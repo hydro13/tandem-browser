@@ -443,13 +443,10 @@
 
     .panel-body {
       flex: 1;
-      overflow-y: auto;
       padding: 10px;
       display: flex;
       flex-direction: column;
     }
-    .panel-body::-webkit-scrollbar { width: 4px; }
-    .panel-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
     /* Activity log */
     .activity-item {
@@ -473,6 +470,8 @@
 
     /* Chat */
     .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
     .chat-msg {
       padding: 8px 10px;
       border-radius: 10px;

@@ -25,6 +25,30 @@ const cleanEnv = { ...process.env };
 delete cleanEnv.ELECTRON_RUN_AS_NODE;
 delete cleanEnv.ATOM_SHELL_INTERNAL_RUN_AS_NODE;
 
+// macOS: clear quarantine flags (Gatekeeper kills unsigned Electron with SIGKILL)
+if (process.platform === 'darwin') {
+    const { execSync } = require('child_process');
+    const electronApp = path.join(__dirname, '..', 'node_modules', 'electron', 'dist', 'Electron.app');
+    try {
+        execSync(`xattr -cr "${electronApp}"`, { stdio: 'ignore' });
+        console.log('[run-electron] Cleared macOS quarantine flags');
+    } catch (e) {
+        // xattr may fail if already clean — that's fine
+    }
+}
+
+// Kill any leftover process on port 8765
+try {
+    const { execSync } = require('child_process');
+    const pids = execSync('/usr/sbin/lsof -ti :8765 2>/dev/null', { encoding: 'utf8' }).trim();
+    if (pids) {
+        execSync(`kill -9 ${pids.split('\n').join(' ')}`, { stdio: 'ignore' });
+        console.log('[run-electron] Killed leftover process on port 8765');
+    }
+} catch (e) {
+    // No process on port — good
+}
+
 console.log('[run-electron] Starting Tandem Browser...');
 
 const child = spawn(electronPath, ['.'], {
