@@ -286,8 +286,8 @@ export class LoginManager {
       loggedInScore += genericResult.loggedIn.length * 10;
       loggedOutScore += genericResult.loggedOut.length * 10;
 
-      detectionMethods.push(...genericResult.loggedIn.map(i => `generic-in-${i}`));
-      detectionMethods.push(...genericResult.loggedOut.map(i => `generic-out-${i}`));
+      detectionMethods.push(...genericResult.loggedIn.map((i: string) => `generic-in-${i}`));
+      detectionMethods.push(...genericResult.loggedOut.map((i: string) => `generic-out-${i}`));
 
       // Determine status
       let status: 'logged-in' | 'logged-out' | 'unknown';

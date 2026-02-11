@@ -16,6 +16,46 @@
 - **Status polling**: automatic refresh after upload, real-time processing status
 - **Error handling**: graceful auth token expiry and network error management
 
+### 🤖 Phase 5 — OpenClaw Integration
+
+#### Smart Content Extraction (5.1)
+- **ContentExtractor class**: extract structured JSON from any web page
+- **Page type detection**: article, profile (LinkedIn etc.), product (Amazon etc.), search results, generic
+- **Article extraction**: title, author, date, body text (converted to markdown via Turndown), images
+- **Profile extraction**: name, headline, location, summary, experience, education arrays
+- **Product extraction**: name, price, description, images, reviews summary with rating/count
+- **Search results**: query detection + results array with title/url/snippet
+- **Turndown integration**: clean HTML to markdown conversion with custom rules
+- **API**: `POST /content/extract` (current page), `POST /content/extract/url` (headless extraction)
+
+#### Multi-step Workflow Engine (5.2)
+- **WorkflowEngine class**: execute complex automation sequences
+- **Step types**: navigate, wait, click, type, extract, screenshot, scroll, condition
+- **Condition logic**: if element exists/text contains/URL matches → goto/skip/abort
+- **Variables system**: pass data between steps, store extraction results
+- **Error handling**: retry logic, timeout handling, graceful failures
+- **Workflow templates**: saved in ~/.tandem/workflows/ as JSON
+- **Background execution**: non-blocking workflow runs with status tracking
+- **API**: `POST /workflow/run`, `GET /workflow/status/:id`, `POST /workflow/stop`
+- **Management**: `GET /workflows`, `POST /workflows`, `DELETE /workflows/:id`
+
+#### Login State Manager (5.3)
+- **LoginManager class**: track authentication status per domain
+- **Auto-detection**: login pages, logged-in/out indicators with confidence scoring
+- **Domain configs**: custom rules for LinkedIn, GitHub, Twitter with fallback generic detection
+- **State persistence**: ~/.tandem/auth/login-states.json with timestamps
+- **Detection methods**: selector existence, URL patterns, text content, cookie checks
+- **Manual override**: update login state explicitly when auto-detection fails
+- **API**: `GET /auth/states`, `GET /auth/state/:domain`, `POST /auth/check`, `POST /auth/update`
+
+#### OpenClaw Skill Package (5.4)
+- **Complete documentation**: skill/SKILL.md with comprehensive API guide
+- **Endpoint examples**: curl commands for all features with expected responses
+- **Common workflows**: browse page, extract content, fill forms, multi-step automation
+- **Error handling guide**: status codes, error formats, retry strategies
+- **Best practices**: timing, login checks, captcha handling, anti-detection guidelines
+- **Integration ready**: immediate OpenClaw skill deployment capability
+
 ### 🔒🎵 Phase 5 — Advanced Stealth + Audio Capture
 
 #### Fingerprint Protection (5.1-5.5)

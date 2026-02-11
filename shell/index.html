@@ -2739,6 +2739,291 @@
       border-radius: 4px;
       font-size: 11px;
     }
+
+    /* Onboarding Overlay */
+    .onboarding-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 10001;
+      backdrop-filter: blur(12px);
+      align-items: center;
+      justify-content: center;
+      animation: onboardingFadeIn 0.4s ease-out;
+    }
+    
+    .onboarding-overlay.visible {
+      display: flex;
+    }
+    
+    @keyframes onboardingFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    
+    .onboarding-content {
+      background: var(--surface);
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      max-width: 700px;
+      width: 90%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
+    }
+    
+    .onboarding-step {
+      padding: 40px;
+      text-align: center;
+      animation: stepSlideIn 0.3s ease-out;
+    }
+    
+    .onboarding-step.hidden {
+      display: none;
+    }
+    
+    @keyframes stepSlideIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .onboarding-header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .onboarding-header h2 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    
+    .onboarding-header p {
+      color: var(--text-dim);
+      font-size: 16px;
+      margin-bottom: 32px;
+    }
+    
+    .onboarding-body p {
+      color: var(--text);
+      line-height: 1.6;
+      margin-bottom: 32px;
+      font-size: 16px;
+    }
+    
+    .tandem-illustration {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin: 32px 0;
+      font-size: 48px;
+    }
+    
+    .human-side, .ai-side {
+      text-align: center;
+      font-size: 32px;
+      line-height: 1.2;
+    }
+    
+    .human-side small, .ai-side small {
+      font-size: 14px;
+      color: var(--text-dim);
+      display: block;
+      margin-top: 8px;
+    }
+    
+    .connection {
+      font-size: 24px;
+      color: var(--accent);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+    
+    .features-tour {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    
+    .tour-feature {
+      background: var(--tab-bg);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    
+    .tour-icon {
+      font-size: 24px;
+      width: 40px;
+      flex-shrink: 0;
+    }
+    
+    .tour-info h4 {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .tour-info p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin: 0;
+      line-height: 1.5;
+    }
+    
+    .tour-info kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--success);
+    }
+    
+    .import-options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    
+    .import-card {
+      background: var(--tab-bg);
+      border-radius: 12px;
+      padding: 20px;
+      border-left: 4px solid var(--success);
+    }
+    
+    .import-card h4 {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    
+    .import-card p {
+      color: var(--text-dim);
+      font-size: 14px;
+      margin: 0;
+      line-height: 1.4;
+    }
+    
+    .import-status {
+      background: var(--tab-bg);
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: var(--text-dim);
+      min-height: 20px;
+    }
+    
+    .completion-tips {
+      background: var(--tab-bg);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 32px;
+      text-align: left;
+    }
+    
+    .completion-tips h4 {
+      color: var(--text);
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+    
+    .completion-tips ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    
+    .completion-tips li {
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.6;
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+    
+    .completion-tips li:before {
+      content: "✓";
+      color: var(--success);
+      font-weight: bold;
+      position: absolute;
+      left: 0;
+    }
+    
+    .completion-tips kbd {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 12px;
+      color: var(--success);
+    }
+    
+    .onboarding-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    
+    .onboarding-actions .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    
+    .onboarding-actions .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+    
+    .onboarding-actions .btn-primary:hover {
+      background: #d73c57;
+    }
+    
+    .onboarding-actions .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+    
+    .onboarding-actions .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.2);
+    }
+    
+    .onboarding-actions .btn-large {
+      padding: 16px 32px;
+      font-size: 16px;
+    }
   </style>
 
   <script>
@@ -2793,6 +3078,138 @@
         hideShortcutsOverlay();
       }
     });
+
+    // ═══════════════════════════════════════════════
+    // Onboarding functionality
+    // ═══════════════════════════════════════════════
+
+    let currentOnboardingStep = 1;
+
+    function showOnboarding() {
+      const overlay = document.getElementById('onboarding-overlay');
+      overlay.classList.add('visible');
+      showOnboardingStep(1);
+    }
+
+    function hideOnboarding() {
+      const overlay = document.getElementById('onboarding-overlay');
+      overlay.classList.remove('visible');
+    }
+
+    function showOnboardingStep(step) {
+      // Hide all steps
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`onboarding-step-${i}`).classList.add('hidden');
+      }
+      
+      // Show current step
+      document.getElementById(`onboarding-step-${step}`).classList.remove('hidden');
+      currentOnboardingStep = step;
+    }
+
+    function nextOnboardingStep() {
+      if (currentOnboardingStep < 4) {
+        showOnboardingStep(currentOnboardingStep + 1);
+      }
+    }
+
+    function prevOnboardingStep() {
+      if (currentOnboardingStep > 1) {
+        showOnboardingStep(currentOnboardingStep - 1);
+      }
+    }
+
+    function skipOnboarding() {
+      showOnboardingStep(4); // Go to completion step
+    }
+
+    async function startChromeImport() {
+      const statusEl = document.getElementById('import-status');
+      
+      try {
+        statusEl.innerHTML = '📥 Importeren van Chrome bookmarks...';
+        
+        const bookmarksResp = await fetch('http://localhost:8765/import/chrome/bookmarks', { method: 'POST' });
+        if (bookmarksResp.ok) {
+          statusEl.innerHTML += '<br>✅ Bookmarks geïmporteerd';
+        }
+        
+        statusEl.innerHTML += '<br>📚 Importeren van geschiedenis...';
+        const historyResp = await fetch('http://localhost:8765/import/chrome/history', { method: 'POST' });
+        if (historyResp.ok) {
+          statusEl.innerHTML += '<br>✅ Geschiedenis geïmporteerd';
+        }
+        
+        statusEl.innerHTML += '<br>🍪 Importeren van cookies...';
+        const cookiesResp = await fetch('http://localhost:8765/import/chrome/cookies', { method: 'POST' });
+        if (cookiesResp.ok) {
+          statusEl.innerHTML += '<br>✅ Cookies geïmporteerd';
+        } else {
+          statusEl.innerHTML += '<br>⚠️ Cookies kunnen niet geïmporteerd worden (encrypted)';
+        }
+        
+        statusEl.innerHTML += '<br><br>🎉 Import voltooid!';
+        
+        setTimeout(() => {
+          nextOnboardingStep();
+        }, 2000);
+        
+      } catch (error) {
+        statusEl.innerHTML = '❌ Import mislukt. Chrome moet gesloten zijn om data te importeren.';
+      }
+    }
+
+    async function completeOnboarding() {
+      try {
+        // Mark onboarding as complete
+        await fetch('http://localhost:8765/config', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            general: {
+              onboardingComplete: true
+            }
+          })
+        });
+        
+        hideOnboarding();
+        
+        // Show Kees panel after a brief moment
+        setTimeout(() => {
+          if (window.tandem && window.tandem.openPanel) {
+            window.tandem.openPanel();
+          }
+        }, 1000);
+        
+      } catch (error) {
+        hideOnboarding();
+      }
+    }
+
+    // Check if onboarding should be shown
+    async function checkOnboarding() {
+      try {
+        const response = await fetch('http://localhost:8765/config');
+        if (response.ok) {
+          const config = await response.json();
+          const onboardingComplete = config.general?.onboardingComplete || false;
+          
+          if (!onboardingComplete) {
+            // Show onboarding after a brief delay
+            setTimeout(showOnboarding, 1500);
+          }
+        } else {
+          // If no config exists, show onboarding
+          setTimeout(showOnboarding, 1500);
+        }
+      } catch (error) {
+        // If API is not ready, show onboarding
+        setTimeout(showOnboarding, 1500);
+      }
+    }
+
+    // Start onboarding check
+    setTimeout(checkOnboarding, 2000);
 
     // ═══════════════════════════════════════════════
     // Theme management

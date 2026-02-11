@@ -45,6 +45,14 @@ export interface TandemConfig {
   behavior: {
     trackingEnabled: boolean;
   };
+
+  // Appearance
+  appearance: {
+    theme: 'dark' | 'light' | 'system';
+  };
+
+  // Onboarding
+  onboardingComplete: boolean;
 }
 
 const DEFAULT_CONFIG: TandemConfig = {
@@ -77,6 +85,10 @@ const DEFAULT_CONFIG: TandemConfig = {
   behavior: {
     trackingEnabled: true,
   },
+  appearance: {
+    theme: 'dark',
+  },
+  onboardingComplete: false,
 };
 
 /**

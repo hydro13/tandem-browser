@@ -71,7 +71,7 @@ interface GenericContent {
 }
 
 export class ContentExtractor {
-  private turndown: TurndownService;
+  private turndown: any;
 
   constructor() {
     this.turndown = new TurndownService({

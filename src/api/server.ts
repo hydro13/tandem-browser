@@ -94,7 +94,7 @@ export class TandemAPI {
     
     this.app = express();
     this.app.use(cors());
-    this.app.use(express.json());
+    this.app.use(express.json({ limit: '50mb' }));
     this.setupRoutes();
   }
 
@@ -1370,6 +1370,19 @@ export class TandemAPI {
       }
     });
 
+    // Upload audio recording from renderer
+    this.app.post('/claronote/upload', async (req: Request, res: Response) => {
+      try {
+        const { audioBase64, duration } = req.body;
+        if (!audioBase64) { res.status(400).json({ error: 'audioBase64 required' }); return; }
+        const audioBuffer = Buffer.from(audioBase64, 'base64');
+        const noteId = await this.claroNoteManager.uploadRecording(audioBuffer, duration || 0);
+        res.json({ ok: true, noteId });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // DATA — Export, Import, Wipe
     // ═══════════════════════════════════════════════
@@ -1471,7 +1484,7 @@ export class TandemAPI {
 
     this.app.delete('/workflows/:id', async (req: Request, res: Response) => {
       try {
-        const { id } = req.params;
+        const id = req.params.id as string;
         await this.workflowEngine.deleteWorkflow(id);
         res.json({ ok: true });
       } catch (e: any) {
@@ -1507,7 +1520,7 @@ export class TandemAPI {
 
     this.app.get('/workflow/status/:executionId', async (req: Request, res: Response) => {
       try {
-        const { executionId } = req.params;
+        const executionId = req.params.executionId as string;
         if (Array.isArray(executionId)) {
           res.status(400).json({ error: 'Invalid executionId' });
           return;
@@ -1564,7 +1577,7 @@ export class TandemAPI {
 
     this.app.get('/auth/state/:domain', async (req: Request, res: Response) => {
       try {
-        const { domain } = req.params;
+        const domain = req.params.domain as string;
         const state = await this.loginManager.getLoginState(domain);
         res.json(state);
       } catch (e: any) {
@@ -1619,7 +1632,7 @@ export class TandemAPI {
 
     this.app.delete('/auth/state/:domain', async (req: Request, res: Response) => {
       try {
-        const { domain } = req.params;
+        const domain = req.params.domain as string;
         await this.loginManager.clearLoginState(domain);
         res.json({ ok: true });
       } catch (e: any) {

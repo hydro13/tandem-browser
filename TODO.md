@@ -332,28 +332,43 @@
 
 ---
 
-## Phase 5.8: Help & Keyboard Shortcuts ⌨️
-- [ ] `shell/help.html` — Help pagina met alle features uitgelegd
-- [ ] **Cmd+?** → Keyboard shortcuts popup (overlay, niet nieuwe pagina)
-- [ ] Shortcuts overlay: alle shortcuts gegroepeerd (Navigatie, Kees, Tools, Browser)
-- [ ] Zoekbaar: typ in overlay om shortcut te vinden
-- [ ] Help pagina: feature overzicht, tips, "wat kan Kees allemaal?"
-- [ ] Eerste keer openen: auto-toon shortcuts overlay (onboarding)
-- [ ] Link naar help vanuit Settings scherm
+## Phase 5.8: Help & Keyboard Shortcuts ⌨️ ✅ DONE
+- [x] `shell/help.html` — Help pagina met alle features uitgelegd
+- [x] **Cmd+?** → Keyboard shortcuts popup (overlay, niet nieuwe pagina)
+- [x] Shortcuts overlay: alle shortcuts gegroepeerd (Navigatie, Kees, Tools, Browser)
+- [x] Zoekbaar: typ in overlay om shortcut te vinden
+- [x] Help pagina: feature overzicht, tips, "wat kan Kees allemaal?"
+- [x] Eerste keer openen: auto-toon shortcuts overlay (onboarding)
+- [x] Link naar help vanuit Settings scherm
 
 ---
 
-## Phase 6: Polish & Distribution 🚀
+## Phase 5.9: OpenClaw Integration 🔗 ✅ DONE
+- [x] Smart Content Extraction (`src/content/extractor.ts`) — detect page type, extract structured JSON
+- [x] Multi-step Workflow Engine (`src/workflow/engine.ts`) — JSON workflow definitions, conditions, retry
+- [x] Login State Manager (`src/auth/login-manager.ts`) — track login state per domain, detect login pages
+- [x] OpenClaw Skill Package (`skill/SKILL.md`) — complete API docs with examples & common workflows
+- [x] API: `POST /content/extract`, `POST /content/extract/url`
+- [x] API: `GET /workflows`, `POST /workflows`, `DELETE /workflows/:id`
+- [x] API: `POST /workflow/run`, `GET /workflow/status/:id`, `POST /workflow/stop`, `GET /workflow/running`
+- [x] API: `GET /auth/states`, `GET /auth/state/:domain`, `POST /auth/check`, `POST /auth/update`
+- [x] Workflow templates stored in `~/.tandem/workflows/`
+- [x] `npx tsc` — zero errors
+
+---
+
+## Phase 6: Polish & Distribution 🚀 🔄 ACTIEF
 > Van project naar product.
 
 - [ ] Multi-profile support (gescheiden browse contexten)
-- [ ] Keyboard shortcuts overzicht (Cmd+?)
-- [ ] Themes (donker/licht/custom)
+- [x] Keyboard shortcuts overzicht (Cmd+?)
+- [x] Themes (donker/licht/systeem) + Settings toggle
+- [x] Zoom support (Cmd+=/−/0) met per-tab opslag
+- [x] Onboarding flow (eerste keer openen)
 - [ ] Auto-updater (electron-updater)
 - [ ] DMG build (macOS)
 - [ ] AppImage build (Linux)
 - [ ] Documentatie site
-- [ ] Onboarding flow (eerste keer openen)
 
 ---
 
