@@ -1,7 +1,7 @@
 import { Session } from 'electron';
 
 /**
- * StealthManager — Makes Centaur Browser look like a regular human browser.
+ * StealthManager — Makes Tandem Browser look like a regular human browser.
  * 
  * Anti-detection measures:
  * 1. Realistic User-Agent (matches real Chrome)

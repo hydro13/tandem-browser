@@ -58,30 +58,49 @@ Een browser gebouwd voor **mens-AI symbiose**. Niet een headless scraper, niet e
 
 ## Features (MVP — Week 1)
 
-### Must Have
-- [ ] Electron browser met tabs en navigatie
-- [ ] HTTP API op localhost:8765
-- [ ] `/navigate` — URL openen
-- [ ] `/page-content` — Volledige pagina als markdown/text teruggeven
-- [ ] `/click` — Element klikken (CSS selector)
-- [ ] `/type` — Tekst typen in velden
-- [ ] `/screenshot` — Screenshot maken en opslaan
-- [ ] `/execute-js` — JavaScript uitvoeren op de pagina
-- [ ] `/cookies` — Cookies lezen/zetten
-- [ ] `/status` — Huidige URL, titel, laadstatus
-- [ ] Anti-detect: realistic UA, geen headless flags
-- [ ] Persistent sessions (cookies overleven restart)
-- [ ] Copilot alert systeem (notification naar Robin)
+### Phase 1: Core (MVP) ✅ GEBOUWD
+- [x] Electron browser met navigatie
+- [x] HTTP API op localhost:8765 (13 endpoints)
+- [x] `/navigate`, `/page-content`, `/click`, `/type`
+- [x] `/screenshot`, `/execute-js`, `/cookies`, `/status`
+- [x] `/scroll`, `/wait`, `/links`, `/forms`, `/page-html`
+- [x] Anti-detect: realistic UA, geen headless flags, stealth script
+- [x] Persistent sessions (cookies overleven restart via `persist:tandem`)
+- [x] Copilot alert systeem (macOS notification + in-browser overlay)
 
-### Nice to Have (Week 2+)
-- [ ] Tab management via API
-- [ ] Form auto-fill met opgeslagen profielen
-- [ ] Proxy support
-- [ ] Request interception (headers wijzigen)
-- [ ] Fingerprint spoofing (canvas, WebGL, fonts)
-- [ ] OpenClaw skill/tool integratie
-- [ ] Recording/replay van sessies
-- [ ] Multi-profile support
+### Phase 2: Echte Browser Ervaring 🔄 NU
+- [ ] **Tabs** — Meerdere tabs openen, sluiten, wisselen (via UI + API)
+- [ ] **Favorieten/Bookmarks** — Opslaan, organiseren, importeren
+- [ ] **Chrome import** — Favorieten, geschiedenis, cookies importeren vanuit Chrome
+- [ ] **Wachtwoorden database** — Lokale encrypted password store (SQLite + AES-256)
+- [ ] **Autofill** — Formulieren automatisch invullen met opgeslagen credentials
+- [ ] **Download manager** — Downloads beheren via UI + API
+- [ ] **Geschiedenis** — Browse history met zoekfunctie
+
+### Phase 3: Stealth & Anti-Detect 🔒
+- [ ] **Canvas fingerprint spoofing** — Randomized canvas output
+- [ ] **WebGL fingerprint masking** — GPU info maskeren
+- [ ] **Font enumeration spoofing** — Consistente font lijst
+- [ ] **Proxy support** — SOCKS5/HTTP proxy per tab of globaal
+- [ ] **Request interception** — Headers wijzigen, requests blokkeren
+- [ ] **Timing randomisatie** — Menselijke delays bij automated actions
+- [ ] **TLS fingerprint** — JA3 fingerprint matching met echte Chrome
+
+### Phase 4: AI Integratie 🤖
+- [ ] **OpenClaw skill** — Tandem als native OpenClaw tool/skill
+- [ ] **Page-to-markdown** — Turndown integration voor clean markdown output
+- [ ] **Smart extraction** — AI-gestuurde content extractie (artikel, profiel, product)
+- [ ] **Session recording** — Opnemen en replay van browse sessies
+- [ ] **Multi-step workflows** — Keten van acties definiëren en uitvoeren
+- [ ] **Login state management** — Per-site login sessies beheren
+
+### Phase 5: Polish & Distribution 🚀
+- [ ] **Multi-profile support** — Gescheiden browse profielen
+- [ ] **Keyboard shortcuts** — Cmd+T (tab), Cmd+L (URL), etc.
+- [ ] **Themes** — Donker/licht/custom
+- [ ] **Auto-update** — Electron auto-updater
+- [ ] **electron-builder** — DMG/AppImage distributie
+- [ ] **Documentatie** — API docs, gebruikershandleiding
 
 ## Tech Stack
 
@@ -119,8 +138,8 @@ Gewoon als browser. Open het, browse, doe je ding. Als Kees iets nodig heeft ver
 
 ## Oorsprong
 
-Herbouwd vanuit `totalrecall-browserV2` — Robin's eerdere custom browser die al VSCode extensions in de browser kon draaien en Claude CLI integratie had. De DNA is hetzelfde, de focus is verschoven van "dev tool" naar "centaur browsing tool".
+Herbouwd vanuit `totalrecall-browserV2` — Robin's eerdere custom browser die al VSCode extensions in de browser kon draaien en Claude CLI integratie had. De DNA is hetzelfde, de focus is verschoven van "dev tool" naar "tandem browsing tool".
 
 ## Naam
 
-**Centaur** — half mens, half AI. Samen sterker dan apart. Net als het schaakconcept waar een mens+AI team sterker is dan de beste AI of de beste mens alleen.
+**Tandem** — twee personen, één voertuig. Samen trappen, samen sturen. Net als het schaakconcept waar een mens+AI team sterker is dan de beste AI of de beste mens alleen.

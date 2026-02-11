@@ -11,7 +11,7 @@ let api: TandemAPI | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   // Persistent session — cookies survive restart
-  const partition = 'persist:centaur';
+  const partition = 'persist:tandem';
   const ses = session.fromPartition(partition);
 
   // Apply stealth patches to the session

@@ -8,7 +8,7 @@ A browser built for **human-AI symbiosis**. Robin (human) and Kees (AI) browse t
 
 Platforms are locking out AI crawlers. LinkedIn returns 403. Twitter blocks bots. Even basic websites hide behind Cloudflare. 
 
-A real browser with a real human behind it passes every detection gate. Centaur combines that with AI-powered automation — the best of both worlds.
+A real browser with a real human behind it passes every detection gate. Tandem combines that with AI-powered automation — the best of both worlds.
 
 ## Quick Start
 
@@ -62,7 +62,7 @@ Tandem Browser (Electron)
 - **Real browser** — Not headless, not Puppeteer. A browser Robin actually uses.
 - **API-first** — Everything Kees does goes through the HTTP API.
 - **Local only** — No cloud, no external services. Your data stays yours.
-- **Centaur** — Together stronger than apart.
+- **Tandem** — Together stronger than apart.
 
 ## Origin
 
