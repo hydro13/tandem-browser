@@ -2122,22 +2122,23 @@
     let claroNoteRecording = false;
     let claroNoteTimer = null;
     let claroNoteStartTime = 0;
+    let claroNoteMediaRecorder = null;
+    let claroNoteAudioChunks = [];
+    let claroNoteAudioStream = null;
+    let claroNoteAnalyser = null;
+    let claroNoteWaveformRAF = null;
 
     async function initClaroNote() {
       if (claroNoteInitialized) return;
-      
       try {
-        // Check authentication status
         const response = await fetch('http://localhost:8765/claronote/status');
         const data = await response.json();
-        
         if (data.authenticated) {
           showClaroNoteMain(data.user);
           await loadClaroNoteNotes();
         } else {
           showClaroNoteLogin();
         }
-        
         claroNoteInitialized = true;
         setupClaroNoteEventListeners();
       } catch (error) {
@@ -2160,53 +2161,32 @@
       const errorEl = document.getElementById('claronote-error');
       errorEl.textContent = message;
       errorEl.style.display = 'block';
-      setTimeout(() => {
-        errorEl.style.display = 'none';
-      }, 5000);
+      setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
     }
 
     function setupClaroNoteEventListeners() {
-      // Login form
       const loginForm = document.getElementById('claronote-login-form');
-      if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-          e.preventDefault();
-          await handleClaroNoteLogin();
-        });
-      }
-
-      // Record button
+      if (loginForm) loginForm.addEventListener('submit', async (e) => { e.preventDefault(); await handleClaroNoteLogin(); });
       const recordBtn = document.getElementById('claronote-record-btn');
-      if (recordBtn) {
-        recordBtn.addEventListener('click', toggleClaroNoteRecording);
-      }
-
-      // Refresh button
+      if (recordBtn) recordBtn.addEventListener('click', toggleClaroNoteRecording);
       const refreshBtn = document.getElementById('claronote-refresh');
-      if (refreshBtn) {
-        refreshBtn.addEventListener('click', loadClaroNoteNotes);
-      }
+      if (refreshBtn) refreshBtn.addEventListener('click', loadClaroNoteNotes);
     }
 
     async function handleClaroNoteLogin() {
       const email = document.getElementById('claronote-email').value;
       const password = document.getElementById('claronote-password').value;
       const loginBtn = document.getElementById('claronote-login-btn');
-      
       if (!email || !password) return;
-      
       loginBtn.textContent = 'Inloggen...';
       loginBtn.disabled = true;
-      
       try {
         const response = await fetch('http://localhost:8765/claronote/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-        
         const data = await response.json();
-        
         if (data.success) {
           showClaroNoteMain(data.user);
           await loadClaroNoteNotes();
@@ -2231,64 +2211,118 @@
 
     async function startClaroNoteRecording() {
       try {
-        const response = await fetch('http://localhost:8765/claronote/record/start', {
-          method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          claroNoteRecording = true;
-          claroNoteStartTime = Date.now();
-          updateRecordingUI();
-          startRecordingTimer();
-        } else {
-          showClaroNoteError(data.error || 'Kon opname niet starten');
-        }
+        // Request microphone access — actual audio capture in renderer
+        claroNoteAudioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        claroNoteMediaRecorder = new MediaRecorder(claroNoteAudioStream, { mimeType: 'audio/webm' });
+        claroNoteAudioChunks = [];
+
+        claroNoteMediaRecorder.ondataavailable = (e) => {
+          if (e.data.size > 0) claroNoteAudioChunks.push(e.data);
+        };
+
+        claroNoteMediaRecorder.start(1000); // collect chunks every second
+        claroNoteRecording = true;
+        claroNoteStartTime = Date.now();
+
+        // Setup waveform visualization
+        try {
+          const audioCtx = new AudioContext();
+          const source = audioCtx.createMediaStreamSource(claroNoteAudioStream);
+          claroNoteAnalyser = audioCtx.createAnalyser();
+          claroNoteAnalyser.fftSize = 256;
+          source.connect(claroNoteAnalyser);
+          drawClaroNoteWaveform();
+        } catch (e) { /* waveform optional */ }
+
+        updateRecordingUI();
+        startRecordingTimer();
+
+        // Notify server (state tracking only)
+        fetch('http://localhost:8765/claronote/record/start', { method: 'POST' }).catch(() => {});
       } catch (error) {
-        showClaroNoteError('Fout bij starten opname');
+        showClaroNoteError('Microfoon niet beschikbaar');
       }
     }
 
     async function stopClaroNoteRecording() {
-      try {
-        const response = await fetch('http://localhost:8765/claronote/record/stop', {
-          method: 'POST'
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
+      if (!claroNoteMediaRecorder) return;
+
+      return new Promise((resolve) => {
+        claroNoteMediaRecorder.onstop = async () => {
           claroNoteRecording = false;
+          const duration = Math.round((Date.now() - claroNoteStartTime) / 1000);
+
+          // Cleanup audio stream
+          if (claroNoteAudioStream) {
+            claroNoteAudioStream.getTracks().forEach(t => t.stop());
+            claroNoteAudioStream = null;
+          }
+          if (claroNoteWaveformRAF) { cancelAnimationFrame(claroNoteWaveformRAF); claroNoteWaveformRAF = null; }
+          claroNoteAnalyser = null;
+
           updateRecordingUI();
           stopRecordingTimer();
-          
-          // Show processing status
-          document.getElementById('claronote-status-text').textContent = 'Uploaden en verwerken...';
-          
-          // Start polling for note status if we got a note ID
-          if (data.noteId) {
-            pollNoteStatus(data.noteId);
+          document.getElementById('claronote-status-text').textContent = 'Uploaden...';
+
+          // Convert to base64 and upload via API proxy
+          try {
+            const blob = new Blob(claroNoteAudioChunks, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.onloadend = async () => {
+              try {
+                const base64 = reader.result.split(',')[1];
+                const resp = await fetch('http://localhost:8765/claronote/upload', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ audioBase64: base64, duration })
+                });
+                const data = await resp.json();
+                if (data.ok && data.noteId) {
+                  document.getElementById('claronote-status-text').textContent = 'Verwerken...';
+                  pollNoteStatus(data.noteId);
+                } else {
+                  document.getElementById('claronote-status-text').textContent = 'Upload mislukt';
+                  setTimeout(() => { document.getElementById('claronote-status-text').textContent = 'Klaar om op te nemen'; }, 3000);
+                }
+              } catch (err) {
+                document.getElementById('claronote-status-text').textContent = 'Upload mislukt';
+                setTimeout(() => { document.getElementById('claronote-status-text').textContent = 'Klaar om op te nemen'; }, 3000);
+              }
+              resolve();
+            };
+            reader.readAsDataURL(blob);
+          } catch (err) {
+            document.getElementById('claronote-status-text').textContent = 'Upload mislukt';
+            resolve();
           }
-          
-          // Refresh notes list
-          setTimeout(() => loadClaroNoteNotes(), 1000);
-        } else {
-          showClaroNoteError(data.error || 'Kon opname niet stoppen');
-        }
-      } catch (error) {
-        showClaroNoteError('Fout bij stoppen opname');
-        claroNoteRecording = false;
-        updateRecordingUI();
-        stopRecordingTimer();
+        };
+
+        claroNoteMediaRecorder.stop();
+        fetch('http://localhost:8765/claronote/record/stop', { method: 'POST' }).catch(() => {});
+      });
+    }
+
+    function drawClaroNoteWaveform() {
+      if (!claroNoteAnalyser || !claroNoteRecording) return;
+      const waveformEl = document.getElementById('claronote-waveform');
+      const bufLen = claroNoteAnalyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufLen);
+      claroNoteAnalyser.getByteFrequencyData(dataArray);
+      const bars = 20;
+      const step = Math.floor(bufLen / bars);
+      let stops = [];
+      for (let i = 0; i < bars; i++) {
+        const val = dataArray[i * step] / 255;
+        stops.push(`rgba(233,69,96,${val * 0.8 + 0.1}) ${(i / bars) * 100}%`);
       }
+      waveformEl.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
+      claroNoteWaveformRAF = requestAnimationFrame(drawClaroNoteWaveform);
     }
 
     function updateRecordingUI() {
       const recordBtn = document.getElementById('claronote-record-btn');
       const statusText = document.getElementById('claronote-status-text');
       const waveform = document.getElementById('claronote-waveform');
-      
       if (claroNoteRecording) {
         recordBtn.style.background = 'var(--warning)';
         recordBtn.textContent = '⏹️';
@@ -2465,7 +2499,7 @@
         const response = await fetch(`http://localhost:8765/claronote/notes/${noteId}`);
         const data = await response.json();
         
-        if (data.note && data.note.status === 'PROCESSING') {
+        if (data.note && (data.note.status === 'PROCESSING' || data.note.status === 'UPLOADING')) {
           // Still processing, poll again in 2 seconds
           setTimeout(() => pollNoteStatus(noteId), 2000);
         } else {
