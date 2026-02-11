@@ -302,6 +302,17 @@
 
 ---
 
+## Phase 5.8: Help & Keyboard Shortcuts ⌨️
+- [ ] `shell/help.html` — Help pagina met alle features uitgelegd
+- [ ] **Cmd+?** → Keyboard shortcuts popup (overlay, niet nieuwe pagina)
+- [ ] Shortcuts overlay: alle shortcuts gegroepeerd (Navigatie, Kees, Tools, Browser)
+- [ ] Zoekbaar: typ in overlay om shortcut te vinden
+- [ ] Help pagina: feature overzicht, tips, "wat kan Kees allemaal?"
+- [ ] Eerste keer openen: auto-toon shortcuts overlay (onboarding)
+- [ ] Link naar help vanuit Settings scherm
+
+---
+
 ## Phase 6: Polish & Distribution 🚀
 > Van project naar product.
 
