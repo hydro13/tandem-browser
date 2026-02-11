@@ -178,7 +178,7 @@ export class NetworkInspector {
       if (fs.existsSync(filePath)) {
         try {
           existing = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-        } catch { /* start fresh */ }
+        } catch (e: any) { console.warn('Network domain file parse failed, starting fresh:', e.message); }
       }
 
       // Merge
@@ -191,8 +191,8 @@ export class NetworkInspector {
       }
 
       fs.writeFileSync(filePath, JSON.stringify(existing, null, 2));
-    } catch {
-      // Silent fail
+    } catch (e: any) {
+      console.warn('Network domain flush failed for', domain + ':', e.message);
     }
   }
 

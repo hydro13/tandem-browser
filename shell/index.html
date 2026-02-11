@@ -1106,6 +1106,8 @@
           openSettings();
         } else if (action === 'bookmark-page') {
           toggleBookmarkCurrentPage();
+        } else if (action === 'toggle-bookmarks-bar') {
+          toggleBookmarksBar();
         } else if (action === 'find-in-page') {
           toggleFindBar(true);
         } else if (action === 'open-history') {
@@ -1357,6 +1359,12 @@
       const wsDot = document.getElementById('ws-dot');
       const wsStatusText = document.getElementById('ws-status-text');
 
+      // Safety check: if any critical element is missing, don't initialize
+      if (!messagesEl || !inputEl || !sendBtn || !typingEl || !wsDot || !wsStatusText) {
+        console.error('[ocChat] Missing required DOM elements, chat will not initialize');
+        return { ensureConnected() {}, disconnect() {} };
+      }
+
       function setStatus(state) {
         if (state === 'connected') {
           wsDot.style.background = 'var(--success)';
@@ -1373,6 +1381,11 @@
       }
 
       function sendRequest(method, params, cb) {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+          console.warn('[ocChat] WebSocket not connected, cannot send request:', method);
+          if (cb) cb({ error: { code: 'NOT_CONNECTED', message: 'WebSocket not connected' } });
+          return null;
+        }
         const id = crypto.randomUUID();
         if (cb) pendingCallbacks.set(id, cb);
         ws.send(JSON.stringify({ type: 'req', id, method, params }));
@@ -2064,7 +2077,23 @@
 
     bookmarkStar.addEventListener('click', toggleBookmarkCurrentPage);
 
+    function toggleBookmarksBar() {
+      bookmarksBarVisible = !bookmarksBarVisible;
+      if (bookmarksBarVisible) {
+        loadBookmarksBar();
+      } else {
+        bookmarksBar.classList.remove('visible');
+      }
+      // Persist to config
+      fetch('http://localhost:8765/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ general: { showBookmarksBar: bookmarksBarVisible } }),
+      }).catch(() => {});
+    }
+
     async function loadBookmarksBar() {
+      if (!bookmarksBarVisible) return;
       try {
         const resp = await fetch('http://localhost:8765/bookmarks');
         if (!resp.ok) return;
@@ -2092,8 +2121,21 @@
       } catch { /* API not ready */ }
     }
 
-    // Load bookmarks bar on startup
-    setTimeout(loadBookmarksBar, 1500);
+    // Load bookmarks bar on startup — respect config
+    setTimeout(async () => {
+      try {
+        const res = await fetch('http://localhost:8765/config');
+        if (res.ok) {
+          const cfg = await res.json();
+          if (cfg.general && cfg.general.showBookmarksBar === false) {
+            bookmarksBarVisible = false;
+            bookmarksBar.classList.remove('visible');
+            return;
+          }
+        }
+      } catch { /* API not ready, show bar by default */ }
+      loadBookmarksBar();
+    }, 1500);
 
     // Update star when URL changes
     const _prevUpdateTabMeta2 = updateTabMeta;
@@ -2294,9 +2336,12 @@
     }
 
     async function handleClaroNoteLogin() {
-      const email = document.getElementById('claronote-email').value;
-      const password = document.getElementById('claronote-password').value;
+      const emailEl = document.getElementById('claronote-email');
+      const passwordEl = document.getElementById('claronote-password');
       const loginBtn = document.getElementById('claronote-login-btn');
+      if (!emailEl || !passwordEl || !loginBtn) return;
+      const email = emailEl.value;
+      const password = passwordEl.value;
       if (!email || !password) return;
       loginBtn.textContent = 'Inloggen...';
       loginBtn.disabled = true;

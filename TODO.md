@@ -88,12 +88,12 @@
 - [x] Screenshot → bestand opslaan (~/Pictures/Tandem/)
 - [x] Cmd+Shift+S quick screenshot werkt zonder draw mode
 - [x] Clickable thumbnails in Screenshots tab (opent full-size viewer)
-- [ ] Screenshot → Apple Photos library (via `osascript` / Photos framework)
+- [x] Screenshot → Apple Photos library (via `osascript` — async, non-blocking)
 - [ ] Screenshot → Google Photos (via API, instelbaar)
-- [ ] Configuratiescherm: aan/uit per bestemming
+- [x] Configuratiescherm: aan/uit per bestemming
   - [x] ☑️ Clipboard (altijd aan)
   - [x] ☑️ Lokale folder: ~/Pictures/Tandem/
-  - [ ] ☑️ Apple Photos
+  - [x] ☑️ Apple Photos (config.screenshots.applePhotos)
   - [ ] ☑️ Google Photos
 - [x] Preview in Kees paneel (Screenshots tab) — base64 preview
 - [x] Bestandsnaam: `tandem-{url-slug}-{timestamp}.png`
@@ -241,6 +241,9 @@
 - [x] Chrome history import (SQLite via better-sqlite3)
 - [x] Chrome cookies import (met Keychain warning — encrypted values niet importeerbaar)
 - [x] API: POST /import/chrome/bookmarks, history, cookies + GET /import/chrome/status
+- [x] Chrome bookmark sync — file watcher, auto-import bij wijzigingen (2s debounce)
+- [x] Multi-profile support — detecteert alle Chrome profielen, config.sync.chromeProfile
+- [x] API: GET /import/chrome/profiles, POST sync/start, POST sync/stop, GET sync/status
 - [ ] Firefox import (optioneel, later)
 
 ### 4.2 Bookmarks Manager ✅ DONE
@@ -365,6 +368,11 @@
 - [x] Themes (donker/licht/systeem) + Settings toggle
 - [x] Zoom support (Cmd+=/−/0) met per-tab opslag
 - [x] Onboarding flow (eerste keer openen)
+- [x] API auth token (auto-generated ~/.tandem/api-token, Bearer auth op alle endpoints)
+- [x] Silent error swallowing → console.warn (20+ fixes)
+- [x] IPC handler cleanup — geen duplicates bij macOS reactivation
+- [x] TandemAPI constructor refactored naar TandemAPIOptions interface
+- [x] Duplicate macOS Finder bestanden opgeruimd
 - [ ] Auto-updater (electron-updater)
 - [ ] DMG build (macOS)
 - [ ] AppImage build (Linux)
@@ -395,4 +403,4 @@
 
 ---
 
-*Laatst bijgewerkt: 11 februari 2026*
+*Laatst bijgewerkt: 12 februari 2026*

@@ -43,7 +43,7 @@ export class HistoryManager {
       if (fs.existsSync(this.storePath)) {
         return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
       }
-    } catch { /* corrupted */ }
+    } catch (e: any) { console.warn('History file corrupted, starting fresh:', e.message); }
     return { entries: [] };
   }
 

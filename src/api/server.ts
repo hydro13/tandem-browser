@@ -1,9 +1,10 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import crypto from 'crypto';
 import { BrowserWindow } from 'electron';
 import { copilotAlert } from '../main';
 import { TabManager } from '../tabs/manager';
@@ -32,10 +33,59 @@ import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
 import { LoginManager } from '../auth/login-manager';
 
+/** Generate or load API auth token from ~/.tandem/api-token */
+function getOrCreateAuthToken(): string {
+  const tandemDir = path.join(os.homedir(), '.tandem');
+  if (!fs.existsSync(tandemDir)) fs.mkdirSync(tandemDir, { recursive: true });
+
+  const tokenPath = path.join(tandemDir, 'api-token');
+  try {
+    if (fs.existsSync(tokenPath)) {
+      const existing = fs.readFileSync(tokenPath, 'utf-8').trim();
+      if (existing.length >= 32) return existing;
+    }
+  } catch (e: any) {
+    console.warn('Could not read existing API token, generating new:', e.message);
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  fs.writeFileSync(tokenPath, token, { mode: 0o600 });
+  console.log('🔑 New API token generated → ~/.tandem/api-token');
+  return token;
+}
+
+/** Options object for TandemAPI constructor */
+export interface TandemAPIOptions {
+  win: BrowserWindow;
+  port?: number;
+  tabManager: TabManager;
+  panelManager: PanelManager;
+  drawManager: DrawOverlayManager;
+  activityTracker: ActivityTracker;
+  voiceManager: VoiceManager;
+  behaviorObserver: BehaviorObserver;
+  configManager: ConfigManager;
+  siteMemory: SiteMemoryManager;
+  watchManager: WatchManager;
+  headlessManager: HeadlessManager;
+  formMemory: FormMemoryManager;
+  contextBridge: ContextBridge;
+  pipManager: PiPManager;
+  networkInspector: NetworkInspector;
+  chromeImporter: ChromeImporter;
+  bookmarkManager: BookmarkManager;
+  historyManager: HistoryManager;
+  downloadManager: DownloadManager;
+  audioCaptureManager: AudioCaptureManager;
+  extensionLoader: ExtensionLoader;
+  claroNoteManager: ClaroNoteManager;
+}
+
 export class TandemAPI {
   private app: express.Application;
   private server: http.Server | null = null;
   private win: BrowserWindow;
+  private authToken: string;
   private port: number;
   private tabManager: TabManager;
   private panelManager: PanelManager;
@@ -62,30 +112,30 @@ export class TandemAPI {
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
 
-  constructor(win: BrowserWindow, port: number = 8765, tabManager: TabManager, panelManager: PanelManager, drawManager: DrawOverlayManager, activityTracker: ActivityTracker, voiceManager: VoiceManager, behaviorObserver: BehaviorObserver, configManager: ConfigManager, siteMemory: SiteMemoryManager, watchManager: WatchManager, headlessManager: HeadlessManager, formMemory: FormMemoryManager, contextBridge: ContextBridge, pipManager: PiPManager, networkInspector: NetworkInspector, chromeImporter: ChromeImporter, bookmarkManager: BookmarkManager, historyManager: HistoryManager, downloadManager: DownloadManager, audioCaptureManager: AudioCaptureManager, extensionLoader: ExtensionLoader, claroNoteManager: ClaroNoteManager) {
-    this.win = win;
-    this.port = port;
-    this.tabManager = tabManager;
-    this.panelManager = panelManager;
-    this.drawManager = drawManager;
-    this.activityTracker = activityTracker;
-    this.voiceManager = voiceManager;
-    this.behaviorObserver = behaviorObserver;
-    this.configManager = configManager;
-    this.siteMemory = siteMemory;
-    this.watchManager = watchManager;
-    this.headlessManager = headlessManager;
-    this.formMemory = formMemory;
-    this.contextBridge = contextBridge;
-    this.pipManager = pipManager;
-    this.networkInspector = networkInspector;
-    this.chromeImporter = chromeImporter;
-    this.bookmarkManager = bookmarkManager;
-    this.historyManager = historyManager;
-    this.downloadManager = downloadManager;
-    this.audioCaptureManager = audioCaptureManager;
-    this.extensionLoader = extensionLoader;
-    this.claroNoteManager = claroNoteManager;
+  constructor(opts: TandemAPIOptions) {
+    this.win = opts.win;
+    this.port = opts.port ?? 8765;
+    this.tabManager = opts.tabManager;
+    this.panelManager = opts.panelManager;
+    this.drawManager = opts.drawManager;
+    this.activityTracker = opts.activityTracker;
+    this.voiceManager = opts.voiceManager;
+    this.behaviorObserver = opts.behaviorObserver;
+    this.configManager = opts.configManager;
+    this.siteMemory = opts.siteMemory;
+    this.watchManager = opts.watchManager;
+    this.headlessManager = opts.headlessManager;
+    this.formMemory = opts.formMemory;
+    this.contextBridge = opts.contextBridge;
+    this.pipManager = opts.pipManager;
+    this.networkInspector = opts.networkInspector;
+    this.chromeImporter = opts.chromeImporter;
+    this.bookmarkManager = opts.bookmarkManager;
+    this.historyManager = opts.historyManager;
+    this.downloadManager = opts.downloadManager;
+    this.audioCaptureManager = opts.audioCaptureManager;
+    this.extensionLoader = opts.extensionLoader;
+    this.claroNoteManager = opts.claroNoteManager;
     
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -106,6 +156,28 @@ export class TandemAPI {
       }
     }));
     this.app.use(express.json({ limit: '50mb' }));
+
+    // API auth token — require for all endpoints except /status
+    this.authToken = getOrCreateAuthToken();
+    this.app.use((req: Request, res: Response, next: NextFunction) => {
+      // Allow /status without auth (health check)
+      if (req.path === '/status') return next();
+      // Allow OPTIONS preflight
+      if (req.method === 'OPTIONS') return next();
+
+      // Check Authorization header or query param
+      const authHeader = req.headers.authorization;
+      const queryToken = req.query.token as string | undefined;
+
+      if (authHeader) {
+        const match = authHeader.match(/^Bearer\s+(.+)$/i);
+        if (match && match[1] === this.authToken) return next();
+      }
+      if (queryToken === this.authToken) return next();
+
+      res.status(401).json({ error: 'Unauthorized — provide Authorization: Bearer <token> header or ?token=<token>. Token is in ~/.tandem/api-token' });
+    });
+
     this.setupRoutes();
   }
 
@@ -695,7 +767,7 @@ export class TandemAPI {
         // Chat history
         const chatPath = path.join(tandemDir, 'chat-history.json');
         if (fs.existsSync(chatPath)) {
-          try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch { /* skip */ }
+          try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e: any) { console.warn('Chat history load failed:', e.message); }
         }
 
         // Behavior stats
@@ -1076,6 +1148,46 @@ export class TandemAPI {
       try {
         const result = await this.chromeImporter.importCookies(this.win.webContents.session);
         res.json(result);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══ Chrome Sync — Bookmark auto-sync ═══
+
+    this.app.get('/import/chrome/profiles', (_req: Request, res: Response) => {
+      try {
+        const profiles = this.chromeImporter.listProfiles();
+        res.json({ profiles });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/import/chrome/sync/start', (req: Request, res: Response) => {
+      try {
+        if (req.body.profile) {
+          this.chromeImporter.setProfile(req.body.profile);
+        }
+        const started = this.chromeImporter.startSync();
+        res.json({ ok: started, syncing: this.chromeImporter.isSyncing() });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/import/chrome/sync/stop', (_req: Request, res: Response) => {
+      try {
+        this.chromeImporter.stopSync();
+        res.json({ ok: true, syncing: false });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/import/chrome/sync/status', (_req: Request, res: Response) => {
+      try {
+        res.json({ syncing: this.chromeImporter.isSyncing() });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

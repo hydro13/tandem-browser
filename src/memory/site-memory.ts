@@ -75,7 +75,8 @@ export class SiteMemoryManager {
     if (!fs.existsSync(filePath)) return null;
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-    } catch {
+    } catch (e: any) {
+      console.warn('Site memory load failed for', domain + ':', e.message);
       return null;
     }
   }
@@ -183,7 +184,8 @@ export class SiteMemoryManager {
       this.trackVisitStart(url);
 
       return visit;
-    } catch {
+    } catch (e: any) {
+      console.warn('Site memory recordVisit failed for', url + ':', e.message);
       return null;
     }
   }
@@ -231,11 +233,13 @@ export class SiteMemoryManager {
         try {
           const data: SiteData = JSON.parse(fs.readFileSync(path.join(this.memoryDir, f), 'utf-8'));
           return { domain: data.domain, lastVisit: data.lastVisit, visitCount: data.visitCount };
-        } catch {
+        } catch (e: any) {
+          console.warn('Site memory listSites: skipping corrupt file', f + ':', e.message);
           return null;
         }
       }).filter(Boolean) as { domain: string; lastVisit: number; visitCount: number }[];
-    } catch {
+    } catch (e: any) {
+      console.warn('Site memory listSites: dir read failed:', e.message);
       return [];
     }
   }
@@ -280,9 +284,9 @@ export class SiteMemoryManager {
               break; // One result per domain
             }
           }
-        } catch { /* skip corrupt files */ }
+        } catch (e: any) { console.warn('Site memory search: skipping corrupt file', f + ':', e.message); }
       }
-    } catch { /* empty dir */ }
+    } catch (e: any) { console.warn('Site memory search: dir read failed:', e.message); }
 
     return results.sort((a, b) => b.timestamp - a.timestamp);
   }

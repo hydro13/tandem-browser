@@ -58,7 +58,7 @@ export class ActivityTracker {
         setTimeout(() => {
           try {
             this.win.webContents.send('auto-snapshot-request', { url });
-          } catch { /* window may be closed */ }
+          } catch (e: any) { console.warn('Auto-snapshot send failed (window may be closed):', e.message); }
         }, 3000);
       }
     }

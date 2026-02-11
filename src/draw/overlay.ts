@@ -1,7 +1,9 @@
 import { BrowserWindow, app, webContents, clipboard, nativeImage } from 'electron';
+import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { ConfigManager } from '../config/manager';
 
 /**
  * DrawOverlayManager — Manages the transparent annotation canvas overlay.
@@ -13,13 +15,15 @@ import os from 'os';
  */
 export class DrawOverlayManager {
   private win: BrowserWindow;
+  private configManager: ConfigManager | null;
   private drawMode = false;
   private screenshotDir: string;
   private picturesDir: string;
   private lastScreenshotPath: string | null = null;
 
-  constructor(win: BrowserWindow) {
+  constructor(win: BrowserWindow, configManager?: ConfigManager) {
     this.win = win;
+    this.configManager = configManager ?? null;
     this.screenshotDir = path.join(app.getPath('userData'), 'screenshots');
     this.picturesDir = path.join(os.homedir(), 'Pictures', 'Tandem');
     if (!fs.existsSync(this.screenshotDir)) {
@@ -145,10 +149,13 @@ export class DrawOverlayManager {
       fs.writeFileSync(appPath, buffer);
       this.lastScreenshotPath = appPath;
 
-      // Step 7: Clear annotations
+      // Step 7: Import to Apple Photos (async, non-blocking)
+      this.importToApplePhotos(picturesPath);
+
+      // Step 8: Clear annotations
       this.win.webContents.send('draw-clear', {});
 
-      // Step 8: Notify renderer of new screenshot (for panel preview)
+      // Step 9: Notify renderer of new screenshot (for panel preview)
       this.win.webContents.send('screenshot-taken', {
         path: picturesPath,
         appPath,
@@ -193,6 +200,9 @@ export class DrawOverlayManager {
       fs.writeFileSync(appPath, buffer);
       this.lastScreenshotPath = appPath;
 
+      // Import to Apple Photos (async, non-blocking)
+      this.importToApplePhotos(picturesPath);
+
       // Notify renderer
       const base64 = buffer.toString('base64');
       this.win.webContents.send('screenshot-taken', {
@@ -206,6 +216,35 @@ export class DrawOverlayManager {
     } catch (e: any) {
       return { ok: false, error: e.message };
     }
+  }
+
+  /**
+   * Import screenshot into Apple Photos via osascript.
+   * Runs async in background — never blocks the screenshot flow.
+   * Only runs on macOS when config.screenshots.applePhotos is true.
+   */
+  private importToApplePhotos(filePath: string): void {
+    if (process.platform !== 'darwin') return;
+    if (!this.configManager) return;
+
+    const config = this.configManager.getConfig();
+    if (!config.screenshots.applePhotos) return;
+
+    const script = `
+      tell application "Photos"
+        with timeout of 30 seconds
+          import POSIX file "${filePath.replace(/"/g, '\\"')}"
+        end timeout
+      end tell
+    `;
+
+    execFile('osascript', ['-e', script], (error) => {
+      if (error) {
+        console.warn('📸 Apple Photos import failed:', error.message);
+      } else {
+        console.log('📸 Screenshot imported to Apple Photos:', path.basename(filePath));
+      }
+    });
   }
 
   /** Get last annotated screenshot as PNG buffer */

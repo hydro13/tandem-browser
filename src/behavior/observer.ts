@@ -59,8 +59,8 @@ export class BehaviorObserver {
       const stream = this.getStream();
       stream.write(JSON.stringify(event) + '\n');
       this.eventCount++;
-    } catch {
-      // Silent fail — behavioral tracking must never crash the app
+    } catch (e: any) {
+      console.warn('Behavior event write failed:', e.message);
     }
   }
 
@@ -150,14 +150,14 @@ export class BehaviorObserver {
       try {
         const content = fs.readFileSync(todayFile, 'utf-8');
         todayEvents = content.split('\n').filter(l => l.trim()).length;
-      } catch { /* ignore */ }
+      } catch (e: any) { console.warn('Behavior stats read failed:', e.message); }
     }
 
     // List all raw files
     let totalFiles = 0;
     try {
       totalFiles = fs.readdirSync(this.rawDir).filter(f => f.endsWith('.jsonl')).length;
-    } catch { /* ignore */ }
+    } catch (e: any) { console.warn('Behavior rawDir read failed:', e.message); }
 
     return {
       totalEventsSession: this.eventCount,

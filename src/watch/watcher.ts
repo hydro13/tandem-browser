@@ -52,7 +52,7 @@ export class WatchManager {
       if (fs.existsSync(this.watchFile)) {
         return JSON.parse(fs.readFileSync(this.watchFile, 'utf-8'));
       }
-    } catch { /* ignore */ }
+    } catch (e: any) { console.warn('Watch state load failed, starting fresh:', e.message); }
     return { watches: [] };
   }
 

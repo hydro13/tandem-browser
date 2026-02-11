@@ -14,6 +14,7 @@ export interface TandemConfig {
     language: string;
     keesPanelPosition: 'left' | 'right';
     keesPanelDefaultOpen: boolean;
+    showBookmarksBar: boolean;
   };
 
   // Screenshots
@@ -41,6 +42,12 @@ export interface TandemConfig {
     customAcceptLanguage: string;
   };
 
+  // Sync
+  sync: {
+    chromeBookmarks: boolean;
+    chromeProfile: string; // 'Default', 'Profile 1', etc.
+  };
+
   // Behavioral Learning
   behavior: {
     trackingEnabled: boolean;
@@ -62,6 +69,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     language: 'nl-BE',
     keesPanelPosition: 'right',
     keesPanelDefaultOpen: false,
+    showBookmarksBar: true,
   },
   screenshots: {
     clipboard: true,
@@ -81,6 +89,10 @@ const DEFAULT_CONFIG: TandemConfig = {
     stealthLevel: 'medium',
     acceptLanguage: 'auto',
     customAcceptLanguage: '',
+  },
+  sync: {
+    chromeBookmarks: false,
+    chromeProfile: 'Default',
   },
   behavior: {
     trackingEnabled: true,
@@ -119,8 +131,8 @@ export class ConfigManager {
         const raw = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
         return this.deepMerge(DEFAULT_CONFIG, raw);
       }
-    } catch {
-      // Corrupted file — use defaults
+    } catch (e: any) {
+      console.warn('Config file corrupted, using defaults:', e.message);
     }
     return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
@@ -129,8 +141,8 @@ export class ConfigManager {
   private save(): void {
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-    } catch {
-      // Silent fail
+    } catch (e: any) {
+      console.warn('Config save failed:', e.message);
     }
   }
 
@@ -181,8 +193,8 @@ export class ConfigManager {
     for (const listener of this.changeListeners) {
       try {
         listener(this.config, changed);
-      } catch {
-        // Don't let a bad listener crash the app
+      } catch (e: any) {
+        console.warn('Config change listener error:', e.message);
       }
     }
   }

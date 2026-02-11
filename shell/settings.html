@@ -319,6 +319,7 @@
     <a href="#voice" data-section="voice">🎙️ Voice</a>
     <a href="#appearance" data-section="appearance">🎨 Thema</a>
     <a href="#stealth" data-section="stealth">🛡️ Stealth</a>
+    <a href="#sync" data-section="sync">🔄 Sync</a>
     <a href="#behavior" data-section="behavior">🧬 Behavioral Learning</a>
     <a href="#data" data-section="data">💾 Data</a>
   </nav>
@@ -385,6 +386,17 @@
           <span class="slider"></span>
         </label>
       </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Favorietenbalk tonen</div>
+          <div class="field-desc">Toon de bookmarks bar onder de adresbalk (Cmd+Shift+B)</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-showBookmarksBar">
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <!-- ═══ Screenshots ═══ -->
@@ -424,10 +436,10 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Apple Photos</div>
-          <div class="field-desc">Binnenkort beschikbaar</div>
+          <div class="field-desc">Importeer screenshots automatisch in Apple Photos (alleen macOS)</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="cfg-applePhotos" disabled>
+          <input type="checkbox" id="cfg-applePhotos">
           <span class="slider"></span>
         </label>
       </div>
@@ -571,6 +583,41 @@
       </div>
     </div>
 
+    <!-- ═══ Sync ═══ -->
+    <div class="section" id="sync">
+      <h2>🔄 Sync</h2>
+      <p class="section-desc">Synchroniseer data vanuit Chrome</p>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Chrome favorieten sync</div>
+          <div class="field-desc">Importeer en synchroniseer automatisch favorieten vanuit Google Chrome</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-chromeBookmarks">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field" id="field-chromeProfile">
+        <div class="field-info">
+          <div class="field-label">Chrome profiel</div>
+          <div class="field-desc">Selecteer welk Chrome profiel je wilt synchroniseren</div>
+        </div>
+        <select id="cfg-chromeProfile">
+          <option value="Default">Default</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Sync status</div>
+          <div class="field-desc" id="sync-status-text">Niet actief</div>
+        </div>
+        <button class="btn btn-secondary" id="btn-syncNow">🔄 Nu synchroniseren</button>
+      </div>
+    </div>
+
     <!-- ═══ Behavioral Learning ═══ -->
     <div class="section" id="behavior">
       <h2>🧬 Behavioral Learning</h2>
@@ -683,10 +730,12 @@
       setVal('cfg-language', g.language || 'nl-BE');
       setVal('cfg-keesPanelPosition', g.keesPanelPosition || 'right');
       setChecked('cfg-keesPanelDefaultOpen', !!g.keesPanelDefaultOpen);
+      setChecked('cfg-showBookmarksBar', g.showBookmarksBar !== false);
       toggleField('field-customStartUrl', g.startPage === 'custom');
 
       // Screenshots
       setChecked('cfg-localFolder', s.localFolder !== false);
+      setChecked('cfg-applePhotos', !!s.applePhotos);
       setVal('cfg-localFolderPath', s.localFolderPath || '~/Pictures/Tandem/');
 
       // Voice
@@ -704,6 +753,12 @@
       setVal('cfg-customAcceptLanguage', st.customAcceptLanguage || '');
       toggleField('field-customUserAgent', st.userAgent === 'custom');
       toggleField('field-customAcceptLanguage', st.acceptLanguage === 'custom');
+
+      // Sync
+      const sy = config.sync || {};
+      setChecked('cfg-chromeBookmarks', !!sy.chromeBookmarks);
+      setVal('cfg-chromeProfile', sy.chromeProfile || 'Default');
+      toggleField('field-chromeProfile', !!sy.chromeBookmarks);
 
       // Behavior
       setChecked('cfg-trackingEnabled', b.trackingEnabled !== false);
@@ -771,6 +826,10 @@
     wire('cfg-stealthLevel', 'stealth.stealthLevel');
     wire('cfg-acceptLanguage', 'stealth.acceptLanguage');
     wire('cfg-customAcceptLanguage', 'stealth.customAcceptLanguage');
+    wire('cfg-showBookmarksBar', 'general.showBookmarksBar');
+    wire('cfg-applePhotos', 'screenshots.applePhotos');
+    wire('cfg-chromeBookmarks', 'sync.chromeBookmarks');
+    wire('cfg-chromeProfile', 'sync.chromeProfile');
     wire('cfg-trackingEnabled', 'behavior.trackingEnabled');
 
     // Silence timeout slider
@@ -923,9 +982,81 @@
       }
     }
 
+    // ═══ Chrome sync ═══
+    // Show/hide profile selector when sync toggled
+    document.getElementById('cfg-chromeBookmarks').addEventListener('change', (e) => {
+      toggleField('field-chromeProfile', e.target.checked);
+      // Start/stop sync via API
+      if (e.target.checked) {
+        fetch(`${API}/import/chrome/sync/start`, { method: 'POST' }).then(() => updateSyncStatus());
+      } else {
+        fetch(`${API}/import/chrome/sync/stop`, { method: 'POST' }).then(() => updateSyncStatus());
+      }
+    });
+
+    // Load Chrome profiles into dropdown
+    async function loadChromeProfiles() {
+      try {
+        const res = await fetch(`${API}/import/chrome/profiles`);
+        if (res.ok) {
+          const data = await res.json();
+          const select = document.getElementById('cfg-chromeProfile');
+          const currentVal = select.value;
+          select.innerHTML = '';
+          if (data.profiles && data.profiles.length > 0) {
+            for (const p of data.profiles) {
+              const opt = document.createElement('option');
+              opt.value = p.path;
+              opt.textContent = p.name + (p.hasBookmarks ? '' : ' (geen favorieten)');
+              select.appendChild(opt);
+            }
+          } else {
+            const opt = document.createElement('option');
+            opt.value = 'Default';
+            opt.textContent = 'Default';
+            select.appendChild(opt);
+          }
+          select.value = currentVal || (config.sync || {}).chromeProfile || 'Default';
+        }
+      } catch { /* API not ready */ }
+    }
+
+    // Sync status
+    async function updateSyncStatus() {
+      try {
+        const res = await fetch(`${API}/import/chrome/sync/status`);
+        if (res.ok) {
+          const data = await res.json();
+          const statusEl = document.getElementById('sync-status-text');
+          if (data.syncing) {
+            statusEl.textContent = `Actief — synchroniseert met ${data.profile || 'Chrome'}`;
+            statusEl.style.color = 'var(--success)';
+          } else {
+            statusEl.textContent = 'Niet actief';
+            statusEl.style.color = 'var(--text-dim)';
+          }
+        }
+      } catch { /* API not ready */ }
+    }
+
+    // Manual sync button
+    document.getElementById('btn-syncNow').addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API}/import/chrome/bookmarks`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`${data.count || 0} favorieten gesynchroniseerd ✓`);
+        } else {
+          showToast('Sync mislukt ✕');
+        }
+      } catch { showToast('Sync mislukt ✕'); }
+    });
+
     // ═══ Init ═══
     loadConfig();
     loadBehaviorStats();
+    loadChromeProfiles();
+    updateSyncStatus();
     // Refresh stats every 10s
     setInterval(loadBehaviorStats, 10000);
   </script>

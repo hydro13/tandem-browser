@@ -214,7 +214,7 @@ export class HeadlessManager {
       } else if (!found) {
         this.captchaDetected = false;
       }
-    } catch { /* window may have been destroyed */ }
+    } catch (e: any) { console.warn('Captcha detection check failed (window may be destroyed):', e.message); }
   }
 
   /** Destroy everything */

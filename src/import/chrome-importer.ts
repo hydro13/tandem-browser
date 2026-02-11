@@ -1,14 +1,18 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { ConfigManager } from '../config/manager';
 
 /**
- * ChromeImporter — Import bookmarks, history, and cookies from Google Chrome.
- * 
+ * ChromeImporter — Import and sync bookmarks, history, and cookies from Google Chrome.
+ *
  * Chrome data paths (macOS):
- *   ~/Library/Application Support/Google/Chrome/Default/Bookmarks (JSON)
- *   ~/Library/Application Support/Google/Chrome/Default/History (SQLite)
- *   ~/Library/Application Support/Google/Chrome/Default/Cookies (SQLite)
+ *   ~/Library/Application Support/Google/Chrome/{Profile}/Bookmarks (JSON)
+ *   ~/Library/Application Support/Google/Chrome/{Profile}/History (SQLite)
+ *   ~/Library/Application Support/Google/Chrome/{Profile}/Cookies (SQLite)
+ *
+ * Sync mode: watches Chrome's Bookmarks file for changes and auto-imports.
+ * Supports multiple Chrome profiles (Default, Profile 1, Profile 2, etc.)
  */
 
 export interface ChromeBookmark {
@@ -36,22 +40,145 @@ export interface ChromeImportStatus {
 }
 
 export class ChromeImporter {
+  private chromeBasePath: string;
   private chromeProfilePath: string;
   private tandemDir: string;
+  private watcher: fs.FSWatcher | null = null;
+  private syncDebounce: ReturnType<typeof setTimeout> | null = null;
+  private configManager: ConfigManager | null = null;
+  private lastSyncHash: string = '';
 
-  constructor() {
-    this.chromeProfilePath = path.join(
+  constructor(configManager?: ConfigManager) {
+    this.configManager = configManager ?? null;
+    this.chromeBasePath = path.join(
       os.homedir(),
       'Library',
       'Application Support',
       'Google',
-      'Chrome',
-      'Default'
+      'Chrome'
     );
+    const profile = this.configManager?.getConfig().sync.chromeProfile ?? 'Default';
+    this.chromeProfilePath = path.join(this.chromeBasePath, profile);
     this.tandemDir = path.join(os.homedir(), '.tandem');
     if (!fs.existsSync(this.tandemDir)) {
       fs.mkdirSync(this.tandemDir, { recursive: true });
     }
+  }
+
+  /** List available Chrome profiles */
+  listProfiles(): { name: string; path: string; hasBookmarks: boolean }[] {
+    const results: { name: string; path: string; hasBookmarks: boolean }[] = [];
+    if (!fs.existsSync(this.chromeBasePath)) return results;
+
+    try {
+      const entries = fs.readdirSync(this.chromeBasePath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        // Chrome profiles are 'Default', 'Profile 1', 'Profile 2', etc.
+        if (entry.name === 'Default' || entry.name.startsWith('Profile ')) {
+          const profilePath = path.join(this.chromeBasePath, entry.name);
+          const hasBookmarks = fs.existsSync(path.join(profilePath, 'Bookmarks'));
+
+          // Try to read profile name from Preferences
+          let displayName = entry.name;
+          try {
+            const prefs = JSON.parse(fs.readFileSync(path.join(profilePath, 'Preferences'), 'utf-8'));
+            if (prefs.profile?.name) displayName = `${prefs.profile.name} (${entry.name})`;
+          } catch { /* use folder name */ }
+
+          results.push({ name: displayName, path: entry.name, hasBookmarks });
+        }
+      }
+    } catch (e: any) {
+      console.warn('Could not list Chrome profiles:', e.message);
+    }
+
+    return results;
+  }
+
+  /** Switch to a different Chrome profile */
+  setProfile(profileDir: string): void {
+    this.chromeProfilePath = path.join(this.chromeBasePath, profileDir);
+    // Restart sync if active
+    if (this.watcher) {
+      this.stopSync();
+      this.startSync();
+    }
+  }
+
+  /** Start watching Chrome Bookmarks file for changes */
+  startSync(): boolean {
+    if (this.watcher) return true; // Already watching
+
+    const bookmarksPath = path.join(this.chromeProfilePath, 'Bookmarks');
+    if (!fs.existsSync(bookmarksPath)) {
+      console.warn('📚 Chrome Bookmarks not found at:', bookmarksPath);
+      return false;
+    }
+
+    // Do initial import
+    const initial = this.importBookmarks();
+    if (initial.ok) {
+      console.log(`📚 Chrome bookmark sync started — ${initial.count} bookmarks imported from ${path.basename(this.chromeProfilePath)}`);
+      // Store hash to detect real changes
+      try {
+        this.lastSyncHash = fs.readFileSync(bookmarksPath, 'utf-8').length.toString();
+      } catch { /* ignore */ }
+    }
+
+    // Watch for changes
+    try {
+      this.watcher = fs.watch(bookmarksPath, (eventType) => {
+        if (eventType !== 'change') return;
+
+        // Debounce — Chrome writes the file multiple times per save
+        if (this.syncDebounce) clearTimeout(this.syncDebounce);
+        this.syncDebounce = setTimeout(() => {
+          try {
+            // Check if file actually changed (Chrome touches it often)
+            const content = fs.readFileSync(bookmarksPath, 'utf-8');
+            const hash = content.length.toString();
+            if (hash === this.lastSyncHash) return;
+            this.lastSyncHash = hash;
+
+            const result = this.importBookmarks();
+            if (result.ok) {
+              console.log(`📚 Chrome bookmarks synced — ${result.count} bookmarks`);
+            }
+          } catch (e: any) {
+            console.warn('📚 Chrome bookmark sync failed:', e.message);
+          }
+        }, 2000); // 2 second debounce
+      });
+
+      return true;
+    } catch (e: any) {
+      console.warn('📚 Could not start Chrome bookmark sync:', e.message);
+      return false;
+    }
+  }
+
+  /** Stop watching */
+  stopSync(): void {
+    if (this.watcher) {
+      this.watcher.close();
+      this.watcher = null;
+    }
+    if (this.syncDebounce) {
+      clearTimeout(this.syncDebounce);
+      this.syncDebounce = null;
+    }
+    console.log('📚 Chrome bookmark sync stopped');
+  }
+
+  /** Is sync currently active? */
+  isSyncing(): boolean {
+    return this.watcher !== null;
+  }
+
+  /** Cleanup */
+  destroy(): void {
+    this.stopSync();
   }
 
   /** Check what Chrome data is available */

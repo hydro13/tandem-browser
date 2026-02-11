@@ -116,7 +116,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   configManager = new ConfigManager();
   tabManager = new TabManager(win);
   panelManager = new PanelManager(win);
-  drawManager = new DrawOverlayManager(win);
+  drawManager = new DrawOverlayManager(win, configManager);
   activityTracker = new ActivityTracker(win, panelManager, drawManager);
   voiceManager = new VoiceManager(win, panelManager);
   behaviorObserver = new BehaviorObserver(win);
@@ -127,7 +127,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   contextBridge = new ContextBridge();
   pipManager = new PiPManager();
   networkInspector = new NetworkInspector();
-  chromeImporter = new ChromeImporter();
+  chromeImporter = new ChromeImporter(configManager);
   bookmarkManager = new BookmarkManager();
   historyManager = new HistoryManager();
   downloadManager = new DownloadManager();
@@ -145,9 +145,48 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     console.warn('⚠️ Failed to load some extensions:', err);
   });
 
-  api = new TandemAPI(win, API_PORT, tabManager, panelManager, drawManager, activityTracker, voiceManager, behaviorObserver, configManager, siteMemory, watchManager, headlessManager, formMemory, contextBridge, pipManager, networkInspector, chromeImporter, bookmarkManager, historyManager, downloadManager, audioCaptureManager, extensionLoader, claroNoteManager);
+  // Auto-start Chrome bookmark sync if enabled in config
+  if (configManager.getConfig().sync.chromeBookmarks) {
+    chromeImporter.startSync();
+  }
+
+  api = new TandemAPI({
+    win,
+    port: API_PORT,
+    tabManager: tabManager!,
+    panelManager: panelManager!,
+    drawManager: drawManager!,
+    activityTracker: activityTracker!,
+    voiceManager: voiceManager!,
+    behaviorObserver: behaviorObserver!,
+    configManager: configManager!,
+    siteMemory: siteMemory!,
+    watchManager: watchManager!,
+    headlessManager: headlessManager!,
+    formMemory: formMemory!,
+    contextBridge: contextBridge!,
+    pipManager: pipManager!,
+    networkInspector: networkInspector!,
+    chromeImporter: chromeImporter!,
+    bookmarkManager: bookmarkManager!,
+    historyManager: historyManager!,
+    downloadManager: downloadManager!,
+    audioCaptureManager: audioCaptureManager!,
+    extensionLoader: extensionLoader!,
+    claroNoteManager: claroNoteManager!,
+  });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
+
+  // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
+  const ipcChannels = ['tab-update', 'tab-register', 'chat-send', 'voice-transcript', 'voice-status-update', 'activity-webview-event', 'form-submitted'];
+  for (const channel of ipcChannels) {
+    ipcMain.removeAllListeners(channel);
+  }
+  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list'];
+  for (const handler of ipcHandlers) {
+    try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
+  }
 
   // Listen for tab metadata updates from renderer
   ipcMain.on('tab-update', (_event, data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
@@ -247,7 +286,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
           const prevDomain = new URL(prevTab.url).hostname;
           if (prevDomain) networkInspector.flushDomain(prevDomain);
         }
-      } catch { /* ignore */ }
+      } catch (e: any) { console.warn('Network flush domain parse failed:', e.message); }
     }
     // Track visit end when navigating away
     if (siteMemory && data.type === 'did-start-navigation' && data.url) {
@@ -360,6 +399,7 @@ function buildAppMenu(): void {
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
         { type: 'separator' },
         { label: 'Bookmark Page', accelerator: 'CmdOrCtrl+D', click: () => send('bookmark-page') },
+        { label: 'Toggle Bookmarks Bar', accelerator: 'CmdOrCtrl+Shift+B', click: () => send('toggle-bookmarks-bar') },
         { label: 'Find in Page', accelerator: 'CmdOrCtrl+F', click: () => send('find-in-page') },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: () => send('open-history') },
       ],
@@ -395,7 +435,7 @@ function buildAppMenu(): void {
           mainWindow?.webContents.executeJavaScript(`
             const p = document.getElementById('kees-panel');
             if (p) p.classList.toggle('open');
-          `).catch(() => {});
+          `).catch((e: any) => console.warn('Panel toggle fallback failed:', e.message));
         }},
         { label: 'Voice Input', accelerator: 'CmdOrCtrl+Shift+M', click: () => voiceManager?.toggleVoice() },
         { label: 'PiP Mode', accelerator: 'CmdOrCtrl+Shift+P', click: () => pipManager?.toggle() },
@@ -492,6 +532,7 @@ app.on('will-quit', () => {
   if (networkInspector) networkInspector.destroy();
   if (voiceManager) voiceManager.stop();
   if (audioCaptureManager) audioCaptureManager.stopRecording();
+  if (chromeImporter) chromeImporter.destroy();
 });
 
 app.on('window-all-closed', () => {

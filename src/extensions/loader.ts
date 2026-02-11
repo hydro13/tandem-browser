@@ -127,12 +127,12 @@ export class ExtensionLoader {
           try {
             const manifest = JSON.parse(fs.readFileSync(path.join(extPath, 'manifest.json'), 'utf-8'));
             name = manifest.name || dir.name;
-          } catch { /* use dir name */ }
+          } catch (e: any) { console.warn('Extension manifest parse failed for', dir.name + ':', e.message); }
         }
 
         results.push({ name, path: extPath, hasManifest, loaded: isLoaded });
       }
-    } catch { /* ignore */ }
+    } catch (e: any) { console.warn('Extensions directory listing failed:', e.message); }
 
     return results;
   }
