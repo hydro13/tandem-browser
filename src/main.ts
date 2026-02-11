@@ -93,6 +93,7 @@ async function createWindow(): Promise<BrowserWindow> {
       webviewTag: true,
       contextIsolation: true,
       nodeIntegration: false,
+      sandbox: false,  // Required for preload/contextBridge to work (TotalRecall V2 also uses this)
     },
   });
 
