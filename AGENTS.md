@@ -4,12 +4,16 @@
 
 Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Kees (AI) browsen samen het web. Jij schrijft de code.
 
+**Lees EERST `PROJECT.md`** — dat is het complete overzicht van wat Tandem is, hoe het werkt, en waarom.
+
 ## Het project
 
-- **Repo:** `hydro13/tandem-browser` (privé)
+- **Repo:** `hydro13/tandem-browser` (privé, GitHub: hydro13)
 - **Stack:** Electron + TypeScript + Express.js API (localhost:8765)
-- **Doel:** Browser waar een AI (via HTTP API) en een mens (via UI) samen browsen
+- **Doel:** Browser waar een AI (via HTTP API + WebSocket) en een mens (via UI) samen browsen
 - **Filosofie:** Lokaal, privacy-first, geen cloud dependencies
+- **~8,900 lines TypeScript, ~3,500 lines HTML/JS, ~111 API endpoints**
+- **Phases 1-5 complete** — zie PROJECT.md voor details
 
 ## Regels — WAT JE MOET DOEN
 
@@ -135,6 +139,39 @@ Tandem leert Robin's gedragspatronen en repliceert die bij automated acties.
 - Fallback (als profiel nog leeg): gaussian random 80-300ms clicks, 30-120ms typing
 
 **Gouden regel:** Het gedrag moet statistisch ononderscheidbaar zijn van Robin's echte browsing.
+
+## 💬 Chat Architectuur — BELANGRIJK
+
+Het Kees panel heeft een Chat tab die Robin en Kees laat communiceren. Deze verbindt **direct via WebSocket** met de OpenClaw gateway (ws://127.0.0.1:18789).
+
+### Hoe het werkt
+1. WebSocket naar `ws://127.0.0.1:18789`
+2. Wacht op `connect.challenge` event
+3. Stuur `connect` request met gateway token uit `~/.openclaw/openclaw.json`
+4. Laad history via `chat.history` (sessionKey: `agent:main:main`)
+5. Stuur berichten via `chat.send`
+6. Ontvang streaming updates via `chat` events (state: `delta` → `final`)
+
+### ⚠️ NIET DOEN — Geleerde Lessen
+We hebben drie andere methoden geprobeerd die NIET werkten:
+
+1. **❌ Cron polling van localhost:8765/chat** — Te traag (zelfs 15 sec voelt als eeuwigheid), verspilt API tokens bij elke poll
+2. **❌ Iframe embed van OpenClaw webchat** — Server stuurt `X-Frame-Options: DENY` en `Content-Security-Policy: frame-ancestors 'none'`. Zelfs met header stripping via `onHeadersReceived` was er het auth token probleem.
+3. **❌ Webview met localStorage token injectie** — Aparte partition (`persist:openclaw-chat`) deelt geen storage met main partition. Token structuur complex (3 localStorage keys nodig). Te fragiel.
+
+**✅ Direct WebSocket is de enige juiste aanpak.** Simpel, snel, real-time. De gateway token staat in `~/.openclaw/openclaw.json` → `gateway.auth.token`.
+
+### Chat code locatie
+Alle chat WebSocket code zit in `shell/index.html` in de `ocChat` IIFE. Zoek naar `// === OpenClaw WebSocket Chat ===` of `ocChat`.
+
+## 🍎 macOS Quarantine — BELANGRIJK
+
+Electron op macOS wordt geKILLed door Gatekeeper (SIGKILL na ~4 sec) als quarantine flags aanwezig zijn. **ALTIJD** voor het starten:
+```bash
+xattr -cr node_modules/electron/dist/Electron.app
+```
+
+Dit moet na elke `npm install` of als Electron opnieuw gedownload wordt. Bouw dit in start scripts in.
 
 ## Bestandsstructuur
 
