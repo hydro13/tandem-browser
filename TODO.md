@@ -221,30 +221,54 @@
 
 ---
 
-## Phase 4: Echte Browser Features 📦
+## Phase 4: Echte Browser Features 📦 ✅ DONE
 > Van "tool" naar "dagelijkse browser".
 
-### 3.1 Data Import
-- [ ] Chrome bookmarks import (JSON parse van `~/Library/Application Support/Google/Chrome/Default/Bookmarks`)
-- [ ] Chrome cookies import
-- [ ] Chrome geschiedenis import
-- [ ] Firefox import (optioneel)
+### 4.1 Chrome Data Import ✅ DONE
+- [x] Chrome bookmarks import (JSON parse)
+- [x] Chrome history import (SQLite via better-sqlite3)
+- [x] Chrome cookies import (met Keychain warning — encrypted values niet importeerbaar)
+- [x] API: POST /import/chrome/bookmarks, history, cookies + GET /import/chrome/status
+- [ ] Firefox import (optioneel, later)
 
-### 3.2 Wachtwoorden & Autofill
+### 4.2 Bookmarks Manager ✅ DONE
+- [x] BookmarkManager class met CRUD + folder support
+- [x] Bookmarks bar in shell (toggle-baar, onder URL bar)
+- [x] Star icon in URL bar (★/☆) — toont of pagina gebookmarked is
+- [x] Cmd+D = bookmark huidige pagina
+- [x] Draw mode verplaatst naar Cmd+Shift+D
+- [x] API: GET /bookmarks, POST /add, DELETE /remove, PUT /update, GET /search, GET /check
+
+### 4.3 History Manager ✅ DONE
+- [x] Auto-track elke navigatie → history entry
+- [x] Opslag: ~/.tandem/history.json (max 10000 entries, FIFO)
+- [x] Zoekfunctie
+- [x] Cmd+Y = open history page (shell/history.html)
+- [x] API: GET /history, GET /history/search, DELETE /history/clear
+
+### 4.4 Download Manager ✅ DONE
+- [x] Hook into Electron session.on('will-download')
+- [x] Track: filename, url, size, progress, status
+- [x] macOS notificatie bij download complete
+- [x] API: GET /downloads, GET /downloads/active
+
+### 4.5 Find in Page ✅ DONE
+- [x] Cmd+F → zoekbalk bovenaan webview
+- [x] Webview findInPage() API
+- [x] Volgende/vorige match, match count
+- [x] Escape = sluiten
+
+### Browser Basics — TODO
+- [ ] Zoom in/out (Cmd+/-)
+- [ ] Print / PDF export
+
+### Wachtwoorden & Autofill — TODO
 - [ ] Lokale password database (SQLite + AES-256-GCM)
 - [ ] Master password bij eerste keer
 - [ ] Autofill login formulieren
 - [ ] Password generator
 - [ ] API: `GET /passwords/suggest` — credentials voor huidige site
 - [ ] Nooit cloud sync — alles lokaal
-
-### 3.3 Browser Basics
-- [ ] Download manager
-- [ ] Geschiedenis met zoekfunctie
-- [ ] Bookmarks bar + manager
-- [ ] Find in page (Cmd+F)
-- [ ] Zoom in/out (Cmd+/-)
-- [ ] Print / PDF export
 
 ---
 

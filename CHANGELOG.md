@@ -2,6 +2,19 @@
 
 ## [Unreleased] — 2026-02-11
 
+### 📦 Phase 4 — Echte Browser Features
+- **4.1 Chrome Data Import**: Import bookmarks (JSON), history (SQLite), cookies (encrypted warning)
+  - API: `GET /import/chrome/status`, `POST /import/chrome/bookmarks`, `POST /import/chrome/history`, `POST /import/chrome/cookies`
+- **4.2 Bookmarks Manager**: CRUD, folders, bookmarks bar, star icon in URL bar, Cmd+D
+  - API: `GET /bookmarks`, `POST /bookmarks/add`, `DELETE /bookmarks/remove`, `PUT /bookmarks/update`, `GET /bookmarks/search`, `GET /bookmarks/check`
+- **4.3 History Manager**: Auto-track visits, search, history page (Cmd+Y)
+  - API: `GET /history`, `GET /history/search`, `DELETE /history/clear`
+- **4.4 Download Manager**: Electron download hooks, progress tracking, completion notifications
+  - API: `GET /downloads`, `GET /downloads/active`
+- **4.5 Find in Page**: Cmd+F search bar, match count, next/prev, Escape to close
+- **Breaking**: Draw mode shortcut moved from Cmd+D → Cmd+Shift+D
+- **Dependency**: Added `better-sqlite3` for SQLite reading
+
 ### 🖼️ Phase 3.7 — PiP Mode
 - Added `PiPManager` — always-on-top mini window (350x250, frameless, draggable)
 - `shell/pip.html` — mini dashboard: activity feed, status indicators (API/voice/learning), quick command input
