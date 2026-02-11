@@ -63,26 +63,6 @@ async function createWindow(): Promise<BrowserWindow> {
   const stealth = new StealthManager(ses, partition);
   await stealth.apply();
 
-  // Strip X-Frame-Options and CSP frame-ancestors from OpenClaw webchat responses
-  // so the webchat iframe in Kees panel loads without being blocked
-  ses.webRequest.onHeadersReceived({ urls: ['http://127.0.0.1:18789/*'] }, (details, callback) => {
-    const headers = { ...details.responseHeaders };
-    // Remove frame-blocking headers (case-insensitive keys)
-    for (const key of Object.keys(headers)) {
-      const lower = key.toLowerCase();
-      if (lower === 'x-frame-options') delete headers[key];
-      if (lower === 'content-security-policy') {
-        // Remove frame-ancestors directive but keep other CSP directives
-        const val = headers[key];
-        if (val && val.length > 0) {
-          headers[key] = val.map(v => v.replace(/frame-ancestors[^;]*(;|$)/gi, '').trim()).filter(v => v);
-          if (headers[key]!.length === 0) delete headers[key];
-        }
-      }
-    }
-    callback({ responseHeaders: headers });
-  });
-
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
   const stealthScript = StealthManager.getStealthScript(stealthSeed);

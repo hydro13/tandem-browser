@@ -711,9 +711,21 @@
         <!-- Activity tab -->
         <div class="panel-content" id="panel-activity" style="display:flex;flex-direction:column;flex:1;">
         </div>
-        <!-- Chat tab — OpenClaw webchat embed -->
+        <!-- Chat tab — Direct WebSocket to OpenClaw gateway -->
         <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;">
-          <webview id="openclaw-chat" allow="microphone" style="width:100%;height:100%;border:none;flex:1;" partition="persist:openclaw-chat"></webview>
+          <div class="ws-status" id="ws-status" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span class="ws-dot" id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
+            <span id="ws-status-text">Disconnected</span>
+          </div>
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="typing-indicator" id="typing-indicator">
+            <div class="typing-dots"><span></span><span></span><span></span></div>
+            <span>Kees is typing...</span>
+          </div>
+          <div class="chat-input-wrap">
+            <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
+            <button class="chat-send-btn" id="chat-send-btn">▶</button>
+          </div>
         </div>
         <!-- Screenshots tab -->
         <div class="panel-content" id="panel-screenshots" style="display:none;flex-direction:column;flex:1;">
@@ -1254,17 +1266,7 @@
         document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
         if (tab === 'chat') {
-          const chatView = document.getElementById('openclaw-chat');
-          if (chatView && !chatView.src) {
-            chatView.src = 'http://127.0.0.1:18789/';
-            chatView.addEventListener('dom-ready', () => {
-              // Inject gateway token into webchat localStorage
-              chatView.executeJavaScript(`
-                localStorage.setItem('openclaw.device.auth.v1', JSON.stringify({token: 'de07381e753441ae3a697a72022a23eb0f67f67e257eeb68'}));
-                if (document.querySelector('[class*="disconnect"], [class*="error"]')) location.reload();
-              `);
-            }, { once: true });
-          }
+          ocChat.ensureConnected();
         }
         document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
         document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
@@ -1308,8 +1310,6 @@
         while (activityEl.children.length > 200) activityEl.removeChild(activityEl.firstChild);
       });
 
-      // Chat is now handled by OpenClaw webchat iframe
-
       // Tab source changes (🧀/👤 indicator)
       window.tandem.onTabSourceChanged((data) => {
         for (const [id, entry] of tabs) {
@@ -1335,7 +1335,209 @@
       });
     }
 
-    // Chat is now handled by OpenClaw webchat iframe — no send logic needed
+    // ═══════════════════════════════════════════════
+    // OpenClaw WebSocket Chat Client
+    // ═══════════════════════════════════════════════
+    const ocChat = (() => {
+      const SESSION_KEY = 'agent:main:main';
+      const WS_URL = 'ws://127.0.0.1:18789';
+      const TOKEN = 'de07381e753441ae3a697a72022a23eb0f67f67e257eeb68';
+
+      let ws = null;
+      let connected = false;
+      let reconnectDelay = 1000;
+      let reconnectTimer = null;
+      let streamingMsg = null;
+      let streamingText = '';
+      const pendingCallbacks = new Map();
+
+      const messagesEl = document.getElementById('chat-messages');
+      const inputEl = document.getElementById('chat-input');
+      const sendBtn = document.getElementById('chat-send-btn');
+      const typingEl = document.getElementById('typing-indicator');
+      const wsDot = document.getElementById('ws-dot');
+      const wsStatusText = document.getElementById('ws-status-text');
+
+      function setStatus(state) {
+        if (state === 'connected') {
+          wsDot.style.background = 'var(--success)';
+          wsStatusText.textContent = 'Connected';
+          connected = true;
+        } else if (state === 'connecting') {
+          wsDot.style.background = 'var(--warning)';
+          wsStatusText.textContent = 'Connecting...';
+        } else {
+          wsDot.style.background = 'var(--accent)';
+          wsStatusText.textContent = 'Disconnected';
+          connected = false;
+        }
+      }
+
+      function sendRequest(method, params, cb) {
+        const id = crypto.randomUUID();
+        if (cb) pendingCallbacks.set(id, cb);
+        ws.send(JSON.stringify({ type: 'req', id, method, params }));
+        return id;
+      }
+
+      function scrollToBottom() {
+        requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+      }
+
+      function formatTime(ts) {
+        if (!ts) return '';
+        const d = new Date(typeof ts === 'number' ? (ts < 1e12 ? ts * 1000 : ts) : ts);
+        return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      function escapeHtml(s) {
+        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+      }
+
+      function appendMessage(role, text, timestamp) {
+        const cls = role === 'user' ? 'robin' : 'kees';
+        const name = role === 'user' ? 'Robin' : 'Kees';
+        const el = document.createElement('div');
+        el.className = `chat-msg ${cls}`;
+        el.innerHTML = `<div class="msg-from">${name}</div><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">${formatTime(timestamp)}</div>`;
+        messagesEl.appendChild(el);
+        scrollToBottom();
+        return el;
+      }
+
+      function loadHistory() {
+        sendRequest('chat.history', { sessionKey: SESSION_KEY, limit: 200 }, (res) => {
+          if (!res.result) return;
+          messagesEl.innerHTML = '';
+          const msgs = res.result.messages || res.result;
+          if (Array.isArray(msgs)) {
+            for (const m of msgs) {
+              const text = Array.isArray(m.content)
+                ? m.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
+                : (m.text || m.content || '');
+              if (text) appendMessage(m.role, text, m.timestamp || m.createdAt);
+            }
+          }
+          scrollToBottom();
+        });
+      }
+
+      function handleChatEvent(payload) {
+        const { state, message } = payload;
+        if (state === 'delta') {
+          typingEl.classList.add('active');
+          const text = (message && (message.text || (Array.isArray(message.content) ? message.content.filter(c=>c.type==='text').map(c=>c.text).join('') : ''))) || '';
+          streamingText += text;
+          if (!streamingMsg) {
+            streamingMsg = appendMessage('assistant', streamingText, Date.now());
+          } else {
+            streamingMsg.querySelector('.msg-text').innerHTML = escapeHtml(streamingText);
+            scrollToBottom();
+          }
+        } else if (state === 'final') {
+          typingEl.classList.remove('active');
+          streamingMsg = null;
+          streamingText = '';
+          loadHistory();
+        } else if (state === 'error') {
+          typingEl.classList.remove('active');
+          streamingMsg = null;
+          streamingText = '';
+          appendMessage('assistant', '⚠️ Error: ' + (message?.text || 'Unknown error'), Date.now());
+        }
+      }
+
+      function connect() {
+        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+        setStatus('connecting');
+        ws = new WebSocket(WS_URL);
+
+        ws.onopen = () => { /* wait for connect.challenge */ };
+
+        ws.onmessage = (e) => {
+          let msg;
+          try { msg = JSON.parse(e.data); } catch { return; }
+
+          if (msg.type === 'event') {
+            if (msg.event === 'connect.challenge') {
+              sendRequest('connect', {
+                minProtocol: 3, maxProtocol: 3,
+                client: { id: 'tandem-browser', version: '1.0', platform: 'tandem', mode: 'webchat', instanceId: crypto.randomUUID() },
+                role: 'operator',
+                scopes: ['operator.admin'],
+                auth: { token: TOKEN, nonce: msg.payload?.nonce },
+                userAgent: navigator.userAgent,
+                locale: navigator.language
+              }, (res) => {
+                if (res.result) {
+                  setStatus('connected');
+                  reconnectDelay = 1000;
+                  loadHistory();
+                } else {
+                  console.error('Connect failed:', res.error);
+                  setStatus('disconnected');
+                }
+              });
+            }
+            if (msg.event === 'chat') {
+              handleChatEvent(msg.payload);
+            }
+          }
+
+          if (msg.type === 'res' && msg.id) {
+            const cb = pendingCallbacks.get(msg.id);
+            if (cb) { pendingCallbacks.delete(msg.id); cb(msg); }
+          }
+        };
+
+        ws.onclose = () => {
+          setStatus('disconnected');
+          pendingCallbacks.clear();
+          scheduleReconnect();
+        };
+
+        ws.onerror = () => { /* onclose will fire */ };
+      }
+
+      function scheduleReconnect() {
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(() => {
+          reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
+          connect();
+        }, reconnectDelay);
+      }
+
+      function sendMessage() {
+        const text = inputEl.value.trim();
+        if (!text || !connected) return;
+        inputEl.value = '';
+        inputEl.style.height = '';
+        appendMessage('user', text, Date.now());
+        sendRequest('chat.send', {
+          sessionKey: SESSION_KEY,
+          message: text,
+          deliver: false,
+          idempotencyKey: crypto.randomUUID()
+        });
+      }
+
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendMessage();
+        }
+      });
+      inputEl.addEventListener('input', () => {
+        inputEl.style.height = '';
+        inputEl.style.height = Math.min(inputEl.scrollHeight, 80) + 'px';
+      });
+      sendBtn.addEventListener('click', sendMessage);
+
+      return {
+        ensureConnected() { connect(); },
+        disconnect() { if (ws) ws.close(); if (reconnectTimer) clearTimeout(reconnectTimer); }
+      };
+    })();
 
     // Panel resize
     const resizeHandle = document.getElementById('panel-resize');
