@@ -26,20 +26,22 @@ export class StealthManager {
   }
 
   async apply(): Promise<void> {
-    // Don't override User-Agent globally — Electron's default UA works for Google login
-    // The UA override is only applied via onBeforeSendHeaders for non-Google sites
-    // this.session.setUserAgent(this.USER_AGENT);
+    // Set realistic User-Agent globally (LinkedIn etc. block "Electron" UA)
+    // Google auth is excluded via the onBeforeSendHeaders skip below
+    this.session.setUserAgent(this.USER_AGENT);
 
     // Modify headers to look natural
     this.session.webRequest.onBeforeSendHeaders((details, callback) => {
       const headers = { ...details.requestHeaders };
 
-      // Skip ALL header manipulation for Google auth — our overrides break their login detection
-      // TotalRecall V2 has zero stealth and Google works fine there
+      // For Google auth domains: restore real Electron UA (Google blocks fake Chrome UA)
+      // but keep everything else — TotalRecall V2 works with default Electron UA on Google
       const url = details.url || '';
       if (url.includes('accounts.google.com') || url.includes('google.com/signin') || 
           url.includes('googleapis.com') || url.includes('gstatic.com') ||
           url.includes('consent.google.com')) {
+        // Remove our fake UA, let Electron's real one through
+        delete headers['User-Agent'];
         callback({ requestHeaders: headers });
         return;
       }
