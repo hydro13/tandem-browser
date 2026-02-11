@@ -713,7 +713,7 @@
         </div>
         <!-- Chat tab — OpenClaw webchat embed -->
         <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;">
-          <iframe src="http://127.0.0.1:18789/" allow="microphone" style="width:100%;height:100%;border:none;flex:1;"></iframe>
+          <webview id="openclaw-chat" allow="microphone" style="width:100%;height:100%;border:none;flex:1;" partition="persist:openclaw-chat"></webview>
         </div>
         <!-- Screenshots tab -->
         <div class="panel-content" id="panel-screenshots" style="display:none;flex-direction:column;flex:1;">
@@ -1253,6 +1253,19 @@
         const tab = btn.dataset.panelTab;
         document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
+        if (tab === 'chat') {
+          const chatView = document.getElementById('openclaw-chat');
+          if (chatView && !chatView.src) {
+            chatView.src = 'http://127.0.0.1:18789/';
+            chatView.addEventListener('dom-ready', () => {
+              // Inject gateway token into webchat localStorage
+              chatView.executeJavaScript(`
+                localStorage.setItem('openclaw.device.auth.v1', JSON.stringify({token: 'de07381e753441ae3a697a72022a23eb0f67f67e257eeb68'}));
+                if (document.querySelector('[class*="disconnect"], [class*="error"]')) location.reload();
+              `);
+            }, { once: true });
+          }
+        }
         document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
         document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
         
