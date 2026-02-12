@@ -1,3 +1,14 @@
+# ⚠️ VERVALLEN — NIET IMPLEMENTEREN
+
+> Dit document beschrijft directe Anthropic API integratie.
+> Robin heeft een Max Pro account — geen API key beschikbaar.
+> Claude werkt via Cowork/Claude Code → MCP → Tandem API.
+> Zie `VERFIJND-PLAN.md` voor de correcte architectuur.
+> De "Claude" aanwezigheid in het Kees panel wordt een Activity Feed
+> die MCP tool calls toont, GEEN directe API backend.
+
+---
+
 # Fase 3: Claude Direct Backend — Sessie Context
 
 ## Wat is dit?

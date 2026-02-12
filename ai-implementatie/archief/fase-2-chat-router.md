@@ -14,6 +14,14 @@ De chat logica zit inline in `shell/index.html` (regels ~1680-1880). Dit is een 
 4. Streaming responses ontvangt via `chat` events
 5. Reconnect logica heeft met exponential backoff
 
+### Correcties uit audit (12 feb 2026)
+
+**Hardcoded token:** Het OpenClaw token (`de07381e...`) op regel 1687 is hardcoded. Bij de refactoring moet dit dynamisch geladen worden uit `~/.openclaw/openclaw.json`.
+
+**Claude backend:** In het originele plan was er een "ClaudeBackend" die de Anthropic API aanroept. Dit VERVALT (Max Pro, geen API key). In plaats daarvan komt een **ClaudeActivityBackend** die MCP tool calls toont als berichten in het Kees panel.
+
+**Voice:** Voice koppeling wordt meegenomen in deze fase (~30 regels). Geen aparte fase 5 meer.
+
 ### WebSocket Protocol (OpenClaw)
 
 ```javascript

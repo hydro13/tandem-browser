@@ -62,6 +62,21 @@ Zie de volledige lijst in de visie documentatie.
 - Session key: `agent:main:main`
 - Streaming responses via `chat` events met `delta/final/error` states
 
+### Claude Integratie (via MCP — GEEN directe API)
+
+**BELANGRIJK:** Robin heeft een Max Pro account. Claude wordt NIET via de Anthropic API geïntegreerd maar via MCP (Model Context Protocol).
+
+**Werking:**
+1. Cowork/Claude Code start → leest MCP config → start tandem-mcp server
+2. tandem-mcp maakt HTTP calls naar localhost:8765 (Tandem API)
+3. Claude kan via MCP tools de browser bedienen
+4. MCP tool calls worden gelogd naar chat API → zichtbaar in Kees panel
+
+**MCP Config (Cowork):** Via Cowork plugin/MCP settings
+**MCP Config (Claude Code):** `~/.claude/settings.json`
+
+**Geen `@anthropic-ai/sdk` dependency nodig.**
+
 ### Agent System (src/agents/)
 - X-Scout agent als voorbeeld van autonome browser-agent
 - Menselijke timing model (delays tussen acties)
