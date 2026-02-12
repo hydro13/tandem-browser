@@ -186,6 +186,31 @@ export class BookmarkManager {
     return this.listFlat().find(b => b.type === 'url' && b.url === url) || null;
   }
 
+  /** Move a bookmark to a different parent folder */
+  move(id: string, newParentId?: string): boolean {
+    const bookmark = this.findById(id, this.store.bookmarks);
+    if (!bookmark) return false;
+
+    // Remove from current location
+    this.removeFromList(id, this.store.bookmarks);
+
+    // Add to new parent
+    if (newParentId) {
+      const parent = this.findById(newParentId, this.store.bookmarks);
+      if (parent && parent.type === 'folder') {
+        if (!parent.children) parent.children = [];
+        parent.children.push(bookmark);
+      } else {
+        this.store.bookmarks.push(bookmark);
+      }
+    } else {
+      this.store.bookmarks.push(bookmark);
+    }
+
+    this.save();
+    return true;
+  }
+
   /** Get bookmarks bar items (top-level bookmarks only) */
   getBarItems(): Bookmark[] {
     // Return top-level items from "bookmark_bar" folder, or just top-level items

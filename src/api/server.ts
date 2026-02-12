@@ -1249,6 +1249,28 @@ export class TandemAPI {
       }
     });
 
+    this.app.post('/bookmarks/add-folder', (req: Request, res: Response) => {
+      try {
+        const { name, parentId } = req.body;
+        if (!name) { res.status(400).json({ error: 'name required' }); return; }
+        const folder = this.bookmarkManager.addFolder(name, parentId);
+        res.json({ ok: true, folder });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/bookmarks/move', (req: Request, res: Response) => {
+      try {
+        const { id, parentId } = req.body;
+        if (!id) { res.status(400).json({ error: 'id required' }); return; }
+        const moved = this.bookmarkManager.move(id, parentId);
+        res.json({ ok: moved });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     this.app.get('/bookmarks/search', (req: Request, res: Response) => {
       try {
         const q = req.query.q as string;

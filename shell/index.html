@@ -240,10 +240,12 @@
       padding: 3px 12px;
       background: var(--surface);
       border-bottom: 1px solid rgba(255,255,255,0.04);
-      overflow-x: auto;
-      overflow-y: hidden;
+      overflow: visible;
       white-space: nowrap;
       height: 28px;
+      position: relative;
+      z-index: 500;
+      flex-wrap: nowrap;
     }
     .bookmarks-bar.visible { display: flex; }
     .bookmarks-bar::-webkit-scrollbar { height: 0; }
@@ -261,8 +263,94 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .bookmarks-bar a:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+    .bookmarks-bar a:hover, .bookmarks-bar .bm-folder:hover { color: var(--text); background: rgba(255,255,255,0.08); }
     .bookmarks-bar a img { width: 14px; height: 14px; border-radius: 2px; }
+
+    /* Bookmark folder items */
+    .bookmarks-bar .bm-folder {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+      user-select: none;
+    }
+    .bm-folder-icon { font-size: 12px; }
+
+    /* Overflow chevron button */
+    .bm-overflow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+      user-select: none;
+    }
+    .bm-overflow:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+    .bm-overflow .bm-dropdown { right: 0; left: auto; }
+
+    /* Folder dropdown */
+    .bm-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 220px;
+      max-width: 350px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      z-index: 2000;
+      padding: 4px 0;
+    }
+    .bm-dropdown.open { display: block; }
+    .bm-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bm-dropdown .bm-subfolder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .bm-dropdown a:hover, .bm-dropdown .bm-subfolder:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.08);
+    }
+    .bm-dropdown a img { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
+    .bm-dropdown .bm-subfolder { position: relative; }
+    .bm-dropdown .bm-subfolder::after { content: '▸'; margin-left: auto; font-size: 10px; opacity: 0.5; }
+    .bm-dropdown .bm-subfolder .bm-dropdown { left: 100%; top: -4px; }
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-left { left: auto; right: 100%; }
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-top { top: auto; bottom: 0; }
 
     /* ═══ Find in page bar ═══ */
     .find-bar {
@@ -343,11 +431,16 @@
       width: 100%;
       height: 100%;
       z-index: 100;
-      pointer-events: none;
+      pointer-events: none; /* Allow page interaction */
       cursor: default;
+      display: none;
     }
     .draw-overlay.active {
-      pointer-events: auto;
+      display: block; /* Visible when draw mode on */
+      pointer-events: none; /* STILL allow page interaction */
+    }
+    .draw-overlay.drawing {
+      pointer-events: auto; /* ONLY block during actual drawing */
       cursor: crosshair;
     }
 
@@ -578,6 +671,143 @@
       40% { transform: translateY(-4px); }
     }
 
+    /* Voice Input Indicator */
+    .voice-indicator-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 30px 40px;
+      border-radius: 16px;
+      display: none;
+      align-items: center;
+      gap: 20px;
+      z-index: 10000;
+      pointer-events: none;
+    }
+    .voice-indicator-overlay.active { display: flex; }
+    .voice-pulse {
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: voicePulse 1.5s infinite;
+    }
+    @keyframes voicePulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+    }
+    .voice-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .voice-status {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .voice-live-text {
+      font-size: 14px;
+      color: var(--text-dim);
+      min-width: 200px;
+    }
+
+    /* Onboarding Overlay */
+    .onboarding-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(20px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+    }
+    .onboarding-overlay.visible { display: flex; }
+    .onboarding-content {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 50px 60px;
+      max-width: 600px;
+      text-align: center;
+    }
+    .onboarding-step h2 {
+      font-size: 28px;
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+    .onboarding-step p {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+    .onboarding-feature {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin: 15px 0;
+      font-size: 15px;
+      color: var(--text);
+    }
+    .onboarding-icon {
+      background: var(--accent);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .onboarding-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 40px;
+      gap: 15px;
+    }
+    .onboarding-nav button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+    .onboarding-nav button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .onboarding-nav button:hover:not(:disabled) {
+      opacity: 0.8;
+    }
+    .onboarding-nav #onboarding-skip {
+      background: transparent;
+      color: var(--text-dim);
+    }
+    .onboarding-dots {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
+    }
+    .onboarding-dots .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      opacity: 0.3;
+    }
+    .onboarding-dots .dot.active {
+      background: var(--accent);
+      opacity: 1;
+    }
+
     /* Screenshots section — grid layout */
     .screenshot-preview {
       display: grid;
@@ -694,6 +924,68 @@
         <div class="separator"></div>
         <button id="btn-draw-clear" title="Wissen">🗑</button>
         <button id="btn-snap-kees" title="📸 Snap voor Kees">📸</button>
+      </div>
+    </div>
+
+    <!-- Voice Input Indicator -->
+    <div class="voice-indicator-overlay" id="voice-indicator">
+      <div class="voice-pulse"></div>
+      <div class="voice-text">
+        <div class="voice-status">🎙️ Luisteren...</div>
+        <div class="voice-live-text" id="voice-live-text"></div>
+      </div>
+    </div>
+
+    <!-- Onboarding Overlay -->
+    <div class="onboarding-overlay" id="onboarding-overlay">
+      <div class="onboarding-content">
+        <div class="onboarding-step" id="onboarding-step-1">
+          <h2>👋 Welkom bij Tandem Browser</h2>
+          <p>Robin + Kees = samen browsen. Jij stuurt, Kees kijkt mee en helpt.</p>
+          <div class="onboarding-feature">
+            <span class="onboarding-icon">⌘K</span>
+            <span>Open Kees Panel</span>
+          </div>
+        </div>
+
+        <div class="onboarding-step" id="onboarding-step-2" style="display:none;">
+          <h2>📸 Screenshots & Annotaties</h2>
+          <p>Teken op de pagina en maak screenshots voor Kees.</p>
+          <div class="onboarding-feature">
+            <span class="onboarding-icon">⌘⇧D</span>
+            <span>Draw Mode</span>
+          </div>
+          <div class="onboarding-feature">
+            <span class="onboarding-icon">⌘⇧S</span>
+            <span>Screenshot</span>
+          </div>
+        </div>
+
+        <div class="onboarding-step" id="onboarding-step-3" style="display:none;">
+          <h2>🎙️ Voice Input</h2>
+          <p>Praat tegen Kees met je stem.</p>
+          <div class="onboarding-feature">
+            <span class="onboarding-icon">⌘⇧M</span>
+            <span>Start Voice Input</span>
+          </div>
+        </div>
+
+        <div class="onboarding-step" id="onboarding-step-4" style="display:none;">
+          <h2>🚀 Klaar om te beginnen!</h2>
+          <p>Alle shortcuts staan in het menu (⌘?) als je ze nodig hebt.</p>
+        </div>
+
+        <div class="onboarding-nav">
+          <button id="onboarding-prev" disabled>Vorige</button>
+          <div class="onboarding-dots">
+            <span class="dot active"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+          <button id="onboarding-next">Volgende</button>
+          <button id="onboarding-skip">Overslaan</button>
+        </div>
       </div>
     </div>
 
@@ -927,6 +1219,40 @@
           const zoomLevel = tabZoomLevels.get(tabId) || 0;
           entry.webview.setZoomLevel(zoomLevel);
         }
+
+        // Per-tab canvas visibility: will be handled by draw system
+        // Defer to avoid scope issues with redraw() function
+        setTimeout(() => {
+          const canvas = document.getElementById('draw-canvas');
+          const toolbar = document.getElementById('draw-toolbar');
+
+          if (typeof redraw === 'function') {
+            if (drawCanvasTabId === tabId && drawEnabled) {
+              // Active draw mode on this tab - show canvas and toolbar
+              if (canvas) canvas.classList.add('active');
+              // Install scroll listener for this tab
+              const entry = tabs.get(tabId);
+              if (entry && entry.webview) {
+                installScrollListener(entry.webview, tabId);
+              }
+              if (toolbar) toolbar.classList.add('visible');
+              redraw(); // Render shapes for this tab
+            } else if (typeof tabShapes !== 'undefined' && tabShapes.has(tabId) && tabShapes.get(tabId).length > 0) {
+              // This tab has saved shapes (but draw mode might be off) - show canvas only
+              if (canvas) canvas.classList.add('active');
+              if (toolbar) toolbar.classList.remove('visible');
+              // Temporarily set drawCanvasTabId to render this tab's shapes
+              const prevTabId = drawCanvasTabId;
+              drawCanvasTabId = tabId;
+              redraw();
+              drawCanvasTabId = prevTabId;
+            } else {
+              // No shapes and no active draw mode - hide everything
+              if (canvas) canvas.classList.remove('active');
+              if (toolbar) toolbar.classList.remove('visible');
+            }
+          }
+        }, 0);
       },
     };
 
@@ -1112,6 +1438,9 @@
           toggleFindBar(true);
         } else if (action === 'open-history') {
           openHistoryPage();
+        } else if (action === 'open-bookmarks') {
+          const shellPath = window.location.href.replace(/\/[^/]*$/, '');
+          window.tandem.newTab(shellPath + '/bookmarks.html');
         } else if (action === 'show-shortcuts') {
           showShortcutsOverlay();
         } else if (action === 'zoom-in') {
@@ -1141,6 +1470,14 @@
           initClaroNote().then(() => {
             toggleClaroNoteRecording();
           });
+        } else if (action === 'voice-input') {
+          // Toggle voice input
+          if (window.tandem) window.tandem.toggleVoice();
+        } else if (action === 'show-onboarding') {
+          // Manually show onboarding
+          console.log('[DEBUG] Onboarding action received from menu');
+          console.log('[DEBUG] showOnboarding function exists?', typeof showOnboarding);
+          showOnboarding();
         }
       });
     }
@@ -1322,6 +1659,11 @@
             }
           }
         }
+      });
+
+      // Open URL in new tab (from popup redirect)
+      window.tandem.onOpenUrlInNewTab((url) => {
+        if (url) window.tandem.newTab(url);
       });
 
       // Screenshot notifications
@@ -1585,14 +1927,36 @@
     const ctx = drawCanvas.getContext('2d');
 
     let drawEnabled = false;
+    let drawCanvasTabId = null; // Track which tab the canvas belongs to
     let currentTool = 'line';
     let currentColor = '#e94560';
+    let toolActive = false; // Tool is actively selected (can draw)
     let isDrawing = false;
     let startX = 0, startY = 0;
-    /** Store completed shapes for compositing */
-    let shapes = [];
+    /** Store completed shapes PER TAB */
+    const tabShapes = new Map(); // Map<tabId, shapes[]>
+    /** Store scroll offset PER TAB */
+    const tabScrollOffsets = new Map(); // Map<tabId, {x, y}>
     /** Current freeform path points */
     let currentPath = [];
+
+    // Helper: get shapes array for current tab (create if not exists)
+    function getShapesForCurrentTab() {
+      if (!drawCanvasTabId) return [];
+      if (!tabShapes.has(drawCanvasTabId)) {
+        tabShapes.set(drawCanvasTabId, []);
+      }
+      return tabShapes.get(drawCanvasTabId);
+    }
+
+    // Helper: get scroll offset for current tab
+    function getScrollOffset() {
+      if (!drawCanvasTabId) return { x: 0, y: 0 };
+      if (!tabScrollOffsets.has(drawCanvasTabId)) {
+        tabScrollOffsets.set(drawCanvasTabId, { x: 0, y: 0 });
+      }
+      return tabScrollOffsets.get(drawCanvasTabId);
+    }
 
     function resizeCanvas() {
       const rect = drawCanvas.parentElement.getBoundingClientRect();
@@ -1603,11 +1967,68 @@
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 100);
 
+    // Scroll polling interval handle
+    let scrollPollInterval = null;
+
+    // Install scroll listener in webview to track page scroll position
+    const scrollJS = `(function() {
+      return {
+        x: window.scrollX || window.pageXOffset || 0,
+        y: window.scrollY || window.pageYOffset || 0
+      };
+    })();`;
+
+    async function installScrollListener(wv, tabId) {
+      // Stop any existing polling
+      if (scrollPollInterval) {
+        clearInterval(scrollPollInterval);
+        scrollPollInterval = null;
+      }
+
+      // Immediate first read of scroll position
+      try {
+        const initialScroll = await wv.executeJavaScript(scrollJS);
+        tabScrollOffsets.set(tabId, initialScroll);
+        redraw();
+      } catch (err) {
+        tabScrollOffsets.set(tabId, { x: 0, y: 0 });
+      }
+
+      // Continue polling for scroll changes
+      scrollPollInterval = setInterval(async () => {
+        if (!drawEnabled || drawCanvasTabId !== tabId) {
+          clearInterval(scrollPollInterval);
+          scrollPollInterval = null;
+          return;
+        }
+
+        try {
+          const scrollPos = await wv.executeJavaScript(scrollJS);
+          const currentOffset = tabScrollOffsets.get(tabId) || { x: 0, y: 0 };
+          if (scrollPos.x !== currentOffset.x || scrollPos.y !== currentOffset.y) {
+            tabScrollOffsets.set(tabId, scrollPos);
+            redraw();
+          }
+        } catch (err) {
+          // Webview might be destroyed or navigating
+        }
+      }, 50);
+    }
+
     function redraw() {
       ctx.clearRect(0, 0, drawCanvas.width, drawCanvas.height);
+      const shapes = getShapesForCurrentTab();
+      const scroll = getScrollOffset();
+
+      // Apply scroll offset: translate canvas so shapes stay at page position
+      ctx.save();
+      ctx.translate(-scroll.x, -scroll.y);
+
       for (const shape of shapes) {
         drawShape(shape);
       }
+
+      ctx.restore();
     }
 
     function drawShape(s) {
@@ -1661,11 +2082,13 @@
     }
 
     drawCanvas.addEventListener('mousedown', (e) => {
-      if (!drawEnabled) return;
+      if (!drawEnabled || !toolActive) return; // Only draw if tool is active
       isDrawing = true;
       const rect = drawCanvas.getBoundingClientRect();
-      startX = e.clientX - rect.left;
-      startY = e.clientY - rect.top;
+      const scroll = getScrollOffset();
+      // Store in page coordinates (canvas coords + scroll offset)
+      startX = e.clientX - rect.left + scroll.x;
+      startY = e.clientY - rect.top + scroll.y;
       if (currentTool === 'line') {
         currentPath = [{ x: startX, y: startY }];
       }
@@ -1674,8 +2097,10 @@
     drawCanvas.addEventListener('mousemove', (e) => {
       if (!isDrawing || !drawEnabled) return;
       const rect = drawCanvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const scroll = getScrollOffset();
+      // Store in page coordinates
+      const mx = e.clientX - rect.left + scroll.x;
+      const my = e.clientY - rect.top + scroll.y;
 
       if (currentTool === 'line') {
         currentPath.push({ x: mx, y: my });
@@ -1703,9 +2128,12 @@
       if (!isDrawing || !drawEnabled) return;
       isDrawing = false;
       const rect = drawCanvas.getBoundingClientRect();
-      const mx = e.clientX - rect.left;
-      const my = e.clientY - rect.top;
+      const scroll = getScrollOffset();
+      // Store in page coordinates
+      const mx = e.clientX - rect.left + scroll.x;
+      const my = e.clientY - rect.top + scroll.y;
 
+      const shapes = getShapesForCurrentTab();
       if (currentTool === 'text') {
         const text = prompt('Tekst:');
         if (text) shapes.push({ type: 'text', x: startX, y: startY, text, color: currentColor });
@@ -1732,12 +2160,25 @@
       return null;
     }
 
-    // Draw tool buttons
+    // Draw tool buttons - toggle on/off
     document.querySelectorAll('.draw-toolbar button[data-tool]').forEach(btn => {
       btn.addEventListener('click', () => {
+        const wasActive = btn.classList.contains('active');
+
+        // Deactivate all tools first
         document.querySelectorAll('.draw-toolbar button[data-tool]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentTool = btn.dataset.tool;
+
+        if (wasActive) {
+          // Clicking active tool → deactivate (page interaction mode)
+          toolActive = false;
+          drawCanvas.classList.remove('drawing');
+        } else {
+          // Clicking inactive tool → activate (drawing mode)
+          btn.classList.add('active');
+          currentTool = btn.dataset.tool;
+          toolActive = true;
+          drawCanvas.classList.add('drawing');
+        }
       });
     });
 
@@ -1752,7 +2193,9 @@
 
     // Clear
     document.getElementById('btn-draw-clear').addEventListener('click', () => {
-      shapes = [];
+      if (drawCanvasTabId) {
+        tabShapes.set(drawCanvasTabId, []); // Clear shapes for current tab
+      }
       redraw();
     });
 
@@ -1766,17 +2209,27 @@
       window.tandem.onDrawMode((data) => {
         drawEnabled = data.enabled;
         if (drawEnabled) {
+          drawCanvasTabId = activeTabId; // Bind canvas to current tab
           drawCanvas.classList.add('active');
           drawToolbar.classList.add('visible');
           resizeCanvas();
+
+          // Install scroll listener in active webview
+          const entry = tabs.get(activeTabId);
+          if (entry && entry.webview) {
+            installScrollListener(entry.webview, activeTabId);
+          }
         } else {
           drawCanvas.classList.remove('active');
           drawToolbar.classList.remove('visible');
+          drawCanvasTabId = null; // Unbind when disabled
         }
       });
 
       window.tandem.onDrawClear(() => {
-        shapes = [];
+        if (drawCanvasTabId) {
+          tabShapes.set(drawCanvasTabId, []); // Clear shapes for current tab
+        }
         redraw();
       });
     }
@@ -1846,6 +2299,16 @@
       wv.addEventListener('did-navigate-in-page', (e) => {
         if (e.isMainFrame && window.tandem) {
           window.tandem.sendWebviewEvent({ type: 'did-navigate-in-page', url: e.url, tabId });
+        }
+      });
+      wv.addEventListener('did-finish-load', () => {
+        if (window.tandem) {
+          window.tandem.sendWebviewEvent({
+            type: 'did-finish-load',
+            url: wv.getURL(),
+            title: wv.getTitle(),
+            tabId
+          });
         }
       });
       wv.addEventListener('did-start-loading', () => {
@@ -2092,33 +2555,259 @@
       }).catch(() => {});
     }
 
+    // Transparent overlay to catch clicks outside dropdowns
+    const bmOverlay = document.createElement('div');
+    bmOverlay.id = 'bm-click-overlay';
+    bmOverlay.style.cssText = 'display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:499;';
+    document.body.appendChild(bmOverlay);
+
+    function closeAllBookmarkDropdowns() {
+      document.querySelectorAll('.bm-dropdown.open').forEach(d => d.classList.remove('open'));
+      bmOverlay.style.display = 'none';
+    }
+
+    bmOverlay.addEventListener('click', closeAllBookmarkDropdowns);
+
+    function openBookmarkDropdown(dropdown) {
+      // Close all other dropdowns first
+      document.querySelectorAll('.bm-dropdown.open').forEach(d => {
+        d.classList.remove('open');
+        d.style.left = '';
+        d.style.right = '';
+      });
+      dropdown.classList.add('open');
+      // Flip top-level dropdown if it overflows right edge
+      const rect = dropdown.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        dropdown.style.left = 'auto';
+        dropdown.style.right = '0';
+      }
+      bmOverlay.style.display = 'block';
+    }
+
+    function createBookmarkLink(item) {
+      const a = document.createElement('a');
+      let hostname = '';
+      try { hostname = new URL(item.url).hostname; } catch {}
+      const shortName = (item.name || hostname).substring(0, 40);
+      a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${shortName}`;
+      a.title = item.url;
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        closeAllBookmarkDropdowns();
+        const entry = tabs.get(activeTabId);
+        if (entry) entry.webview.loadURL(item.url);
+      });
+      return a;
+    }
+
+    function createFolderDropdown(items) {
+      const dropdown = document.createElement('div');
+      dropdown.className = 'bm-dropdown';
+
+      for (const child of items) {
+        if (child.type === 'url' && child.url) {
+          dropdown.appendChild(createBookmarkLink(child));
+        } else if (child.type === 'folder' && child.children) {
+          const subfolder = document.createElement('div');
+          subfolder.className = 'bm-subfolder';
+          const label = document.createElement('span');
+          label.textContent = (child.name || 'Folder').substring(0, 35);
+          const icon = document.createElement('span');
+          icon.className = 'bm-folder-icon';
+          icon.textContent = '📁';
+          subfolder.appendChild(icon);
+          subfolder.appendChild(label);
+
+          const subDropdown = createFolderDropdown(child.children);
+          subfolder.appendChild(subDropdown);
+
+          // Click on the subfolder label/icon to toggle sub-dropdown
+          subfolder.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            // Close sibling sub-dropdowns at same level
+            const parent = subfolder.parentElement;
+            if (parent) {
+              parent.querySelectorAll('.bm-subfolder > .bm-dropdown.open').forEach(d => {
+                if (d !== subDropdown) { d.classList.remove('open', 'flip-left', 'flip-top'); }
+              });
+            }
+            subDropdown.classList.toggle('open');
+            if (subDropdown.classList.contains('open')) {
+              // Reset positioning
+              subDropdown.classList.remove('flip-left', 'flip-top');
+              const rect = subDropdown.getBoundingClientRect();
+              // Flip left if overflows right edge
+              if (rect.right > window.innerWidth) subDropdown.classList.add('flip-left');
+              // Flip up if overflows bottom edge
+              if (rect.bottom > window.innerHeight) subDropdown.classList.add('flip-top');
+            }
+          });
+
+          dropdown.appendChild(subfolder);
+        }
+      }
+
+      if (items.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'padding: 6px 12px; font-size: 11px; color: #555;';
+        empty.textContent = '(leeg)';
+        dropdown.appendChild(empty);
+      }
+
+      return dropdown;
+    }
+
+    // Build a bar element (link or folder) from bookmark data
+    function createBarElement(item) {
+      if (item.type === 'url' && item.url) {
+        return createBookmarkLink(item);
+      } else if (item.type === 'folder' && item.children) {
+        const folder = document.createElement('div');
+        folder.className = 'bm-folder';
+        folder.innerHTML = `<span class="bm-folder-icon">📁</span> ${(item.name || 'Folder').substring(0, 25)}`;
+        const dropdown = createFolderDropdown(item.children);
+        folder.appendChild(dropdown);
+        folder.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (dropdown.classList.contains('open')) {
+            closeAllBookmarkDropdowns();
+          } else {
+            openBookmarkDropdown(dropdown);
+          }
+        });
+        return folder;
+      }
+      return null;
+    }
+
+    let barItems = []; // cached bookmark data for relayout
+
+    function layoutBookmarksBar() {
+      if (!bookmarksBarVisible || barItems.length === 0) return;
+
+      bookmarksBar.innerHTML = '';
+      bookmarksBar.classList.add('visible');
+
+      // Add all items first
+      const elements = [];
+      for (const item of barItems) {
+        const el = createBarElement(item);
+        if (el) {
+          bookmarksBar.appendChild(el);
+          elements.push({ el, item });
+        }
+      }
+
+      // Measure: find which items overflow the bar
+      const barRight = bookmarksBar.getBoundingClientRect().right - 12; // minus padding
+      let overflowIndex = -1;
+      // Reserve ~40px for the >> button
+      const reserveWidth = 40;
+
+      for (let i = 0; i < elements.length; i++) {
+        const elRect = elements[i].el.getBoundingClientRect();
+        if (elRect.right > barRight - reserveWidth) {
+          overflowIndex = i;
+          break;
+        }
+      }
+
+      if (overflowIndex < 0) return; // everything fits
+
+      // Remove overflow items from bar
+      const overflowItems = [];
+      for (let i = overflowIndex; i < elements.length; i++) {
+        bookmarksBar.removeChild(elements[i].el);
+        overflowItems.push(elements[i].item);
+      }
+
+      // Create >> overflow button with dropdown
+      const chevron = document.createElement('div');
+      chevron.className = 'bm-overflow';
+      chevron.textContent = '»';
+
+      const overflowDropdown = document.createElement('div');
+      overflowDropdown.className = 'bm-dropdown';
+      // Build dropdown items from overflow data
+      for (const item of overflowItems) {
+        if (item.type === 'url' && item.url) {
+          overflowDropdown.appendChild(createBookmarkLink(item));
+        } else if (item.type === 'folder' && item.children) {
+          const subfolder = document.createElement('div');
+          subfolder.className = 'bm-subfolder';
+          const icon = document.createElement('span');
+          icon.className = 'bm-folder-icon';
+          icon.textContent = '📁';
+          const label = document.createElement('span');
+          label.textContent = (item.name || 'Folder').substring(0, 35);
+          subfolder.appendChild(icon);
+          subfolder.appendChild(label);
+          const subDropdown = createFolderDropdown(item.children);
+          subfolder.appendChild(subDropdown);
+          subfolder.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            overflowDropdown.querySelectorAll('.bm-subfolder > .bm-dropdown.open').forEach(d => {
+              if (d !== subDropdown) d.classList.remove('open', 'flip-left', 'flip-top');
+            });
+            subDropdown.classList.toggle('open');
+            if (subDropdown.classList.contains('open')) {
+              subDropdown.classList.remove('flip-left', 'flip-top');
+              const rect = subDropdown.getBoundingClientRect();
+              if (rect.right > window.innerWidth) subDropdown.classList.add('flip-left');
+              if (rect.bottom > window.innerHeight) subDropdown.classList.add('flip-top');
+            }
+          });
+          overflowDropdown.appendChild(subfolder);
+        }
+      }
+
+      chevron.appendChild(overflowDropdown);
+      chevron.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (overflowDropdown.classList.contains('open')) {
+          closeAllBookmarkDropdowns();
+        } else {
+          openBookmarkDropdown(overflowDropdown);
+        }
+      });
+
+      bookmarksBar.appendChild(chevron);
+    }
+
+    // Relayout on window resize
+    window.addEventListener('resize', () => {
+      if (bookmarksBarVisible && barItems.length > 0) layoutBookmarksBar();
+    });
+
     async function loadBookmarksBar() {
       if (!bookmarksBarVisible) return;
-      try {
-        const resp = await fetch('http://localhost:8765/bookmarks');
-        if (!resp.ok) return;
-        const data = await resp.json();
-        const items = data.bar || [];
-        bookmarksBar.innerHTML = '';
-        if (items.length === 0) {
-          bookmarksBar.classList.remove('visible');
-          return;
+
+      let retries = 3;
+      while (retries > 0) {
+        try {
+          const resp = await fetch('http://localhost:8765/bookmarks');
+          if (!resp.ok) {
+            retries--;
+            if (retries > 0) { await new Promise(r => setTimeout(r, 1000)); continue; }
+            return;
+          }
+          const data = await resp.json();
+          barItems = (data.bar || []).slice(0, 30);
+          if (barItems.length === 0) {
+            bookmarksBar.classList.remove('visible');
+            return;
+          }
+          layoutBookmarksBar();
+          break;
+        } catch (err) {
+          retries--;
+          if (retries > 0) { await new Promise(r => setTimeout(r, 1000)); }
         }
-        bookmarksBar.classList.add('visible');
-        for (const item of items.slice(0, 30)) {
-          if (item.type !== 'url' || !item.url) continue;
-          const a = document.createElement('a');
-          let hostname = '';
-          try { hostname = new URL(item.url).hostname; } catch {}
-          a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${item.name || hostname}`;
-          a.title = item.url;
-          a.addEventListener('click', () => {
-            const entry = tabs.get(activeTabId);
-            if (entry) entry.webview.loadURL(item.url);
-          });
-          bookmarksBar.appendChild(a);
-        }
-      } catch { /* API not ready */ }
+      }
     }
 
     // Load bookmarks bar on startup — respect config
@@ -3285,8 +3974,19 @@
     let currentOnboardingStep = 1;
 
     function showOnboarding() {
+      console.log('[DEBUG] showOnboarding() called');
       const overlay = document.getElementById('onboarding-overlay');
+      console.log('[DEBUG] Onboarding overlay element:', overlay);
+
+      if (!overlay) {
+        console.error('[DEBUG] CRITICAL: onboarding-overlay element not found in DOM!');
+        return;
+      }
+
+      console.log('[DEBUG] Adding visible class to overlay');
       overlay.classList.add('visible');
+      console.log('[DEBUG] Overlay classes after add:', overlay.className);
+      console.log('[DEBUG] Calling showOnboardingStep(1)');
       showOnboardingStep(1);
     }
 
@@ -3296,31 +3996,104 @@
     }
 
     function showOnboardingStep(step) {
+      console.log('[DEBUG] showOnboardingStep() called with step:', step);
+      currentOnboardingStep = step;
+
       // Hide all steps
       for (let i = 1; i <= 4; i++) {
-        document.getElementById(`onboarding-step-${i}`).classList.add('hidden');
+        const stepEl = document.getElementById(`onboarding-step-${i}`);
+        console.log(`[DEBUG] Step ${i} element:`, stepEl);
+        if (stepEl) stepEl.style.display = 'none';
       }
-      
+
       // Show current step
-      document.getElementById(`onboarding-step-${step}`).classList.remove('hidden');
-      currentOnboardingStep = step;
-    }
+      const currentStep = document.getElementById(`onboarding-step-${step}`);
+      console.log('[DEBUG] Current step element:', currentStep);
+      if (currentStep) {
+        currentStep.style.display = 'block';
+        console.log('[DEBUG] Set display=block on step', step);
+      } else {
+        console.error('[DEBUG] CRITICAL: onboarding-step-' + step + ' element not found!');
+      }
 
-    function nextOnboardingStep() {
-      if (currentOnboardingStep < 4) {
-        showOnboardingStep(currentOnboardingStep + 1);
+      // Update dots
+      const dots = document.querySelectorAll('.onboarding-dots .dot');
+      dots.forEach((dot, i) => {
+        if (i === step - 1) {
+          dot.classList.add('active');
+        } else {
+          dot.classList.remove('active');
+        }
+      });
+
+      // Update button states
+      const prevBtn = document.getElementById('onboarding-prev');
+      const nextBtn = document.getElementById('onboarding-next');
+      const skipBtn = document.getElementById('onboarding-skip');
+
+      if (prevBtn) prevBtn.disabled = step === 1;
+
+      if (step === 4) {
+        // Last step
+        if (nextBtn) {
+          nextBtn.textContent = 'Start!';
+          nextBtn.setAttribute('data-final-step', 'true');
+        }
+        if (skipBtn) skipBtn.style.display = 'none';
+      } else {
+        if (nextBtn) {
+          nextBtn.textContent = 'Volgende';
+          nextBtn.removeAttribute('data-final-step');
+        }
+        if (skipBtn) skipBtn.style.display = 'block';
       }
     }
 
-    function prevOnboardingStep() {
-      if (currentOnboardingStep > 1) {
-        showOnboardingStep(currentOnboardingStep - 1);
-      }
-    }
+    // Register onboarding event listeners
+    (() => {
+      const nextBtn = document.getElementById('onboarding-next');
+      const prevBtn = document.getElementById('onboarding-prev');
+      const skipBtn = document.getElementById('onboarding-skip');
 
-    function skipOnboarding() {
-      showOnboardingStep(4); // Go to completion step
-    }
+      if (nextBtn) nextBtn.addEventListener('click', () => {
+        console.log('[DEBUG] Next button clicked, current step:', currentOnboardingStep);
+        console.log('[DEBUG] Button text:', nextBtn.textContent);
+        console.log('[DEBUG] data-final-step attribute:', nextBtn.getAttribute('data-final-step'));
+
+        // Check if we're on the final step (step 4) or if button says "Start!"
+        if (currentOnboardingStep === 4 || nextBtn.textContent === 'Start!' || nextBtn.getAttribute('data-final-step') === 'true') {
+          // Final step - hide and save
+          console.log('[DEBUG] Final step detected - hiding onboarding');
+          hideOnboarding();
+          fetch('http://localhost:8765/config', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ general: { onboardingComplete: true } })
+          }).then(() => console.log('[DEBUG] Onboarding completion saved'));
+        } else if (currentOnboardingStep < 4) {
+          console.log('[DEBUG] Going to next step:', currentOnboardingStep + 1);
+          showOnboardingStep(currentOnboardingStep + 1);
+        } else {
+          console.error('[DEBUG] UNEXPECTED STATE: step', currentOnboardingStep, 'but not final step logic triggered!');
+        }
+      });
+
+      if (prevBtn) prevBtn.addEventListener('click', () => {
+        if (currentOnboardingStep > 1) {
+          showOnboardingStep(currentOnboardingStep - 1);
+        }
+      });
+
+      if (skipBtn) skipBtn.addEventListener('click', () => {
+        hideOnboarding();
+        // Save that onboarding was completed
+        fetch('http://localhost:8765/config', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ general: { onboardingComplete: true } })
+        });
+      });
+    })();
 
     async function startChromeImport() {
       const statusEl = document.getElementById('import-status');

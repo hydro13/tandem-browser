@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bookmarks</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #1a1a2e;
+      color: #eee;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 260px;
+      background: #16213e;
+      border-right: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+    .sidebar-header {
+      padding: 20px 16px 12px;
+      font-size: 18px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .sidebar-header span { color: #e94560; }
+
+    .folder-tree { padding: 8px 0; flex: 1; }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      color: #aaa;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .tree-item:hover { background: rgba(255,255,255,0.05); color: #eee; }
+    .tree-item.active { background: rgba(233,69,96,0.15); color: #e94560; }
+    .tree-item .icon { font-size: 14px; flex-shrink: 0; }
+    .tree-item .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .tree-children { padding-left: 20px; }
+
+    .sidebar-actions {
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      gap: 8px;
+    }
+    .sidebar-actions button {
+      flex: 1;
+      padding: 6px 12px;
+      background: #0f3460;
+      border: none;
+      border-radius: 6px;
+      color: #aaa;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sidebar-actions button:hover { background: #1a4a7a; color: #eee; }
+
+    /* Main content */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      background: #16213e;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .toolbar .breadcrumb {
+      font-size: 14px;
+      color: #888;
+      flex: 1;
+    }
+    .breadcrumb span { cursor: pointer; color: #aaa; }
+    .breadcrumb span:hover { color: #eee; }
+    .breadcrumb .sep { color: #555; margin: 0 4px; }
+
+    .search-box {
+      position: relative;
+      width: 280px;
+    }
+    .search-box input {
+      width: 100%;
+      padding: 6px 12px;
+      padding-left: 30px;
+      background: #0f3460;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: #eee;
+      font-size: 13px;
+      outline: none;
+    }
+    .search-box input:focus { border-color: #e94560; }
+    .search-box input::placeholder { color: #555; }
+    .search-box .search-icon {
+      position: absolute;
+      left: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #555;
+      font-size: 12px;
+    }
+
+    .toolbar button {
+      padding: 6px 14px;
+      background: #0f3460;
+      border: none;
+      border-radius: 6px;
+      color: #aaa;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+    }
+    .toolbar button:hover { background: #1a4a7a; color: #eee; }
+    .toolbar button.accent { background: #e94560; color: #fff; }
+    .toolbar button.accent:hover { background: #d03050; }
+
+    /* Bookmark list */
+    .bookmark-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .bm-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .bm-item:hover { background: rgba(255,255,255,0.05); }
+    .bm-item .bm-icon { font-size: 16px; flex-shrink: 0; width: 20px; text-align: center; }
+    .bm-item .bm-icon img { width: 16px; height: 16px; border-radius: 2px; vertical-align: middle; }
+    .bm-item .bm-info { flex: 1; min-width: 0; }
+    .bm-item .bm-name { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .bm-item .bm-url { font-size: 11px; color: #555; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+    .bm-item .bm-actions { display: none; gap: 4px; }
+    .bm-item:hover .bm-actions { display: flex; }
+    .bm-item .bm-actions button {
+      padding: 3px 8px;
+      background: rgba(255,255,255,0.08);
+      border: none;
+      border-radius: 4px;
+      color: #888;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .bm-item .bm-actions button:hover { color: #eee; background: rgba(255,255,255,0.15); }
+    .bm-item .bm-actions button.delete:hover { color: #e94560; }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #555;
+      font-size: 14px;
+    }
+
+    /* Edit dialog */
+    .dialog-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 5000;
+      align-items: center;
+      justify-content: center;
+    }
+    .dialog-overlay.open { display: flex; }
+    .dialog {
+      background: #16213e;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 24px;
+      width: 420px;
+      max-width: 90%;
+    }
+    .dialog h3 { font-size: 16px; margin-bottom: 16px; }
+    .dialog label { font-size: 12px; color: #888; display: block; margin-bottom: 4px; }
+    .dialog input {
+      width: 100%;
+      padding: 8px 12px;
+      background: #0f3460;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 6px;
+      color: #eee;
+      font-size: 13px;
+      outline: none;
+      margin-bottom: 12px;
+    }
+    .dialog input:focus { border-color: #e94560; }
+    .dialog-buttons { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+    .dialog-buttons button {
+      padding: 8px 20px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .dialog-buttons .btn-cancel { background: #0f3460; color: #aaa; }
+    .dialog-buttons .btn-cancel:hover { color: #eee; }
+    .dialog-buttons .btn-save { background: #e94560; color: #fff; }
+    .dialog-buttons .btn-save:hover { background: #d03050; }
+  </style>
+</head>
+<body>
+  <!-- Sidebar: folder tree -->
+  <div class="sidebar">
+    <div class="sidebar-header"><span>B</span>ookmarks</div>
+    <div class="folder-tree" id="folder-tree"></div>
+    <div class="sidebar-actions">
+      <button id="btn-new-folder">+ Map</button>
+      <button id="btn-import-chrome">Chrome Import</button>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main">
+    <div class="toolbar">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <div class="search-box">
+        <span class="search-icon">&#x1F50D;</span>
+        <input type="text" id="search" placeholder="Zoek bookmarks...">
+      </div>
+      <button id="btn-add-bookmark" class="accent">+ Bookmark</button>
+    </div>
+    <div class="bookmark-list" id="bookmark-list"></div>
+  </div>
+
+  <!-- Edit dialog -->
+  <div class="dialog-overlay" id="dialog-overlay">
+    <div class="dialog">
+      <h3 id="dialog-title">Bewerken</h3>
+      <label>Naam</label>
+      <input type="text" id="dialog-name">
+      <div id="dialog-url-group">
+        <label>URL</label>
+        <input type="text" id="dialog-url">
+      </div>
+      <div class="dialog-buttons">
+        <button class="btn-cancel" id="btn-dialog-cancel">Annuleren</button>
+        <button class="btn-save" id="btn-dialog-save">Opslaan</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:8765';
+    let allBookmarks = [];
+    let currentFolderId = null; // null = root, or folder id
+    let currentFolderPath = []; // breadcrumb path
+    let editingId = null;
+    let isNewFolder = false;
+    let isNewBookmark = false;
+
+    // Fetch all bookmarks
+    async function fetchBookmarks() {
+      const res = await fetch(`${API}/bookmarks`);
+      const data = await res.json();
+      allBookmarks = data.bookmarks || [];
+      renderTree();
+      renderList();
+    }
+
+    // Find folder by ID in tree
+    function findFolder(id, list = allBookmarks) {
+      for (const item of list) {
+        if (item.id === id) return item;
+        if (item.children) {
+          const found = findFolder(id, item.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    // Get items for current folder
+    function getCurrentItems() {
+      if (!currentFolderId) return allBookmarks;
+      const folder = findFolder(currentFolderId);
+      return folder && folder.children ? folder.children : [];
+    }
+
+    // Render folder tree in sidebar
+    function renderTree() {
+      const tree = document.getElementById('folder-tree');
+      tree.innerHTML = '';
+
+      // All Bookmarks root
+      const root = document.createElement('div');
+      root.className = `tree-item ${!currentFolderId ? 'active' : ''}`;
+      root.innerHTML = '<span class="icon">&#x1F4D6;</span><span class="name">Alle Bookmarks</span>';
+      root.addEventListener('click', () => navigateToFolder(null, []));
+      tree.appendChild(root);
+
+      // Render folders recursively
+      function renderFolders(items, container, path = []) {
+        for (const item of items) {
+          if (item.type !== 'folder') continue;
+          const el = document.createElement('div');
+          el.className = `tree-item ${currentFolderId === item.id ? 'active' : ''}`;
+          el.innerHTML = `<span class="icon">&#x1F4C1;</span><span class="name">${item.name}</span>`;
+          const itemPath = [...path, { id: item.id, name: item.name }];
+          el.addEventListener('click', (e) => {
+            e.stopPropagation();
+            navigateToFolder(item.id, itemPath);
+          });
+          container.appendChild(el);
+
+          if (item.children && item.children.some(c => c.type === 'folder')) {
+            const children = document.createElement('div');
+            children.className = 'tree-children';
+            renderFolders(item.children, children, itemPath);
+            container.appendChild(children);
+          }
+        }
+      }
+
+      renderFolders(allBookmarks, tree);
+    }
+
+    // Navigate to folder
+    function navigateToFolder(folderId, path) {
+      currentFolderId = folderId;
+      currentFolderPath = path;
+      renderTree();
+      renderList();
+      renderBreadcrumb();
+    }
+
+    // Render breadcrumb
+    function renderBreadcrumb() {
+      const el = document.getElementById('breadcrumb');
+      let html = '<span data-id="">Alle Bookmarks</span>';
+      for (const item of currentFolderPath) {
+        html += `<span class="sep">›</span><span data-id="${item.id}">${item.name}</span>`;
+      }
+      el.innerHTML = html;
+      el.querySelectorAll('span[data-id]').forEach(span => {
+        span.addEventListener('click', () => {
+          const id = span.dataset.id || null;
+          const idx = currentFolderPath.findIndex(p => p.id === id);
+          const path = id ? currentFolderPath.slice(0, idx + 1) : [];
+          navigateToFolder(id, path);
+        });
+      });
+    }
+
+    // Render bookmark list
+    function renderList() {
+      const list = document.getElementById('bookmark-list');
+      const items = getCurrentItems();
+      list.innerHTML = '';
+
+      if (items.length === 0) {
+        list.innerHTML = '<div class="empty-state">Geen bookmarks in deze map</div>';
+        return;
+      }
+
+      // Sort: folders first, then by name
+      const sorted = [...items].sort((a, b) => {
+        if (a.type === 'folder' && b.type !== 'folder') return -1;
+        if (a.type !== 'folder' && b.type === 'folder') return 1;
+        return (a.name || '').localeCompare(b.name || '');
+      });
+
+      for (const item of sorted) {
+        const el = document.createElement('div');
+        el.className = 'bm-item';
+
+        if (item.type === 'folder') {
+          const count = item.children ? item.children.length : 0;
+          el.innerHTML = `
+            <div class="bm-icon">&#x1F4C1;</div>
+            <div class="bm-info">
+              <div class="bm-name">${item.name}</div>
+              <div class="bm-url">${count} items</div>
+            </div>
+            <div class="bm-actions">
+              <button class="edit" data-id="${item.id}">Bewerk</button>
+              <button class="delete" data-id="${item.id}">Verwijder</button>
+            </div>
+          `;
+          el.addEventListener('dblclick', () => {
+            const path = [...currentFolderPath, { id: item.id, name: item.name }];
+            navigateToFolder(item.id, path);
+          });
+          // Single click also navigates into folder
+          el.querySelector('.bm-info').addEventListener('click', () => {
+            const path = [...currentFolderPath, { id: item.id, name: item.name }];
+            navigateToFolder(item.id, path);
+          });
+        } else {
+          let hostname = '';
+          try { hostname = new URL(item.url).hostname; } catch {}
+          el.innerHTML = `
+            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
+            <div class="bm-info">
+              <div class="bm-name">${item.name || hostname}</div>
+              <div class="bm-url">${item.url || ''}</div>
+            </div>
+            <div class="bm-actions">
+              <button class="edit" data-id="${item.id}">Bewerk</button>
+              <button class="delete" data-id="${item.id}">Verwijder</button>
+            </div>
+          `;
+          el.querySelector('.bm-info').addEventListener('click', () => {
+            window.location.href = item.url;
+          });
+        }
+
+        // Edit button
+        el.querySelector('.edit')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openEditDialog(item);
+        });
+
+        // Delete button
+        el.querySelector('.delete')?.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (confirm(`Verwijder "${item.name}"?`)) {
+            await fetch(`${API}/bookmarks/remove`, {
+              method: 'DELETE',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: item.id }),
+            });
+            fetchBookmarks();
+          }
+        });
+
+        list.appendChild(el);
+      }
+    }
+
+    // Edit dialog
+    function openEditDialog(item) {
+      editingId = item ? item.id : null;
+      isNewFolder = false;
+      isNewBookmark = false;
+      document.getElementById('dialog-title').textContent = item ? 'Bewerken' : 'Nieuw';
+      document.getElementById('dialog-name').value = item ? item.name : '';
+      document.getElementById('dialog-url').value = item && item.url ? item.url : '';
+      document.getElementById('dialog-url-group').style.display = item && item.type === 'folder' ? 'none' : 'block';
+      document.getElementById('dialog-overlay').classList.add('open');
+      document.getElementById('dialog-name').focus();
+    }
+
+    function openNewFolderDialog() {
+      editingId = null;
+      isNewFolder = true;
+      isNewBookmark = false;
+      document.getElementById('dialog-title').textContent = 'Nieuwe Map';
+      document.getElementById('dialog-name').value = '';
+      document.getElementById('dialog-url').value = '';
+      document.getElementById('dialog-url-group').style.display = 'none';
+      document.getElementById('dialog-overlay').classList.add('open');
+      document.getElementById('dialog-name').focus();
+    }
+
+    function openNewBookmarkDialog() {
+      editingId = null;
+      isNewFolder = false;
+      isNewBookmark = true;
+      document.getElementById('dialog-title').textContent = 'Nieuwe Bookmark';
+      document.getElementById('dialog-name').value = '';
+      document.getElementById('dialog-url').value = 'https://';
+      document.getElementById('dialog-url-group').style.display = 'block';
+      document.getElementById('dialog-overlay').classList.add('open');
+      document.getElementById('dialog-name').focus();
+    }
+
+    function closeDialog() {
+      document.getElementById('dialog-overlay').classList.remove('open');
+      editingId = null;
+      isNewFolder = false;
+      isNewBookmark = false;
+    }
+
+    async function saveDialog() {
+      const name = document.getElementById('dialog-name').value.trim();
+      const url = document.getElementById('dialog-url').value.trim();
+
+      if (!name) return;
+
+      if (isNewFolder) {
+        await fetch(`${API}/bookmarks/add-folder`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, parentId: currentFolderId }),
+        });
+      } else if (isNewBookmark) {
+        if (!url) return;
+        await fetch(`${API}/bookmarks/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, url, parentId: currentFolderId }),
+        });
+      } else if (editingId) {
+        await fetch(`${API}/bookmarks/update`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: editingId, name, url: url || undefined }),
+        });
+      }
+
+      closeDialog();
+      fetchBookmarks();
+    }
+
+    // Search
+    let searchTimeout;
+    document.getElementById('search').addEventListener('input', (e) => {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(async () => {
+        const q = e.target.value.trim();
+        if (!q) {
+          renderList();
+          return;
+        }
+        const res = await fetch(`${API}/bookmarks/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+        const list = document.getElementById('bookmark-list');
+        list.innerHTML = '';
+
+        if (!data.results || data.results.length === 0) {
+          list.innerHTML = '<div class="empty-state">Geen resultaten</div>';
+          return;
+        }
+
+        for (const item of data.results) {
+          const el = document.createElement('div');
+          el.className = 'bm-item';
+          let hostname = '';
+          try { hostname = new URL(item.url).hostname; } catch {}
+          el.innerHTML = `
+            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
+            <div class="bm-info">
+              <div class="bm-name">${item.name || hostname}</div>
+              <div class="bm-url">${item.url || ''}</div>
+            </div>
+          `;
+          el.addEventListener('click', () => { window.location.href = item.url; });
+          list.appendChild(el);
+        }
+      }, 300);
+    });
+
+    // Event listeners
+    document.getElementById('btn-dialog-cancel').addEventListener('click', closeDialog);
+    document.getElementById('btn-dialog-save').addEventListener('click', saveDialog);
+    document.getElementById('dialog-overlay').addEventListener('click', (e) => {
+      if (e.target === document.getElementById('dialog-overlay')) closeDialog();
+    });
+    document.getElementById('btn-new-folder').addEventListener('click', openNewFolderDialog);
+    document.getElementById('btn-add-bookmark').addEventListener('click', openNewBookmarkDialog);
+
+    document.getElementById('btn-import-chrome').addEventListener('click', async () => {
+      const btn = document.getElementById('btn-import-chrome');
+      btn.textContent = 'Importeren...';
+      btn.disabled = true;
+      try {
+        const res = await fetch(`${API}/import/chrome/bookmarks`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok) {
+          alert(`${data.count} bookmarks geimporteerd!`);
+          fetchBookmarks();
+        } else {
+          alert('Import mislukt: ' + (data.error || 'Onbekende fout'));
+        }
+      } catch (e) {
+        alert('Import mislukt: ' + e.message);
+      }
+      btn.textContent = 'Chrome Import';
+      btn.disabled = false;
+    });
+
+    // Keyboard: Enter to save dialog, Escape to close
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && document.getElementById('dialog-overlay').classList.contains('open')) {
+        saveDialog();
+      }
+      if (e.key === 'Escape') {
+        closeDialog();
+      }
+    });
+
+    // Init
+    fetchBookmarks();
+    renderBreadcrumb();
+  </script>
+</body>
+</html>

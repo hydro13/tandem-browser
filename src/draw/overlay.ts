@@ -82,10 +82,7 @@ export class DrawOverlayManager {
 
       this.lastScreenshotPath = filePath;
 
-      // Step 4: Clear annotations after snap
-      this.win.webContents.send('draw-clear', {});
-
-      // Step 5: Notify renderer of new screenshot
+      // Step 4: Notify renderer of new screenshot (annotations blijven staan voor verdere bewerking)
       this.win.webContents.send('screenshot-taken', { path: filePath, filename });
 
       return { ok: true, path: filePath };
@@ -152,10 +149,7 @@ export class DrawOverlayManager {
       // Step 7: Import to Apple Photos (async, non-blocking)
       this.importToApplePhotos(picturesPath);
 
-      // Step 8: Clear annotations
-      this.win.webContents.send('draw-clear', {});
-
-      // Step 9: Notify renderer of new screenshot (for panel preview)
+      // Step 8: Notify renderer of new screenshot (annotations blijven staan)
       this.win.webContents.send('screenshot-taken', {
         path: picturesPath,
         appPath,

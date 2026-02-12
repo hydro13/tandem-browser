@@ -13,7 +13,7 @@ contextBridge.exposeInMainWorld('tandem', {
   executeJS: (code: string) => ipcRenderer.invoke('execute-js', code),
 
   // Tab management
-  newTab: () => ipcRenderer.invoke('tab-new'),
+  newTab: (url?: string) => ipcRenderer.invoke('tab-new', url),
   closeTab: (tabId: string) => ipcRenderer.invoke('tab-close', tabId),
   focusTab: (tabId: string) => ipcRenderer.invoke('tab-focus', tabId),
   focusTabByIndex: (index: number) => ipcRenderer.invoke('tab-focus-index', index),
@@ -103,6 +103,11 @@ contextBridge.exposeInMainWorld('tandem', {
   // Download complete notification
   onDownloadComplete: (callback: (data: { id: string; filename: string; savePath: string }) => void) => {
     ipcRenderer.on('download-complete', (_event, data) => callback(data));
+  },
+
+  // Open URL in new tab (from popup redirect)
+  onOpenUrlInNewTab: (callback: (url: string) => void) => {
+    ipcRenderer.on('open-url-in-new-tab', (_event, url) => callback(url));
   },
 
   // Bookmark toggle

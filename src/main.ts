@@ -63,6 +63,32 @@ async function createWindow(): Promise<BrowserWindow> {
   const stealth = new StealthManager(ses, partition);
   await stealth.apply();
 
+  // Fix cookie persistence: downgrade SameSite=None cookies that are missing Secure flag,
+  // and periodically flush cookie store to ensure persistence
+  ses.webRequest.onHeadersReceived((details, callback) => {
+    const headers = details.responseHeaders || {};
+
+    // Fix Set-Cookie headers: ensure SameSite=None cookies have Secure flag
+    const cookieHeaders = headers['set-cookie'] || headers['Set-Cookie'];
+    if (cookieHeaders) {
+      const fixedCookies = cookieHeaders.map((cookie: string) => {
+        // If SameSite=None but no Secure, add Secure
+        if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
+          return cookie + '; Secure';
+        }
+        return cookie;
+      });
+      // Normalize to lowercase header name
+      delete headers['Set-Cookie'];
+      headers['set-cookie'] = fixedCookies;
+    }
+
+    callback({ responseHeaders: headers });
+  });
+
+  // Flush cookies to disk every 30 seconds for reliability
+  setInterval(() => { ses.cookies.flushStore().catch(() => {}); }, 30000);
+
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
   const stealthScript = StealthManager.getStealthScript(stealthSeed);
@@ -80,6 +106,32 @@ async function createWindow(): Promise<BrowserWindow> {
         contents.executeJavaScript(stealthScript).catch((e) => console.warn('Stealth script injection failed:', e.message));
       });
 
+      // Handle popups from webviews
+      contents.setWindowOpenHandler(({ url }) => {
+        // OAuth/auth popups need window.opener — allow as real popup with proper config
+        const isAuth = url.includes('accounts.google.com') || url.includes('appleid.apple.com')
+          || url.includes('login.microsoftonline.com') || url.includes('/oauth') || url.includes('/auth');
+        if (isAuth) {
+          return {
+            action: 'allow',
+            overrideBrowserWindowOptions: {
+              width: 500,
+              height: 700,
+              webPreferences: {
+                partition,
+                nodeIntegration: false,
+                contextIsolation: true,
+                sandbox: true,
+              },
+            },
+          };
+        }
+        // All other popups → new tab
+        if (url && url !== 'about:blank' && mainWindow) {
+          mainWindow.webContents.send('open-url-in-new-tab', url);
+        }
+        return { action: 'deny' };
+      });
     }
   });
 
@@ -351,9 +403,9 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     return bookmarkManager ? bookmarkManager.isBookmarked(url) : false;
   });
 
-  ipcMain.handle('tab-new', async () => {
-    const newtabPath = `file://${path.join(__dirname, '..', 'shell', 'newtab.html')}`;
-    return tabManager?.openTab(newtabPath);
+  ipcMain.handle('tab-new', async (_event, url?: string) => {
+    const targetUrl = url || `file://${path.join(__dirname, '..', 'shell', 'newtab.html')}`;
+    return tabManager?.openTab(targetUrl);
   });
 
   ipcMain.handle('tab-close', async (_event, tabId: string) => {
@@ -371,6 +423,85 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   ipcMain.handle('tab-list', async () => {
     return tabManager?.listTabs();
+  });
+
+  // Navigation IPC handlers
+  ipcMain.handle('navigate', async (_event, url: string) => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (wc) {
+      wc.loadURL(url);
+      return { success: true };
+    }
+    return { success: false, error: 'No active tab' };
+  });
+
+  ipcMain.handle('go-back', async () => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (wc && wc.canGoBack()) {
+      wc.goBack();
+      return { success: true };
+    }
+    return { success: false };
+  });
+
+  ipcMain.handle('go-forward', async () => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (wc && wc.canGoForward()) {
+      wc.goForward();
+      return { success: true };
+    }
+    return { success: false };
+  });
+
+  ipcMain.handle('reload', async () => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (wc) {
+      wc.reload();
+      return { success: true };
+    }
+    return { success: false };
+  });
+
+  ipcMain.handle('get-page-content', async () => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (!wc) return { success: false, error: 'No active tab' };
+
+    try {
+      const content = await wc.executeJavaScript(`
+        document.documentElement.outerHTML
+      `);
+      return { success: true, content };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('get-page-status', async () => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (!wc) return { success: false, error: 'No active tab' };
+
+    try {
+      const status = await wc.executeJavaScript(`({
+        url: window.location.href,
+        title: document.title,
+        readyState: document.readyState
+      })`);
+      return { success: true, ...status };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('execute-js', async (_event, code: string) => {
+    const wc = await tabManager?.getActiveWebContents();
+    if (!wc) return { success: false, error: 'No active tab' };
+
+    try {
+      const result = await wc.executeJavaScript(code);
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: String(error) };
+    }
   });
 }
 
@@ -400,6 +531,7 @@ function buildAppMenu(): void {
         { type: 'separator' },
         { label: 'Bookmark Page', accelerator: 'CmdOrCtrl+D', click: () => send('bookmark-page') },
         { label: 'Toggle Bookmarks Bar', accelerator: 'CmdOrCtrl+Shift+B', click: () => send('toggle-bookmarks-bar') },
+        { label: 'Bookmark Manager', click: () => send('open-bookmarks') },
         { label: 'Find in Page', accelerator: 'CmdOrCtrl+F', click: () => send('find-in-page') },
         { label: 'History', accelerator: 'CmdOrCtrl+Y', click: () => send('open-history') },
       ],
@@ -431,11 +563,6 @@ function buildAppMenu(): void {
       submenu: [
         { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
           panelManager?.togglePanel();
-          // Also directly toggle via shell JS as fallback (IPC may not reach shell)
-          mainWindow?.webContents.executeJavaScript(`
-            const p = document.getElementById('kees-panel');
-            if (p) p.classList.toggle('open');
-          `).catch((e: any) => console.warn('Panel toggle fallback failed:', e.message));
         }},
         { label: 'Voice Input', accelerator: 'CmdOrCtrl+Shift+M', click: () => voiceManager?.toggleVoice() },
         { label: 'PiP Mode', accelerator: 'CmdOrCtrl+Shift+P', click: () => pipManager?.toggle() },
@@ -474,6 +601,8 @@ function buildAppMenu(): void {
       label: 'Help',
       submenu: [
         { label: 'Keyboard Shortcuts', accelerator: 'CmdOrCtrl+Shift+/', click: () => send('show-shortcuts') },
+        { type: 'separator' },
+        { label: 'Show Onboarding', click: () => send('show-onboarding') },
       ],
     },
   ];
