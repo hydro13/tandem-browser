@@ -28,6 +28,7 @@ import { DownloadManager } from './downloads/manager';
 import { AudioCaptureManager } from './audio/capture';
 import { ExtensionLoader } from './extensions/loader';
 import { ClaroNoteManager } from './claronote/manager';
+import { EventStreamManager } from './events/stream';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -55,6 +56,7 @@ let downloadManager: DownloadManager | null = null;
 let audioCaptureManager: AudioCaptureManager | null = null;
 let extensionLoader: ExtensionLoader | null = null;
 let claroNoteManager: ClaroNoteManager | null = null;
+let eventStream: EventStreamManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -186,6 +188,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   audioCaptureManager = new AudioCaptureManager();
   extensionLoader = new ExtensionLoader();
   claroNoteManager = new ClaroNoteManager();
+  eventStream = new EventStreamManager();
+
+  // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
+  contextBridge.connectEventStream(eventStream);
 
   // Hook download manager into session
   const partition = 'persist:tandem';
@@ -226,6 +232,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     audioCaptureManager: audioCaptureManager!,
     extensionLoader: extensionLoader!,
     claroNoteManager: claroNoteManager!,
+    eventStream: eventStream!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -240,9 +247,18 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
 
+  // Helper: sync tab list into ContextBridge for live context summary
+  const syncTabsToContext = () => {
+    if (tabManager && contextBridge) {
+      contextBridge.updateTabs(tabManager.listTabs());
+    }
+  };
+
   // Listen for tab metadata updates from renderer
   ipcMain.on('tab-update', (_event, data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
     tabManager?.updateTab(data.tabId, data);
+    eventStream?.handleTabEvent('tab-updated', { tabId: data.tabId, url: data.url, title: data.title });
+    syncTabsToContext();
   });
 
   // Listen for initial tab registration
@@ -251,6 +267,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
       // Notify renderer of the tab ID
       win.webContents.send('tab-registered', { tabId: tab.id });
+      eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
+      syncTabsToContext();
     }
   });
 
@@ -292,16 +310,24 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (voiceManager) {
       voiceManager.handleTranscript(data.text, data.isFinal);
     }
+    eventStream?.handleVoiceInput(data);
   });
 
   ipcMain.on('voice-status-update', (_event, data: { listening: boolean }) => {
     if (voiceManager) {
       voiceManager.setListening(data.listening);
     }
+    eventStream?.handleVoiceStatus(data);
+    contextBridge?.setVoiceActive(data.listening);
   });
 
   // ═══ Activity tracking: webview events from renderer ═══
   ipcMain.on('activity-webview-event', (_event, data: { type: string; url?: string; tabId?: string }) => {
+    // Feed into EventStreamManager for SSE
+    if (eventStream) {
+      const activeTab = tabManager?.getActiveTab();
+      eventStream.handleWebviewEvent({ ...data, title: activeTab?.title });
+    }
     if (activityTracker) {
       activityTracker.onWebviewEvent(data);
     }
@@ -374,6 +400,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (formMemory && data.url && data.fields) {
       formMemory.recordForm(data.url, data.fields);
     }
+    eventStream?.handleFormSubmit({ url: data.url, fields: data.fields });
   });
 
   // Tab management IPC for renderer shortcuts
@@ -405,16 +432,27 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   ipcMain.handle('tab-new', async (_event, url?: string) => {
     const targetUrl = url || `file://${path.join(__dirname, '..', 'shell', 'newtab.html')}`;
-    return tabManager?.openTab(targetUrl);
+    const tab = await tabManager?.openTab(targetUrl);
+    if (tab) eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: targetUrl });
+    syncTabsToContext();
+    return tab;
   });
 
   ipcMain.handle('tab-close', async (_event, tabId: string) => {
-    return tabManager?.closeTab(tabId);
+    eventStream?.handleTabEvent('tab-closed', { tabId });
+    const result = await tabManager?.closeTab(tabId);
+    syncTabsToContext();
+    return result;
   });
 
   ipcMain.handle('tab-focus', async (_event, tabId: string) => {
     if (behaviorObserver) behaviorObserver.recordTabSwitch(tabId);
-    return tabManager?.focusTab(tabId);
+    const tabs = tabManager?.listTabs() || [];
+    const tab = tabs.find(t => t.id === tabId);
+    eventStream?.handleTabEvent('tab-focused', { tabId, url: tab?.url, title: tab?.title });
+    const result = await tabManager?.focusTab(tabId);
+    syncTabsToContext();
+    return result;
   });
 
   ipcMain.handle('tab-focus-index', async (_event, index: number) => {

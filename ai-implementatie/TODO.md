@@ -16,76 +16,80 @@
 
 ## Fase 1: MCP Server (2-3 sessies)
 
-### Sessie 1.1: Basis MCP Server + Lees/Navigatie Tools
-- [ ] `npm install @modelcontextprotocol/sdk@^1.26.0`
-- [ ] `src/mcp/api-client.ts` — HTTP wrapper voor Tandem API
-- [ ] `src/mcp/server.ts` — MCP server met stdio transport
-- [ ] Tool: `tandem_navigate` (POST /navigate)
-- [ ] Tool: `tandem_go_back` / `tandem_go_forward` / `tandem_reload`
-- [ ] Tool: `tandem_read_page` (GET /page-content → markdown, max 2000 woorden)
-- [ ] Tool: `tandem_screenshot` (GET /screenshot → MCP image content type)
-- [ ] Tool: `tandem_get_links` (links op huidige pagina)
-- [ ] Tool: `tandem_wait_for_load` (polling op page status)
-- [ ] Activity logging: elke tool call → POST /chat met from: "claude"
-- [ ] Error handling: duidelijke melding als Tandem niet draait
-- [ ] `npx tsc` — zero errors
-- [ ] Test: Cowork kan `tandem_read_page()` aanroepen
-- [ ] Test: navigatie werkt, pagina verandert in Tandem
-- [ ] Test: screenshot geeft zichtbare image
+### Sessie 1.1: Basis MCP Server + Lees/Navigatie Tools ✅ (13 feb 2026)
+- [x] `npm install @modelcontextprotocol/sdk@^1.26.0`
+- [x] `src/mcp/api-client.ts` — HTTP wrapper voor Tandem API
+- [x] `src/mcp/server.ts` — MCP server met stdio transport
+- [x] Tool: `tandem_navigate` (POST /navigate)
+- [x] Tool: `tandem_go_back` / `tandem_go_forward` / `tandem_reload`
+- [x] Tool: `tandem_read_page` (GET /page-content → markdown, max 2000 woorden)
+- [x] Tool: `tandem_screenshot` (GET /screenshot → MCP image content type)
+- [x] Tool: `tandem_get_links` (links op huidige pagina)
+- [x] Tool: `tandem_wait_for_load` (polling op page status)
+- [x] Activity logging: elke tool call → POST /chat met from: "claude"
+- [x] Error handling: duidelijke melding als Tandem niet draait
+- [x] `npx tsc` — zero errors
+- [x] Test: Cowork kan `tandem_read_page()` aanroepen
+- [x] Test: navigatie werkt, pagina verandert in Tandem
+- [x] Test: screenshot geeft zichtbare image
 
-### Sessie 1.2: Interactie + Tabs + Chat + Extra Tools
-- [ ] Tool: `tandem_click` (POST /click)
-- [ ] Tool: `tandem_type` (POST /type)
-- [ ] Tool: `tandem_scroll` (POST /scroll)
-- [ ] Tool: `tandem_execute_js` (POST /execute-js)
-- [ ] Tool: `tandem_list_tabs` (GET /tabs/list)
-- [ ] Tool: `tandem_open_tab` (POST /tabs/open)
-- [ ] Tool: `tandem_close_tab` (POST /tabs/close)
-- [ ] Tool: `tandem_focus_tab` (POST /tabs/focus)
-- [ ] Tool: `tandem_send_message` (POST /chat met from: "claude")
-- [ ] Tool: `tandem_get_chat_history` (GET /chat)
-- [ ] Tool: `tandem_search_bookmarks` (GET /bookmarks/search)
-- [ ] Tool: `tandem_search_history` (GET /history/search)
-- [ ] Tool: `tandem_get_context` (meerdere calls gecombineerd)
-- [ ] `npx tsc` — zero errors
-- [ ] Test: complete flow navigeer → lees → klik → typ
-- [ ] Test: tab management (open, focus, close)
-- [ ] Test: chat berichten verschijnen in Kees panel
+### Sessie 1.2: Interactie + Tabs + Chat + Extra Tools ✅ (13 feb 2026, code toegevoegd)
 
-### Sessie 1.3: MCP Resources + Config + Content Truncatie
-- [ ] Resource: `tandem://page/current` (huidige pagina)
-- [ ] Resource: `tandem://tabs/list` (open tabs)
-- [ ] Resource: `tandem://chat/history` (chat berichten)
-- [ ] Resource: `tandem://context` (browser overzicht)
-- [ ] Content truncatie via ContentExtractor + turndown (max 2000 woorden)
-- [ ] MCP config voor Cowork gedocumenteerd
-- [ ] MCP config voor Claude Code gedocumenteerd
-- [ ] `npx tsc` — zero errors
-- [ ] Test: resources leesbaar vanuit Cowork
+- [x] Tool: `tandem_click` (POST /click)
+- [x] Tool: `tandem_type` (POST /type)
+- [x] Tool: `tandem_scroll` (POST /scroll)
+- [x] Tool: `tandem_execute_js` (POST /execute-js)
+- [x] Tool: `tandem_list_tabs` (GET /tabs/list)
+- [x] Tool: `tandem_open_tab` (POST /tabs/open)
+- [x] Tool: `tandem_close_tab` (POST /tabs/close)
+- [x] Tool: `tandem_focus_tab` (POST /tabs/focus)
+- [x] Tool: `tandem_send_message` (POST /chat met from: "claude")
+- [x] Tool: `tandem_get_chat_history` (GET /chat)
+- [x] Tool: `tandem_search_bookmarks` (GET /bookmarks/search)
+- [x] Tool: `tandem_search_history` (GET /history/search)
+- [x] Tool: `tandem_get_context` (meerdere calls gecombineerd)
+- [x] `npx tsc` — zero errors
+- [x] Test: complete flow navigeer → lees → klik → typ
+- [x] Test: tab management (open, focus, close)
+- [x] Test: chat berichten verschijnen in Kees panel
+
+### Sessie 1.3: MCP Resources + Config + Content Truncatie ✅ (13 feb 2026, code toegevoegd)
+
+- [x] Resource: `tandem://page/current` (huidige pagina)
+- [x] Resource: `tandem://tabs/list` (open tabs)
+- [x] Resource: `tandem://chat/history` (chat berichten)
+- [x] Resource: `tandem://context` (browser overzicht)
+- [x] Content truncatie via ContentExtractor + turndown (max 2000 woorden)
+- [x] MCP config voor Cowork gedocumenteerd
+- [x] MCP config voor Claude Code gedocumenteerd
+- [x] `npx tsc` — zero errors
+- [x] Test: resources leesbaar vanuit Cowork
 
 ---
 
 ## Fase 2: Event Stream + Context Manager (1-2 sessies)
 
-### Sessie 2.1: EventStreamManager + SSE Endpoint
-- [ ] `src/events/stream.ts` — EventStreamManager class
-- [ ] Event types: navigation, page-loaded, tab-opened/closed/focused, click, form-submit, scroll, voice-input, screenshot, error
-- [ ] Ring buffer: max 100 events
-- [ ] SSE endpoint: GET /events/stream
-- [ ] Debounce: navigatie direct, scroll max 1 per 5s
-- [ ] Wire IPC events → EventStreamManager in main.ts
-- [ ] `npx tsc` — zero errors
-- [ ] Test: `curl http://localhost:8765/events/stream` toont events
-- [ ] Test: navigatie events komen door in real-time
+### Sessie 2.1: EventStreamManager + SSE Endpoint ✅ (13 feb 2026)
 
-### Sessie 2.2: ContextManager (extend ContextBridge)
-- [ ] Extend bestaande ContextBridge (src/bridge/context-bridge.ts)
-- [ ] `getContextSummary()` — compact tekst (~500 tokens max)
-- [ ] Event subscriptions op EventStreamManager
-- [ ] Update MCP resources met live context
-- [ ] MCP notifications bij events
-- [ ] `npx tsc` — zero errors
-- [ ] Test: context actueel na navigatie/tab switch
+- [x] `src/events/stream.ts` — EventStreamManager class
+- [x] Event types: navigation, page-loaded, tab-opened/closed/focused, click, form-submit, scroll, voice-input, screenshot, error
+- [x] Ring buffer: max 100 events
+- [x] SSE endpoint: GET /events/stream
+- [x] Debounce: navigatie direct, scroll max 1 per 5s
+- [x] Wire IPC events → EventStreamManager in main.ts
+- [x] `npx tsc` — zero errors
+- [x] Test: `curl http://localhost:8765/events/stream` toont events
+- [x] Test: navigatie events komen door in real-time
+
+### Sessie 2.2: ContextManager (extend ContextBridge) ✅ (13 feb 2026)
+
+- [x] Extend bestaande ContextBridge (src/bridge/context-bridge.ts)
+- [x] `getContextSummary()` — compact tekst (~500 tokens max)
+- [x] Event subscriptions op EventStreamManager
+- [x] Update MCP resources met live context (`tandem://context` → `/context/summary`)
+- [x] MCP notifications bij events (SSE listener → `sendResourceUpdated`)
+- [x] `npx tsc` — zero errors
+- [x] Test: context actueel na navigatie/tab switch
 - [ ] Test: geen merkbare performance impact
 
 ---

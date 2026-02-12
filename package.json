@@ -10,9 +10,11 @@
     "start": "xattr -cr node_modules/electron/dist/Electron.app 2>/dev/null; npm run compile && node scripts/run-electron.js",
     "compile": "tsc",
     "watch": "tsc -w",
-    "build": "tsc && electron-builder"
+    "build": "tsc && electron-builder",
+    "mcp": "node dist/mcp/server.js"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "express": "^4.21.0",

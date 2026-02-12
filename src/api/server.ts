@@ -32,6 +32,7 @@ import { ClaroNoteManager } from '../claronote/manager';
 import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
 import { LoginManager } from '../auth/login-manager';
+import { EventStreamManager } from '../events/stream';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -79,6 +80,7 @@ export interface TandemAPIOptions {
   audioCaptureManager: AudioCaptureManager;
   extensionLoader: ExtensionLoader;
   claroNoteManager: ClaroNoteManager;
+  eventStream: EventStreamManager;
 }
 
 export class TandemAPI {
@@ -108,6 +110,7 @@ export class TandemAPI {
   private audioCaptureManager: AudioCaptureManager;
   private extensionLoader: ExtensionLoader;
   private claroNoteManager: ClaroNoteManager;
+  private eventStream: EventStreamManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -136,7 +139,8 @@ export class TandemAPI {
     this.audioCaptureManager = opts.audioCaptureManager;
     this.extensionLoader = opts.extensionLoader;
     this.claroNoteManager = opts.claroNoteManager;
-    
+    this.eventStream = opts.eventStream;
+
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
     this.workflowEngine = new WorkflowEngine();
@@ -222,6 +226,24 @@ export class TandemAPI {
         });
       } catch (e: any) {
         res.json({ ready: false, error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // EVENT STREAM — SSE (Phase 2)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/events/stream', (req: Request, res: Response) => {
+      this.eventStream.sseHandler(req, res);
+    });
+
+    this.app.get('/events/recent', (req: Request, res: Response) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 50;
+        const events = this.eventStream.getRecent(limit);
+        res.json({ events });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
       }
     });
 
@@ -1024,6 +1046,15 @@ export class TandemAPI {
         const page = this.contextBridge.getPage(url);
         if (!page) { res.status(404).json({ error: 'Page not found in context' }); return; }
         res.json(page);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/context/summary', (_req: Request, res: Response) => {
+      try {
+        const summary = this.contextBridge.getContextSummary();
+        res.json(summary);
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
