@@ -57,6 +57,11 @@ export class BookmarkManager {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
   }
 
+  /** Reload bookmarks from disk (e.g. after Chrome import overwrites the file) */
+  reload(): void {
+    this.store = this.load();
+  }
+
   /** Get all bookmarks (tree structure) */
   list(): Bookmark[] {
     return this.store.bookmarks;

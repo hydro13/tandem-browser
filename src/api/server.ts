@@ -165,7 +165,13 @@ export class TandemAPI {
       // Allow OPTIONS preflight
       if (req.method === 'OPTIONS') return next();
 
-      // Check Authorization header or query param
+      // Allow requests from our own shell (file:// origin) and localhost
+      const origin = req.headers.origin || '';
+      if (origin === 'file://' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || !origin) {
+        return next();
+      }
+
+      // Check Authorization header or query param for external requests
       const authHeader = req.headers.authorization;
       const queryToken = req.query.token as string | undefined;
 
@@ -1129,6 +1135,8 @@ export class TandemAPI {
     this.app.post('/import/chrome/bookmarks', (_req: Request, res: Response) => {
       try {
         const result = this.chromeImporter.importBookmarks();
+        // Reload BookmarkManager so it picks up the imported data
+        this.bookmarkManager.reload();
         res.json(result);
       } catch (e: any) {
         res.status(500).json({ error: e.message });

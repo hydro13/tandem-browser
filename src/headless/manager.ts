@@ -2,6 +2,12 @@ import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { copilotAlert } from '../main';
 
+/** Page load timeout in milliseconds */
+const PAGE_LOAD_TIMEOUT_MS = 30000;
+
+/** Captcha detection check interval in milliseconds */
+const CAPTCHA_CHECK_INTERVAL_MS = 3000;
+
 /** Known captcha selectors to detect */
 const CAPTCHA_SELECTORS = [
   'iframe[src*="recaptcha"]',
@@ -43,7 +49,7 @@ export class HeadlessManager {
       await this.ensureWindow();
 
       await new Promise<void>((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Page load timeout')), 30000);
+        const timeout = setTimeout(() => reject(new Error('Page load timeout')), PAGE_LOAD_TIMEOUT_MS);
 
         this.window!.webContents.once('did-finish-load', () => {
           clearTimeout(timeout);
@@ -57,7 +63,11 @@ export class HeadlessManager {
           reject(new Error(`Load failed: ${errorDescription}`));
         });
 
-        this.window!.webContents.loadURL(url).catch(reject);
+        this.window!.webContents.loadURL(url).catch((err) => {
+          clearTimeout(timeout);
+          console.error('Headless window loadURL failed:', err.message);
+          reject(err);
+        });
       });
 
       return { ok: true };
@@ -151,7 +161,10 @@ export class HeadlessManager {
 
     // Apply stealth script on every page load
     this.window.webContents.on('did-finish-load', () => {
-      this.window?.webContents.executeJavaScript(StealthManager.getStealthScript()).catch((e) => console.warn('Headless stealth injection failed:', e.message));
+      if (this.window && !this.window.isDestroyed()) {
+        this.window.webContents.executeJavaScript(StealthManager.getStealthScript())
+          .catch((e) => console.warn('Headless stealth injection failed:', e.message));
+      }
     });
 
     // Detect unexpected redirects (e.g. login walls)
@@ -185,7 +198,7 @@ export class HeadlessManager {
     this.stopCaptchaCheck();
     this.captchaCheckInterval = setInterval(() => {
       this.detectCaptcha().catch((e) => console.warn('Captcha detection failed:', e.message));
-    }, 3000);
+    }, CAPTCHA_CHECK_INTERVAL_MS);
   }
 
   private stopCaptchaCheck(): void {

@@ -28,6 +28,7 @@ export class BehaviorObserver {
   private lastKeypressTs = 0;
   private keypressIntervals: number[] = [];
   private clickTimestamps: number[] = [];
+  private readonly MAX_SAMPLES = 1000;
 
   constructor(win: BrowserWindow) {
     this.win = win;
@@ -82,11 +83,11 @@ export class BehaviorObserver {
         if (this.lastKeypressTs > 0) {
           const interval = now - this.lastKeypressTs;
           if (interval < 5000) { // Only track reasonable intervals
-            this.keypressIntervals.push(interval);
-            // Keep last 1000
-            if (this.keypressIntervals.length > 1000) {
-              this.keypressIntervals = this.keypressIntervals.slice(-1000);
+            // Efficient circular buffer management
+            if (this.keypressIntervals.length >= this.MAX_SAMPLES) {
+              this.keypressIntervals.shift(); // Remove oldest
             }
+            this.keypressIntervals.push(interval);
           }
         }
         this.lastKeypressTs = now;
@@ -104,10 +105,11 @@ export class BehaviorObserver {
   /** Record a click event (called from activity tracker) */
   recordClick(x: number, y: number): void {
     const now = Date.now();
-    this.clickTimestamps.push(now);
-    if (this.clickTimestamps.length > 1000) {
-      this.clickTimestamps = this.clickTimestamps.slice(-1000);
+    // Efficient circular buffer management
+    if (this.clickTimestamps.length >= this.MAX_SAMPLES) {
+      this.clickTimestamps.shift(); // Remove oldest
     }
+    this.clickTimestamps.push(now);
     this.record({ type: 'click', ts: now, data: { x, y } });
   }
 
