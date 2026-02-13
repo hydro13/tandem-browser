@@ -249,11 +249,12 @@ export class TandemAPI {
           return;
         }
         const data = JSON.parse(fs.readFileSync(openclawPath, 'utf-8'));
-        if (!data.token) {
+        const token = data.token || data.gateway?.auth?.token;
+        if (!token) {
           res.status(404).json({ error: 'No token field in openclaw.json' });
           return;
         }
-        res.json({ token: data.token });
+        res.json({ token });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

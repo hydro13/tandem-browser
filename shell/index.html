@@ -539,6 +539,8 @@
       padding: 10px;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
     }
 
     /* Activity log */
@@ -1098,7 +1100,7 @@
         <div class="panel-content" id="panel-activity" style="display:flex;flex-direction:column;flex:1;">
         </div>
         <!-- Chat tab — Multi-backend via ChatRouter (Phase 3) -->
-        <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;">
+        <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
           <div class="chat-backend-selector" id="chat-backend-selector">
             <button class="backend-option active" data-backend="openclaw" id="btn-backend-openclaw">
               <span class="backend-dot" id="dot-openclaw"></span>
@@ -1509,6 +1511,9 @@
       if (entry) entry.webview.reload();
     };
 
+    urlBar.addEventListener('focus', () => urlBar.select());
+    urlBar.addEventListener('click', () => urlBar.select());
+
     urlBar.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
         let url = urlBar.value.trim();
@@ -1844,7 +1849,15 @@
       // ── Shared helpers ──
 
       function scrollToBottom() {
-        requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
+        requestAnimationFrame(() => { 
+          messagesEl.scrollTop = messagesEl.scrollHeight;
+        });
+      }
+      
+      function ensureElementAtBottom(element) {
+        // Ensure the element is at the very bottom of the container
+        messagesEl.appendChild(element);
+        scrollToBottom();
       }
 
       function formatTime(ts) {
@@ -1891,8 +1904,9 @@
       const dualMode = new DualMode(router);
       let currentMode = 'openclaw'; // 'openclaw' | 'claude' | 'both'
 
-      // Track streaming message element for OpenClaw deltas
-      let streamingMsgEl = null;
+      // Track streaming message elements per conversation
+      let streamingMessages = new Map(); // conversationId -> { element, startTime }
+      let currentConversationId = null;
 
       // ── Backend selector UI ──
 
@@ -1953,9 +1967,23 @@
       }
 
       function switchBackend(id) {
+        // Store any locally typed Robin messages before clearing
+        const localRobinMessages = [];
+        for (const child of messagesEl.children) {
+          if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+            localRobinMessages.push({
+              role: 'user',
+              text: child.querySelector('.msg-text').textContent,
+              timestamp: child.querySelector('.msg-time').textContent,
+              source: 'robin'
+            });
+          }
+        }
+        
         currentMode = id;
         messagesEl.innerHTML = '';
-        streamingMsgEl = null;
+        streamingMessages.clear();
+        currentConversationId = null;
 
         if (id === 'both') {
           // In "both" mode, set router to openclaw as default but enable dual mode
@@ -1963,14 +1991,30 @@
           dualMode.setEnabled(true);
           // Load combined history — OpenClaw first, then Claude
           openclawBackend.loadHistory((msgs) => {
-            for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
+            for (const m of msgs) {
+              const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+              el.dataset.fromHistory = 'true';
+            }
+            // Re-add local Robin messages
+            for (const localMsg of localRobinMessages) {
+              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+              el.dataset.localMessage = 'true';
+            }
           });
         } else {
           dualMode.setEnabled(false);
           router.setActive(id);
           if (id === 'openclaw') {
             openclawBackend.loadHistory((msgs) => {
-              for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
+              for (const m of msgs) {
+                const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+                el.dataset.fromHistory = 'true';
+              }
+              // Re-add local Robin messages
+              for (const localMsg of localRobinMessages) {
+                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+                el.dataset.localMessage = 'true';
+              }
             });
           } else {
             claudeBackend._loadHistory();
@@ -2020,47 +2064,183 @@
         if (currentMode === 'both') return; // handled by dualMode
 
         if (type === 'historyReload') {
-          messagesEl.innerHTML = '';
-          streamingMsgEl = null;
-          if (Array.isArray(msg)) {
-            for (const m of msg) appendMessage(m.role, m.text, m.timestamp, m.source);
+          // Store any locally typed Robin messages before processing history
+          const localRobinMessages = [];
+          for (const child of messagesEl.children) {
+            if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+              localRobinMessages.push({
+                role: 'user',
+                text: child.querySelector('.msg-text').textContent,
+                timestamp: child.querySelector('.msg-time').textContent,
+                source: 'robin'
+              });
+            }
           }
+          
+          // Finalize any active streaming messages with correct timestamp
+          for (const [convId, streamData] of streamingMessages.entries()) {
+            const timeEl = streamData.element.querySelector('.msg-time');
+            if (timeEl) timeEl.textContent = formatTime(Date.now());
+          }
+          streamingMessages.clear();
+          currentConversationId = null;
+          
+          // Re-add local Robin messages after any history operations
+          setTimeout(() => {
+            for (const localMsg of localRobinMessages) {
+              // Check if this message is already in the DOM (from history)
+              let alreadyExists = false;
+              for (const child of messagesEl.children) {
+                if (child.classList.contains('robin') && 
+                    child.querySelector('.msg-text').textContent === localMsg.text &&
+                    child.dataset.fromHistory === 'true') {
+                  alreadyExists = true;
+                  break;
+                }
+              }
+              
+              // Only add if not already present from history
+              if (!alreadyExists) {
+                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+                el.dataset.localMessage = 'true';
+              }
+            }
+          }, 0);
           return;
         }
 
         if (msg._streaming) {
-          if (!streamingMsgEl) {
-            streamingMsgEl = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          // Start new conversation if needed
+          if (!currentConversationId) {
+            currentConversationId = crypto.randomUUID();
+          }
+          
+          let streamData = streamingMessages.get(currentConversationId);
+          if (!streamData) {
+            // Create new streaming message element - always insert at the very end
+            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+            streamData = { 
+              element, 
+              startTime: Date.now(),
+              lastPosition: messagesEl.children.length - 1
+            };
+            streamingMessages.set(currentConversationId, streamData);
           } else {
-            streamingMsgEl.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
-            scrollToBottom();
+            // Update existing streaming element content
+            streamData.element.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
+            
+            // Ensure streaming element stays at the end (after any Robin messages sent during streaming)
+            const currentIndex = Array.from(messagesEl.children).indexOf(streamData.element);
+            const lastIndex = messagesEl.children.length - 1;
+            if (currentIndex !== lastIndex) {
+              ensureElementAtBottom(streamData.element);
+            }
           }
         } else {
-          streamingMsgEl = null;
-          appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          // Finalize current conversation
+          if (currentConversationId) {
+            const streamData = streamingMessages.get(currentConversationId);
+            if (streamData) {
+              // Update timestamp to show completion time
+              const timeEl = streamData.element.querySelector('.msg-time');
+              if (timeEl) timeEl.textContent = formatTime(Date.now());
+              // Move to bottom one last time
+              messagesEl.appendChild(streamData.element);
+              scrollToBottom();
+              streamingMessages.delete(currentConversationId);
+            }
+            currentConversationId = null;
+          }
+          // Only append a new element if this is NOT a final event (final reuses the streaming element)
+          if (!msg._final) {
+            appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          }
         }
       });
 
       // Dual-mode message handler (Fase 5) — both backends at once
-      let dualStreamingEls = {}; // per-backend streaming elements
+      let dualStreamingConversations = {}; // per-backend conversation tracking
       dualMode.onMessage((msg, type, backendId) => {
         if (type === 'historyReload') {
-          // In dual mode, don't clear — just append new history items
+          // Store any locally typed Robin messages before clearing
+          const localRobinMessages = [];
+          for (const child of messagesEl.children) {
+            if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+              localRobinMessages.push({
+                role: 'user',
+                text: child.querySelector('.msg-text').textContent,
+                timestamp: child.querySelector('.msg-time').textContent,
+                source: 'robin'
+              });
+            }
+          }
+          
+          // Clear and rebuild to avoid duplicates
+          messagesEl.innerHTML = '';
+          streamingMessages.clear();
+          dualStreamingConversations = {};
+          
           if (Array.isArray(msg)) {
-            for (const m of msg) appendMessage(m.role, m.text, m.timestamp, m.source);
+            for (const m of msg) {
+              const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+              el.dataset.fromHistory = 'true';
+            }
+            
+            // Re-add local Robin messages that aren't in history
+            for (const localMsg of localRobinMessages) {
+              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+              el.dataset.localMessage = 'true';
+            }
           }
           return;
         }
 
         if (msg._streaming) {
-          if (!dualStreamingEls[backendId]) {
-            dualStreamingEls[backendId] = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          // Start new conversation for this backend if needed
+          if (!dualStreamingConversations[backendId]) {
+            dualStreamingConversations[backendId] = {
+              conversationId: crypto.randomUUID(),
+              started: false
+            };
+          }
+          
+          const convId = dualStreamingConversations[backendId].conversationId;
+          let streamData = streamingMessages.get(convId);
+          
+          if (!streamData) {
+            // Create new streaming message element
+            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+            streamData = { 
+              element, 
+              startTime: Date.now(),
+              backendId
+            };
+            streamingMessages.set(convId, streamData);
+            dualStreamingConversations[backendId].started = true;
           } else {
-            dualStreamingEls[backendId].querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
-            scrollToBottom();
+            // Update existing streaming element content
+            streamData.element.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
+            
+            // Ensure streaming element stays at the end
+            const currentIndex = Array.from(messagesEl.children).indexOf(streamData.element);
+            const lastIndex = messagesEl.children.length - 1;
+            if (currentIndex !== lastIndex) {
+              ensureElementAtBottom(streamData.element);
+            }
           }
         } else {
-          dualStreamingEls[backendId] = null;
+          // Finalize conversation for this backend
+          if (dualStreamingConversations[backendId]) {
+            const convId = dualStreamingConversations[backendId].conversationId;
+            const streamData = streamingMessages.get(convId);
+            if (streamData) {
+              // Update timestamp to show completion time
+              const timeEl = streamData.element.querySelector('.msg-time');
+              if (timeEl) timeEl.textContent = formatTime(Date.now());
+              streamingMessages.delete(convId);
+            }
+            delete dualStreamingConversations[backendId];
+          }
           appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
         }
       });
@@ -2107,7 +2287,8 @@
           if (target === 'both' && !openclawBackend.isConnected() && !claudeBackend.isConnected()) return;
 
           // Show user message (display original text with @-mention for clarity)
-          appendMessage('user', text, Date.now(), 'robin');
+          const robinMsg = appendMessage('user', text, Date.now(), 'robin');
+          robinMsg.dataset.localMessage = 'true';
 
           dualMode.sendMessage(text);
         } else {
@@ -2117,7 +2298,8 @@
 
           // For OpenClaw, append user message locally (backend doesn't emit it)
           if (router.getActiveId() === 'openclaw') {
-            appendMessage('user', text, Date.now(), 'robin');
+            const robinMsg = appendMessage('user', text, Date.now(), 'robin');
+            robinMsg.dataset.localMessage = 'true';
           }
           // For Claude, the backend emits the sent message
 
@@ -2170,15 +2352,21 @@
       const noodremBtn = document.getElementById('noodrem-btn');
       const approvalContainer = document.getElementById('approval-container');
 
-      // Noodrem button — emergency stop
+      // Noodrem — debounced emergency stop (prevents spam)
+      let _noodremLast = 0;
+      function fireNoodrem() {
+        const now = Date.now();
+        if (now - _noodremLast < 2000) return; // 2s debounce
+        _noodremLast = now;
+        if (window.tandem && window.tandem.emergencyStop) {
+          window.tandem.emergencyStop();
+        } else {
+          fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
+        }
+      }
+
       if (noodremBtn) {
-        noodremBtn.addEventListener('click', () => {
-          if (window.tandem && window.tandem.emergencyStop) {
-            window.tandem.emergencyStop();
-          } else {
-            fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
-          }
-        });
+        noodremBtn.addEventListener('click', fireNoodrem);
       }
 
       // Escape key = noodrem (global handler, always works)
@@ -2186,11 +2374,7 @@
         if (e.key === 'Escape' && e.shiftKey) {
           e.preventDefault();
           e.stopPropagation();
-          if (window.tandem && window.tandem.emergencyStop) {
-            window.tandem.emergencyStop();
-          } else {
-            fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
-          }
+          fireNoodrem();
         }
       }, true);
 

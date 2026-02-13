@@ -14,16 +14,34 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       min-height: 100vh;
-      padding: 40px 20px;
+      padding: 0.5vh 20px 40px;
+    }
+
+    .logo-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 32px;
+    }
+
+    .logo-bg {
+      width: 700px;
+      height: auto;
+      opacity: 0.45;
+      pointer-events: none;
+      user-select: none;
     }
 
     .logo {
       font-size: 48px;
       font-weight: 700;
-      margin-bottom: 8px;
+      margin-top: -45px;
       letter-spacing: -1px;
+      position: relative;
+      z-index: 1;
     }
 
     .logo span { color: #e94560; }
@@ -31,7 +49,8 @@
     .subtitle {
       color: #888;
       font-size: 14px;
-      margin-bottom: 32px;
+      position: relative;
+      z-index: 1;
     }
 
     .search-box {
@@ -169,8 +188,11 @@
   </style>
 </head>
 <body>
-  <div class="logo"><span>T</span>andem</div>
-  <div class="subtitle">Co-Pilot Browser</div>
+  <div class="logo-wrap">
+    <img class="logo-bg" src="tandem-bike.png" alt="">
+    <div class="logo"><span>T</span>andem</div>
+    <div class="subtitle">Co-Pilot Browser</div>
+  </div>
 
   <div class="search-box">
     <span class="search-icon">&#x1F50D;</span>
