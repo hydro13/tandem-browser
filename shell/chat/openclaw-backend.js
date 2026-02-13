@@ -69,7 +69,7 @@ class OpenClawBackend {
 
   /** Load chat history from OpenClaw */
   loadHistory(onMessages) {
-    this._sendRequest('chat.history', { sessionKey: this._sessionKey, limit: 200 }, (res) => {
+    this._sendRequest('chat.history', { sessionKey: this._sessionKey, limit: 20 }, (res) => {
       if (!res.result) return;
       const msgs = res.result.messages || res.result;
       if (!Array.isArray(msgs)) return;
@@ -88,6 +88,8 @@ class OpenClawBackend {
           });
         }
       }
+      // Sort chronologically (oldest first) — chat.history may return newest-first
+      parsed.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       if (onMessages) onMessages(parsed);
     });
   }
@@ -123,21 +125,19 @@ class OpenClawBackend {
         if (msg.event === 'connect.challenge') {
           this._sendRequest('connect', {
             minProtocol: 3, maxProtocol: 3,
-            client: { id: 'tandem-browser', version: '1.0', platform: 'tandem', mode: 'webchat', instanceId: crypto.randomUUID() },
+            client: { id: 'webchat', version: '1.0', platform: 'browser', mode: 'webchat', instanceId: crypto.randomUUID() },
             role: 'operator',
             scopes: ['operator.admin'],
-            auth: { token: this._token, nonce: msg.payload?.nonce },
+            auth: { token: this._token },
             userAgent: navigator.userAgent,
             locale: navigator.language
           }, (res) => {
             if (res.result) {
               this._setConnected(true);
               this._reconnectDelay = 1000;
-              // Load history after connecting
+              // Load history after connecting (emit as historyReload so UI clears first)
               this.loadHistory((msgs) => {
-                for (const m of msgs) {
-                  this._emit('message', m);
-                }
+                this._emit('historyReload', msgs);
               });
             } else {
               console.error('[OpenClawBackend] Connect failed:', res.error);
@@ -146,6 +146,8 @@ class OpenClawBackend {
           });
         }
         if (msg.event === 'chat') {
+          // If we receive chat events, we're definitely connected
+          if (!this._connected) this._setConnected(true);
           this._handleChatEvent(msg.payload);
         }
       }
@@ -181,7 +183,7 @@ class OpenClawBackend {
     if (state === 'delta') {
       this._emit('typing', true);
       const text = (message && (message.text || (Array.isArray(message.content) ? message.content.filter(c => c.type === 'text').map(c => c.text).join('') : ''))) || '';
-      this._streamingText += text;
+      this._streamingText = text || this._streamingText;
       this._emit('message', {
         id: 'streaming',
         role: 'assistant',
@@ -192,12 +194,20 @@ class OpenClawBackend {
       });
     } else if (state === 'final') {
       this._emit('typing', false);
+      const finalText = this._streamingText;
       this._streamingMsg = null;
       this._streamingText = '';
-      // Reload full history on final to ensure consistency
-      this.loadHistory((msgs) => {
-        this._emit('historyReload', msgs);
-      });
+      // Emit a non-streaming message to finalize the UI element
+      if (finalText) {
+        this._emit('message', {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          text: finalText,
+          source: 'openclaw',
+          timestamp: Date.now(),
+          _final: true
+        });
+      }
     } else if (state === 'error') {
       this._emit('typing', false);
       this._streamingMsg = null;

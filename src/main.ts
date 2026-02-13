@@ -157,9 +157,18 @@ async function createWindow(): Promise<BrowserWindow> {
 
   mainWindow.loadFile(path.join(__dirname, '..', 'shell', 'index.html'));
 
-  if (IS_DEV) {
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
-  }
+  // Fix origin header for WebSocket connections to OpenClaw
+  // Electron sends "null" origin for file:// pages, which OpenClaw rejects
+  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
+    { urls: ['ws://127.0.0.1:*/*', 'ws://localhost:*/*'] },
+    (details, callback) => {
+      details.requestHeaders['Origin'] = 'http://127.0.0.1:18789';
+      callback({ requestHeaders: details.requestHeaders });
+    }
+  );
+
+  // Temporarily always open DevTools for debugging
+  mainWindow.webContents.openDevTools({ mode: 'detach' });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
