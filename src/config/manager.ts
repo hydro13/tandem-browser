@@ -15,6 +15,7 @@ export interface TandemConfig {
     keesPanelPosition: 'left' | 'right';
     keesPanelDefaultOpen: boolean;
     showBookmarksBar: boolean;
+    activeBackend: 'openclaw' | 'claude';
   };
 
   // Screenshots
@@ -58,6 +59,16 @@ export interface TandemConfig {
     theme: 'dark' | 'light' | 'system';
   };
 
+  // AI Autonomy
+  autonomy: {
+    autoApproveRead: boolean;
+    autoApproveNavigate: boolean;
+    autoApproveClick: boolean;
+    autoApproveType: boolean;
+    autoApproveForms: boolean;
+    trustedSites: string[];
+  };
+
   // Onboarding
   onboardingComplete: boolean;
 }
@@ -70,6 +81,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     keesPanelPosition: 'right',
     keesPanelDefaultOpen: false,
     showBookmarksBar: true,
+    activeBackend: 'openclaw',
   },
   screenshots: {
     clipboard: true,
@@ -99,6 +111,14 @@ const DEFAULT_CONFIG: TandemConfig = {
   },
   appearance: {
     theme: 'dark',
+  },
+  autonomy: {
+    autoApproveRead: true,
+    autoApproveNavigate: true,
+    autoApproveClick: false,
+    autoApproveType: false,
+    autoApproveForms: false,
+    trustedSites: ['google.com', 'wikipedia.org', 'duckduckgo.com'],
   },
   onboardingComplete: false,
 };

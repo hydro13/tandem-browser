@@ -95,6 +95,14 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('kees-typing', (_event, data) => callback(data));
   },
 
+  // Emergency stop — stops all agent activity
+  emergencyStop: () => ipcRenderer.invoke('emergency-stop'),
+
+  // Task approval events from main
+  onApprovalRequest: (callback: (data: { requestId: string; taskId: string; stepId: string; description: string; action: any; riskLevel: string }) => void) => {
+    ipcRenderer.on('approval-request', (_event, data) => callback(data));
+  },
+
   // Tab source changes (robin/kees control indicator)
   onTabSourceChanged: (callback: (data: { tabId: string; source: string }) => void) => {
     ipcRenderer.on('tab-source-changed', (_event, data) => callback(data));

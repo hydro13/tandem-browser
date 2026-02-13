@@ -647,6 +647,58 @@
     }
     .backend-dot.connected { background: var(--success); }
 
+    /* Noodrem button — emergency stop */
+    .noodrem-btn {
+      margin-left: auto;
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid rgba(233,69,96,0.3);
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      opacity: 0.6;
+    }
+    .noodrem-btn:hover { background: rgba(233,69,96,0.2); opacity: 1; }
+    .noodrem-btn.active { background: rgba(233,69,96,0.3); opacity: 1; animation: noodrem-pulse 1s infinite; }
+    @keyframes noodrem-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,0.4); } 50% { box-shadow: 0 0 8px 2px rgba(233,69,96,0.4); } }
+
+    /* Approval request cards */
+    .approval-container { flex-shrink: 0; }
+    .approval-card {
+      margin: 6px 8px;
+      padding: 10px 12px;
+      background: rgba(124,58,237,0.15);
+      border: 1px solid rgba(124,58,237,0.3);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+    .approval-card .approval-title { font-weight: 600; color: var(--text); margin-bottom: 6px; }
+    .approval-card .approval-desc { color: var(--text-dim); margin-bottom: 4px; line-height: 1.4; }
+    .approval-card .approval-site { color: var(--text-dim); font-size: 10px; margin-bottom: 8px; }
+    .approval-card .approval-risk { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-bottom: 8px; }
+    .approval-card .approval-risk.risk-medium { background: rgba(251,191,36,0.2); color: #fbbf24; }
+    .approval-card .approval-risk.risk-high { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .approval-card .approval-actions { display: flex; gap: 8px; }
+    .approval-card .approval-actions button {
+      flex: 1; padding: 5px 10px; border: none; border-radius: 6px;
+      font-size: 11px; cursor: pointer; transition: all 0.15s;
+    }
+    .approval-card .btn-approve { background: rgba(16,185,129,0.2); color: #10b981; }
+    .approval-card .btn-approve:hover { background: rgba(16,185,129,0.35); }
+    .approval-card .btn-reject { background: rgba(239,68,68,0.2); color: #ef4444; }
+    .approval-card .btn-reject:hover { background: rgba(239,68,68,0.35); }
+
+    /* Tab source indicator — AI controlled tabs */
+    .tab-header .tab-source-indicator {
+      font-size: 10px;
+      margin-right: 3px;
+      opacity: 0.8;
+    }
+    .tab-header.ai-controlled {
+      border-bottom: 2px solid #7c3aed;
+    }
+
     /* Source styling — visual distinction per origin */
     .chat-msg.source-openclaw { border-left: 3px solid #ff6b35; }
     .chat-msg.source-claude { border-left: 3px solid #7c3aed; }
@@ -1039,6 +1091,7 @@
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
         <button class="panel-tab" data-panel-tab="claronote">🎙️</button>
+        <button class="noodrem-btn" id="noodrem-btn" title="Noodrem — stop alle AI activiteit (Escape)">🛑</button>
       </div>
       <div class="panel-body" id="panel-body">
         <!-- Activity tab -->
@@ -1060,6 +1113,7 @@
             <span class="ws-dot" id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
             <span id="ws-status-text">Disconnected</span>
           </div>
+          <div class="approval-container" id="approval-container" style="display:none;"></div>
           <div class="chat-messages" id="chat-messages"></div>
           <div class="typing-indicator" id="typing-indicator">
             <div class="typing-dots"><span></span><span></span><span></span></div>
@@ -1705,18 +1759,48 @@
         while (activityEl.children.length > 200) activityEl.removeChild(activityEl.firstChild);
       });
 
-      // Tab source changes (🧀/👤 indicator)
+      // Tab source changes (🧀/👤 indicator) + AI tab visual border
       window.tandem.onTabSourceChanged((data) => {
         for (const [id, entry] of tabs) {
           if (id === data.tabId) {
             const sourceEl = entry.tabEl.querySelector('.tab-source');
             if (sourceEl) {
-              sourceEl.textContent = data.source === 'kees' ? '🧀' : '👤';
-              sourceEl.title = data.source === 'kees' ? 'Kees controlled' : 'Robin controlled';
+              sourceEl.textContent = data.source === 'kees' ? '🤖' : '👤';
+              sourceEl.title = data.source === 'kees' ? 'AI controlled — klik om over te nemen' : 'Robin controlled';
+            }
+            // Visual indicator: purple bottom border for AI tabs
+            if (data.source === 'kees') {
+              entry.tabEl.style.borderBottom = '2px solid #7c3aed';
+            } else {
+              entry.tabEl.style.borderBottom = '';
             }
           }
         }
       });
+
+      // Robin claims an AI tab by focusing it (click on tab header)
+      // The click handler already calls focusTab, we hook into it to also claim
+      const origTabClickHandler = (tabId) => {
+        // Check if this is an AI tab
+        const entry = tabs.get(tabId);
+        if (entry) {
+          const sourceEl = entry.tabEl.querySelector('.tab-source');
+          if (sourceEl && sourceEl.textContent === '🤖') {
+            // Claim the tab for Robin
+            fetch('http://localhost:8765/tabs/source', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ tabId, source: 'robin' })
+            }).catch(() => {});
+          }
+        }
+      };
+      // Hook into existing tab click by patching focusTab handler
+      const _origFocusTab = window.__tandemTabs.focusTab;
+      window.__tandemTabs.focusTab = function(tabId) {
+        origTabClickHandler(tabId);
+        return _origFocusTab.call(window.__tandemTabs, tabId);
+      };
 
       // Open URL in new tab (from popup redirect)
       window.tandem.onOpenUrlInNewTab((url) => {
@@ -1838,19 +1922,26 @@
         }
       }
 
-      btnOC.addEventListener('click', () => {
-        router.setActive('openclaw');
+      function switchBackend(id) {
+        router.setActive(id);
         messagesEl.innerHTML = '';
-        openclawBackend.loadHistory((msgs) => {
-          for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
-        });
-      });
+        if (id === 'openclaw') {
+          openclawBackend.loadHistory((msgs) => {
+            for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
+          });
+        } else {
+          claudeBackend._loadHistory();
+        }
+        // Persist choice to config
+        fetch('http://localhost:8765/config', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ general: { activeBackend: id } })
+        }).catch(() => {});
+      }
 
-      btnCL.addEventListener('click', () => {
-        router.setActive('claude');
-        messagesEl.innerHTML = '';
-        claudeBackend._loadHistory();
-      });
+      btnOC.addEventListener('click', () => switchBackend('openclaw'));
+      btnCL.addEventListener('click', () => switchBackend('claude'));
 
       // ── Connection status dots ──
 
@@ -1939,9 +2030,15 @@
 
       // ── Initialize ──
 
-      // Default to OpenClaw
-      router.setActive('openclaw');
+      // Load saved backend from config, fallback to openclaw
       router.connectAll();
+      fetch('http://localhost:8765/config')
+        .then(r => r.json())
+        .then(cfg => {
+          const saved = cfg.general && cfg.general.activeBackend;
+          switchBackend(saved === 'claude' ? 'claude' : 'openclaw');
+        })
+        .catch(() => switchBackend('openclaw'));
 
       return {
         ensureConnected() { router.connectAll(); },
@@ -1949,6 +2046,107 @@
         router,
         sendMessage(text) { return router.sendMessage(text); }
       };
+    })();
+
+    // ═══════════════════════════════════════════════
+    // Noodrem + Approval System (Fase 4)
+    // ═══════════════════════════════════════════════
+    (() => {
+      const noodremBtn = document.getElementById('noodrem-btn');
+      const approvalContainer = document.getElementById('approval-container');
+
+      // Noodrem button — emergency stop
+      if (noodremBtn) {
+        noodremBtn.addEventListener('click', () => {
+          if (window.tandem && window.tandem.emergencyStop) {
+            window.tandem.emergencyStop();
+          } else {
+            fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
+          }
+        });
+      }
+
+      // Escape key = noodrem (global handler, always works)
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && e.shiftKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.tandem && window.tandem.emergencyStop) {
+            window.tandem.emergencyStop();
+          } else {
+            fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
+          }
+        }
+      }, true);
+
+      // Listen for approval requests from main process
+      if (window.tandem && window.tandem.onApprovalRequest) {
+        window.tandem.onApprovalRequest((data) => {
+          showApprovalCard(data);
+        });
+      }
+
+      function showApprovalCard(data) {
+        if (!approvalContainer) return;
+        approvalContainer.style.display = 'block';
+
+        const card = document.createElement('div');
+        card.className = 'approval-card';
+        card.dataset.requestId = data.requestId;
+
+        const riskClass = data.riskLevel === 'high' ? 'risk-high' : 'risk-medium';
+        const riskLabel = data.riskLevel === 'high' ? 'Hoog risico' : 'Medium risico';
+        const actionDesc = data.action ? `${data.action.type}: ${JSON.stringify(data.action.params || {}).slice(0, 80)}` : '';
+
+        card.innerHTML = `
+          <div class="approval-title">🤖 Kees wil een actie uitvoeren:</div>
+          <div class="approval-desc">${escapeHtmlSimple(data.description || '')}</div>
+          <div class="approval-desc" style="font-family:monospace;font-size:10px;">${escapeHtmlSimple(actionDesc)}</div>
+          <span class="approval-risk ${riskClass}">${riskLabel}</span>
+          <div class="approval-actions">
+            <button class="btn-approve" data-task="${data.taskId}" data-step="${data.stepId}">✅ Goedkeuren</button>
+            <button class="btn-reject" data-task="${data.taskId}" data-step="${data.stepId}">❌ Afwijzen</button>
+          </div>
+        `;
+
+        card.querySelector('.btn-approve').addEventListener('click', () => {
+          fetch(`http://localhost:8765/tasks/${data.taskId}/approve`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stepId: data.stepId })
+          }).catch(() => {});
+          card.remove();
+          if (approvalContainer.children.length === 0) approvalContainer.style.display = 'none';
+        });
+
+        card.querySelector('.btn-reject').addEventListener('click', () => {
+          fetch(`http://localhost:8765/tasks/${data.taskId}/reject`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stepId: data.stepId })
+          }).catch(() => {});
+          card.remove();
+          if (approvalContainer.children.length === 0) approvalContainer.style.display = 'none';
+        });
+
+        approvalContainer.appendChild(card);
+      }
+
+      function escapeHtmlSimple(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+      }
+
+      // Emergency stop clears all approval cards
+      if (window.tandem) {
+        const origOnEmergency = window.tandem.onTabSourceChanged; // listen for emergency-stop event via IPC
+      }
+      // Also poll for emergency stop events (backup)
+      window.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'emergency-stop' && approvalContainer) {
+          approvalContainer.innerHTML = '';
+          approvalContainer.style.display = 'none';
+        }
+      });
     })();
 
     // Panel resize

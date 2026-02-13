@@ -321,6 +321,7 @@
     <a href="#stealth" data-section="stealth">🛡️ Stealth</a>
     <a href="#sync" data-section="sync">🔄 Sync</a>
     <a href="#behavior" data-section="behavior">🧬 Behavioral Learning</a>
+    <a href="#autonomy" data-section="autonomy">🤖 AI Autonomie</a>
     <a href="#data" data-section="data">💾 Data</a>
   </nav>
 
@@ -649,6 +650,75 @@
         <div class="stat-card"><div class="stat-value" id="stat-sessionEvents">—</div><div class="stat-label">Sessie events</div></div>
         <div class="stat-card"><div class="stat-value" id="stat-avgKeypress">—</div><div class="stat-label">Gem. keypress (ms)</div></div>
         <div class="stat-card"><div class="stat-value" id="stat-avgClick">—</div><div class="stat-label">Gem. click delay (ms)</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ AI Autonomie ═══ -->
+    <div class="section" id="autonomy">
+      <h2>🤖 AI Autonomie</h2>
+      <p class="section-desc">Bepaal wat Kees/Claude automatisch mag doen zonder te vragen</p>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Pagina's lezen zonder vragen</div>
+          <div class="field-desc">Screenshots, scrollen, tekst lezen</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-autoApproveRead">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Navigeren zonder vragen</div>
+          <div class="field-desc">Naar URL's gaan, tabs openen/sluiten</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-autoApproveNavigate">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Klikken zonder vragen</div>
+          <div class="field-desc">Links en knoppen klikken</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-autoApproveClick">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Tekst typen zonder vragen</div>
+          <div class="field-desc">Tekst invullen in zoekvelden en inputs</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-autoApproveType">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field">
+        <div class="field-info">
+          <div class="field-label">Formulieren invullen zonder vragen</div>
+          <div class="field-desc">Formulieren automatisch invullen en versturen</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="cfg-autoApproveForms">
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="field" style="flex-direction:column;align-items:flex-start;">
+        <div class="field-info" style="margin-bottom:8px;">
+          <div class="field-label">Vertrouwde sites</div>
+          <div class="field-desc">Op deze sites mag de AI meer automatisch doen</div>
+        </div>
+        <textarea id="cfg-trustedSites" style="width:100%;min-height:60px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;" placeholder="google.com&#10;wikipedia.org&#10;duckduckgo.com"></textarea>
       </div>
     </div>
 
@@ -1052,8 +1122,67 @@
       } catch { showToast('Sync mislukt ✕'); }
     });
 
+    // ═══ Autonomy settings ═══
+    let autonomyConfig = {};
+
+    async function loadAutonomy() {
+      try {
+        const res = await fetch(`${API}/autonomy`);
+        if (res.ok) autonomyConfig = await res.json();
+      } catch { /* API not ready */ }
+      applyAutonomyToUI();
+    }
+
+    function applyAutonomyToUI() {
+      setChecked('cfg-autoApproveRead', autonomyConfig.autoApproveRead !== false);
+      setChecked('cfg-autoApproveNavigate', autonomyConfig.autoApproveNavigate !== false);
+      setChecked('cfg-autoApproveClick', !!autonomyConfig.autoApproveClick);
+      setChecked('cfg-autoApproveType', !!autonomyConfig.autoApproveType);
+      setChecked('cfg-autoApproveForms', !!autonomyConfig.autoApproveForms);
+      const sitesEl = document.getElementById('cfg-trustedSites');
+      if (sitesEl && autonomyConfig.trustedSites) {
+        sitesEl.value = autonomyConfig.trustedSites.join('\n');
+      }
+    }
+
+    async function saveAutonomy(patch) {
+      try {
+        const res = await fetch(`${API}/autonomy`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch),
+        });
+        if (res.ok) {
+          autonomyConfig = await res.json();
+          showToast('Opgeslagen ✓');
+        }
+      } catch { showToast('Opslaan mislukt ✕'); }
+    }
+
+    // Autonomy toggle handlers
+    for (const [id, key] of [
+      ['cfg-autoApproveRead', 'autoApproveRead'],
+      ['cfg-autoApproveNavigate', 'autoApproveNavigate'],
+      ['cfg-autoApproveClick', 'autoApproveClick'],
+      ['cfg-autoApproveType', 'autoApproveType'],
+      ['cfg-autoApproveForms', 'autoApproveForms'],
+    ]) {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('change', (e) => saveAutonomy({ [key]: e.target.checked }));
+    }
+
+    // Trusted sites textarea
+    const trustedSitesEl = document.getElementById('cfg-trustedSites');
+    if (trustedSitesEl) {
+      trustedSitesEl.addEventListener('change', () => {
+        const sites = trustedSitesEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+        saveAutonomy({ trustedSites: sites });
+      });
+    }
+
     // ═══ Init ═══
     loadConfig();
+    loadAutonomy();
     loadBehaviorStats();
     loadChromeProfiles();
     updateSyncStatus();

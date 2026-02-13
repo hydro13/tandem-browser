@@ -29,6 +29,7 @@ import { AudioCaptureManager } from './audio/capture';
 import { ExtensionLoader } from './extensions/loader';
 import { ClaroNoteManager } from './claronote/manager';
 import { EventStreamManager } from './events/stream';
+import { TaskManager } from './agents/task-manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -57,6 +58,7 @@ let audioCaptureManager: AudioCaptureManager | null = null;
 let extensionLoader: ExtensionLoader | null = null;
 let claroNoteManager: ClaroNoteManager | null = null;
 let eventStream: EventStreamManager | null = null;
+let taskManager: TaskManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -189,9 +191,21 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   extensionLoader = new ExtensionLoader();
   claroNoteManager = new ClaroNoteManager();
   eventStream = new EventStreamManager();
+  taskManager = new TaskManager();
 
   // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
   contextBridge.connectEventStream(eventStream);
+
+  // Wire TaskManager events to renderer (Fase 4)
+  taskManager.on('approval-request', (data: any) => {
+    win.webContents.send('approval-request', data);
+  });
+  taskManager.on('task-updated', (task: any) => {
+    win.webContents.send('task-updated', task);
+  });
+  taskManager.on('emergency-stop', (data: any) => {
+    win.webContents.send('emergency-stop', data);
+  });
 
   // Hook download manager into session
   const partition = 'persist:tandem';
@@ -233,6 +247,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     extensionLoader: extensionLoader!,
     claroNoteManager: claroNoteManager!,
     eventStream: eventStream!,
+    taskManager: taskManager!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -242,7 +257,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list'];
+  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -461,6 +476,18 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   ipcMain.handle('tab-list', async () => {
     return tabManager?.listTabs();
+  });
+
+  // ═══ Emergency Stop — Escape key from renderer ═══
+  ipcMain.handle('emergency-stop', async () => {
+    if (taskManager) {
+      const result = taskManager.emergencyStop();
+      if (panelManager) {
+        panelManager.addChatMessage('kees', `🛑 Noodrem! ${result.stopped} taken gestopt door Robin.`);
+      }
+      return result;
+    }
+    return { stopped: 0 };
   });
 
   // Navigation IPC handlers
@@ -700,6 +727,7 @@ app.on('will-quit', () => {
   if (voiceManager) voiceManager.stop();
   if (audioCaptureManager) audioCaptureManager.stopRecording();
   if (chromeImporter) chromeImporter.destroy();
+  if (taskManager) taskManager.destroy();
 });
 
 app.on('window-all-closed', () => {

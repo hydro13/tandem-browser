@@ -33,6 +33,7 @@ import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
 import { LoginManager } from '../auth/login-manager';
 import { EventStreamManager } from '../events/stream';
+import { TaskManager } from '../agents/task-manager';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -81,6 +82,7 @@ export interface TandemAPIOptions {
   extensionLoader: ExtensionLoader;
   claroNoteManager: ClaroNoteManager;
   eventStream: EventStreamManager;
+  taskManager: TaskManager;
 }
 
 export class TandemAPI {
@@ -111,6 +113,7 @@ export class TandemAPI {
   private extensionLoader: ExtensionLoader;
   private claroNoteManager: ClaroNoteManager;
   private eventStream: EventStreamManager;
+  private taskManager: TaskManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -140,6 +143,7 @@ export class TandemAPI {
     this.extensionLoader = opts.extensionLoader;
     this.claroNoteManager = opts.claroNoteManager;
     this.eventStream = opts.eventStream;
+    this.taskManager = opts.taskManager;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -597,6 +601,20 @@ export class TandemAPI {
       }
     });
 
+    // Set tab source (robin/kees)
+    this.app.post('/tabs/source', (req: Request, res: Response) => {
+      try {
+        const { tabId, source } = req.body;
+        if (!tabId || !source) {
+          return res.status(400).json({ error: 'tabId and source required' });
+        }
+        const ok = this.tabManager.setTabSource(tabId, source);
+        res.json({ ok });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // PANEL — Kees side panel
     // ═══════════════════════════════════════════════
@@ -779,6 +797,131 @@ export class TandemAPI {
       try {
         const updated = this.configManager.updateConfig(req.body);
         res.json(updated);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // TASKS — Agent task queue + approval (Fase 4)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/tasks', (req: Request, res: Response) => {
+      try {
+        const status = req.query.status as string | undefined;
+        const tasks = this.taskManager.listTasks(status as any);
+        res.json(tasks);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/tasks/:id', (req: Request, res: Response) => {
+      const taskId = req.params.id as string;
+      const task = this.taskManager.getTask(taskId);
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+      res.json(task);
+    });
+
+    this.app.post('/tasks', (req: Request, res: Response) => {
+      try {
+        const { description, createdBy, assignedTo, steps } = req.body;
+        if (!description || !steps) {
+          return res.status(400).json({ error: 'description and steps required' });
+        }
+        const task = this.taskManager.createTask(
+          description,
+          createdBy || 'claude',
+          assignedTo || 'claude',
+          steps
+        );
+        res.json(task);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/tasks/:id/approve', (req: Request, res: Response) => {
+      try {
+        const taskId = req.params.id as string;
+        const { stepId } = req.body;
+        this.taskManager.respondToApproval(taskId, stepId, true);
+        res.json({ ok: true, approved: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/tasks/:id/reject', (req: Request, res: Response) => {
+      try {
+        const taskId = req.params.id as string;
+        const { stepId } = req.body;
+        this.taskManager.respondToApproval(taskId, stepId, false);
+        res.json({ ok: true, approved: false });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/tasks/:id/status', (req: Request, res: Response) => {
+      try {
+        const taskId = req.params.id as string;
+        const { status, stepIndex, stepStatus, result } = req.body;
+        if (status === 'running') this.taskManager.markTaskRunning(taskId);
+        else if (status === 'done') this.taskManager.markTaskDone(taskId, result);
+        else if (status === 'failed') this.taskManager.markTaskFailed(taskId, result || 'Unknown error');
+        if (stepIndex !== undefined && stepStatus) {
+          this.taskManager.updateStepStatus(taskId, stepIndex, stepStatus, result);
+        }
+        const task = this.taskManager.getTask(taskId);
+        res.json(task || { error: 'Task not found' });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/emergency-stop', (_req: Request, res: Response) => {
+      try {
+        const result = this.taskManager.emergencyStop();
+        if (this.panelManager) {
+          this.panelManager.addChatMessage('kees', `🛑 Noodrem! ${result.stopped} taken gestopt.`);
+        }
+        res.json(result);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/tasks/check-approval', (req: Request, res: Response) => {
+      try {
+        const { actionType, targetUrl } = req.query;
+        const needs = this.taskManager.needsApproval(
+          actionType as string || '',
+          targetUrl as string
+        );
+        res.json({ needsApproval: needs });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/autonomy', (_req: Request, res: Response) => {
+      res.json(this.taskManager.getAutonomySettings());
+    });
+
+    this.app.patch('/autonomy', (req: Request, res: Response) => {
+      try {
+        const updated = this.taskManager.updateAutonomySettings(req.body);
+        res.json(updated);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/activity-log/agent', (req: Request, res: Response) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 50;
+        res.json(this.taskManager.getActivityLog(limit));
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

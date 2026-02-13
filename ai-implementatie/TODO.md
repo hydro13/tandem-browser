@@ -110,7 +110,7 @@
 - [x] Unified chat history met source labels
 - [x] Visueel onderscheid per bron (border colors: openclaw=#ff6b35, claude=#7c3aed, robin=#10b981)
 - [x] `npx tsc` — zero errors
-- [ ] State persistence in config (general.activeBackend) — TODO volgende sessie
+- [x] State persistence in config (general.activeBackend) ✅ (13 feb 2026)
 - [ ] Test: OpenClaw werkt IDENTIEK aan voor de refactor
 - [ ] Test: geen regressies (reconnect, streaming, history, typing)
 - [ ] Test: backend wisselen is smooth
@@ -120,26 +120,33 @@
 
 ## Fase 4: Agent Autonomie (2-3 sessies)
 
-### Sessie 4.1: Task Queue + Approval System
-- [ ] AITask en TaskStep interfaces
-- [ ] Task queue opslag: ~/.tandem/tasks/
-- [ ] Risico-niveaus met approval defaults
-- [ ] Approval UI in Kees panel
-- [ ] Noodrem: Escape stopt ALLE agent-activiteit
-- [ ] Settings UI voor autonomie levels
-- [ ] Vertrouwde sites configuratie
-- [ ] `npx tsc` — zero errors
+### Sessie 4.1: Task Queue + Approval System ✅ (13 feb 2026)
+- [x] AITask en TaskStep interfaces (`src/agents/task-manager.ts`)
+- [x] Task queue opslag: ~/.tandem/tasks/
+- [x] Risico-niveaus met approval defaults (none/low/medium/high)
+- [x] Approval UI in Kees panel (approval cards met goedkeuren/afwijzen)
+- [x] Noodrem: Shift+Escape stopt ALLE agent-activiteit + 🛑 knop in panel header
+- [x] Settings UI voor autonomie levels (`shell/settings.html` → AI Autonomie sectie)
+- [x] Vertrouwde sites configuratie (textarea in settings)
+- [x] API endpoints: GET/POST /tasks, /tasks/:id/approve, /tasks/:id/reject, POST /emergency-stop
+- [x] Autonomy settings: GET/PATCH /autonomy
+- [x] Activity log: GET /activity-log/agent
+- [x] TaskManager events naar renderer via IPC (approval-request, task-updated, emergency-stop)
+- [x] `npx tsc` — zero errors
 - [ ] Test: Robin ziet approval request
 - [ ] Test: noodrem stopt alles
 
-### Sessie 4.2: Autonomous Browse Sessions
-- [ ] Tab isolatie (tabSource: 'robin' | 'kees')
-- [ ] Visuele indicator in tab header
-- [ ] Robin kan AI tab overnemen (klik = claim)
-- [ ] Menselijke timing (hergebruik X-Scout patronen)
-- [ ] `tandem_research()` MCP tool
-- [ ] Activity log (ActivityEntry interface)
-- [ ] `npx tsc` — zero errors
+### Sessie 4.2: Autonomous Browse Sessions ✅ (13 feb 2026)
+- [x] Tab isolatie (tabSource: 'robin' | 'kees') — al aanwezig in TabManager
+- [x] Visuele indicator in tab header (🤖 icon + paarse border voor AI tabs)
+- [x] Robin kan AI tab overnemen (klik op AI tab = claim via POST /tabs/source)
+- [x] Menselijke timing (Gaussian delay, hergebruik X-Scout patronen in MCP server)
+- [x] `tandem_research()` MCP tool — autonoom zoeken, lezen, samenvatten
+- [x] `tandem_create_task()` MCP tool — taken aanmaken met stappen
+- [x] `tandem_emergency_stop()` MCP tool — noodrem via MCP
+- [x] Activity log (ActivityEntry interface in TaskManager)
+- [x] POST /tabs/source endpoint voor tab claim
+- [x] `npx tsc` — zero errors
 - [ ] Test: Claude kan zelfstandig 5 pagina's onderzoeken
 - [ ] Test: Robin ziet voortgang real-time
 
