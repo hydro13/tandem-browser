@@ -611,6 +611,48 @@
     }
     .chat-send-btn:hover { opacity: 0.85; }
 
+    /* Backend selector (Phase 3) */
+    .chat-backend-selector {
+      display: flex;
+      gap: 4px;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      flex-shrink: 0;
+    }
+    .backend-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .backend-option:hover { background: rgba(255,255,255,0.04); }
+    .backend-option.active {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.15);
+      color: var(--text);
+    }
+    .backend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+    .backend-dot.connected { background: var(--success); }
+
+    /* Source styling — visual distinction per origin */
+    .chat-msg.source-openclaw { border-left: 3px solid #ff6b35; }
+    .chat-msg.source-claude { border-left: 3px solid #7c3aed; }
+    .chat-msg.source-robin { border-left: 3px solid #10b981; }
+    .chat-msg.claude { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.2); align-self: flex-start; color: var(--text); }
+
     /* Voice indicator — large, prominent */
     .voice-indicator {
       display: none;
@@ -1002,8 +1044,18 @@
         <!-- Activity tab -->
         <div class="panel-content" id="panel-activity" style="display:flex;flex-direction:column;flex:1;">
         </div>
-        <!-- Chat tab — Direct WebSocket to OpenClaw gateway -->
+        <!-- Chat tab — Multi-backend via ChatRouter (Phase 3) -->
         <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;">
+          <div class="chat-backend-selector" id="chat-backend-selector">
+            <button class="backend-option active" data-backend="openclaw" id="btn-backend-openclaw">
+              <span class="backend-dot" id="dot-openclaw"></span>
+              🐙 Kees
+            </button>
+            <button class="backend-option" data-backend="claude" id="btn-backend-claude">
+              <span class="backend-dot" id="dot-claude"></span>
+              🤖 Claude
+            </button>
+          </div>
           <div class="ws-status" id="ws-status" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);">
             <span class="ws-dot" id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
             <span id="ws-status-text">Disconnected</span>
@@ -1099,6 +1151,11 @@
     <h3 id="alert-title">🧀 Kees heeft je nodig</h3>
     <p id="alert-body">...</p>
   </div>
+
+  <!-- Chat Router + Backends (Phase 3) -->
+  <script src="chat/openclaw-backend.js"></script>
+  <script src="chat/claude-activity-backend.js"></script>
+  <script src="chat/router.js"></script>
 
   <script>
     // ═══════════════════════════════════════════════
@@ -1604,7 +1661,7 @@
         document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
         document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
         if (tab === 'chat') {
-          ocChat.ensureConnected();
+          chatRouter.ensureConnected();
         }
         document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
         document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
@@ -1679,21 +1736,9 @@
     }
 
     // ═══════════════════════════════════════════════
-    // OpenClaw WebSocket Chat Client
+    // Chat Router — Multi-backend chat (Phase 3)
     // ═══════════════════════════════════════════════
-    const ocChat = (() => {
-      const SESSION_KEY = 'agent:main:main';
-      const WS_URL = 'ws://127.0.0.1:18789';
-      const TOKEN = 'de07381e753441ae3a697a72022a23eb0f67f67e257eeb68';
-
-      let ws = null;
-      let connected = false;
-      let reconnectDelay = 1000;
-      let reconnectTimer = null;
-      let streamingMsg = null;
-      let streamingText = '';
-      const pendingCallbacks = new Map();
-
+    const chatRouter = (() => {
       const messagesEl = document.getElementById('chat-messages');
       const inputEl = document.getElementById('chat-input');
       const sendBtn = document.getElementById('chat-send-btn');
@@ -1701,38 +1746,13 @@
       const wsDot = document.getElementById('ws-dot');
       const wsStatusText = document.getElementById('ws-status-text');
 
-      // Safety check: if any critical element is missing, don't initialize
+      // Safety check
       if (!messagesEl || !inputEl || !sendBtn || !typingEl || !wsDot || !wsStatusText) {
-        console.error('[ocChat] Missing required DOM elements, chat will not initialize');
+        console.error('[chatRouter] Missing required DOM elements, chat will not initialize');
         return { ensureConnected() {}, disconnect() {} };
       }
 
-      function setStatus(state) {
-        if (state === 'connected') {
-          wsDot.style.background = 'var(--success)';
-          wsStatusText.textContent = 'Connected';
-          connected = true;
-        } else if (state === 'connecting') {
-          wsDot.style.background = 'var(--warning)';
-          wsStatusText.textContent = 'Connecting...';
-        } else {
-          wsDot.style.background = 'var(--accent)';
-          wsStatusText.textContent = 'Disconnected';
-          connected = false;
-        }
-      }
-
-      function sendRequest(method, params, cb) {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
-          console.warn('[ocChat] WebSocket not connected, cannot send request:', method);
-          if (cb) cb({ error: { code: 'NOT_CONNECTED', message: 'WebSocket not connected' } });
-          return null;
-        }
-        const id = crypto.randomUUID();
-        if (cb) pendingCallbacks.set(id, cb);
-        ws.send(JSON.stringify({ type: 'req', id, method, params }));
-        return id;
-      }
+      // ── Shared helpers ──
 
       function scrollToBottom() {
         requestAnimationFrame(() => { messagesEl.scrollTop = messagesEl.scrollHeight; });
@@ -1748,131 +1768,161 @@
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
       }
 
-      function appendMessage(role, text, timestamp) {
-        const cls = role === 'user' ? 'robin' : 'kees';
-        const name = role === 'user' ? 'Robin' : 'Kees';
+      function appendMessage(role, text, timestamp, source) {
+        const sourceClass = source || 'openclaw';
+        let cls, name;
+        if (role === 'user') {
+          cls = 'robin';
+          name = 'Robin';
+        } else if (sourceClass === 'claude') {
+          cls = 'claude';
+          name = 'Claude';
+        } else {
+          cls = 'kees';
+          name = 'Kees';
+        }
         const el = document.createElement('div');
-        el.className = `chat-msg ${cls}`;
+        el.className = `chat-msg ${cls} source-${source || sourceClass}`;
         el.innerHTML = `<div class="msg-from">${name}</div><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">${formatTime(timestamp)}</div>`;
         messagesEl.appendChild(el);
         scrollToBottom();
         return el;
       }
 
-      function loadHistory() {
-        sendRequest('chat.history', { sessionKey: SESSION_KEY, limit: 200 }, (res) => {
-          if (!res.result) return;
-          messagesEl.innerHTML = '';
-          const msgs = res.result.messages || res.result;
-          if (Array.isArray(msgs)) {
-            for (const m of msgs) {
-              const text = Array.isArray(m.content)
-                ? m.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
-                : (m.text || m.content || '');
-              if (text) appendMessage(m.role, text, m.timestamp || m.createdAt);
-            }
-          }
-          scrollToBottom();
-        });
-      }
+      // ── Router setup ──
 
-      function handleChatEvent(payload) {
-        const { state, message } = payload;
-        if (state === 'delta') {
-          typingEl.classList.add('active');
-          const text = (message && (message.text || (Array.isArray(message.content) ? message.content.filter(c=>c.type==='text').map(c=>c.text).join('') : ''))) || '';
-          streamingText += text;
-          if (!streamingMsg) {
-            streamingMsg = appendMessage('assistant', streamingText, Date.now());
+      const router = new ChatRouter();
+      const openclawBackend = new OpenClawBackend();
+      const claudeBackend = new ClaudeActivityBackend();
+
+      router.register(openclawBackend);
+      router.register(claudeBackend);
+
+      // Track streaming message element for OpenClaw deltas
+      let streamingMsgEl = null;
+
+      // ── Backend selector UI ──
+
+      const btnOC = document.getElementById('btn-backend-openclaw');
+      const btnCL = document.getElementById('btn-backend-claude');
+      const dotOC = document.getElementById('dot-openclaw');
+      const dotCL = document.getElementById('dot-claude');
+
+      function updateBackendUI(activeId) {
+        btnOC.classList.toggle('active', activeId === 'openclaw');
+        btnCL.classList.toggle('active', activeId === 'claude');
+
+        // Update status bar text
+        const backend = router.getActive();
+        if (backend) {
+          const connected = backend.isConnected();
+          wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
+          wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
+        }
+
+        // Update placeholder
+        if (activeId === 'claude') {
+          inputEl.placeholder = 'Bericht aan Claude...';
+        } else {
+          inputEl.placeholder = 'Bericht aan Kees...';
+        }
+
+        // Update typing indicator text
+        const typingText = typingEl.querySelector('span:last-child');
+        if (typingText) {
+          if (activeId === 'claude') {
+            typingText.textContent = 'Claude is thinking...';
           } else {
-            streamingMsg.querySelector('.msg-text').innerHTML = escapeHtml(streamingText);
-            scrollToBottom();
+            typingText.textContent = 'Kees is typing...';
           }
-        } else if (state === 'final') {
-          typingEl.classList.remove('active');
-          streamingMsg = null;
-          streamingText = '';
-          loadHistory();
-        } else if (state === 'error') {
-          typingEl.classList.remove('active');
-          streamingMsg = null;
-          streamingText = '';
-          appendMessage('assistant', '⚠️ Error: ' + (message?.text || 'Unknown error'), Date.now());
         }
       }
 
-      function connect() {
-        if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-        setStatus('connecting');
-        ws = new WebSocket(WS_URL);
+      btnOC.addEventListener('click', () => {
+        router.setActive('openclaw');
+        messagesEl.innerHTML = '';
+        openclawBackend.loadHistory((msgs) => {
+          for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
+        });
+      });
 
-        ws.onopen = () => { /* wait for connect.challenge */ };
+      btnCL.addEventListener('click', () => {
+        router.setActive('claude');
+        messagesEl.innerHTML = '';
+        claudeBackend._loadHistory();
+      });
 
-        ws.onmessage = (e) => {
-          let msg;
-          try { msg = JSON.parse(e.data); } catch { return; }
+      // ── Connection status dots ──
 
-          if (msg.type === 'event') {
-            if (msg.event === 'connect.challenge') {
-              sendRequest('connect', {
-                minProtocol: 3, maxProtocol: 3,
-                client: { id: 'tandem-browser', version: '1.0', platform: 'tandem', mode: 'webchat', instanceId: crypto.randomUUID() },
-                role: 'operator',
-                scopes: ['operator.admin'],
-                auth: { token: TOKEN, nonce: msg.payload?.nonce },
-                userAgent: navigator.userAgent,
-                locale: navigator.language
-              }, (res) => {
-                if (res.result) {
-                  setStatus('connected');
-                  reconnectDelay = 1000;
-                  loadHistory();
-                } else {
-                  console.error('Connect failed:', res.error);
-                  setStatus('disconnected');
-                }
-              });
-            }
-            if (msg.event === 'chat') {
-              handleChatEvent(msg.payload);
-            }
+      router.onConnectionChange((connected, backendId) => {
+        if (backendId === 'openclaw') {
+          dotOC.classList.toggle('connected', connected);
+        } else if (backendId === 'claude') {
+          dotCL.classList.toggle('connected', connected);
+        }
+        // Update status bar if this is the active backend
+        if (backendId === router.getActiveId()) {
+          const backend = router.getActive();
+          wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
+          wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
+        }
+      });
+
+      // ── Message handling ──
+
+      router.onMessage((msg, type, backendId) => {
+        if (type === 'historyReload') {
+          // Full history reload — clear and repopulate
+          messagesEl.innerHTML = '';
+          streamingMsgEl = null;
+          if (Array.isArray(msg)) {
+            for (const m of msg) appendMessage(m.role, m.text, m.timestamp, m.source);
           }
+          return;
+        }
 
-          if (msg.type === 'res' && msg.id) {
-            const cb = pendingCallbacks.get(msg.id);
-            if (cb) { pendingCallbacks.delete(msg.id); cb(msg); }
+        // Regular message
+        if (msg._streaming) {
+          // Streaming delta from OpenClaw
+          if (!streamingMsgEl) {
+            streamingMsgEl = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          } else {
+            streamingMsgEl.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
+            scrollToBottom();
           }
-        };
+        } else {
+          streamingMsgEl = null;
+          appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+        }
+      });
 
-        ws.onclose = () => {
-          setStatus('disconnected');
-          pendingCallbacks.clear();
-          scheduleReconnect();
-        };
+      router.onTyping((typing) => {
+        typingEl.classList.toggle('active', typing);
+      });
 
-        ws.onerror = () => { /* onclose will fire */ };
-      }
+      router.onSwitch((id) => {
+        updateBackendUI(id);
+      });
 
-      function scheduleReconnect() {
-        if (reconnectTimer) clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(() => {
-          reconnectDelay = Math.min(reconnectDelay * 1.5, 15000);
-          connect();
-        }, reconnectDelay);
-      }
+      // ── Send message (input + button) ──
 
       function sendMessage() {
         const text = inputEl.value.trim();
-        if (!text || !connected) return;
+        if (!text) return;
+
+        const backend = router.getActive();
+        if (!backend || !backend.isConnected()) return;
+
         inputEl.value = '';
         inputEl.style.height = '';
-        appendMessage('user', text, Date.now());
-        sendRequest('chat.send', {
-          sessionKey: SESSION_KEY,
-          message: text,
-          deliver: false,
-          idempotencyKey: crypto.randomUUID()
-        });
+
+        // For OpenClaw, append user message locally (backend doesn't emit it)
+        if (router.getActiveId() === 'openclaw') {
+          appendMessage('user', text, Date.now(), 'robin');
+        }
+        // For Claude, the backend emits the sent message
+
+        router.sendMessage(text);
       }
 
       inputEl.addEventListener('keydown', (e) => {
@@ -1887,9 +1937,17 @@
       });
       sendBtn.addEventListener('click', sendMessage);
 
+      // ── Initialize ──
+
+      // Default to OpenClaw
+      router.setActive('openclaw');
+      router.connectAll();
+
       return {
-        ensureConnected() { connect(); },
-        disconnect() { if (ws) ws.close(); if (reconnectTimer) clearTimeout(reconnectTimer); }
+        ensureConnected() { router.connectAll(); },
+        disconnect() { router.disconnectAll(); },
+        router,
+        sendMessage(text) { return router.sendMessage(text); }
       };
     })();
 
@@ -2367,6 +2425,10 @@
           if (finalText) {
             window.tandem.sendVoiceTranscript(finalText, true);
             if (liveEl) liveEl.textContent = '';
+            // Voice → ChatRouter: send final transcript to active backend
+            if (typeof chatRouter !== 'undefined' && chatRouter.router) {
+              chatRouter.sendMessage(finalText);
+            }
           } else if (interimText) {
             window.tandem.sendVoiceTranscript(interimText, false);
           }

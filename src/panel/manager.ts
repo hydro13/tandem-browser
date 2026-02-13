@@ -12,7 +12,7 @@ export interface ActivityEvent {
 
 export interface ChatMessage {
   id: number;
-  from: 'robin' | 'kees';
+  from: 'robin' | 'kees' | 'claude';
   text: string;
   timestamp: number;
 }
@@ -100,7 +100,7 @@ export class PanelManager {
   }
 
   /** Add a chat message */
-  addChatMessage(from: 'robin' | 'kees', text: string): ChatMessage {
+  addChatMessage(from: 'robin' | 'kees' | 'claude', text: string): ChatMessage {
     const msg: ChatMessage = {
       id: ++this.chatCounter,
       from,

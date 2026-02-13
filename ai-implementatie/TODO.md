@@ -96,25 +96,23 @@
 
 ## Fase 3: Chat Router + Voice Koppeling (2-3 sessies)
 
-### Sessie 3.1: Interface + OpenClawBackend extractie
-- [ ] ChatMessage en ChatBackend interfaces definiëren
-- [ ] OpenClawBackend class — WebSocket logica uit index.html extraheren
-- [ ] FIX: OpenClaw token dynamisch laden uit ~/.openclaw/openclaw.json
-- [ ] Endpoint in server.ts voor token ophalen
-- [ ] ClaudeActivityBackend class — pollt /chat voor MCP activiteit
-- [ ] ChatRouter class — routeert naar actieve backend
-- [ ] `npx tsc` — zero errors
+### Sessie 3.1+3.2: Interface + OpenClawBackend + Router UI + Voice ✅ (13 feb 2026)
+- [x] ChatMessage en ChatBackend interfaces definiëren (`src/chat/interfaces.ts`)
+- [x] OpenClawBackend class — WebSocket logica uit index.html extraheren (`shell/chat/openclaw-backend.js`)
+- [x] FIX: OpenClaw token dynamisch laden uit ~/.openclaw/openclaw.json
+- [x] Endpoint in server.ts voor token ophalen (GET /config/openclaw-token)
+- [x] ClaudeActivityBackend class — pollt /chat voor MCP activiteit (`shell/chat/claude-activity-backend.js`)
+- [x] ChatRouter class — routeert naar actieve backend (`shell/chat/router.js`)
+- [x] PanelManager + API server: `from: 'claude'` support (was alleen robin|kees)
+- [x] Backend selector UI (🐙 Kees | 🤖 Claude)
+- [x] Connection status indicators (groen dots)
+- [x] Voice final transcript → chatRouter.sendMessage()
+- [x] Unified chat history met source labels
+- [x] Visueel onderscheid per bron (border colors: openclaw=#ff6b35, claude=#7c3aed, robin=#10b981)
+- [x] `npx tsc` — zero errors
+- [ ] State persistence in config (general.activeBackend) — TODO volgende sessie
 - [ ] Test: OpenClaw werkt IDENTIEK aan voor de refactor
 - [ ] Test: geen regressies (reconnect, streaming, history, typing)
-
-### Sessie 3.2: Router UI + Voice koppeling
-- [ ] Backend selector UI (🐙 Kees | 🤖 Claude)
-- [ ] Connection status indicators
-- [ ] State persistence in config
-- [ ] Voice final transcript → chatRouter.sendMessage()
-- [ ] Unified chat history met source labels
-- [ ] Visueel onderscheid per bron (border colors)
-- [ ] `npx tsc` — zero errors
 - [ ] Test: backend wisselen is smooth
 - [ ] Test: voice → actieve backend → antwoord in panel
 

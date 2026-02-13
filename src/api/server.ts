@@ -230,6 +230,28 @@ export class TandemAPI {
     });
 
     // ═══════════════════════════════════════════════
+    // OPENCLAW TOKEN — Phase 3 (Chat Router)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/config/openclaw-token', (_req: Request, res: Response) => {
+      try {
+        const openclawPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+        if (!fs.existsSync(openclawPath)) {
+          res.status(404).json({ error: 'OpenClaw config not found at ~/.openclaw/openclaw.json' });
+          return;
+        }
+        const data = JSON.parse(fs.readFileSync(openclawPath, 'utf-8'));
+        if (!data.token) {
+          res.status(404).json({ error: 'No token field in openclaw.json' });
+          return;
+        }
+        res.json({ token: data.token });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
     // EVENT STREAM — SSE (Phase 2)
     // ═══════════════════════════════════════════════
 
@@ -606,11 +628,11 @@ export class TandemAPI {
       }
     });
 
-    /** Send chat message (default: kees, but 'from' param allows robin for internal UI) */
+    /** Send chat message (default: kees, 'from' param allows robin/claude) */
     this.app.post('/chat', (req: Request, res: Response) => {
       const { text, from } = req.body;
       if (!text) { res.status(400).json({ error: 'text required' }); return; }
-      const sender = (from === 'robin') ? 'robin' : 'kees';
+      const sender: 'robin' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'kees';
       try {
         const msg = this.panelManager.addChatMessage(sender, text);
         res.json({ ok: true, message: msg });
