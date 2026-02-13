@@ -30,6 +30,7 @@ import { ExtensionLoader } from './extensions/loader';
 import { ClaroNoteManager } from './claronote/manager';
 import { EventStreamManager } from './events/stream';
 import { TaskManager } from './agents/task-manager';
+import { TabLockManager } from './agents/tab-lock-manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -59,6 +60,7 @@ let extensionLoader: ExtensionLoader | null = null;
 let claroNoteManager: ClaroNoteManager | null = null;
 let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
+let tabLockManager: TabLockManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -192,6 +194,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   claroNoteManager = new ClaroNoteManager();
   eventStream = new EventStreamManager();
   taskManager = new TaskManager();
+  tabLockManager = new TabLockManager();
 
   // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
   contextBridge.connectEventStream(eventStream);
@@ -248,6 +251,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     claroNoteManager: claroNoteManager!,
     eventStream: eventStream!,
     taskManager: taskManager!,
+    tabLockManager: tabLockManager!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -728,6 +732,7 @@ app.on('will-quit', () => {
   if (audioCaptureManager) audioCaptureManager.stopRecording();
   if (chromeImporter) chromeImporter.destroy();
   if (taskManager) taskManager.destroy();
+  if (tabLockManager) tabLockManager.destroy();
 });
 
 app.on('window-all-closed', () => {

@@ -34,6 +34,7 @@ import { WorkflowEngine } from '../workflow/engine';
 import { LoginManager } from '../auth/login-manager';
 import { EventStreamManager } from '../events/stream';
 import { TaskManager } from '../agents/task-manager';
+import { TabLockManager } from '../agents/tab-lock-manager';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -83,6 +84,7 @@ export interface TandemAPIOptions {
   claroNoteManager: ClaroNoteManager;
   eventStream: EventStreamManager;
   taskManager: TaskManager;
+  tabLockManager: TabLockManager;
 }
 
 export class TandemAPI {
@@ -114,6 +116,7 @@ export class TandemAPI {
   private claroNoteManager: ClaroNoteManager;
   private eventStream: EventStreamManager;
   private taskManager: TaskManager;
+  private tabLockManager: TabLockManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -144,6 +147,7 @@ export class TandemAPI {
     this.claroNoteManager = opts.claroNoteManager;
     this.eventStream = opts.eventStream;
     this.taskManager = opts.taskManager;
+    this.tabLockManager = opts.tabLockManager;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -922,6 +926,54 @@ export class TandemAPI {
       try {
         const limit = parseInt(req.query.limit as string) || 50;
         res.json(this.taskManager.getActivityLog(limit));
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // TAB LOCKS — Multi-AI tab conflict prevention (Fase 5)
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/tab-locks', (_req: Request, res: Response) => {
+      try {
+        res.json({ locks: this.tabLockManager.getAllLocks() });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/tab-locks/acquire', (req: Request, res: Response) => {
+      try {
+        const { tabId, agentId } = req.body;
+        if (!tabId || !agentId) {
+          return res.status(400).json({ error: 'tabId and agentId required' });
+        }
+        const result = this.tabLockManager.acquire(tabId, agentId);
+        res.json(result);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/tab-locks/release', (req: Request, res: Response) => {
+      try {
+        const { tabId, agentId } = req.body;
+        if (!tabId || !agentId) {
+          return res.status(400).json({ error: 'tabId and agentId required' });
+        }
+        const released = this.tabLockManager.release(tabId, agentId);
+        res.json({ ok: released });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/tab-locks/:tabId', (req: Request, res: Response) => {
+      try {
+        const tabId = req.params.tabId as string;
+        const owner = this.tabLockManager.getOwner(tabId);
+        res.json({ tabId, locked: owner !== null, owner });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

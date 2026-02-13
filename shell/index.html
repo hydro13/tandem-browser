@@ -1108,6 +1108,10 @@
               <span class="backend-dot" id="dot-claude"></span>
               🤖 Claude
             </button>
+            <button class="backend-option" data-backend="both" id="btn-backend-both">
+              <span class="backend-dot" id="dot-both"></span>
+              🐙🤖 Beide
+            </button>
           </div>
           <div class="ws-status" id="ws-status" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);">
             <span class="ws-dot" id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
@@ -1206,10 +1210,11 @@
     <p id="alert-body">...</p>
   </div>
 
-  <!-- Chat Router + Backends (Phase 3) -->
+  <!-- Chat Router + Backends (Phase 3) + DualMode (Phase 5) -->
   <script src="chat/openclaw-backend.js"></script>
   <script src="chat/claude-activity-backend.js"></script>
   <script src="chat/router.js"></script>
+  <script src="chat/dual-mode.js"></script>
 
   <script>
     // ═══════════════════════════════════════════════
@@ -1882,6 +1887,10 @@
       router.register(openclawBackend);
       router.register(claudeBackend);
 
+      // ── DualMode setup (Fase 5) ──
+      const dualMode = new DualMode(router);
+      let currentMode = 'openclaw'; // 'openclaw' | 'claude' | 'both'
+
       // Track streaming message element for OpenClaw deltas
       let streamingMsgEl = null;
 
@@ -1889,32 +1898,53 @@
 
       const btnOC = document.getElementById('btn-backend-openclaw');
       const btnCL = document.getElementById('btn-backend-claude');
+      const btnBoth = document.getElementById('btn-backend-both');
       const dotOC = document.getElementById('dot-openclaw');
       const dotCL = document.getElementById('dot-claude');
+      const dotBoth = document.getElementById('dot-both');
 
       function updateBackendUI(activeId) {
         btnOC.classList.toggle('active', activeId === 'openclaw');
         btnCL.classList.toggle('active', activeId === 'claude');
+        btnBoth.classList.toggle('active', activeId === 'both');
 
-        // Update status bar text
-        const backend = router.getActive();
-        if (backend) {
-          const connected = backend.isConnected();
-          wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
-          wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
-        }
-
-        // Update placeholder
-        if (activeId === 'claude') {
-          inputEl.placeholder = 'Bericht aan Claude...';
+        if (activeId === 'both') {
+          // In both mode, show combined status
+          const ocConn = openclawBackend.isConnected();
+          const clConn = claudeBackend.isConnected();
+          const anyConnected = ocConn || clConn;
+          wsDot.style.background = anyConnected ? 'var(--success)' : 'var(--accent)';
+          if (ocConn && clConn) {
+            wsStatusText.textContent = 'Kees + Claude Connected';
+          } else if (ocConn) {
+            wsStatusText.textContent = 'Kees Connected, Claude Disconnected';
+          } else if (clConn) {
+            wsStatusText.textContent = 'Kees Disconnected, Claude Connected';
+          } else {
+            wsStatusText.textContent = 'Both Disconnected';
+          }
+          inputEl.placeholder = 'Bericht aan Kees & Claude... (@kees/@claude voor specifiek)';
         } else {
-          inputEl.placeholder = 'Bericht aan Kees...';
+          // Single backend mode
+          const backend = router.getActive();
+          if (backend) {
+            const connected = backend.isConnected();
+            wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
+            wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
+          }
+          if (activeId === 'claude') {
+            inputEl.placeholder = 'Bericht aan Claude...';
+          } else {
+            inputEl.placeholder = 'Bericht aan Kees...';
+          }
         }
 
         // Update typing indicator text
         const typingText = typingEl.querySelector('span:last-child');
         if (typingText) {
-          if (activeId === 'claude') {
+          if (activeId === 'both') {
+            typingText.textContent = 'AI is thinking...';
+          } else if (activeId === 'claude') {
             typingText.textContent = 'Claude is thinking...';
           } else {
             typingText.textContent = 'Kees is typing...';
@@ -1923,15 +1953,32 @@
       }
 
       function switchBackend(id) {
-        router.setActive(id);
+        currentMode = id;
         messagesEl.innerHTML = '';
-        if (id === 'openclaw') {
+        streamingMsgEl = null;
+
+        if (id === 'both') {
+          // In "both" mode, set router to openclaw as default but enable dual mode
+          router.setActive('openclaw');
+          dualMode.setEnabled(true);
+          // Load combined history — OpenClaw first, then Claude
           openclawBackend.loadHistory((msgs) => {
             for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
           });
         } else {
-          claudeBackend._loadHistory();
+          dualMode.setEnabled(false);
+          router.setActive(id);
+          if (id === 'openclaw') {
+            openclawBackend.loadHistory((msgs) => {
+              for (const m of msgs) appendMessage(m.role, m.text, m.timestamp, m.source);
+            });
+          } else {
+            claudeBackend._loadHistory();
+          }
         }
+
+        updateBackendUI(id);
+
         // Persist choice to config
         fetch('http://localhost:8765/config', {
           method: 'PATCH',
@@ -1942,6 +1989,7 @@
 
       btnOC.addEventListener('click', () => switchBackend('openclaw'));
       btnCL.addEventListener('click', () => switchBackend('claude'));
+      btnBoth.addEventListener('click', () => switchBackend('both'));
 
       // ── Connection status dots ──
 
@@ -1951,8 +1999,14 @@
         } else if (backendId === 'claude') {
           dotCL.classList.toggle('connected', connected);
         }
-        // Update status bar if this is the active backend
-        if (backendId === router.getActiveId()) {
+        // Update "both" dot — green if any backend connected
+        const anyConnected = openclawBackend.isConnected() || claudeBackend.isConnected();
+        dotBoth.classList.toggle('connected', anyConnected);
+
+        // Update status bar for current mode
+        if (currentMode === 'both') {
+          updateBackendUI('both');
+        } else if (backendId === router.getActiveId()) {
           const backend = router.getActive();
           wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
           wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
@@ -1961,9 +2015,11 @@
 
       // ── Message handling ──
 
+      // Single-backend message handler (existing behavior)
       router.onMessage((msg, type, backendId) => {
+        if (currentMode === 'both') return; // handled by dualMode
+
         if (type === 'historyReload') {
-          // Full history reload — clear and repopulate
           messagesEl.innerHTML = '';
           streamingMsgEl = null;
           if (Array.isArray(msg)) {
@@ -1972,9 +2028,7 @@
           return;
         }
 
-        // Regular message
         if (msg._streaming) {
-          // Streaming delta from OpenClaw
           if (!streamingMsgEl) {
             streamingMsgEl = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
           } else {
@@ -1987,12 +2041,50 @@
         }
       });
 
+      // Dual-mode message handler (Fase 5) — both backends at once
+      let dualStreamingEls = {}; // per-backend streaming elements
+      dualMode.onMessage((msg, type, backendId) => {
+        if (type === 'historyReload') {
+          // In dual mode, don't clear — just append new history items
+          if (Array.isArray(msg)) {
+            for (const m of msg) appendMessage(m.role, m.text, m.timestamp, m.source);
+          }
+          return;
+        }
+
+        if (msg._streaming) {
+          if (!dualStreamingEls[backendId]) {
+            dualStreamingEls[backendId] = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          } else {
+            dualStreamingEls[backendId].querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
+            scrollToBottom();
+          }
+        } else {
+          dualStreamingEls[backendId] = null;
+          appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+        }
+      });
+
       router.onTyping((typing) => {
+        if (currentMode !== 'both') {
+          typingEl.classList.toggle('active', typing);
+        }
+      });
+
+      dualMode.onTyping((typing, backendId) => {
+        // In dual mode, show typing if any backend is typing
         typingEl.classList.toggle('active', typing);
+        const typingText = typingEl.querySelector('span:last-child');
+        if (typingText && typing) {
+          const name = backendId === 'openclaw' ? 'Kees' : 'Claude';
+          typingText.textContent = `${name} is typing...`;
+        }
       });
 
       router.onSwitch((id) => {
-        updateBackendUI(id);
+        if (currentMode !== 'both') {
+          updateBackendUI(id);
+        }
       });
 
       // ── Send message (input + button) ──
@@ -2001,19 +2093,36 @@
         const text = inputEl.value.trim();
         if (!text) return;
 
-        const backend = router.getActive();
-        if (!backend || !backend.isConnected()) return;
-
         inputEl.value = '';
         inputEl.style.height = '';
 
-        // For OpenClaw, append user message locally (backend doesn't emit it)
-        if (router.getActiveId() === 'openclaw') {
-          appendMessage('user', text, Date.now(), 'robin');
-        }
-        // For Claude, the backend emits the sent message
+        if (currentMode === 'both') {
+          // Dual mode: parse @-mentions, send to appropriate backends
+          const { target, cleanText } = DualMode.parseMention(text);
+          if (!cleanText) return;
 
-        router.sendMessage(text);
+          // Check if target backend(s) connected
+          if (target === 'claude' && !claudeBackend.isConnected()) return;
+          if (target === 'openclaw' && !openclawBackend.isConnected()) return;
+          if (target === 'both' && !openclawBackend.isConnected() && !claudeBackend.isConnected()) return;
+
+          // Show user message (display original text with @-mention for clarity)
+          appendMessage('user', text, Date.now(), 'robin');
+
+          dualMode.sendMessage(text);
+        } else {
+          // Single backend mode (existing behavior)
+          const backend = router.getActive();
+          if (!backend || !backend.isConnected()) return;
+
+          // For OpenClaw, append user message locally (backend doesn't emit it)
+          if (router.getActiveId() === 'openclaw') {
+            appendMessage('user', text, Date.now(), 'robin');
+          }
+          // For Claude, the backend emits the sent message
+
+          router.sendMessage(text);
+        }
       }
 
       inputEl.addEventListener('keydown', (e) => {
@@ -2036,7 +2145,9 @@
         .then(r => r.json())
         .then(cfg => {
           const saved = cfg.general && cfg.general.activeBackend;
-          switchBackend(saved === 'claude' ? 'claude' : 'openclaw');
+          if (saved === 'claude') switchBackend('claude');
+          else if (saved === 'both') switchBackend('both');
+          else switchBackend('openclaw');
         })
         .catch(() => switchBackend('openclaw'));
 
@@ -2044,7 +2155,11 @@
         ensureConnected() { router.connectAll(); },
         disconnect() { router.disconnectAll(); },
         router,
-        sendMessage(text) { return router.sendMessage(text); }
+        dualMode,
+        sendMessage(text) {
+          if (currentMode === 'both') return dualMode.sendMessage(text);
+          return router.sendMessage(text);
+        }
       };
     })();
 

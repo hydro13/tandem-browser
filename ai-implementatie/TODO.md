@@ -154,13 +154,15 @@
 
 ## Fase 5: Multi-AI Coördinatie (1-2 sessies)
 
-### Sessie 5.1: Dual Backend + Message Routing
-- [ ] DualMode class — berichten naar alle backends
-- [ ] @-mention routing (@claude, @kees)
-- [ ] Antwoorden gelabeld per bron
-- [ ] TabLockManager — voorkom tab conflicten
-- [ ] Backend selector: derde optie "🐙🤖 Beide"
-- [ ] `npx tsc` — zero errors
+### Sessie 5.1: Dual Backend + Message Routing ✅ (13 feb 2026)
+- [x] DualMode class — berichten naar alle backends (`shell/chat/dual-mode.js`)
+- [x] @-mention routing (@claude, @kees) — case insensitive, strip prefix
+- [x] Antwoorden gelabeld per bron (source: 'openclaw' | 'claude')
+- [x] TabLockManager — voorkom tab conflicten (`src/agents/tab-lock-manager.ts`)
+- [x] Backend selector: derde optie "🐙🤖 Beide" in index.html
+- [x] API endpoints: GET/POST /tab-locks, /tab-locks/acquire, /tab-locks/release, /tab-locks/:tabId
+- [x] State persistence: general.activeBackend supports 'both'
+- [x] `npx tsc` — zero errors
 - [ ] Test: beide backends tegelijk zonder crashes
 - [ ] Test: @-mention routing werkt
 - [ ] Test: geen tab conflicten
