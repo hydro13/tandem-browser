@@ -86,15 +86,17 @@ export class TabManager {
 
     this.tabs.set(id, tab);
 
-    // Notify renderer of source indicator
-    this.win.webContents.send('tab-source-changed', { tabId: id, source });
-
     if (groupId && this.groups.has(groupId)) {
       this.groups.get(groupId)!.tabIds.push(id);
     }
 
-    // Focus the new tab
+    // Focus the new tab BEFORE sending source indicator,
+    // because focusTab's renderer patch (origTabClickHandler) checks
+    // the source indicator and resets AI tabs back to robin.
     await this.focusTab(id);
+
+    // Now notify renderer of source indicator (after focus is done)
+    this.win.webContents.send('tab-source-changed', { tabId: id, source });
 
     return tab;
   }

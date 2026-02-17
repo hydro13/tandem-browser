@@ -317,9 +317,7 @@ export class TandemAPI {
             const url = window.location.href;
             const meta = document.querySelector('meta[name="description"]');
             const description = meta ? meta.getAttribute('content') : '';
-            const body = document.body.cloneNode(true);
-            body.querySelectorAll('script, style, nav, footer, aside, [role="banner"], [role="navigation"], .ad, .ads, .advertisement').forEach(el => el.remove());
-            const text = body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
+            const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
             return { title, url, description, text, length: text.length };
           })()
         `);
@@ -382,10 +380,10 @@ export class TandemAPI {
     // ═══════════════════════════════════════════════
 
     this.app.post('/execute-js', async (req: Request, res: Response) => {
-      const { code } = req.body;
-      if (!code) { res.status(400).json({ error: 'code required' }); return; }
+      const script = req.body.code || req.body.script;
+      if (!script) { res.status(400).json({ error: 'code or script required' }); return; }
       try {
-        const result = await this.execInActiveTab(code);
+        const result = await this.execInActiveTab(script);
         res.json({ ok: true, result });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
