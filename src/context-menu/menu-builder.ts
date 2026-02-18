@@ -4,6 +4,11 @@ import { ContextMenuParams, ContextMenuDeps } from './types';
 /** Protocols that should never be opened/downloaded */
 const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'file:', 'vbscript:'];
 
+const SEARCH_ENGINE = {
+  name: 'Google',
+  url: 'https://www.google.com/search?q=',
+};
+
 /** Check if a URL is safe to open in a new tab or download */
 function isSafeURL(url: string): boolean {
   if (!url) return false;
@@ -55,7 +60,9 @@ export class ContextMenuBuilder {
     }
 
     // Phase 1: Navigation + tool items (always present)
-    this.addSeparator(menu);
+    if (menu.items.length > 0 && menu.items.some(i => i.type !== 'separator')) {
+      this.addSeparator(menu);
+    }
     this.addNavigationItems(menu, params, wc);
     this.addSeparator(menu);
     this.addToolItems(menu, params, wc);
@@ -151,10 +158,10 @@ export class ContextMenuBuilder {
       ? params.selectionText.substring(0, 30) + '...'
       : params.selectionText;
     menu.append(new MenuItem({
-      label: `Search Google for "${truncated}"`,
+      label: `Search ${SEARCH_ENGINE.name} for "${truncated}"`,
       click: () => {
         const query = encodeURIComponent(params.selectionText);
-        this.deps.tabManager.openTab(`https://www.google.com/search?q=${query}`);
+        this.deps.tabManager.openTab(`${SEARCH_ENGINE.url}${query}`);
       },
     }));
   }
@@ -228,10 +235,10 @@ export class ContextMenuBuilder {
       ? params.selectionText.substring(0, 30) + '...'
       : params.selectionText;
     menu.append(new MenuItem({
-      label: `Search Google for "${truncated}"`,
+      label: `Search ${SEARCH_ENGINE.name} for "${truncated}"`,
       click: () => {
         const query = encodeURIComponent(params.selectionText);
-        this.deps.tabManager.openTab(`https://www.google.com/search?q=${query}`);
+        this.deps.tabManager.openTab(`${SEARCH_ENGINE.url}${query}`);
       },
     }));
   }
@@ -302,13 +309,13 @@ export class ContextMenuBuilder {
       defaultPath: `${safeName}.html`,
       filters: [
         { name: 'Web Page, Complete', extensions: ['html'] },
-        { name: 'Web Page, HTML Only', extensions: ['html'] },
+        { name: 'Web Page, HTML Only', extensions: ['htm'] },
       ],
     });
 
     if (!result.canceled && result.filePath) {
       if (wc.isDestroyed()) return;
-      const saveType = result.filePath.endsWith('.html') ? 'HTMLComplete' : 'HTMLOnly';
+      const saveType = result.filePath.endsWith('.htm') ? 'HTMLOnly' : 'HTMLComplete';
       await wc.savePage(result.filePath, saveType as 'HTMLComplete' | 'HTMLOnly').catch((err) => {
         console.warn('Save page failed:', err.message);
       });
@@ -323,25 +330,27 @@ export class ContextMenuBuilder {
 
     // Kees AI items
     if (params.selectionText) {
+      const safeText = params.selectionText.replace(/[\u0000-\u001f]/g, ' ').trim();
+      const truncatedForPrompt = safeText.length > 500 ? safeText.substring(0, 500) + '...' : safeText;
       menu.append(new MenuItem({
         label: 'Ask Kees about Selection',
         click: () => {
           this.deps.panelManager.togglePanel(true);
-          const text = params.selectionText;
           this.deps.win.webContents.send('kees-chat-inject',
-            `What can you tell me about this: "${text}"`
+            `What can you tell me about this: "${truncatedForPrompt}"`
           );
         },
       }));
     }
 
     if (params.mediaType === 'image' && params.srcURL) {
+      const safeSrc = params.srcURL.replace(/[\u0000-\u001f]/g, '').trim();
       menu.append(new MenuItem({
         label: 'Ask Kees about this Image',
         click: () => {
           this.deps.panelManager.togglePanel(true);
           this.deps.win.webContents.send('kees-chat-inject',
-            `Analyze this image: ${params.srcURL}`
+            `Analyze this image: ${safeSrc}`
           );
         },
       }));
@@ -349,11 +358,34 @@ export class ContextMenuBuilder {
 
     menu.append(new MenuItem({
       label: 'Summarize Page with Kees',
-      click: () => {
+      click: async () => {
+        if (wc.isDestroyed()) return;
         this.deps.panelManager.togglePanel(true);
-        this.deps.win.webContents.send('kees-chat-inject',
-          'Please summarize the current page for me.'
-        );
+
+        let excerpt = '';
+        try {
+          excerpt = await wc.executeJavaScript(`
+            (() => {
+              const title = document.title || '';
+              const body = document.body?.innerText || '';
+              const trimmed = body.substring(0, 2000);
+              return title + '\\n\\n' + trimmed;
+            })()
+          `);
+        } catch {}
+
+        const prompt = excerpt
+          ? 'Please summarize this page:\\n\\n' + excerpt
+          : 'Please summarize the current page for me.';
+
+        this.deps.win.webContents.send('kees-chat-inject', prompt);
+      },
+    }));
+
+    menu.append(new MenuItem({
+      label: 'Screenshot this Page',
+      click: () => {
+        this.deps.win.webContents.send('shortcut', 'quick-screenshot');
       },
     }));
 
@@ -468,9 +500,27 @@ export class ContextMenuBuilder {
         if (wc && !wc.isDestroyed()) wc.reload();
       },
     }));
+    const dupWc = webContents.fromId(tab.webContentsId);
+    const dupUrl = (dupWc && !dupWc.isDestroyed()) ? dupWc.getURL() : tab.url;
     menu.append(new MenuItem({
       label: 'Duplicate Tab',
-      click: () => this.deps.tabManager.openTab(tab.url),
+      enabled: !!(dupUrl && dupUrl !== 'about:blank'),
+      click: () => {
+        const wc = webContents.fromId(tab.webContentsId);
+        const currentUrl = (wc && !wc.isDestroyed()) ? wc.getURL() : tab.url;
+        this.deps.tabManager.openTab(currentUrl);
+      },
+    }));
+    menu.append(new MenuItem({
+      label: tab.pinned ? 'Unpin Tab' : 'Pin Tab',
+      click: () => {
+        const currentTab = this.deps.tabManager.getTab(tabId);
+        if (currentTab?.pinned) {
+          this.deps.tabManager.unpinTab(tabId);
+        } else {
+          this.deps.tabManager.pinTab(tabId);
+        }
+      },
     }));
     const tabWc = webContents.fromId(tab.webContentsId);
     const isMuted = tabWc && !tabWc.isDestroyed() ? tabWc.isAudioMuted() : false;
@@ -480,6 +530,14 @@ export class ContextMenuBuilder {
         // Re-read mute state at click time to avoid stale toggle
         const wc = webContents.fromId(tab.webContentsId);
         if (wc && !wc.isDestroyed()) wc.setAudioMuted(!wc.isAudioMuted());
+      },
+    }));
+    const currentSource = this.deps.tabManager.getTabSource(tabId);
+    menu.append(new MenuItem({
+      label: currentSource === 'kees' ? 'Take back from Kees' : 'Let Kees handle this tab',
+      click: () => {
+        const newSource = this.deps.tabManager.getTabSource(tabId) === 'kees' ? 'robin' : 'kees';
+        this.deps.tabManager.setTabSource(tabId, newSource);
       },
     }));
 
@@ -495,7 +553,7 @@ export class ContextMenuBuilder {
       enabled: allTabs.length > 1,
       click: async () => {
         for (const t of allTabs.filter(t => t.id !== tabId)) {
-          await this.deps.tabManager.closeTab(t.id);
+          try { await this.deps.tabManager.closeTab(t.id); } catch {}
         }
       },
     }));
@@ -504,7 +562,7 @@ export class ContextMenuBuilder {
       enabled: tabIndex < allTabs.length - 1,
       click: async () => {
         for (const t of allTabs.slice(tabIndex + 1)) {
-          await this.deps.tabManager.closeTab(t.id);
+          try { await this.deps.tabManager.closeTab(t.id); } catch {}
         }
       },
     }));

@@ -12,6 +12,7 @@ export interface Tab {
   active: boolean;
   createdAt: number;
   source: TabSource;
+  pinned: boolean;
 }
 
 export interface TabGroup {
@@ -83,6 +84,7 @@ export class TabManager {
       active: false,
       createdAt: Date.now(),
       source,
+      pinned: false,
     };
 
     this.tabs.set(id, tab);
@@ -191,9 +193,31 @@ export class TabManager {
     if (updates.favicon !== undefined) tab.favicon = updates.favicon;
   }
 
-  /** List all tabs */
+  /** List all tabs — pinned tabs first */
   listTabs(): Tab[] {
-    return Array.from(this.tabs.values());
+    const all = Array.from(this.tabs.values());
+    return all.sort((a, b) => {
+      if (a.pinned === b.pinned) return 0;
+      return a.pinned ? -1 : 1;
+    });
+  }
+
+  /** Pin a tab */
+  pinTab(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.pinned = true;
+    this.win.webContents.send('tab-pin-changed', { tabId, pinned: true });
+    return true;
+  }
+
+  /** Unpin a tab */
+  unpinTab(tabId: string): boolean {
+    const tab = this.tabs.get(tabId);
+    if (!tab) return false;
+    tab.pinned = false;
+    this.win.webContents.send('tab-pin-changed', { tabId, pinned: false });
+    return true;
   }
 
   /** Create or update a tab group */
@@ -271,6 +295,7 @@ export class TabManager {
       active: true,
       createdAt: Date.now(),
       source: 'robin',
+      pinned: false,
     };
     this.tabs.set(id, tab);
     this.activeTabId = id;

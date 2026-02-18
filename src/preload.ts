@@ -30,27 +30,41 @@ contextBridge.exposeInMainWorld('tandem', {
 
   // Events from main process
   onCopilotAlert: (callback: (data: { title: string; body: string }) => void) => {
-    ipcRenderer.on('copilot-alert', (_event, data) => callback(data));
+    const handler = (_event: any, data: { title: string; body: string }) => callback(data);
+    ipcRenderer.on('copilot-alert', handler);
+    return () => ipcRenderer.removeListener('copilot-alert', handler);
   },
   onNavigated: (callback: (url: string) => void) => {
-    ipcRenderer.on('navigated', (_event, url) => callback(url));
+    const handler = (_event: any, url: string) => callback(url);
+    ipcRenderer.on('navigated', handler);
+    return () => ipcRenderer.removeListener('navigated', handler);
   },
   onShortcut: (callback: (action: string) => void) => {
-    ipcRenderer.on('shortcut', (_event, action) => callback(action));
+    const handler = (_event: any, action: string) => callback(action);
+    ipcRenderer.on('shortcut', handler);
+    return () => ipcRenderer.removeListener('shortcut', handler);
   },
   onTabRegistered: (callback: (data: { tabId: string }) => void) => {
-    ipcRenderer.on('tab-registered', (_event, data) => callback(data));
+    const handler = (_event: any, data: { tabId: string }) => callback(data);
+    ipcRenderer.on('tab-registered', handler);
+    return () => ipcRenderer.removeListener('tab-registered', handler);
   },
 
   // Panel
   onPanelToggle: (callback: (data: { open: boolean }) => void) => {
-    ipcRenderer.on('panel-toggle', (_event, data) => callback(data));
+    const handler = (_event: any, data: { open: boolean }) => callback(data);
+    ipcRenderer.on('panel-toggle', handler);
+    return () => ipcRenderer.removeListener('panel-toggle', handler);
   },
   onActivityEvent: (callback: (event: any) => void) => {
-    ipcRenderer.on('activity-event', (_event, data) => callback(data));
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('activity-event', handler);
+    return () => ipcRenderer.removeListener('activity-event', handler);
   },
   onChatMessage: (callback: (msg: any) => void) => {
-    ipcRenderer.on('chat-message', (_event, data) => callback(data));
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('chat-message', handler);
+    return () => ipcRenderer.removeListener('chat-message', handler);
   },
   sendChatMessage: (text: string) => {
     ipcRenderer.send('chat-send', text);
@@ -58,23 +72,33 @@ contextBridge.exposeInMainWorld('tandem', {
 
   // Draw overlay
   onDrawMode: (callback: (data: { enabled: boolean }) => void) => {
-    ipcRenderer.on('draw-mode', (_event, data) => callback(data));
+    const handler = (_event: any, data: { enabled: boolean }) => callback(data);
+    ipcRenderer.on('draw-mode', handler);
+    return () => ipcRenderer.removeListener('draw-mode', handler);
   },
   onDrawClear: (callback: () => void) => {
-    ipcRenderer.on('draw-clear', () => callback());
+    const handler = () => callback();
+    ipcRenderer.on('draw-clear', handler);
+    return () => ipcRenderer.removeListener('draw-clear', handler);
   },
   onScreenshotTaken: (callback: (data: { path: string; filename: string }) => void) => {
-    ipcRenderer.on('screenshot-taken', (_event, data) => callback(data));
+    const handler = (_event: any, data: { path: string; filename: string }) => callback(data);
+    ipcRenderer.on('screenshot-taken', handler);
+    return () => ipcRenderer.removeListener('screenshot-taken', handler);
   },
   snapForKees: () => ipcRenderer.invoke('snap-for-kees'),
   quickScreenshot: () => ipcRenderer.invoke('quick-screenshot'),
 
   // Voice
   onVoiceToggle: (callback: (data: { listening: boolean }) => void) => {
-    ipcRenderer.on('voice-toggle', (_event, data) => callback(data));
+    const handler = (_event: any, data: { listening: boolean }) => callback(data);
+    ipcRenderer.on('voice-toggle', handler);
+    return () => ipcRenderer.removeListener('voice-toggle', handler);
   },
   onVoiceTranscript: (callback: (data: { text: string; isFinal: boolean }) => void) => {
-    ipcRenderer.on('voice-transcript-display', (_event, data) => callback(data));
+    const handler = (_event: any, data: { text: string; isFinal: boolean }) => callback(data);
+    ipcRenderer.on('voice-transcript-display', handler);
+    return () => ipcRenderer.removeListener('voice-transcript-display', handler);
   },
   sendVoiceTranscript: (text: string, isFinal: boolean) => {
     ipcRenderer.send('voice-transcript', { text, isFinal });
@@ -88,12 +112,16 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.send('activity-webview-event', data);
   },
   onAutoSnapshotRequest: (callback: (data: { url: string }) => void) => {
-    ipcRenderer.on('auto-snapshot-request', (_event, data) => callback(data));
+    const handler = (_event: any, data: { url: string }) => callback(data);
+    ipcRenderer.on('auto-snapshot-request', handler);
+    return () => ipcRenderer.removeListener('auto-snapshot-request', handler);
   },
 
   // Kees typing indicator
   onKeesTyping: (callback: (data: { typing: boolean }) => void) => {
-    ipcRenderer.on('kees-typing', (_event, data) => callback(data));
+    const handler = (_event: any, data: { typing: boolean }) => callback(data);
+    ipcRenderer.on('kees-typing', handler);
+    return () => ipcRenderer.removeListener('kees-typing', handler);
   },
 
   // Emergency stop — stops all agent activity
@@ -101,32 +129,44 @@ contextBridge.exposeInMainWorld('tandem', {
 
   // Task approval events from main
   onApprovalRequest: (callback: (data: { requestId: string; taskId: string; stepId: string; description: string; action: any; riskLevel: string }) => void) => {
-    ipcRenderer.on('approval-request', (_event, data) => callback(data));
+    const handler = (_event: any, data: { requestId: string; taskId: string; stepId: string; description: string; action: any; riskLevel: string }) => callback(data);
+    ipcRenderer.on('approval-request', handler);
+    return () => ipcRenderer.removeListener('approval-request', handler);
   },
 
   // Tab source changes (robin/kees control indicator)
   onTabSourceChanged: (callback: (data: { tabId: string; source: string }) => void) => {
-    ipcRenderer.on('tab-source-changed', (_event, data) => callback(data));
+    const handler = (_event: any, data: { tabId: string; source: string }) => callback(data);
+    ipcRenderer.on('tab-source-changed', handler);
+    return () => ipcRenderer.removeListener('tab-source-changed', handler);
   },
 
   // Download complete notification
   onDownloadComplete: (callback: (data: { id: string; filename: string; savePath: string }) => void) => {
-    ipcRenderer.on('download-complete', (_event, data) => callback(data));
+    const handler = (_event: any, data: { id: string; filename: string; savePath: string }) => callback(data);
+    ipcRenderer.on('download-complete', handler);
+    return () => ipcRenderer.removeListener('download-complete', handler);
   },
 
   // Open URL in new tab (from popup redirect)
   onOpenUrlInNewTab: (callback: (url: string) => void) => {
-    ipcRenderer.on('open-url-in-new-tab', (_event, url) => callback(url));
+    const handler = (_event: any, url: string) => callback(url);
+    ipcRenderer.on('open-url-in-new-tab', handler);
+    return () => ipcRenderer.removeListener('open-url-in-new-tab', handler);
   },
 
   // Kees chat injection (from context menu)
   onKeesChatInject: (callback: (text: string) => void) => {
-    ipcRenderer.on('kees-chat-inject', (_event, text) => callback(text));
+    const handler = (_event: any, text: string) => callback(text);
+    ipcRenderer.on('kees-chat-inject', handler);
+    return () => ipcRenderer.removeListener('kees-chat-inject', handler);
   },
 
   // Bookmark status change (from context menu)
   onBookmarkStatusChanged: (callback: (data: { url: string; bookmarked: boolean }) => void) => {
-    ipcRenderer.on('bookmark-status-changed', (_event, data) => callback(data));
+    const handler = (_event: any, data: { url: string; bookmarked: boolean }) => callback(data);
+    ipcRenderer.on('bookmark-status-changed', handler);
+    return () => ipcRenderer.removeListener('bookmark-status-changed', handler);
   },
 
   // Bookmark toggle

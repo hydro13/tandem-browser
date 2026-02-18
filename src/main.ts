@@ -638,6 +638,9 @@ function buildAppMenu(): void {
       submenu: [
         { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => send('new-tab') },
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
+        { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: () => {
+          tabManager?.reopenClosedTab();
+        }},
         { type: 'separator' },
         { label: 'Bookmark Page', accelerator: 'CmdOrCtrl+D', click: () => send('bookmark-page') },
         { label: 'Toggle Bookmarks Bar', accelerator: 'CmdOrCtrl+Shift+B', click: () => send('toggle-bookmarks-bar') },

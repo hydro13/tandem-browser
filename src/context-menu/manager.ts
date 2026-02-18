@@ -15,6 +15,7 @@ export class ContextMenuManager {
   private deps: ContextMenuDeps;
   /** Track registered webContents IDs → their context-menu listener for cleanup */
   private listeners: Map<number, { wc: WebContents; handler: ContextMenuListener }> = new Map();
+  private lastPopupTime = 0;
 
   constructor(deps: ContextMenuDeps) {
     this.deps = deps;
@@ -30,6 +31,10 @@ export class ContextMenuManager {
     if (this.listeners.has(id)) return;
 
     const handler: ContextMenuListener = (_event, params) => {
+      const now = Date.now();
+      if (now - this.lastPopupTime < 200) return;
+      this.lastPopupTime = now;
+
       // Resolve tabId: use provided one, or try to find it from TabManager
       const resolvedTabId = tabId || this.findTabIdForWebContents(webContents);
 
