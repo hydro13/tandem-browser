@@ -3041,26 +3041,7 @@
         if (window.tandem) window.tandem.sendWebviewEvent({ type: 'loading-stop', tabId });
       });
 
-      // Copilot Vision: scroll position tracking (polls every 5s, only reports changes)
-      let _scrollInterval = null;
-      let _lastScrollPct = -1;
-      const scrollCheckJS = `(function(){var h=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);return Math.round((window.scrollY/h)*100)})()`;
-      function startScrollTracking() {
-        if (_scrollInterval) clearInterval(_scrollInterval);
-        _lastScrollPct = -1;
-        _scrollInterval = setInterval(async () => {
-          try {
-            const pct = await wv.executeJavaScript(scrollCheckJS);
-            if (pct !== _lastScrollPct && window.tandem) {
-              _lastScrollPct = pct;
-              window.tandem.sendWebviewEvent({ type: 'scroll', scrollPercent: pct, url: wv.getURL(), tabId });
-            }
-          } catch { /* webview may be navigating or destroyed */ }
-        }, 5000);
-      }
-      wv.addEventListener('did-finish-load', startScrollTracking);
-      wv.addEventListener('destroyed', () => { if (_scrollInterval) clearInterval(_scrollInterval); });
-      wv.addEventListener('did-navigate', () => { _lastScrollPct = -1; }); // reset on navigation
+      // Copilot Vision: scroll/selection/form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
     }
 
     // Also wire activity events for the initial tab

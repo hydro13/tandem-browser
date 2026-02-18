@@ -127,28 +127,7 @@ async function createWindow(): Promise<BrowserWindow> {
         pendingContextMenuWebContents.push(contents);
       }
 
-      // Copilot Vision: detect text selection + form interaction via context-menu (anti-detect safe)
-      contents.on('context-menu', (_event, params) => {
-        if (!activityTracker) return;
-        const url = contents.getURL();
-        // Text selection detection
-        if (params.selectionText && params.selectionText.trim().length > 10) {
-          activityTracker.onWebviewEvent({
-            type: 'text-selected',
-            text: params.selectionText.trim(),
-            url,
-          });
-        }
-        // Form field interaction detection (no values — privacy safe)
-        if (params.isEditable) {
-          activityTracker.onWebviewEvent({
-            type: 'input-focus',
-            fieldType: params.inputFieldType || 'text',
-            fieldName: '',
-            url,
-          });
-        }
-      });
+      // Copilot Vision: text selection + form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
 
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
@@ -246,6 +225,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   taskManager = new TaskManager();
   tabLockManager = new TabLockManager();
   devToolsManager = new DevToolsManager(tabManager!);
+  devToolsManager.setCopilotStream(copilotStream!);
   contextMenuManager = new ContextMenuManager({
     win,
     tabManager: tabManager!,
@@ -555,6 +535,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     activityTracker?.onWebviewEvent({ type: 'tab-switch', tabId, url: tab?.url, title: tab?.title });
     const result = await tabManager?.focusTab(tabId);
     syncTabsToContext();
+    // Ensure CDP is attached to the new active tab for Copilot Vision
+    devToolsManager?.ensureAttached().catch(() => {});
     return result;
   });
 

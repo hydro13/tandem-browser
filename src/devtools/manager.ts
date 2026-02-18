@@ -1,6 +1,7 @@
 import { WebContents, webContents } from 'electron';
 import { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
+import { CopilotStream } from '../activity/copilot-stream';
 import { ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, DOMNodeInfo, StorageData, PerformanceMetrics } from './types';
 
 const MAX_NETWORK_ENTRIES = 300;
@@ -26,6 +27,7 @@ const MAX_RESPONSE_BODY_SIZE = 1_000_000; // 1MB
 export class DevToolsManager {
   private tabManager: TabManager;
   private consoleCapture: ConsoleCapture;
+  private copilotStream?: CopilotStream;
 
   // CDP state
   private attachedWcId: number | null = null;
@@ -38,6 +40,10 @@ export class DevToolsManager {
   constructor(tabManager: TabManager) {
     this.tabManager = tabManager;
     this.consoleCapture = new ConsoleCapture();
+  }
+
+  setCopilotStream(stream: CopilotStream): void {
+    this.copilotStream = stream;
   }
 
   // ═══ Lifecycle ═══
@@ -108,7 +114,78 @@ export class DevToolsManager {
       // Continue — some domains may have succeeded
     }
 
+    // Copilot Vision: install stealth bindings for scroll/selection/form tracking
+    await this.installCopilotBindings(wc);
+
     return wc;
+  }
+
+  private async installCopilotBindings(wc: WebContents): Promise<void> {
+    if (!this.copilotStream) return;
+
+    try {
+      // Create hidden bindings
+      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemScroll' });
+      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemSelection' });
+      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemFormFocus' });
+
+      // Inject listeners (runs in page context but communicates via invisible bindings)
+      await this.injectCopilotListeners(wc);
+    } catch (e: any) {
+      console.warn('⚠️ Copilot Vision bindings failed:', e.message);
+    }
+  }
+
+  private async injectCopilotListeners(wc: WebContents): Promise<void> {
+    const script = `(function(){
+      if(window.__tandemVisionActive) return;
+      window.__tandemVisionActive = true;
+
+      // --- Scroll ---
+      var _sT=null, _lastPct=-1;
+      window.addEventListener('scroll', function(){
+        if(_sT) clearTimeout(_sT);
+        _sT = setTimeout(function(){
+          var h = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+          var pct = Math.round((window.scrollY / h) * 100);
+          if(pct !== _lastPct){ _lastPct = pct; __tandemScroll(String(pct)); }
+        }, 2000);
+      }, {passive:true});
+
+      // --- Text Selection ---
+      var _selT=null;
+      document.addEventListener('selectionchange', function(){
+        if(_selT) clearTimeout(_selT);
+        _selT = setTimeout(function(){
+          var s = (window.getSelection()||'').toString().trim();
+          if(s.length > 10) __tandemSelection(s.substring(0, 500));
+        }, 800);
+      });
+
+      // --- Form Focus ---
+      var _lastField='';
+      document.addEventListener('focusin', function(e){
+        var t = e.target;
+        if(!t || !t.tagName) return;
+        var tag = t.tagName.toLowerCase();
+        if(tag==='input'||tag==='textarea'||tag==='select'||t.isContentEditable){
+          var name = t.name || t.id || t.placeholder || t.getAttribute('aria-label') || '';
+          var type = t.type || tag;
+          var key = type+':'+name;
+          if(key !== _lastField){ _lastField = key; __tandemFormFocus(JSON.stringify({type:type,name:name})); }
+        }
+      }, true);
+    })()`;
+
+    try {
+      await wc.debugger.sendCommand('Runtime.evaluate', {
+        expression: script,
+        silent: true,
+        returnByValue: true,
+      });
+    } catch {
+      // Page may not be ready yet — will retry on next navigation
+    }
   }
 
   private detach(): void {
@@ -129,6 +206,18 @@ export class DevToolsManager {
   /** Route CDP events to sub-captures */
   private handleCDPEvent(method: string, params: any): void {
     const tabId = this.attachedWcId ? this.findTabIdByWcId(this.attachedWcId) : undefined;
+
+    // Copilot Vision: binding callbacks
+    if (method === 'Runtime.bindingCalled') {
+      this.onCopilotBinding(params, tabId);
+      return;
+    }
+
+    // Re-inject listeners after navigation (page context is reset)
+    if (method === 'Page.frameStoppedLoading' && params.frameId) {
+      this.reinjectCopilotListeners();
+      return;
+    }
 
     // Console events
     if (this.consoleCapture.handleEvent(method, params, tabId)) return;
@@ -603,6 +692,63 @@ export class DevToolsManager {
         entries: this.networkEntries.size,
       },
     };
+  }
+
+  // ═══ Copilot Vision ═══
+
+  private onCopilotBinding(params: { name: string; payload: string }, tabId?: string): void {
+    if (!this.copilotStream) return;
+    const timestamp = Date.now();
+    const tab = tabId || 'unknown';
+
+    // Get current URL for context
+    const wc = this.attachedWcId ? webContents.fromId(this.attachedWcId) : null;
+    const url = wc && !wc.isDestroyed() ? wc.getURL() : '';
+
+    switch (params.name) {
+      case '__tandemScroll':
+        this.copilotStream.emitDebounced(`scroll-${tab}`, {
+          type: 'scroll-position',
+          tabId: tab,
+          timestamp,
+          data: { scrollPercent: parseInt(params.payload, 10), url },
+        }, 3000);
+        break;
+
+      case '__tandemSelection':
+        this.copilotStream.emitDebounced(`select-${tab}`, {
+          type: 'text-selected',
+          tabId: tab,
+          timestamp,
+          data: { text: params.payload, url },
+        }, 1000);
+        break;
+
+      case '__tandemFormFocus':
+        try {
+          const field = JSON.parse(params.payload);
+          this.copilotStream.emitDebounced(`form-${tab}`, {
+            type: 'form-interaction',
+            tabId: tab,
+            timestamp,
+            data: { fieldType: field.type, fieldName: field.name, url },
+          }, 2000);
+        } catch { /* invalid JSON, skip */ }
+        break;
+    }
+  }
+
+  private async reinjectCopilotListeners(): Promise<void> {
+    if (!this.copilotStream) return;
+    const wc = this.attachedWcId ? webContents.fromId(this.attachedWcId) : null;
+    if (!wc || wc.isDestroyed()) return;
+
+    // Small delay to let page initialize
+    setTimeout(async () => {
+      try {
+        await this.injectCopilotListeners(wc);
+      } catch { /* page may have navigated again */ }
+    }, 500);
   }
 
   // ═══ Helpers ═══
