@@ -119,6 +119,16 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('open-url-in-new-tab', (_event, url) => callback(url));
   },
 
+  // Kees chat injection (from context menu)
+  onKeesChatInject: (callback: (text: string) => void) => {
+    ipcRenderer.on('kees-chat-inject', (_event, text) => callback(text));
+  },
+
+  // Bookmark status change (from context menu)
+  onBookmarkStatusChanged: (callback: (data: { url: string; bookmarked: boolean }) => void) => {
+    ipcRenderer.on('bookmark-status-changed', (_event, data) => callback(data));
+  },
+
   // Bookmark toggle
   bookmarkPage: (url: string, title: string) => ipcRenderer.invoke('bookmark-page', url, title),
   unbookmarkPage: (url: string) => ipcRenderer.invoke('unbookmark-page', url),

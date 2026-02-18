@@ -41,6 +41,9 @@ export class ContextMenuBuilder {
     this.addSeparator(menu);
     this.addToolItems(menu, params, webContents);
 
+    // Phase 5: Tandem-specific items (Kees AI, Bookmark, Screenshot)
+    this.addTandemItems(menu, params, webContents);
+
     return menu;
   }
 
@@ -279,6 +282,73 @@ export class ContextMenuBuilder {
         console.warn('Save page failed:', err.message);
       });
     }
+  }
+
+  // ═══ Phase 5: Tandem-specific Items ═══
+
+  /** Kees AI integration, Quick Bookmark, Screenshot */
+  private addTandemItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    this.addSeparator(menu);
+
+    // Kees AI items
+    if (params.selectionText) {
+      menu.append(new MenuItem({
+        label: 'Ask Kees about Selection',
+        click: () => {
+          this.deps.panelManager.togglePanel(true);
+          const text = params.selectionText;
+          this.deps.win.webContents.send('kees-chat-inject',
+            `What can you tell me about this: "${text}"`
+          );
+        },
+      }));
+    }
+
+    if (params.mediaType === 'image' && params.srcURL) {
+      menu.append(new MenuItem({
+        label: 'Ask Kees about this Image',
+        click: () => {
+          this.deps.panelManager.togglePanel(true);
+          this.deps.win.webContents.send('kees-chat-inject',
+            `Analyze this image: ${params.srcURL}`
+          );
+        },
+      }));
+    }
+
+    menu.append(new MenuItem({
+      label: 'Summarize Page with Kees',
+      click: () => {
+        this.deps.panelManager.togglePanel(true);
+        this.deps.win.webContents.send('kees-chat-inject',
+          'Please summarize the current page for me.'
+        );
+      },
+    }));
+
+    this.addSeparator(menu);
+
+    // Quick Bookmark toggle
+    const pageUrl = wc.getURL();
+    const pageTitle = wc.getTitle();
+    const isBookmarked = this.deps.bookmarkManager.isBookmarked(pageUrl);
+    menu.append(new MenuItem({
+      label: isBookmarked ? 'Remove Bookmark' : 'Bookmark this Page',
+      accelerator: 'CmdOrCtrl+D',
+      click: () => {
+        if (isBookmarked) {
+          const existing = this.deps.bookmarkManager.findByUrl(pageUrl);
+          if (existing) this.deps.bookmarkManager.remove(existing.id);
+        } else {
+          this.deps.bookmarkManager.add(pageTitle || pageUrl, pageUrl);
+        }
+        // Notify renderer to update bookmark star
+        this.deps.win.webContents.send('bookmark-status-changed', {
+          url: pageUrl,
+          bookmarked: !isBookmarked,
+        });
+      },
+    }));
   }
 
   // ═══ Phase 4: Tab Context Menu ═══

@@ -15,7 +15,7 @@
 | 2 | Link, Afbeelding & Selectie Menu | ✅ DONE | 2026-02-18 |
 | 3 | Input/Tekstveld Context Menu | ✅ DONE | 2026-02-18 |
 | 4 | Tab Context Menu | ✅ DONE | 2026-02-18 |
-| 5 | Tandem-specifieke Items (Kees AI) | ⬜ TODO | - |
+| 5 | Tandem-specifieke Items (Kees AI) | ✅ DONE | 2026-02-18 |
 | 6 | Polish, Edge Cases & Integratie Tests | ⬜ TODO | - |
 
 ---

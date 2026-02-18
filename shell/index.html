@@ -1831,6 +1831,31 @@
         if (url) window.tandem.newTab(url);
       });
 
+      // Kees chat injection from context menu
+      window.tandem.onKeesChatInject((text) => {
+        // Switch to chat tab in panel
+        const chatTab = document.querySelector('[data-panel-tab="chat"]');
+        if (chatTab) chatTab.click();
+        // Fill and submit chat input
+        const chatInput = document.getElementById('chat-input');
+        if (chatInput) {
+          chatInput.value = text;
+          chatInput.dispatchEvent(new Event('input'));
+          // Trigger send
+          const sendBtn = document.getElementById('chat-send-btn');
+          if (sendBtn) sendBtn.click();
+        }
+      });
+
+      // Bookmark status changed from context menu
+      window.tandem.onBookmarkStatusChanged(async (data) => {
+        const bookmarkStar = document.getElementById('btn-bookmark');
+        if (bookmarkStar) {
+          bookmarkStar.classList.toggle('bookmarked', data.bookmarked);
+          bookmarkStar.textContent = data.bookmarked ? '★' : '☆';
+        }
+      });
+
       // Screenshot notifications
       window.tandem.onScreenshotTaken((data) => {
         const listEl = document.getElementById('screenshot-list');
