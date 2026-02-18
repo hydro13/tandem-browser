@@ -32,6 +32,7 @@ import { EventStreamManager } from './events/stream';
 import { TaskManager } from './agents/task-manager';
 import { TabLockManager } from './agents/tab-lock-manager';
 import { ContextMenuManager } from './context-menu/manager';
+import { DevToolsManager } from './devtools/manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -63,6 +64,7 @@ let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
 let tabLockManager: TabLockManager | null = null;
 let contextMenuManager: ContextMenuManager | null = null;
+let devToolsManager: DevToolsManager | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 
@@ -178,8 +180,10 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   );
 
-  // Temporarily always open DevTools for debugging
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  // Only open shell DevTools in dev mode (--dev flag)
+  if (IS_DEV) {
+    mainWindow.webContents.openDevTools({ mode: 'detach' });
+  }
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -215,6 +219,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   eventStream = new EventStreamManager();
   taskManager = new TaskManager();
   tabLockManager = new TabLockManager();
+  devToolsManager = new DevToolsManager(tabManager!);
   contextMenuManager = new ContextMenuManager({
     win,
     tabManager: tabManager!,
@@ -288,6 +293,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     eventStream: eventStream!,
     taskManager: taskManager!,
     tabLockManager: tabLockManager!,
+    devToolsManager: devToolsManager!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -778,6 +784,7 @@ app.on('will-quit', () => {
   if (taskManager) taskManager.destroy();
   if (tabLockManager) tabLockManager.destroy();
   if (contextMenuManager) contextMenuManager.destroy();
+  if (devToolsManager) devToolsManager.destroy();
 });
 
 app.on('window-all-closed', () => {
