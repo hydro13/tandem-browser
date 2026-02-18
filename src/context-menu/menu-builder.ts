@@ -1,4 +1,4 @@
-import { Menu, MenuItem, clipboard, shell, dialog, WebContents } from 'electron';
+import { Menu, MenuItem, clipboard, shell, dialog, WebContents, webContents } from 'electron';
 import { ContextMenuParams, ContextMenuDeps } from './types';
 
 /**
@@ -279,6 +279,82 @@ export class ContextMenuBuilder {
         console.warn('Save page failed:', err.message);
       });
     }
+  }
+
+  // ═══ Phase 4: Tab Context Menu ═══
+
+  /** Build context menu for right-clicking on a tab in the tab bar */
+  buildTabContextMenu(tabId: string): Menu {
+    const menu = new Menu();
+    const allTabs = this.deps.tabManager.listTabs();
+    const tab = allTabs.find(t => t.id === tabId);
+    if (!tab) return menu;
+
+    const tabIndex = allTabs.indexOf(tab);
+
+    menu.append(new MenuItem({
+      label: 'New Tab',
+      accelerator: 'CmdOrCtrl+T',
+      click: () => this.deps.tabManager.openTab(),
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Reload Tab',
+      click: () => {
+        const wc = webContents.fromId(tab.webContentsId);
+        if (wc) wc.reload();
+      },
+    }));
+    menu.append(new MenuItem({
+      label: 'Duplicate Tab',
+      click: () => this.deps.tabManager.openTab(tab.url),
+    }));
+    menu.append(new MenuItem({
+      label: 'Mute Tab',
+      click: () => {
+        const wc = webContents.fromId(tab.webContentsId);
+        if (wc) wc.setAudioMuted(!wc.isAudioMuted());
+      },
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Close Tab',
+      accelerator: 'CmdOrCtrl+W',
+      click: () => this.deps.tabManager.closeTab(tabId),
+    }));
+    menu.append(new MenuItem({
+      label: 'Close Other Tabs',
+      enabled: allTabs.length > 1,
+      click: () => {
+        allTabs.filter(t => t.id !== tabId).forEach(t => {
+          this.deps.tabManager.closeTab(t.id);
+        });
+      },
+    }));
+    menu.append(new MenuItem({
+      label: 'Close Tabs to Right',
+      enabled: tabIndex < allTabs.length - 1,
+      click: () => {
+        allTabs.slice(tabIndex + 1).forEach(t => {
+          this.deps.tabManager.closeTab(t.id);
+        });
+      },
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Reopen Closed Tab',
+      accelerator: 'CmdOrCtrl+Shift+T',
+      enabled: this.deps.tabManager.hasClosedTabs(),
+      click: () => this.deps.tabManager.reopenClosedTab(),
+    }));
+
+    return menu;
   }
 
   /** Append a separator only if the menu already has items (avoids leading separators) */

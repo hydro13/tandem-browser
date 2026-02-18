@@ -33,6 +33,7 @@ export class TabManager {
   private groups: Map<string, TabGroup> = new Map();
   private activeTabId: string | null = null;
   private counter = 0;
+  private closedTabs: { url: string; title: string }[] = [];
 
   constructor(win: BrowserWindow) {
     this.win = win;
@@ -105,6 +106,11 @@ export class TabManager {
   async closeTab(tabId: string): Promise<boolean> {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
+
+    // Save for "Reopen Closed Tab"
+    if (tab.url && tab.url !== 'about:blank') {
+      this.closedTabs.push({ url: tab.url, title: tab.title });
+    }
 
     // Remove from group
     if (tab.groupId) {
@@ -228,6 +234,23 @@ export class TabManager {
       return this.focusTab(tabs[index].id);
     }
     return false;
+  }
+
+  /** Check if there are recently closed tabs to reopen */
+  hasClosedTabs(): boolean {
+    return this.closedTabs.length > 0;
+  }
+
+  /** Reopen the most recently closed tab */
+  async reopenClosedTab(): Promise<Tab | null> {
+    const last = this.closedTabs.pop();
+    if (!last) return null;
+    return this.openTab(last.url);
+  }
+
+  /** Get a tab by ID */
+  getTab(tabId: string): Tab | null {
+    return this.tabs.get(tabId) || null;
   }
 
   /** Register an existing webview (for the initial tab) */

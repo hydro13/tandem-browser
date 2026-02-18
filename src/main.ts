@@ -285,7 +285,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop'];
+  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -504,6 +504,11 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   ipcMain.handle('tab-list', async () => {
     return tabManager?.listTabs();
+  });
+
+  // ═══ Tab Context Menu — right-click on tab bar ═══
+  ipcMain.handle('show-tab-context-menu', async (_event, tabId: string) => {
+    contextMenuManager?.showTabContextMenu(tabId);
   });
 
   // ═══ Emergency Stop — Escape key from renderer ═══

@@ -1266,6 +1266,12 @@
           if (window.tandem) window.tandem.focusTab(tabId);
         });
 
+        // Right-click context menu
+        tabEl.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (window.tandem) window.tandem.showTabContextMenu(tabId);
+        });
+
         // Close button
         tabEl.querySelector('.tab-close').addEventListener('click', () => {
           if (window.tandem) window.tandem.closeTab(tabId);
@@ -1467,6 +1473,10 @@
               if (e.target.classList.contains('tab-close')) return;
               if (window.tandem) window.tandem.focusTab(data.tabId);
             });
+            entry.tabEl.addEventListener('contextmenu', (e) => {
+              e.preventDefault();
+              if (window.tandem) window.tandem.showTabContextMenu(data.tabId);
+            });
             entry.tabEl.querySelector('.tab-close').addEventListener('click', () => {
               if (window.tandem) window.tandem.closeTab(data.tabId);
             });
@@ -1491,6 +1501,10 @@
       tabEl.addEventListener('click', (e) => {
         if (e.target.classList.contains('tab-close')) return;
         if (window.tandem && activeTabId) window.tandem.focusTab(activeTabId);
+      });
+      tabEl.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
+        if (window.tandem && activeTabId) window.tandem.showTabContextMenu(activeTabId);
       });
     })();
 

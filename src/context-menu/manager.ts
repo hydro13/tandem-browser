@@ -71,6 +71,16 @@ export class ContextMenuManager {
   }
 
   /**
+   * Show context menu for a tab in the tab bar (called via IPC from renderer).
+   */
+  showTabContextMenu(tabId: string): void {
+    const menu = this.builder.buildTabContextMenu(tabId);
+    if (menu.items.length > 0) {
+      menu.popup({ window: this.deps.win });
+    }
+  }
+
+  /**
    * Cleanup on app quit.
    */
   destroy(): void {

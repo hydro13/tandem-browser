@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('tandem', {
   focusTab: (tabId: string) => ipcRenderer.invoke('tab-focus', tabId),
   focusTabByIndex: (index: number) => ipcRenderer.invoke('tab-focus-index', index),
   listTabs: () => ipcRenderer.invoke('tab-list'),
+  showTabContextMenu: (tabId: string) => ipcRenderer.invoke('show-tab-context-menu', tabId),
 
   // Tab events to main
   sendTabUpdate: (data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
