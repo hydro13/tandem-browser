@@ -309,17 +309,64 @@ export class TandemAPI {
     // PAGE CONTENT
     // ═══════════════════════════════════════════════
 
-    this.app.get('/page-content', async (_req: Request, res: Response) => {
+    this.app.get('/page-content', async (req: Request, res: Response) => {
       try {
+        const settleMs = parseInt(req.query.settle as string) || 800;
+        const maxWait = parseInt(req.query.timeout as string) || 10000;
         const content = await this.execInActiveTab(`
-          (() => {
-            const title = document.title;
-            const url = window.location.href;
-            const meta = document.querySelector('meta[name="description"]');
-            const description = meta ? meta.getAttribute('content') : '';
-            const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
-            return { title, url, description, text, length: text.length };
-          })()
+          new Promise((resolve) => {
+            const extract = () => {
+              const title = document.title;
+              const url = window.location.href;
+              const meta = document.querySelector('meta[name="description"]');
+              const description = meta ? meta.getAttribute('content') : '';
+              const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
+              return { title, url, description, text, length: text.length };
+            };
+
+            // Quick check: if content is already substantial, return immediately
+            const quick = extract();
+            if (quick.length > 500) {
+              resolve(quick);
+              return;
+            }
+
+            // SPA wait: use MutationObserver to detect when DOM settles
+            let timer = null;
+            const deadline = Date.now() + ${maxWait};
+            const settle = ${settleMs};
+
+            const observer = new MutationObserver(() => {
+              clearTimeout(timer);
+              if (Date.now() >= deadline) {
+                observer.disconnect();
+                resolve(extract());
+                return;
+              }
+              timer = setTimeout(() => {
+                observer.disconnect();
+                resolve(extract());
+              }, settle);
+            });
+
+            observer.observe(document.body, {
+              childList: true, subtree: true,
+              characterData: true, attributes: false
+            });
+
+            // Start the settle timer (in case no mutations happen at all)
+            timer = setTimeout(() => {
+              observer.disconnect();
+              resolve(extract());
+            }, settle);
+
+            // Hard deadline safety
+            setTimeout(() => {
+              clearTimeout(timer);
+              observer.disconnect();
+              resolve(extract());
+            }, ${maxWait});
+          })
         `);
         res.json(content);
       } catch (e: any) {
