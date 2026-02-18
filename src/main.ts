@@ -226,6 +226,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   tabLockManager = new TabLockManager();
   devToolsManager = new DevToolsManager(tabManager!);
   devToolsManager.setCopilotStream(copilotStream!);
+  devToolsManager.setActivityTracker(activityTracker!);
   contextMenuManager = new ContextMenuManager({
     win,
     tabManager: tabManager!,
@@ -337,6 +338,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       win.webContents.send('tab-registered', { tabId: tab.id });
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext();
+      // Auto-attach CDP for Copilot Vision on startup
+      setTimeout(() => {
+        devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
+      }, 2000);
     }
   });
 
@@ -535,8 +540,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     activityTracker?.onWebviewEvent({ type: 'tab-switch', tabId, url: tab?.url, title: tab?.title });
     const result = await tabManager?.focusTab(tabId);
     syncTabsToContext();
-    // Ensure CDP is attached to the new active tab for Copilot Vision
-    devToolsManager?.ensureAttached().catch(() => {});
+    // Attach CDP to the focused tab directly (avoids race with TabManager active tab state)
+    if (tab?.webContentsId) {
+      devToolsManager?.attachToTab(tab.webContentsId).catch(() => {});
+    }
     return result;
   });
 

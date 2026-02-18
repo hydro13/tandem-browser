@@ -2,6 +2,7 @@ import { WebContents, webContents } from 'electron';
 import { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
 import { CopilotStream } from '../activity/copilot-stream';
+import { ActivityTracker } from '../activity/tracker';
 import { ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, DOMNodeInfo, StorageData, PerformanceMetrics } from './types';
 
 const MAX_NETWORK_ENTRIES = 300;
@@ -28,6 +29,7 @@ export class DevToolsManager {
   private tabManager: TabManager;
   private consoleCapture: ConsoleCapture;
   private copilotStream?: CopilotStream;
+  private activityTracker?: ActivityTracker;
 
   // CDP state
   private attachedWcId: number | null = null;
@@ -44,6 +46,10 @@ export class DevToolsManager {
 
   setCopilotStream(stream: CopilotStream): void {
     this.copilotStream = stream;
+  }
+
+  setActivityTracker(tracker: ActivityTracker): void {
+    this.activityTracker = tracker;
   }
 
   // ═══ Lifecycle ═══
@@ -64,6 +70,24 @@ export class DevToolsManager {
     if (this.attached && this.attachedWcId !== wc.id) {
       this.detach();
     }
+
+    return this.attach(wc);
+  }
+
+  /**
+   * Attach CDP to a specific tab by webContentsId.
+   * Use this instead of ensureAttached() when you already know which tab to target
+   * (e.g. on tab-focus) to avoid race conditions with TabManager's active tab state.
+   */
+  async attachToTab(wcId: number): Promise<WebContents | null> {
+    const wc = webContents.fromId(wcId);
+    if (!wc || wc.isDestroyed()) return null;
+
+    // Already attached to this one
+    if (this.attached && this.attachedWcId === wcId) return wc;
+
+    // Detach from old
+    if (this.attached) this.detach();
 
     return this.attach(wc);
   }
@@ -707,12 +731,16 @@ export class DevToolsManager {
 
     switch (params.name) {
       case '__tandemScroll':
+        const scrollPct = parseInt(params.payload, 10);
         this.copilotStream.emitDebounced(`scroll-${tab}`, {
           type: 'scroll-position',
           tabId: tab,
           timestamp,
-          data: { scrollPercent: parseInt(params.payload, 10), url },
+          data: { scrollPercent: scrollPct, url },
         }, 3000);
+        this.activityTracker?.onWebviewEvent({
+          type: 'scroll-position', tabId: tab, scrollPercent: scrollPct, url,
+        });
         break;
 
       case '__tandemSelection':
@@ -722,6 +750,9 @@ export class DevToolsManager {
           timestamp,
           data: { text: params.payload, url },
         }, 1000);
+        this.activityTracker?.onWebviewEvent({
+          type: 'text-selected', tabId: tab, text: params.payload, url,
+        });
         break;
 
       case '__tandemFormFocus':
@@ -733,6 +764,9 @@ export class DevToolsManager {
             timestamp,
             data: { fieldType: field.type, fieldName: field.name, url },
           }, 2000);
+          this.activityTracker?.onWebviewEvent({
+            type: 'form-interaction', tabId: tab, fieldType: field.type, fieldName: field.name, url,
+          });
         } catch { /* invalid JSON, skip */ }
         break;
     }
