@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage, webContents, Menu } from 'electron';
+import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -63,6 +63,8 @@ let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
 let tabLockManager: TabLockManager | null = null;
 let contextMenuManager: ContextMenuManager | null = null;
+/** Queue webview webContents created before contextMenuManager is ready */
+const pendingContextMenuWebContents: WebContents[] = [];
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -114,9 +116,11 @@ async function createWindow(): Promise<BrowserWindow> {
         contents.executeJavaScript(stealthScript).catch((e) => console.warn('Stealth script injection failed:', e.message));
       });
 
-      // Register context menu for this webview
+      // Register context menu for this webview (queue if manager not yet ready)
       if (contextMenuManager) {
         contextMenuManager.registerWebContents(contents);
+      } else {
+        pendingContextMenuWebContents.push(contents);
       }
 
       // Handle popups from webviews
@@ -219,6 +223,14 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     panelManager: panelManager!,
     downloadManager: downloadManager!,
   });
+
+  // Drain any webview webContents that were created before contextMenuManager was ready
+  while (pendingContextMenuWebContents.length > 0) {
+    const wc = pendingContextMenuWebContents.shift()!;
+    if (!wc.isDestroyed()) {
+      contextMenuManager.registerWebContents(wc);
+    }
+  }
 
   // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
   contextBridge.connectEventStream(eventStream);
@@ -735,16 +747,6 @@ app.whenReady().then(async () => {
   const win = await createWindow();
   await startAPI(win);
   buildAppMenu();
-
-  // Register context menu for any webviews that were created before startAPI
-  // (e.g. the initial tab's webview). Future webviews are handled in web-contents-created.
-  if (contextMenuManager) {
-    for (const wc of webContents.getAllWebContents()) {
-      if (wc.getType() === 'webview') {
-        contextMenuManager.registerWebContents(wc);
-      }
-    }
-  }
 
   // Keep shortcuts always registered while app is running
   // (blur/focus approach broke shortcuts when webview had focus)
