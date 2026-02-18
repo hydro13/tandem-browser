@@ -1502,10 +1502,7 @@
         if (e.target.classList.contains('tab-close')) return;
         if (window.tandem && activeTabId) window.tandem.focusTab(activeTabId);
       });
-      tabEl.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        if (window.tandem && activeTabId) window.tandem.showTabContextMenu(activeTabId);
-      });
+      // contextmenu listener is added in onTabRegistered handler (with resolved tabId)
     })();
 
     // ═══════════════════════════════════════════════
@@ -1831,19 +1828,17 @@
         if (url) window.tandem.newTab(url);
       });
 
-      // Kees chat injection from context menu
+      // Kees chat injection from context menu — fill input but let user review before sending
       window.tandem.onKeesChatInject((text) => {
         // Switch to chat tab in panel
         const chatTab = document.querySelector('[data-panel-tab="chat"]');
         if (chatTab) chatTab.click();
-        // Fill and submit chat input
+        // Fill chat input (user reviews and presses Enter/Send)
         const chatInput = document.getElementById('chat-input');
         if (chatInput) {
           chatInput.value = text;
           chatInput.dispatchEvent(new Event('input'));
-          // Trigger send
-          const sendBtn = document.getElementById('chat-send-btn');
-          if (sendBtn) sendBtn.click();
+          chatInput.focus();
         }
       });
 

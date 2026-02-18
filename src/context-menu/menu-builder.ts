@@ -1,5 +1,15 @@
-import { Menu, MenuItem, clipboard, shell, dialog, WebContents, webContents } from 'electron';
+import { Menu, MenuItem, clipboard, dialog, WebContents, webContents } from 'electron';
 import { ContextMenuParams, ContextMenuDeps } from './types';
+
+/** Protocols that should never be opened/downloaded */
+const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'file:', 'vbscript:'];
+
+/** Check if a URL is safe to open in a new tab or download */
+function isSafeURL(url: string): boolean {
+  if (!url) return false;
+  const lower = url.toLowerCase().trim();
+  return !BLOCKED_PROTOCOLS.some(p => lower.startsWith(p));
+}
 
 /**
  * Builds Electron Menu instances based on the right-click context.
@@ -62,26 +72,31 @@ export class ContextMenuBuilder {
   private addLinkItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
     if (!params.linkURL) return;
 
-    menu.append(new MenuItem({
-      label: 'Open Link in New Tab',
-      click: () => this.deps.tabManager.openTab(params.linkURL),
-    }));
+    if (isSafeURL(params.linkURL)) {
+      menu.append(new MenuItem({
+        label: 'Open Link in New Tab',
+        click: () => this.deps.tabManager.openTab(params.linkURL),
+      }));
+    }
     menu.append(new MenuItem({
       label: 'Copy Link Address',
       click: () => clipboard.writeText(params.linkURL),
     }));
-    menu.append(new MenuItem({
-      label: 'Copy Link Text',
-      enabled: !!params.linkText,
-      click: () => clipboard.writeText(params.linkText),
-    }));
+    if (params.linkText) {
+      menu.append(new MenuItem({
+        label: 'Copy Link Text',
+        click: () => clipboard.writeText(params.linkText),
+      }));
+    }
 
     this.addSeparator(menu);
 
-    menu.append(new MenuItem({
-      label: 'Save Link As...',
-      click: () => wc.downloadURL(params.linkURL),
-    }));
+    if (isSafeURL(params.linkURL)) {
+      menu.append(new MenuItem({
+        label: 'Save Link As...',
+        click: () => { if (!wc.isDestroyed()) wc.downloadURL(params.linkURL); },
+      }));
+    }
     menu.append(new MenuItem({
       label: 'Bookmark Link',
       click: () => {
@@ -98,17 +113,19 @@ export class ContextMenuBuilder {
 
     this.addSeparator(menu);
 
-    menu.append(new MenuItem({
-      label: 'Open Image in New Tab',
-      click: () => this.deps.tabManager.openTab(params.srcURL),
-    }));
-    menu.append(new MenuItem({
-      label: 'Save Image As...',
-      click: () => wc.downloadURL(params.srcURL),
-    }));
+    if (isSafeURL(params.srcURL)) {
+      menu.append(new MenuItem({
+        label: 'Open Image in New Tab',
+        click: () => this.deps.tabManager.openTab(params.srcURL),
+      }));
+      menu.append(new MenuItem({
+        label: 'Save Image As...',
+        click: () => { if (!wc.isDestroyed()) wc.downloadURL(params.srcURL); },
+      }));
+    }
     menu.append(new MenuItem({
       label: 'Copy Image',
-      click: () => wc.copyImageAt(params.x, params.y),
+      click: () => { if (!wc.isDestroyed()) wc.copyImageAt(params.x, params.y); },
     }));
     menu.append(new MenuItem({
       label: 'Copy Image Address',
@@ -127,7 +144,7 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Copy',
       accelerator: 'CmdOrCtrl+C',
-      click: () => wc.copy(),
+      click: () => { if (!wc.isDestroyed()) wc.copy(); },
     }));
 
     const truncated = params.selectionText.length > 30
@@ -146,17 +163,19 @@ export class ContextMenuBuilder {
 
   /** Undo, Redo, Cut, Copy, Paste, Paste Plain Text, Delete, Select All */
   private addEditableItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    const guard = (fn: () => void) => () => { if (!wc.isDestroyed()) fn(); };
+
     menu.append(new MenuItem({
       label: 'Undo',
       accelerator: 'CmdOrCtrl+Z',
       enabled: params.editFlags.canUndo,
-      click: () => wc.undo(),
+      click: guard(() => wc.undo()),
     }));
     menu.append(new MenuItem({
       label: 'Redo',
       accelerator: 'CmdOrCtrl+Shift+Z',
       enabled: params.editFlags.canRedo,
-      click: () => wc.redo(),
+      click: guard(() => wc.redo()),
     }));
 
     this.addSeparator(menu);
@@ -165,30 +184,30 @@ export class ContextMenuBuilder {
       label: 'Cut',
       accelerator: 'CmdOrCtrl+X',
       enabled: params.editFlags.canCut,
-      click: () => wc.cut(),
+      click: guard(() => wc.cut()),
     }));
     menu.append(new MenuItem({
       label: 'Copy',
       accelerator: 'CmdOrCtrl+C',
       enabled: params.editFlags.canCopy,
-      click: () => wc.copy(),
+      click: guard(() => wc.copy()),
     }));
     menu.append(new MenuItem({
       label: 'Paste',
       accelerator: 'CmdOrCtrl+V',
       enabled: params.editFlags.canPaste,
-      click: () => wc.paste(),
+      click: guard(() => wc.paste()),
     }));
     menu.append(new MenuItem({
       label: 'Paste as Plain Text',
       accelerator: 'CmdOrCtrl+Shift+V',
       enabled: params.editFlags.canPaste,
-      click: () => wc.pasteAndMatchStyle(),
+      click: guard(() => wc.pasteAndMatchStyle()),
     }));
     menu.append(new MenuItem({
       label: 'Delete',
       enabled: params.editFlags.canDelete,
-      click: () => wc.delete(),
+      click: guard(() => wc.delete()),
     }));
 
     this.addSeparator(menu);
@@ -197,7 +216,7 @@ export class ContextMenuBuilder {
       label: 'Select All',
       accelerator: 'CmdOrCtrl+A',
       enabled: params.editFlags.canSelectAll,
-      click: () => wc.selectAll(),
+      click: guard(() => wc.selectAll()),
     }));
   }
 
@@ -225,18 +244,18 @@ export class ContextMenuBuilder {
       label: 'Back',
       accelerator: 'Alt+Left',
       enabled: wc.canGoBack(),
-      click: () => wc.goBack(),
+      click: () => { if (!wc.isDestroyed()) wc.goBack(); },
     }));
     menu.append(new MenuItem({
       label: 'Forward',
       accelerator: 'Alt+Right',
       enabled: wc.canGoForward(),
-      click: () => wc.goForward(),
+      click: () => { if (!wc.isDestroyed()) wc.goForward(); },
     }));
     menu.append(new MenuItem({
       label: 'Reload',
       accelerator: 'CmdOrCtrl+R',
-      click: () => wc.reload(),
+      click: () => { if (!wc.isDestroyed()) wc.reload(); },
     }));
   }
 
@@ -247,12 +266,12 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Save As...',
       accelerator: 'CmdOrCtrl+S',
-      click: () => this.handleSaveAs(wc),
+      click: () => { this.handleSaveAs(wc).catch(e => console.warn('Save As failed:', e.message)); },
     }));
     menu.append(new MenuItem({
       label: 'Print...',
       accelerator: 'CmdOrCtrl+P',
-      click: () => wc.print(),
+      click: () => { if (!wc.isDestroyed()) wc.print(); },
     }));
 
     this.addSeparator(menu);
@@ -261,6 +280,7 @@ export class ContextMenuBuilder {
       label: 'View Page Source',
       accelerator: 'CmdOrCtrl+U',
       click: () => {
+        if (wc.isDestroyed()) return;
         const url = wc.getURL();
         this.deps.tabManager.openTab(`view-source:${url}`);
       },
@@ -268,12 +288,13 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Inspect Element',
       accelerator: 'CmdOrCtrl+Shift+I',
-      click: () => wc.inspectElement(params.x, params.y),
+      click: () => { if (!wc.isDestroyed()) wc.inspectElement(params.x, params.y); },
     }));
   }
 
   /** Handle Save As via system dialog + savePage */
   private async handleSaveAs(wc: WebContents): Promise<void> {
+    if (wc.isDestroyed()) return;
     const title = wc.getTitle() || 'page';
     const safeName = title.replace(/[^a-z0-9_\- ]/gi, '').substring(0, 60) || 'page';
 
@@ -286,8 +307,9 @@ export class ContextMenuBuilder {
     });
 
     if (!result.canceled && result.filePath) {
+      if (wc.isDestroyed()) return;
       const saveType = result.filePath.endsWith('.html') ? 'HTMLComplete' : 'HTMLOnly';
-      wc.savePage(result.filePath, saveType as 'HTMLComplete' | 'HTMLOnly').catch((err) => {
+      await wc.savePage(result.filePath, saveType as 'HTMLComplete' | 'HTMLOnly').catch((err) => {
         console.warn('Save page failed:', err.message);
       });
     }
@@ -337,15 +359,16 @@ export class ContextMenuBuilder {
 
     this.addSeparator(menu);
 
-    // Quick Bookmark toggle
+    // Quick Bookmark toggle — re-read state at click time to avoid stale toggle
     const pageUrl = wc.getURL();
     const pageTitle = wc.getTitle();
-    const isBookmarked = this.deps.bookmarkManager.isBookmarked(pageUrl);
+    const isBookmarkedNow = this.deps.bookmarkManager.isBookmarked(pageUrl);
     menu.append(new MenuItem({
-      label: isBookmarked ? 'Remove Bookmark' : 'Bookmark this Page',
+      label: isBookmarkedNow ? 'Remove Bookmark' : 'Bookmark this Page',
       accelerator: 'CmdOrCtrl+D',
       click: () => {
-        if (isBookmarked) {
+        const currentlyBookmarked = this.deps.bookmarkManager.isBookmarked(pageUrl);
+        if (currentlyBookmarked) {
           const existing = this.deps.bookmarkManager.findByUrl(pageUrl);
           if (existing) this.deps.bookmarkManager.remove(existing.id);
         } else {
@@ -354,7 +377,7 @@ export class ContextMenuBuilder {
         // Notify renderer to update bookmark star
         this.deps.win.webContents.send('bookmark-status-changed', {
           url: pageUrl,
-          bookmarked: !isBookmarked,
+          bookmarked: !currentlyBookmarked,
         });
       },
     }));
@@ -369,14 +392,16 @@ export class ContextMenuBuilder {
     this.addSeparator(menu);
 
     const label = params.mediaType === 'video' ? 'Video' : 'Audio';
-    menu.append(new MenuItem({
-      label: `Open ${label} in New Tab`,
-      click: () => this.deps.tabManager.openTab(params.srcURL),
-    }));
-    menu.append(new MenuItem({
-      label: `Save ${label} As...`,
-      click: () => wc.downloadURL(params.srcURL),
-    }));
+    if (isSafeURL(params.srcURL)) {
+      menu.append(new MenuItem({
+        label: `Open ${label} in New Tab`,
+        click: () => this.deps.tabManager.openTab(params.srcURL),
+      }));
+      menu.append(new MenuItem({
+        label: `Save ${label} As...`,
+        click: () => { if (!wc.isDestroyed()) wc.downloadURL(params.srcURL); },
+      }));
+    }
     menu.append(new MenuItem({
       label: `Copy ${label} Address`,
       click: () => clipboard.writeText(params.srcURL),
@@ -393,11 +418,11 @@ export class ContextMenuBuilder {
       menu.append(new MenuItem({
         label: 'Copy',
         accelerator: 'CmdOrCtrl+C',
-        click: () => wc.copy(),
+        click: () => { if (!wc.isDestroyed()) wc.copy(); },
       }));
     }
 
-    if (params.linkURL) {
+    if (params.linkURL && isSafeURL(params.linkURL)) {
       this.addSeparator(menu);
       menu.append(new MenuItem({
         label: 'Open Link in New Tab',
@@ -413,7 +438,7 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Inspect Element',
       accelerator: 'CmdOrCtrl+Shift+I',
-      click: () => wc.inspectElement(params.x, params.y),
+      click: () => { if (!wc.isDestroyed()) wc.inspectElement(params.x, params.y); },
     }));
   }
 
@@ -440,7 +465,7 @@ export class ContextMenuBuilder {
       label: 'Reload Tab',
       click: () => {
         const wc = webContents.fromId(tab.webContentsId);
-        if (wc) wc.reload();
+        if (wc && !wc.isDestroyed()) wc.reload();
       },
     }));
     menu.append(new MenuItem({
@@ -448,11 +473,13 @@ export class ContextMenuBuilder {
       click: () => this.deps.tabManager.openTab(tab.url),
     }));
     const tabWc = webContents.fromId(tab.webContentsId);
-    const isMuted = tabWc ? tabWc.isAudioMuted() : false;
+    const isMuted = tabWc && !tabWc.isDestroyed() ? tabWc.isAudioMuted() : false;
     menu.append(new MenuItem({
       label: isMuted ? 'Unmute Tab' : 'Mute Tab',
       click: () => {
-        if (tabWc) tabWc.setAudioMuted(!isMuted);
+        // Re-read mute state at click time to avoid stale toggle
+        const wc = webContents.fromId(tab.webContentsId);
+        if (wc && !wc.isDestroyed()) wc.setAudioMuted(!wc.isAudioMuted());
       },
     }));
 
@@ -466,19 +493,19 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Close Other Tabs',
       enabled: allTabs.length > 1,
-      click: () => {
-        allTabs.filter(t => t.id !== tabId).forEach(t => {
-          this.deps.tabManager.closeTab(t.id);
-        });
+      click: async () => {
+        for (const t of allTabs.filter(t => t.id !== tabId)) {
+          await this.deps.tabManager.closeTab(t.id);
+        }
       },
     }));
     menu.append(new MenuItem({
       label: 'Close Tabs to Right',
       enabled: tabIndex < allTabs.length - 1,
-      click: () => {
-        allTabs.slice(tabIndex + 1).forEach(t => {
-          this.deps.tabManager.closeTab(t.id);
-        });
+      click: async () => {
+        for (const t of allTabs.slice(tabIndex + 1)) {
+          await this.deps.tabManager.closeTab(t.id);
+        }
       },
     }));
 

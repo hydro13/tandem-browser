@@ -2,6 +2,8 @@ import { WebContents } from 'electron';
 import { ContextMenuBuilder } from './menu-builder';
 import { ContextMenuParams, ContextMenuDeps } from './types';
 
+type ContextMenuListener = (event: Electron.Event, params: Electron.ContextMenuParams) => void;
+
 /**
  * ContextMenuManager — registers context-menu handlers on webview webContents.
  *
@@ -11,7 +13,8 @@ import { ContextMenuParams, ContextMenuDeps } from './types';
 export class ContextMenuManager {
   private builder: ContextMenuBuilder;
   private deps: ContextMenuDeps;
-  private registeredWebContents: Set<number> = new Set();
+  /** Track registered webContents IDs → their context-menu listener for cleanup */
+  private listeners: Map<number, { wc: WebContents; handler: ContextMenuListener }> = new Map();
 
   constructor(deps: ContextMenuDeps) {
     this.deps = deps;
@@ -24,10 +27,9 @@ export class ContextMenuManager {
    */
   registerWebContents(webContents: WebContents, tabId?: string): void {
     const id = webContents.id;
-    if (this.registeredWebContents.has(id)) return;
-    this.registeredWebContents.add(id);
+    if (this.listeners.has(id)) return;
 
-    webContents.on('context-menu', (_event, params) => {
+    const handler: ContextMenuListener = (_event, params) => {
       // Resolve tabId: use provided one, or try to find it from TabManager
       const resolvedTabId = tabId || this.findTabIdForWebContents(webContents);
 
@@ -54,10 +56,13 @@ export class ContextMenuManager {
       if (menu.items.length > 0) {
         menu.popup({ window: this.deps.win });
       }
-    });
+    };
+
+    webContents.on('context-menu', handler);
+    this.listeners.set(id, { wc: webContents, handler });
 
     webContents.once('destroyed', () => {
-      this.registeredWebContents.delete(id);
+      this.listeners.delete(id);
     });
   }
 
@@ -81,9 +86,14 @@ export class ContextMenuManager {
   }
 
   /**
-   * Cleanup on app quit.
+   * Cleanup on app quit — remove all context-menu listeners.
    */
   destroy(): void {
-    this.registeredWebContents.clear();
+    for (const [, entry] of this.listeners) {
+      if (!entry.wc.isDestroyed()) {
+        entry.wc.removeListener('context-menu', entry.handler);
+      }
+    }
+    this.listeners.clear();
   }
 }

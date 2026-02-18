@@ -107,9 +107,12 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
 
-    // Save for "Reopen Closed Tab"
+    // Save for "Reopen Closed Tab" (capped at 10)
     if (tab.url && tab.url !== 'about:blank') {
       this.closedTabs.push({ url: tab.url, title: tab.title });
+      if (this.closedTabs.length > 10) {
+        this.closedTabs.shift();
+      }
     }
 
     // Remove from group
@@ -245,7 +248,9 @@ export class TabManager {
   async reopenClosedTab(): Promise<Tab | null> {
     const last = this.closedTabs.pop();
     if (!last) return null;
-    return this.openTab(last.url);
+    const tab = await this.openTab(last.url);
+    if (last.title) tab.title = last.title;
+    return tab;
   }
 
   /** Get a tab by ID */
