@@ -20,12 +20,104 @@ export class ContextMenuBuilder {
   build(params: ContextMenuParams, webContents: WebContents): Menu {
     const menu = new Menu();
 
-    // Phase 1: Navigation + tool items for plain page background
+    // Phase 2: Context-specific items first (link, image, selection)
+    this.addLinkItems(menu, params, webContents);
+    this.addImageItems(menu, params, webContents);
+    this.addSelectionItems(menu, params, webContents);
+
+    // Phase 1: Navigation + tool items (always present)
+    this.addSeparator(menu);
     this.addNavigationItems(menu, params, webContents);
     this.addSeparator(menu);
     this.addToolItems(menu, params, webContents);
 
     return menu;
+  }
+
+  // ═══ Phase 2: Link Items ═══
+
+  /** Open in New Tab, Copy Link Address/Text, Save Link, Bookmark Link */
+  private addLinkItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    if (!params.linkURL) return;
+
+    menu.append(new MenuItem({
+      label: 'Open Link in New Tab',
+      click: () => this.deps.tabManager.openTab(params.linkURL),
+    }));
+    menu.append(new MenuItem({
+      label: 'Copy Link Address',
+      click: () => clipboard.writeText(params.linkURL),
+    }));
+    menu.append(new MenuItem({
+      label: 'Copy Link Text',
+      enabled: !!params.linkText,
+      click: () => clipboard.writeText(params.linkText),
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Save Link As...',
+      click: () => wc.downloadURL(params.linkURL),
+    }));
+    menu.append(new MenuItem({
+      label: 'Bookmark Link',
+      click: () => {
+        this.deps.bookmarkManager.add(params.linkText || params.linkURL, params.linkURL);
+      },
+    }));
+  }
+
+  // ═══ Phase 2: Image Items ═══
+
+  /** Open Image in New Tab, Save/Copy Image, Copy Image Address */
+  private addImageItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    if (params.mediaType !== 'image') return;
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Open Image in New Tab',
+      click: () => this.deps.tabManager.openTab(params.srcURL),
+    }));
+    menu.append(new MenuItem({
+      label: 'Save Image As...',
+      click: () => wc.downloadURL(params.srcURL),
+    }));
+    menu.append(new MenuItem({
+      label: 'Copy Image',
+      click: () => wc.copyImageAt(params.x, params.y),
+    }));
+    menu.append(new MenuItem({
+      label: 'Copy Image Address',
+      click: () => clipboard.writeText(params.srcURL),
+    }));
+  }
+
+  // ═══ Phase 2: Selection Items ═══
+
+  /** Copy selection, Search Google for selection */
+  private addSelectionItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    if (!params.selectionText) return;
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Copy',
+      accelerator: 'CmdOrCtrl+C',
+      click: () => wc.copy(),
+    }));
+
+    const truncated = params.selectionText.length > 30
+      ? params.selectionText.substring(0, 30) + '...'
+      : params.selectionText;
+    menu.append(new MenuItem({
+      label: `Search Google for "${truncated}"`,
+      click: () => {
+        const query = encodeURIComponent(params.selectionText);
+        this.deps.tabManager.openTab(`https://www.google.com/search?q=${query}`);
+      },
+    }));
   }
 
   // ═══ Phase 1: Navigation Items ═══
@@ -73,7 +165,6 @@ export class ContextMenuBuilder {
       accelerator: 'CmdOrCtrl+U',
       click: () => {
         const url = wc.getURL();
-        // Open view-source: URL in a new tab via TabManager
         this.deps.tabManager.openTab(`view-source:${url}`);
       },
     }));

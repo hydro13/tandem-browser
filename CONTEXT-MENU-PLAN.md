@@ -12,7 +12,7 @@
 |------|------|--------|----------------|
 | 0 | Infrastructuur & Foundation | ✅ DONE | 2026-02-18 |
 | 1 | Webpagina Basis Context Menu | ✅ DONE | 2026-02-18 |
-| 2 | Link, Afbeelding & Selectie Menu | ⬜ TODO | - |
+| 2 | Link, Afbeelding & Selectie Menu | ✅ DONE | 2026-02-18 |
 | 3 | Input/Tekstveld Context Menu | ⬜ TODO | - |
 | 4 | Tab Context Menu | ⬜ TODO | - |
 | 5 | Tandem-specifieke Items (Kees AI) | ⬜ TODO | - |
