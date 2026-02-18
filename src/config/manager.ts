@@ -69,6 +69,14 @@ export interface TandemConfig {
     trustedSites: string[];
   };
 
+  // Webhook — notify external systems on chat events
+  webhook: {
+    enabled: boolean;
+    url: string;          // e.g. "http://127.0.0.1:18789"
+    secret: string;       // shared secret for auth (future use)
+    notifyOnRobinChat: boolean;  // fire webhook when Robin sends a message
+  };
+
   // Onboarding
   onboardingComplete: boolean;
 }
@@ -119,6 +127,12 @@ const DEFAULT_CONFIG: TandemConfig = {
     autoApproveType: false,
     autoApproveForms: false,
     trustedSites: ['google.com', 'wikipedia.org', 'duckduckgo.com'],
+  },
+  webhook: {
+    enabled: true,
+    url: 'http://127.0.0.1:18789',
+    secret: '',
+    notifyOnRobinChat: true,
   },
   onboardingComplete: false,
 };

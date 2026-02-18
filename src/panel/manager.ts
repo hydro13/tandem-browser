@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { ConfigManager } from '../config/manager';
 
 export interface ActivityEvent {
   id: number;
@@ -26,6 +27,7 @@ export interface ChatMessage {
  */
 export class PanelManager {
   private win: BrowserWindow;
+  private configManager?: ConfigManager;
   private activityLog: ActivityEvent[] = [];
   private chatMessages: ChatMessage[] = [];
   private eventCounter = 0;
@@ -35,8 +37,9 @@ export class PanelManager {
   private chatHistoryPath: string;
   private keesTyping = false;
 
-  constructor(win: BrowserWindow) {
+  constructor(win: BrowserWindow, configManager?: ConfigManager) {
     this.win = win;
+    this.configManager = configManager;
     const tandemDir = path.join(os.homedir(), '.tandem');
     if (!fs.existsSync(tandemDir)) {
       fs.mkdirSync(tandemDir, { recursive: true });
@@ -114,7 +117,53 @@ export class PanelManager {
     if (from === 'kees' && this.keesTyping) {
       this.setKeesTyping(false);
     }
+
+    // Fire webhook for robin messages (async, non-blocking)
+    this.fireWebhook(msg).catch(() => {});
+
     return msg;
+  }
+
+  /** Fire webhook to notify OpenClaw of new chat message */
+  private async fireWebhook(msg: ChatMessage): Promise<void> {
+    if (!this.configManager) return;
+    const config = this.configManager.getConfig();
+    if (!config.webhook?.enabled || !config.webhook?.url) return;
+    // Only notify for robin messages (kees messages come FROM OpenClaw, no need to echo back)
+    if (msg.from !== 'robin') return;
+    if (!config.webhook.notifyOnRobinChat) return;
+
+    const url = config.webhook.url.replace(/\/$/, '');
+
+    try {
+      const response = await fetch(`${url}/api/sessions/main/events`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(config.webhook.secret ? { 'Authorization': `Bearer ${config.webhook.secret}` } : {}),
+        },
+        body: JSON.stringify({
+          type: 'tandem-chat',
+          text: `[Tandem Chat] Robin: ${msg.text}`,
+          metadata: {
+            messageId: msg.id,
+            from: msg.from,
+            timestamp: msg.timestamp,
+            source: 'tandem-browser',
+          },
+        }),
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!response.ok) {
+        console.warn(`⚠️ Webhook failed (${response.status}): ${response.statusText}`);
+      }
+    } catch (e: any) {
+      // Silent fail — OpenClaw might not be running
+      if (e.name !== 'AbortError') {
+        console.warn('⚠️ Webhook dispatch failed (OpenClaw not running?):', e.message);
+      }
+    }
   }
 
   /** Get chat history */

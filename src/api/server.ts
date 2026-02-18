@@ -720,6 +720,30 @@ export class TandemAPI {
       }
     });
 
+    /** Test webhook connectivity */
+    this.app.post('/chat/webhook/test', async (_req: Request, res: Response) => {
+      try {
+        const config = this.configManager.getConfig();
+        if (!config.webhook?.enabled || !config.webhook?.url) {
+          res.json({ ok: false, error: 'Webhook not configured or disabled' });
+          return;
+        }
+
+        const url = config.webhook.url.replace(/\/$/, '');
+        const response = await fetch(`${url}/api/health`, {
+          signal: AbortSignal.timeout(5000),
+        });
+
+        res.json({
+          ok: response.ok,
+          status: response.status,
+          url: config.webhook.url,
+        });
+      } catch (e: any) {
+        res.json({ ok: false, error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // DRAW — Annotated screenshots
     // ═══════════════════════════════════════════════

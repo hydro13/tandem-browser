@@ -193,7 +193,7 @@ async function createWindow(): Promise<BrowserWindow> {
 async function startAPI(win: BrowserWindow): Promise<void> {
   configManager = new ConfigManager();
   tabManager = new TabManager(win);
-  panelManager = new PanelManager(win);
+  panelManager = new PanelManager(win, configManager);
   drawManager = new DrawOverlayManager(win, configManager);
   activityTracker = new ActivityTracker(win, panelManager, drawManager);
   voiceManager = new VoiceManager(win, panelManager);
