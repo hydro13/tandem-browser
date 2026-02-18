@@ -17,12 +17,19 @@ export class ContextMenuBuilder {
    * Build the full context menu for the given params.
    * Dispatches to context-specific builders in order: specific → general.
    */
-  build(params: ContextMenuParams, webContents: WebContents): Menu {
+  build(params: ContextMenuParams, wc: WebContents): Menu {
     const menu = new Menu();
+    const url = wc.getURL();
+
+    // Phase 6: Internal/shell pages get a minimal menu
+    if (url.startsWith('file://') && url.includes('/shell/')) {
+      this.addInternalPageItems(menu, params, wc);
+      return menu;
+    }
 
     if (params.isEditable) {
       // Phase 3: Input/textarea/contenteditable — edit items first
-      this.addEditableItems(menu, params, webContents);
+      this.addEditableItems(menu, params, wc);
       // Also allow "Search Google" if text is selected inside the field
       if (params.selectionText) {
         this.addSeparator(menu);
@@ -30,19 +37,21 @@ export class ContextMenuBuilder {
       }
     } else {
       // Phase 2: Context-specific items (link, image, selection)
-      this.addLinkItems(menu, params, webContents);
-      this.addImageItems(menu, params, webContents);
-      this.addSelectionItems(menu, params, webContents);
+      this.addLinkItems(menu, params, wc);
+      this.addImageItems(menu, params, wc);
+      // Phase 6: Video/Audio items
+      this.addMediaItems(menu, params, wc);
+      this.addSelectionItems(menu, params, wc);
     }
 
     // Phase 1: Navigation + tool items (always present)
     this.addSeparator(menu);
-    this.addNavigationItems(menu, params, webContents);
+    this.addNavigationItems(menu, params, wc);
     this.addSeparator(menu);
-    this.addToolItems(menu, params, webContents);
+    this.addToolItems(menu, params, wc);
 
     // Phase 5: Tandem-specific items (Kees AI, Bookmark, Screenshot)
-    this.addTandemItems(menu, params, webContents);
+    this.addTandemItems(menu, params, wc);
 
     return menu;
   }
@@ -351,6 +360,63 @@ export class ContextMenuBuilder {
     }));
   }
 
+  // ═══ Phase 6: Media Items (Video/Audio) ═══
+
+  /** Open/Save/Copy address for video and audio elements */
+  private addMediaItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    if (params.mediaType !== 'video' && params.mediaType !== 'audio') return;
+
+    this.addSeparator(menu);
+
+    const label = params.mediaType === 'video' ? 'Video' : 'Audio';
+    menu.append(new MenuItem({
+      label: `Open ${label} in New Tab`,
+      click: () => this.deps.tabManager.openTab(params.srcURL),
+    }));
+    menu.append(new MenuItem({
+      label: `Save ${label} As...`,
+      click: () => wc.downloadURL(params.srcURL),
+    }));
+    menu.append(new MenuItem({
+      label: `Copy ${label} Address`,
+      click: () => clipboard.writeText(params.srcURL),
+    }));
+  }
+
+  // ═══ Phase 6: Internal Page Items ═══
+
+  /** Minimal context menu for shell pages (newtab, settings, bookmarks, help) */
+  private addInternalPageItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    if (params.isEditable) {
+      this.addEditableItems(menu, params, wc);
+    } else if (params.selectionText) {
+      menu.append(new MenuItem({
+        label: 'Copy',
+        accelerator: 'CmdOrCtrl+C',
+        click: () => wc.copy(),
+      }));
+    }
+
+    if (params.linkURL) {
+      this.addSeparator(menu);
+      menu.append(new MenuItem({
+        label: 'Open Link in New Tab',
+        click: () => this.deps.tabManager.openTab(params.linkURL),
+      }));
+      menu.append(new MenuItem({
+        label: 'Copy Link Address',
+        click: () => clipboard.writeText(params.linkURL),
+      }));
+    }
+
+    this.addSeparator(menu);
+    menu.append(new MenuItem({
+      label: 'Inspect Element',
+      accelerator: 'CmdOrCtrl+Shift+I',
+      click: () => wc.inspectElement(params.x, params.y),
+    }));
+  }
+
   // ═══ Phase 4: Tab Context Menu ═══
 
   /** Build context menu for right-clicking on a tab in the tab bar */
@@ -381,11 +447,12 @@ export class ContextMenuBuilder {
       label: 'Duplicate Tab',
       click: () => this.deps.tabManager.openTab(tab.url),
     }));
+    const tabWc = webContents.fromId(tab.webContentsId);
+    const isMuted = tabWc ? tabWc.isAudioMuted() : false;
     menu.append(new MenuItem({
-      label: 'Mute Tab',
+      label: isMuted ? 'Unmute Tab' : 'Mute Tab',
       click: () => {
-        const wc = webContents.fromId(tab.webContentsId);
-        if (wc) wc.setAudioMuted(!wc.isAudioMuted());
+        if (tabWc) tabWc.setAudioMuted(!isMuted);
       },
     }));
 
