@@ -75,6 +75,7 @@ export interface TandemConfig {
     url: string;          // e.g. "http://127.0.0.1:18789"
     secret: string;       // shared secret for auth (future use)
     notifyOnRobinChat: boolean;  // fire webhook when Robin sends a message
+    notifyOnActivity: boolean;   // stream activity events to OpenClaw (Copilot Vision)
   };
 
   // Onboarding
@@ -133,6 +134,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     url: 'http://127.0.0.1:18789',
     secret: '',
     notifyOnRobinChat: true,
+    notifyOnActivity: true,
   },
   onboardingComplete: false,
 };

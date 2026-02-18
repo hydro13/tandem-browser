@@ -16,6 +16,7 @@ export interface ChatMessage {
   from: 'robin' | 'kees' | 'claude';
   text: string;
   timestamp: number;
+  image?: string;  // relative filename in ~/.tandem/chat-images/
 }
 
 /**
@@ -36,6 +37,7 @@ export class PanelManager {
   private maxEvents = 500;
   private chatHistoryPath: string;
   private keesTyping = false;
+  private chatImagesDir: string;
 
   constructor(win: BrowserWindow, configManager?: ConfigManager) {
     this.win = win;
@@ -45,6 +47,10 @@ export class PanelManager {
       fs.mkdirSync(tandemDir, { recursive: true });
     }
     this.chatHistoryPath = path.join(tandemDir, 'chat-history.json');
+    this.chatImagesDir = path.join(tandemDir, 'chat-images');
+    if (!fs.existsSync(this.chatImagesDir)) {
+      fs.mkdirSync(this.chatImagesDir, { recursive: true });
+    }
     this.loadChatHistory();
   }
 
@@ -102,13 +108,29 @@ export class PanelManager {
     return events.slice(-limit);
   }
 
+  /** Save a base64 image to disk, return the filename */
+  saveImage(base64Data: string): string {
+    const raw = base64Data.replace(/^data:image\/\w+;base64,/, '');
+    const ext = base64Data.startsWith('data:image/png') ? 'png' : 'jpg';
+    const filename = `chat-${Date.now()}.${ext}`;
+    const filePath = path.join(this.chatImagesDir, filename);
+    fs.writeFileSync(filePath, Buffer.from(raw, 'base64'));
+    return filename;
+  }
+
+  /** Get full path to a chat image */
+  getImagePath(filename: string): string {
+    return path.join(this.chatImagesDir, filename);
+  }
+
   /** Add a chat message */
-  addChatMessage(from: 'robin' | 'kees' | 'claude', text: string): ChatMessage {
+  addChatMessage(from: 'robin' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
     const msg: ChatMessage = {
       id: ++this.chatCounter,
       from,
       text,
       timestamp: Date.now(),
+      image,
     };
     this.chatMessages.push(msg);
     this.saveChatHistory();
@@ -144,12 +166,13 @@ export class PanelManager {
         },
         body: JSON.stringify({
           type: 'tandem-chat',
-          text: `[Tandem Chat] Robin: ${msg.text}`,
+          text: `[Tandem Chat] Robin: ${msg.text}${msg.image ? ' [image attached: ' + msg.image + ']' : ''}`,
           metadata: {
             messageId: msg.id,
             from: msg.from,
             timestamp: msg.timestamp,
             source: 'tandem-browser',
+            image: msg.image || null,
           },
         }),
         signal: AbortSignal.timeout(5000),

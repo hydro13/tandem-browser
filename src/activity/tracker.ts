@@ -1,6 +1,7 @@
 import { BrowserWindow } from 'electron';
 import { PanelManager } from '../panel/manager';
 import { DrawOverlayManager } from '../draw/overlay';
+import { CopilotStream } from './copilot-stream';
 
 export interface ActivityEntry {
   id: number;
@@ -11,25 +12,27 @@ export interface ActivityEntry {
 
 /**
  * ActivityTracker — Tracks navigation, clicks, scrolls via Electron webview events.
- * 
+ *
  * CRITICAL: All tracking happens via Electron main process events,
  * NOT via injected scripts in the webview. Anti-detect safe.
- * 
+ *
  * Auto-snapshots on navigation events.
  */
 export class ActivityTracker {
   private win: BrowserWindow;
   private panelManager: PanelManager;
   private drawManager: DrawOverlayManager;
+  private copilotStream?: CopilotStream;
   private log: ActivityEntry[] = [];
   private counter = 0;
   private maxEntries = 1000;
   private autoSnapshotEnabled = false; // Disabled until stable
 
-  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager) {
+  constructor(win: BrowserWindow, panelManager: PanelManager, drawManager: DrawOverlayManager, copilotStream?: CopilotStream) {
     this.win = win;
     this.panelManager = panelManager;
     this.drawManager = drawManager;
+    this.copilotStream = copilotStream;
   }
 
   /** Handle webview event forwarded from renderer */
@@ -51,6 +54,11 @@ export class ActivityTracker {
       data as Record<string, unknown>
     );
 
+    // Stream to Kees (Copilot Vision)
+    if (this.copilotStream) {
+      this.streamToKees(data);
+    }
+
     // Auto-snapshot on navigation (skip initial loads and internal pages)
     if (this.autoSnapshotEnabled && data.type === 'did-navigate' && data.url && this.counter > 5) {
       const url = data.url as string;
@@ -61,6 +69,94 @@ export class ActivityTracker {
           } catch (e: any) { console.warn('Auto-snapshot send failed (window may be closed):', e.message); }
         }, 3000);
       }
+    }
+  }
+
+  /** Stream activity events to Kees via CopilotStream */
+  private streamToKees(data: Record<string, unknown>): void {
+    if (!this.copilotStream) return;
+    const tabId = (data.tabId as string) || 'unknown';
+    const timestamp = Date.now();
+
+    switch (data.type) {
+      case 'did-navigate':
+      case 'did-navigate-in-page':
+        this.copilotStream.emit({
+          type: 'navigated',
+          tabId,
+          timestamp,
+          data: { url: data.url, title: data.title || '', fromUrl: data.fromUrl || '' },
+        });
+        break;
+
+      case 'did-finish-load':
+        this.copilotStream.emit({
+          type: 'page-loaded',
+          tabId,
+          timestamp,
+          data: { url: data.url, title: data.title || '', loadTimeMs: data.loadTimeMs || 0 },
+        });
+        break;
+
+      case 'tab-switch':
+        this.copilotStream.emit({
+          type: 'tab-switched',
+          tabId,
+          timestamp,
+          data: { url: data.url, title: data.title || '' },
+        });
+        break;
+
+      case 'tab-open':
+        // Only stream user-initiated opens (source: 'robin'), not agent opens
+        if (data.source === 'robin') {
+          this.copilotStream.emit({
+            type: 'tab-opened',
+            tabId,
+            timestamp,
+            data: { url: data.url, source: data.source },
+          });
+        }
+        break;
+
+      case 'tab-close':
+        this.copilotStream.emit({
+          type: 'tab-closed',
+          tabId,
+          timestamp,
+          data: { url: data.url, title: data.title || '' },
+        });
+        break;
+
+      case 'text-selected':
+        if (data.text) {
+          const text = (data.text as string).substring(0, 500);
+          this.copilotStream.emitDebounced(`select-${tabId}`, {
+            type: 'text-selected',
+            tabId,
+            timestamp,
+            data: { text, url: data.url },
+          }, 1000);
+        }
+        break;
+
+      case 'scroll':
+        this.copilotStream.emitDebounced(`scroll-${tabId}`, {
+          type: 'scroll-position',
+          tabId,
+          timestamp,
+          data: { scrollPercent: data.scrollPercent, url: data.url },
+        }, 3000);
+        break;
+
+      case 'input-focus':
+        this.copilotStream.emitDebounced(`form-${tabId}`, {
+          type: 'form-interaction',
+          tabId,
+          timestamp,
+          data: { fieldType: data.fieldType, fieldName: data.fieldName, url: data.url },
+        }, 2000);
+        break;
     }
   }
 

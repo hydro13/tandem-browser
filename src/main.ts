@@ -33,6 +33,7 @@ import { TaskManager } from './agents/task-manager';
 import { TabLockManager } from './agents/tab-lock-manager';
 import { ContextMenuManager } from './context-menu/manager';
 import { DevToolsManager } from './devtools/manager';
+import { CopilotStream } from './activity/copilot-stream';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -65,6 +66,7 @@ let taskManager: TaskManager | null = null;
 let tabLockManager: TabLockManager | null = null;
 let contextMenuManager: ContextMenuManager | null = null;
 let devToolsManager: DevToolsManager | null = null;
+let copilotStream: CopilotStream | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 
@@ -124,6 +126,29 @@ async function createWindow(): Promise<BrowserWindow> {
       } else {
         pendingContextMenuWebContents.push(contents);
       }
+
+      // Copilot Vision: detect text selection + form interaction via context-menu (anti-detect safe)
+      contents.on('context-menu', (_event, params) => {
+        if (!activityTracker) return;
+        const url = contents.getURL();
+        // Text selection detection
+        if (params.selectionText && params.selectionText.trim().length > 10) {
+          activityTracker.onWebviewEvent({
+            type: 'text-selected',
+            text: params.selectionText.trim(),
+            url,
+          });
+        }
+        // Form field interaction detection (no values — privacy safe)
+        if (params.isEditable) {
+          activityTracker.onWebviewEvent({
+            type: 'input-focus',
+            fieldType: params.inputFieldType || 'text',
+            fieldName: '',
+            url,
+          });
+        }
+      });
 
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
@@ -199,7 +224,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   tabManager = new TabManager(win);
   panelManager = new PanelManager(win, configManager);
   drawManager = new DrawOverlayManager(win, configManager);
-  activityTracker = new ActivityTracker(win, panelManager, drawManager);
+  copilotStream = new CopilotStream(configManager);
+  activityTracker = new ActivityTracker(win, panelManager, drawManager, copilotStream);
   voiceManager = new VoiceManager(win, panelManager);
   behaviorObserver = new BehaviorObserver(win);
   siteMemory = new SiteMemoryManager();
@@ -294,6 +320,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     taskManager: taskManager!,
     tabLockManager: tabLockManager!,
     devToolsManager: devToolsManager!,
+    copilotStream: copilotStream!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -303,7 +330,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu'];
+  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -338,6 +365,14 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (text && panelManager) {
       panelManager.addChatMessage('robin', text);
     }
+  });
+
+  // ═══ Chat Image IPC — Robin pastes image from clipboard ═══
+  ipcMain.handle('chat-send-image', async (_event, data: { text: string; image: string }) => {
+    if (!panelManager) return { ok: false };
+    const filename = panelManager.saveImage(data.image);
+    const msg = panelManager.addChatMessage('robin', data.text || '', filename);
+    return { ok: true, message: msg };
   });
 
   // ═══ Screenshot Snap — composites webview + canvas, saves + clipboard ═══
@@ -494,13 +529,19 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   ipcMain.handle('tab-new', async (_event, url?: string) => {
     const targetUrl = url || `file://${path.join(__dirname, '..', 'shell', 'newtab.html')}`;
     const tab = await tabManager?.openTab(targetUrl);
-    if (tab) eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: targetUrl });
+    if (tab) {
+      eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: targetUrl });
+      activityTracker?.onWebviewEvent({ type: 'tab-open', tabId: tab.id, url: targetUrl, source: 'robin' });
+    }
     syncTabsToContext();
     return tab;
   });
 
   ipcMain.handle('tab-close', async (_event, tabId: string) => {
+    // Capture tab info before closing
+    const closingTab = tabManager?.getTab(tabId);
     eventStream?.handleTabEvent('tab-closed', { tabId });
+    activityTracker?.onWebviewEvent({ type: 'tab-close', tabId, url: closingTab?.url, title: closingTab?.title });
     const result = await tabManager?.closeTab(tabId);
     syncTabsToContext();
     return result;
@@ -511,6 +552,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     const tabs = tabManager?.listTabs() || [];
     const tab = tabs.find(t => t.id === tabId);
     eventStream?.handleTabEvent('tab-focused', { tabId, url: tab?.url, title: tab?.title });
+    activityTracker?.onWebviewEvent({ type: 'tab-switch', tabId, url: tab?.url, title: tab?.title });
     const result = await tabManager?.focusTab(tabId);
     syncTabsToContext();
     return result;
@@ -785,6 +827,7 @@ app.on('will-quit', () => {
   if (tabLockManager) tabLockManager.destroy();
   if (contextMenuManager) contextMenuManager.destroy();
   if (devToolsManager) devToolsManager.destroy();
+  if (copilotStream) copilotStream.destroy();
 });
 
 app.on('window-all-closed', () => {

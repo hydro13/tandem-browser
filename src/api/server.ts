@@ -36,6 +36,7 @@ import { EventStreamManager } from '../events/stream';
 import { TaskManager } from '../agents/task-manager';
 import { TabLockManager } from '../agents/tab-lock-manager';
 import { DevToolsManager } from '../devtools/manager';
+import { CopilotStream } from '../activity/copilot-stream';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -87,6 +88,7 @@ export interface TandemAPIOptions {
   taskManager: TaskManager;
   tabLockManager: TabLockManager;
   devToolsManager: DevToolsManager;
+  copilotStream: CopilotStream;
 }
 
 export class TandemAPI {
@@ -120,6 +122,7 @@ export class TandemAPI {
   private taskManager: TaskManager;
   private tabLockManager: TabLockManager;
   private devToolsManager: DevToolsManager;
+  private copilotStream: CopilotStream;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -152,6 +155,7 @@ export class TandemAPI {
     this.taskManager = opts.taskManager;
     this.tabLockManager = opts.tabLockManager;
     this.devToolsManager = opts.devToolsManager;
+    this.copilotStream = opts.copilotStream;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -702,15 +706,35 @@ export class TandemAPI {
 
     /** Send chat message (default: kees, 'from' param allows robin/claude) */
     this.app.post('/chat', (req: Request, res: Response) => {
-      const { text, from } = req.body;
-      if (!text) { res.status(400).json({ error: 'text required' }); return; }
+      const { text, from, image } = req.body;
+      if (!text && !image) { res.status(400).json({ error: 'text or image required' }); return; }
       const sender: 'robin' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'kees';
       try {
-        const msg = this.panelManager.addChatMessage(sender, text);
+        let savedImage: string | undefined;
+        if (image) {
+          savedImage = this.panelManager.saveImage(image);
+        }
+        const msg = this.panelManager.addChatMessage(sender, text || '', savedImage);
         res.json({ ok: true, message: msg });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
+    });
+
+    /** Serve chat images */
+    this.app.get('/chat/image/:filename', (req: Request, res: Response) => {
+      const filename = req.params.filename as string;
+      // Security: prevent path traversal
+      if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+        res.status(400).json({ error: 'Invalid filename' });
+        return;
+      }
+      const filePath = this.panelManager.getImagePath(filename);
+      if (!fs.existsSync(filePath)) {
+        res.status(404).json({ error: 'Image not found' });
+        return;
+      }
+      res.sendFile(filePath);
     });
 
     /** Set Kees typing indicator */
@@ -2307,6 +2331,20 @@ export class TandemAPI {
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
+    });
+
+    // ═══════════════════════════════════════════════
+    // COPILOT STREAM (Activity Streaming to OpenClaw)
+    // ═══════════════════════════════════════════════
+
+    this.app.post('/copilot-stream/toggle', (req: Request, res: Response) => {
+      const { enabled } = req.body;
+      this.copilotStream.setEnabled(!!enabled);
+      res.json({ ok: true, enabled: !!enabled });
+    });
+
+    this.app.get('/copilot-stream/status', (_req: Request, res: Response) => {
+      res.json({ ok: true, enabled: this.copilotStream.isEnabled() });
     });
   }
 

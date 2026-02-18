@@ -69,6 +69,7 @@ contextBridge.exposeInMainWorld('tandem', {
   sendChatMessage: (text: string) => {
     ipcRenderer.send('chat-send', text);
   },
+  sendChatImage: (text: string, image: string) => ipcRenderer.invoke('chat-send-image', { text, image }),
 
   // Draw overlay
   onDrawMode: (callback: (data: { enabled: boolean }) => void) => {

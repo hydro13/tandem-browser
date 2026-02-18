@@ -612,6 +612,45 @@
       transition: opacity 0.15s;
     }
     .chat-send-btn:hover { opacity: 0.85; }
+    .chat-image-preview {
+      position: relative;
+      padding: 6px 12px;
+      background: rgba(255,255,255,0.05);
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+    .chat-image-preview img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,255,255,0.15);
+    }
+    .chat-image-preview .remove-preview {
+      position: absolute;
+      top: 2px;
+      right: 8px;
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chat-image-preview .remove-preview:hover { background: rgba(255,0,0,0.6); }
+    .chat-msg img.chat-msg-image {
+      max-width: 250px;
+      max-height: 200px;
+      border-radius: 6px;
+      margin-top: 4px;
+      cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.1);
+      display: block;
+    }
+    .chat-msg img.chat-msg-image:hover { border-color: var(--accent); }
 
     /* Backend selector (Phase 3) */
     .chat-backend-selector {
@@ -1125,6 +1164,7 @@
             <div class="typing-dots"><span></span><span></span><span></span></div>
             <span>Kees is typing...</span>
           </div>
+          <div id="chat-image-preview" class="chat-image-preview" style="display:none;"></div>
           <div class="chat-input-wrap">
             <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
             <button class="chat-send-btn" id="chat-send-btn">▶</button>
@@ -1904,7 +1944,7 @@
         return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
       }
 
-      function appendMessage(role, text, timestamp, source) {
+      function appendMessage(role, text, timestamp, source, image) {
         const sourceClass = source || 'openclaw';
         let cls, name;
         if (role === 'user') {
@@ -1920,6 +1960,16 @@
         const el = document.createElement('div');
         el.className = `chat-msg ${cls} source-${source || sourceClass}`;
         el.innerHTML = `<div class="msg-from">${name}</div><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">${formatTime(timestamp)}</div>`;
+        // Add image if present
+        if (image) {
+          const msgText = el.querySelector('.msg-text');
+          const img = document.createElement('img');
+          img.src = `http://localhost:8765/chat/image/${image}`;
+          img.className = 'chat-msg-image';
+          img.addEventListener('click', () => window.open(img.src, '_blank'));
+          img.onerror = () => { img.style.display = 'none'; };
+          msgText.appendChild(img);
+        }
         messagesEl.appendChild(el);
         scrollToBottom();
         return el;
@@ -2026,12 +2076,12 @@
           // Load combined history — OpenClaw first, then Claude
           openclawBackend.loadHistory((msgs) => {
             for (const m of msgs) {
-              const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+              const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
               el.dataset.fromHistory = 'true';
             }
             // Re-add local Robin messages
             for (const localMsg of localRobinMessages) {
-              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
               el.dataset.localMessage = 'true';
             }
           });
@@ -2041,12 +2091,12 @@
           if (id === 'openclaw') {
             openclawBackend.loadHistory((msgs) => {
               for (const m of msgs) {
-                const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+                const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
                 el.dataset.fromHistory = 'true';
               }
               // Re-add local Robin messages
               for (const localMsg of localRobinMessages) {
-                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
                 el.dataset.localMessage = 'true';
               }
             });
@@ -2135,7 +2185,7 @@
               
               // Only add if not already present from history
               if (!alreadyExists) {
-                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+                const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
                 el.dataset.localMessage = 'true';
               }
             }
@@ -2152,7 +2202,7 @@
           let streamData = streamingMessages.get(currentConversationId);
           if (!streamData) {
             // Create new streaming message element - always insert at the very end
-            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
             streamData = { 
               element, 
               startTime: Date.now(),
@@ -2187,7 +2237,7 @@
           }
           // Only append a new element if this is NOT a final event (final reuses the streaming element)
           if (!msg._final) {
-            appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+            appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
           }
         }
       });
@@ -2216,13 +2266,13 @@
           
           if (Array.isArray(msg)) {
             for (const m of msg) {
-              const el = appendMessage(m.role, m.text, m.timestamp, m.source);
+              const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
               el.dataset.fromHistory = 'true';
             }
             
             // Re-add local Robin messages that aren't in history
             for (const localMsg of localRobinMessages) {
-              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source);
+              const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
               el.dataset.localMessage = 'true';
             }
           }
@@ -2243,7 +2293,7 @@
           
           if (!streamData) {
             // Create new streaming message element
-            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+            const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
             streamData = { 
               element, 
               startTime: Date.now(),
@@ -2275,7 +2325,7 @@
             }
             delete dualStreamingConversations[backendId];
           }
-          appendMessage(msg.role, msg.text, msg.timestamp, msg.source);
+          appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
         }
       });
 
@@ -2301,10 +2351,94 @@
         }
       });
 
+      // ── Image paste/drop support ──
+
+      let pendingImage = null; // base64 data URL
+      const imagePreviewEl = document.getElementById('chat-image-preview');
+
+      inputEl.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (const item of items) {
+          if (item.type.startsWith('image/')) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            if (!blob) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+              pendingImage = reader.result;
+              showImagePreview(pendingImage);
+            };
+            reader.readAsDataURL(blob);
+            return;
+          }
+        }
+      });
+
+      inputEl.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      });
+
+      inputEl.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const file = e.dataTransfer?.files?.[0];
+        if (file && file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            pendingImage = reader.result;
+            showImagePreview(pendingImage);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+
+      function showImagePreview(dataUrl) {
+        imagePreviewEl.innerHTML = `
+          <img src="${dataUrl}" alt="Preview">
+          <button class="remove-preview" title="Remove image">✕</button>
+        `;
+        imagePreviewEl.style.display = 'block';
+        imagePreviewEl.querySelector('.remove-preview').addEventListener('click', () => {
+          clearImagePreview();
+        });
+      }
+
+      function clearImagePreview() {
+        pendingImage = null;
+        imagePreviewEl.innerHTML = '';
+        imagePreviewEl.style.display = 'none';
+      }
+
       // ── Send message (input + button) ──
 
       function sendMessage() {
         const text = inputEl.value.trim();
+
+        // Image paste: send via IPC (before text-only check)
+        if (pendingImage) {
+          const imageData = pendingImage;
+          clearImagePreview();
+          inputEl.value = '';
+          inputEl.style.height = '';
+
+          // Show local preview immediately
+          const robinMsg = appendMessage('user', text || '', Date.now(), 'robin');
+          robinMsg.dataset.localMessage = 'true';
+          const msgText = robinMsg.querySelector('.msg-text');
+          const img = document.createElement('img');
+          img.src = imageData;
+          img.className = 'chat-msg-image';
+          img.addEventListener('click', () => window.open(imageData, '_blank'));
+          msgText.appendChild(img);
+
+          // Send to main process via IPC
+          if (window.tandem?.sendChatImage) {
+            window.tandem.sendChatImage(text, imageData);
+          }
+          return;
+        }
+
         if (!text) return;
 
         inputEl.value = '';
@@ -2906,6 +3040,27 @@
       wv.addEventListener('did-stop-loading', () => {
         if (window.tandem) window.tandem.sendWebviewEvent({ type: 'loading-stop', tabId });
       });
+
+      // Copilot Vision: scroll position tracking (polls every 5s, only reports changes)
+      let _scrollInterval = null;
+      let _lastScrollPct = -1;
+      const scrollCheckJS = `(function(){var h=Math.max(1,document.documentElement.scrollHeight-window.innerHeight);return Math.round((window.scrollY/h)*100)})()`;
+      function startScrollTracking() {
+        if (_scrollInterval) clearInterval(_scrollInterval);
+        _lastScrollPct = -1;
+        _scrollInterval = setInterval(async () => {
+          try {
+            const pct = await wv.executeJavaScript(scrollCheckJS);
+            if (pct !== _lastScrollPct && window.tandem) {
+              _lastScrollPct = pct;
+              window.tandem.sendWebviewEvent({ type: 'scroll', scrollPercent: pct, url: wv.getURL(), tabId });
+            }
+          } catch { /* webview may be navigating or destroyed */ }
+        }, 5000);
+      }
+      wv.addEventListener('did-finish-load', startScrollTracking);
+      wv.addEventListener('destroyed', () => { if (_scrollInterval) clearInterval(_scrollInterval); });
+      wv.addEventListener('did-navigate', () => { _lastScrollPct = -1; }); // reset on navigation
     }
 
     // Also wire activity events for the initial tab
