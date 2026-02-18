@@ -11,7 +11,7 @@
 | Fase | Naam | Status | Datum voltooid |
 |------|------|--------|----------------|
 | 0 | Infrastructuur & Foundation | ✅ DONE | 2026-02-18 |
-| 1 | Webpagina Basis Context Menu | ⬜ TODO | - |
+| 1 | Webpagina Basis Context Menu | ✅ DONE | 2026-02-18 |
 | 2 | Link, Afbeelding & Selectie Menu | ⬜ TODO | - |
 | 3 | Input/Tekstveld Context Menu | ⬜ TODO | - |
 | 4 | Tab Context Menu | ⬜ TODO | - |
