@@ -29,5 +29,16 @@
     "electron-builder": "^25.0.0",
     "typescript": "^5.6.0"
   },
-  "productName": "Google Chrome"
+  "productName": "Google Chrome",
+  "build": {
+    "appId": "com.tandem.browser",
+    "files": [
+      "dist/**/*",
+      "shell/**/*",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  }
 }
