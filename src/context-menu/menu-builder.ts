@@ -20,10 +20,20 @@ export class ContextMenuBuilder {
   build(params: ContextMenuParams, webContents: WebContents): Menu {
     const menu = new Menu();
 
-    // Phase 2: Context-specific items first (link, image, selection)
-    this.addLinkItems(menu, params, webContents);
-    this.addImageItems(menu, params, webContents);
-    this.addSelectionItems(menu, params, webContents);
+    if (params.isEditable) {
+      // Phase 3: Input/textarea/contenteditable — edit items first
+      this.addEditableItems(menu, params, webContents);
+      // Also allow "Search Google" if text is selected inside the field
+      if (params.selectionText) {
+        this.addSeparator(menu);
+        this.addSearchItem(menu, params);
+      }
+    } else {
+      // Phase 2: Context-specific items (link, image, selection)
+      this.addLinkItems(menu, params, webContents);
+      this.addImageItems(menu, params, webContents);
+      this.addSelectionItems(menu, params, webContents);
+    }
 
     // Phase 1: Navigation + tool items (always present)
     this.addSeparator(menu);
@@ -107,6 +117,81 @@ export class ContextMenuBuilder {
       accelerator: 'CmdOrCtrl+C',
       click: () => wc.copy(),
     }));
+
+    const truncated = params.selectionText.length > 30
+      ? params.selectionText.substring(0, 30) + '...'
+      : params.selectionText;
+    menu.append(new MenuItem({
+      label: `Search Google for "${truncated}"`,
+      click: () => {
+        const query = encodeURIComponent(params.selectionText);
+        this.deps.tabManager.openTab(`https://www.google.com/search?q=${query}`);
+      },
+    }));
+  }
+
+  // ═══ Phase 3: Editable Field Items ═══
+
+  /** Undo, Redo, Cut, Copy, Paste, Paste Plain Text, Delete, Select All */
+  private addEditableItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
+    menu.append(new MenuItem({
+      label: 'Undo',
+      accelerator: 'CmdOrCtrl+Z',
+      enabled: params.editFlags.canUndo,
+      click: () => wc.undo(),
+    }));
+    menu.append(new MenuItem({
+      label: 'Redo',
+      accelerator: 'CmdOrCtrl+Shift+Z',
+      enabled: params.editFlags.canRedo,
+      click: () => wc.redo(),
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Cut',
+      accelerator: 'CmdOrCtrl+X',
+      enabled: params.editFlags.canCut,
+      click: () => wc.cut(),
+    }));
+    menu.append(new MenuItem({
+      label: 'Copy',
+      accelerator: 'CmdOrCtrl+C',
+      enabled: params.editFlags.canCopy,
+      click: () => wc.copy(),
+    }));
+    menu.append(new MenuItem({
+      label: 'Paste',
+      accelerator: 'CmdOrCtrl+V',
+      enabled: params.editFlags.canPaste,
+      click: () => wc.paste(),
+    }));
+    menu.append(new MenuItem({
+      label: 'Paste as Plain Text',
+      accelerator: 'CmdOrCtrl+Shift+V',
+      enabled: params.editFlags.canPaste,
+      click: () => wc.pasteAndMatchStyle(),
+    }));
+    menu.append(new MenuItem({
+      label: 'Delete',
+      enabled: params.editFlags.canDelete,
+      click: () => wc.delete(),
+    }));
+
+    this.addSeparator(menu);
+
+    menu.append(new MenuItem({
+      label: 'Select All',
+      accelerator: 'CmdOrCtrl+A',
+      enabled: params.editFlags.canSelectAll,
+      click: () => wc.selectAll(),
+    }));
+  }
+
+  /** Search Google item — used standalone for editable fields with selection */
+  private addSearchItem(menu: Menu, params: ContextMenuParams): void {
+    if (!params.selectionText) return;
 
     const truncated = params.selectionText.length > 30
       ? params.selectionText.substring(0, 30) + '...'
