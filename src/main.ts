@@ -31,6 +31,7 @@ import { ClaroNoteManager } from './claronote/manager';
 import { EventStreamManager } from './events/stream';
 import { TaskManager } from './agents/task-manager';
 import { TabLockManager } from './agents/tab-lock-manager';
+import { ContextMenuManager } from './context-menu/manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -61,6 +62,7 @@ let claroNoteManager: ClaroNoteManager | null = null;
 let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
 let tabLockManager: TabLockManager | null = null;
+let contextMenuManager: ContextMenuManager | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -111,6 +113,11 @@ async function createWindow(): Promise<BrowserWindow> {
         }
         contents.executeJavaScript(stealthScript).catch((e) => console.warn('Stealth script injection failed:', e.message));
       });
+
+      // Register context menu for this webview
+      if (contextMenuManager) {
+        contextMenuManager.registerWebContents(contents);
+      }
 
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
@@ -204,6 +211,14 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   eventStream = new EventStreamManager();
   taskManager = new TaskManager();
   tabLockManager = new TabLockManager();
+  contextMenuManager = new ContextMenuManager({
+    win,
+    tabManager: tabManager!,
+    bookmarkManager: bookmarkManager!,
+    historyManager: historyManager!,
+    panelManager: panelManager!,
+    downloadManager: downloadManager!,
+  });
 
   // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
   contextBridge.connectEventStream(eventStream);
@@ -716,6 +731,16 @@ app.whenReady().then(async () => {
   await startAPI(win);
   buildAppMenu();
 
+  // Register context menu for any webviews that were created before startAPI
+  // (e.g. the initial tab's webview). Future webviews are handled in web-contents-created.
+  if (contextMenuManager) {
+    for (const wc of webContents.getAllWebContents()) {
+      if (wc.getType() === 'webview') {
+        contextMenuManager.registerWebContents(wc);
+      }
+    }
+  }
+
   // Keep shortcuts always registered while app is running
   // (blur/focus approach broke shortcuts when webview had focus)
 
@@ -742,6 +767,7 @@ app.on('will-quit', () => {
   if (chromeImporter) chromeImporter.destroy();
   if (taskManager) taskManager.destroy();
   if (tabLockManager) tabLockManager.destroy();
+  if (contextMenuManager) contextMenuManager.destroy();
 });
 
 app.on('window-all-closed', () => {
