@@ -473,6 +473,17 @@ async function startAPI(win: BrowserWindow): Promise<void> {
         }).catch((e) => console.warn('Get active webcontents for site memory failed:', e.message));
       }
     }
+    // Security: run baseline learning + anomaly detection on page load completion
+    if (securityManager && data.type === 'did-finish-load' && data.url) {
+      try {
+        const domain = new URL(data.url).hostname.toLowerCase();
+        if (domain) {
+          securityManager.onPageLoaded(domain).catch((e) =>
+            console.warn('[Security] onPageLoaded failed:', e.message)
+          );
+        }
+      } catch { /* invalid URL, skip */ }
+    }
     // Flush network data when navigating away
     if (networkInspector && data.type === 'did-start-navigation' && data.url) {
       try {

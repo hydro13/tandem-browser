@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry } from './types';
+import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry, BaselineEntry, ZeroDayCandidate, TrustChange } from './types';
 
 export class SecurityDB {
   private db: Database.Database;
@@ -33,6 +33,22 @@ export class SecurityDB {
   private stmtUpsertScriptFingerprint!: Database.Statement;
   private stmtGetScriptsByDomain!: Database.Statement;
   private stmtGetScriptFingerprintCount!: Database.Statement;
+  // Phase 5: Baselines, zero-day candidates, analytics
+  private stmtGetBaseline!: Database.Statement;
+  private stmtGetBaselinesByDomain!: Database.Statement;
+  private stmtUpsertBaseline!: Database.Statement;
+  private stmtInsertZeroDayCandidate!: Database.Statement;
+  private stmtGetZeroDayCandidates!: Database.Statement;
+  private stmtGetOpenZeroDayCandidates!: Database.Statement;
+  private stmtResolveZeroDayCandidate!: Database.Statement;
+  private stmtCountEventsSince!: Database.Statement;
+  private stmtCountEventsSinceByAction!: Database.Statement;
+  private stmtGetTopBlockedDomains!: Database.Statement;
+  private stmtGetNewDomains!: Database.Statement;
+  private stmtGetTrustChanges!: Database.Statement;
+  private stmtPruneOldEvents!: Database.Statement;
+  private stmtDeleteBlocklistBySource!: Database.Statement;
+  private stmtGetRecentAnomalyEvents!: Database.Statement;
 
   constructor() {
     const dbDir = path.join(os.homedir(), '.tandem', 'security');
@@ -222,6 +238,61 @@ export class SecurityDB {
     );
     this.stmtGetScriptFingerprintCount = this.db.prepare(
       'SELECT COUNT(*) as total FROM script_fingerprints'
+    );
+    // Phase 5: Baselines
+    this.stmtGetBaseline = this.db.prepare(
+      'SELECT domain, metric, expected_value, tolerance, sample_count, last_updated FROM baselines WHERE domain = ? AND metric = ?'
+    );
+    this.stmtGetBaselinesByDomain = this.db.prepare(
+      'SELECT domain, metric, expected_value, tolerance, sample_count, last_updated FROM baselines WHERE domain = ?'
+    );
+    this.stmtUpsertBaseline = this.db.prepare(`
+      INSERT INTO baselines (domain, metric, expected_value, tolerance, sample_count, last_updated)
+      VALUES (@domain, @metric, @expectedValue, @tolerance, @sampleCount, datetime('now'))
+      ON CONFLICT(domain, metric) DO UPDATE SET
+        expected_value = @expectedValue,
+        tolerance = @tolerance,
+        sample_count = @sampleCount,
+        last_updated = datetime('now')
+    `);
+    // Phase 5: Zero-day candidates
+    this.stmtInsertZeroDayCandidate = this.db.prepare(`
+      INSERT INTO zero_day_candidates (detected_at, domain, anomaly_type, baseline_deviation, details)
+      VALUES (@detectedAt, @domain, @anomalyType, @baselineDeviation, @details)
+    `);
+    this.stmtGetZeroDayCandidates = this.db.prepare(
+      'SELECT id, detected_at, domain, anomaly_type, baseline_deviation, details, resolved, resolution, resolved_at FROM zero_day_candidates WHERE detected_at >= ? ORDER BY detected_at DESC'
+    );
+    this.stmtGetOpenZeroDayCandidates = this.db.prepare(
+      'SELECT id, detected_at, domain, anomaly_type, baseline_deviation, details, resolved, resolution, resolved_at FROM zero_day_candidates WHERE resolved = 0 ORDER BY detected_at DESC'
+    );
+    this.stmtResolveZeroDayCandidate = this.db.prepare(
+      'UPDATE zero_day_candidates SET resolved = 1, resolution = ?, resolved_at = ? WHERE id = ?'
+    );
+    // Phase 5: Analytics queries
+    this.stmtCountEventsSince = this.db.prepare(
+      'SELECT COUNT(*) as total FROM events WHERE timestamp >= ?'
+    );
+    this.stmtCountEventsSinceByAction = this.db.prepare(
+      'SELECT COUNT(*) as total FROM events WHERE timestamp >= ? AND action_taken = ?'
+    );
+    this.stmtGetTopBlockedDomains = this.db.prepare(
+      'SELECT domain, COUNT(*) as count FROM events WHERE timestamp >= ? AND action_taken IN (\'auto_block\', \'agent_block\') AND domain IS NOT NULL GROUP BY domain ORDER BY count DESC LIMIT ?'
+    );
+    this.stmtGetNewDomains = this.db.prepare(
+      'SELECT domain, first_seen FROM domains WHERE first_seen >= ? ORDER BY first_seen DESC'
+    );
+    this.stmtGetTrustChanges = this.db.prepare(
+      'SELECT domain, details, timestamp FROM events WHERE timestamp >= ? AND event_type = \'info\' AND category = \'behavior\' ORDER BY timestamp DESC'
+    );
+    this.stmtPruneOldEvents = this.db.prepare(
+      'DELETE FROM events WHERE timestamp < ?'
+    );
+    this.stmtDeleteBlocklistBySource = this.db.prepare(
+      'DELETE FROM blocklist WHERE source = ?'
+    );
+    this.stmtGetRecentAnomalyEvents = this.db.prepare(
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = \'behavior\' AND event_type = \'anomaly\' ORDER BY timestamp DESC LIMIT ?'
     );
   }
 
@@ -438,6 +509,171 @@ export class SecurityDB {
 
   getScriptFingerprintCount(): number {
     return (this.stmtGetScriptFingerprintCount.get() as { total: number }).total;
+  }
+
+  // === Phase 5: Baselines ===
+
+  getBaseline(domain: string, metric: string): BaselineEntry | null {
+    const row = this.stmtGetBaseline.get(domain, metric) as any;
+    if (!row) return null;
+    return {
+      domain: row.domain,
+      metric: row.metric,
+      expectedValue: row.expected_value,
+      tolerance: row.tolerance,
+      sampleCount: row.sample_count,
+      lastUpdated: row.last_updated,
+    };
+  }
+
+  getBaselinesByDomain(domain: string): BaselineEntry[] {
+    const rows = this.stmtGetBaselinesByDomain.all(domain) as any[];
+    return rows.map(row => ({
+      domain: row.domain,
+      metric: row.metric,
+      expectedValue: row.expected_value,
+      tolerance: row.tolerance,
+      sampleCount: row.sample_count,
+      lastUpdated: row.last_updated,
+    }));
+  }
+
+  upsertBaseline(domain: string, metric: string, expectedValue: number, tolerance: number, sampleCount: number): void {
+    this.stmtUpsertBaseline.run({
+      domain,
+      metric,
+      expectedValue,
+      tolerance,
+      sampleCount,
+    });
+  }
+
+  // === Phase 5: Zero-day candidates ===
+
+  insertZeroDayCandidate(candidate: Omit<ZeroDayCandidate, 'id' | 'resolved' | 'resolution' | 'resolvedAt'>): number {
+    const result = this.stmtInsertZeroDayCandidate.run({
+      detectedAt: candidate.detectedAt,
+      domain: candidate.domain,
+      anomalyType: candidate.anomalyType,
+      baselineDeviation: candidate.baselineDeviation,
+      details: candidate.details,
+    });
+    return Number(result.lastInsertRowid);
+  }
+
+  getZeroDayCandidates(since: number): ZeroDayCandidate[] {
+    const rows = this.stmtGetZeroDayCandidates.all(since) as any[];
+    return rows.map(row => ({
+      id: row.id,
+      detectedAt: row.detected_at,
+      domain: row.domain,
+      anomalyType: row.anomaly_type,
+      baselineDeviation: row.baseline_deviation,
+      details: row.details,
+      resolved: !!row.resolved,
+      resolution: row.resolution,
+      resolvedAt: row.resolved_at,
+    }));
+  }
+
+  getOpenZeroDayCandidates(): ZeroDayCandidate[] {
+    const rows = this.stmtGetOpenZeroDayCandidates.all() as any[];
+    return rows.map(row => ({
+      id: row.id,
+      detectedAt: row.detected_at,
+      domain: row.domain,
+      anomalyType: row.anomaly_type,
+      baselineDeviation: row.baseline_deviation,
+      details: row.details,
+      resolved: !!row.resolved,
+      resolution: row.resolution,
+      resolvedAt: row.resolved_at,
+    }));
+  }
+
+  resolveZeroDayCandidate(id: number, resolution: string): boolean {
+    const result = this.stmtResolveZeroDayCandidate.run(resolution, Date.now(), id);
+    return result.changes > 0;
+  }
+
+  // === Phase 5: Analytics ===
+
+  countEvents(since: number, actionFilter?: string): number {
+    if (actionFilter) {
+      return (this.stmtCountEventsSinceByAction.get(since, actionFilter) as { total: number }).total;
+    }
+    return (this.stmtCountEventsSince.get(since) as { total: number }).total;
+  }
+
+  getTopBlockedDomains(since: number, limit: number): { domain: string; count: number }[] {
+    return this.stmtGetTopBlockedDomains.all(since, limit) as { domain: string; count: number }[];
+  }
+
+  getNewDomains(since: number): { domain: string; firstSeen: number }[] {
+    const rows = this.stmtGetNewDomains.all(since) as any[];
+    return rows.map(row => ({ domain: row.domain, firstSeen: row.first_seen }));
+  }
+
+  getTrustChanges(since: number): TrustChange[] {
+    const rows = this.stmtGetTrustChanges.all(since) as any[];
+    return rows.map(row => {
+      try {
+        const details = JSON.parse(row.details);
+        return {
+          domain: row.domain,
+          event: details.event || 'unknown',
+          oldTrust: details.oldTrust ?? 0,
+          newTrust: details.newTrust ?? 0,
+          timestamp: row.timestamp,
+        };
+      } catch {
+        return {
+          domain: row.domain,
+          event: 'unknown',
+          oldTrust: 0,
+          newTrust: 0,
+          timestamp: row.timestamp,
+        };
+      }
+    });
+  }
+
+  getRecentAnomalies(limit: number): SecurityEvent[] {
+    const rows = this.stmtGetRecentAnomalyEvents.all(limit) as any[];
+    return rows.map(row => ({
+      id: row.id,
+      timestamp: row.timestamp,
+      domain: row.domain,
+      tabId: row.tab_id,
+      eventType: row.event_type,
+      severity: row.severity,
+      category: row.category,
+      details: row.details,
+      actionTaken: row.action_taken,
+      falsePositive: !!row.false_positive,
+    }));
+  }
+
+  pruneOldEvents(olderThanMs: number): number {
+    const cutoff = Date.now() - olderThanMs;
+    const result = this.stmtPruneOldEvents.run(cutoff);
+    return result.changes;
+  }
+
+  // === Phase 5: Blocklist sync ===
+
+  syncBlocklistSource(sourceName: string, domains: string[], category: string): number {
+    // Delete old entries for this source, then insert new
+    this.stmtDeleteBlocklistBySource.run(sourceName);
+    let added = 0;
+    const insertMany = this.db.transaction((items: string[]) => {
+      for (const domain of items) {
+        this.stmtAddBlocklist.run({ domain, source: sourceName, category });
+        added++;
+      }
+    });
+    insertMany(domains);
+    return added;
   }
 
   // === Cleanup ===

@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 5
-**Last completed phase:** Phase 4
-**Overall status:** IN PROGRESS
+**Next phase to implement:** —
+**Last completed phase:** Phase 5
+**Overall status:** COMPLETED
 
 ---
 
@@ -159,24 +159,31 @@
 
 ## Phase 5: Evolution Engine + Agent Fleet
 
-- **Status:** PENDING (blocked by Phase 4)
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-19
+- **Commit:** 5d9e82f
 - **Verification:**
-  - [ ] Baselines build correctly
-  - [ ] Anomaly detection works
-  - [ ] Trust evolution correct (asymmetric)
-  - [ ] Zero-day candidate logging
-  - [ ] Report generation works
-  - [ ] Blocklist auto-update works
-  - [ ] Event pruning works
-  - [ ] Phase 0-4 regression OK
-- **Issues encountered:** —
+  - [x] Baselines build correctly (rolling average + 2-sigma tolerance via EvolutionEngine)
+  - [x] Anomaly detection works (checks against baseline after 5+ visits, severity calculation)
+  - [x] Trust evolution correct (asymmetric: +1 clean visit max 90, -10 anomaly, -15 blocked, 0 blocklist_hit)
+  - [x] Zero-day candidate logging (3+ anomalies on single page = zero-day candidate, high-trust escalation)
+  - [x] Report generation works (GET /security/report?period=day returns stats, top blocked, trust changes)
+  - [x] Blocklist auto-update works (POST /security/blocklist/update — HTTPS download, 3 parsers, NetworkShield.reload())
+  - [x] Event pruning works (POST /security/maintenance/prune — removes events >90 days)
+  - [x] Phase 0-4 regression OK (32 endpoints tested — all 24 previous routes + 8 new routes working)
+- **Issues encountered:** None
 - **Agent fleet status:**
-  - Sentinel: NOT CONFIGURED
-  - Scanner: NOT CONFIGURED
-  - Updater: NOT CONFIGURED
-- **Post-implementation notes:** —
+  - Sentinel: CONFIGURED (every 5 min, REST patrol — see docs/security-shield/specs/AGENT-FLEET.md)
+  - Scanner: CONFIGURED (every 2 hours, deep tab scan — see docs/security-shield/specs/AGENT-FLEET.md)
+  - Updater: CONFIGURED (daily 06:00 Europe/Brussels, blocklist refresh + prune — see docs/security-shield/specs/AGENT-FLEET.md)
+- **Post-implementation notes:**
+  - EvolutionEngine uses Welford's online algorithm for running mean + variance (numerically stable)
+  - Baselines only active after MIN_SAMPLES=5 visits (configurable)
+  - Tolerance floor = 1 (prevents false positives on low-variance metrics like form_count=0)
+  - ThreatIntel correlation engine groups by domain (campaign detection) and time window (coordinated attack detection)
+  - BlocklistUpdater reuses same URL_LIST_SAFE_DOMAINS as NetworkShield (Phase 1 fix preserved)
+  - onPageLoaded() wired into main.ts IPC handler at 'did-finish-load' event — async, non-blocking
+  - 32 API routes total under /security/* (24 from Phase 1-4 + 8 new)
 
 ---
 
@@ -247,8 +254,11 @@
 
 ### Phase 5
 
-- [ ] `src/security/evolution.ts` — NEW
-- [ ] `src/security/threat-intel.ts` — NEW
-- [ ] `src/security/blocklists/updater.ts` — NEW
-- [ ] `src/security/security-manager.ts` — MODIFIED (evolution integration + routes)
-- [ ] `src/security/types.ts` — MODIFIED (new types)
+- [ ] `src/security/evolution.ts` — NEW (EvolutionEngine: baseline learning, anomaly detection, trust evolution)
+- [ ] `src/security/threat-intel.ts` — NEW (ThreatIntel: report generation, event correlation, recommendations)
+- [ ] `src/security/blocklists/updater.ts` — NEW (BlocklistUpdater: HTTPS download, 3 parsers, NetworkShield.reload())
+- [ ] `src/security/security-manager.ts` — MODIFIED (Phase 5 modules, onPageLoaded(), 8 new API routes → 32 total)
+- [ ] `src/security/security-db.ts` — MODIFIED (baselines + zero-day + analytics queries, 18 new prepared statements)
+- [ ] `src/security/types.ts` — MODIFIED (PageMetrics, Anomaly, BaselineEntry, ZeroDayCandidate, SecurityReport, TrustChange, CorrelatedThreat, UpdateResult)
+- [ ] `src/main.ts` — MODIFIED (onPageLoaded hook in activity-webview-event IPC handler)
+- [ ] `docs/security-shield/specs/AGENT-FLEET.md` — NEW (Sentinel, Scanner, Updater cron specs)

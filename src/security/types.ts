@@ -143,3 +143,84 @@ export interface GatekeeperHistoryEntry {
   source: 'agent' | 'timeout' | 'queue-full' | 'rest';
   timestamp: number;
 }
+
+// === Phase 5: Evolution Engine + Agent Fleet types ===
+
+export interface PageMetrics {
+  script_count: number;
+  external_domain_count: number;
+  form_count: number;
+  cookie_count: number;
+  request_count: number;
+  resource_size_total: number;
+  [key: string]: number;
+}
+
+export interface Anomaly {
+  domain: string;
+  metric: string;
+  expected: number;
+  actual: number;
+  deviation: number;
+  tolerance: number;
+  severity: EventSeverity;
+}
+
+export interface BaselineEntry {
+  domain: string;
+  metric: string;
+  expectedValue: number;
+  tolerance: number;
+  sampleCount: number;
+  lastUpdated: string;
+}
+
+export interface ZeroDayCandidate {
+  id?: number;
+  detectedAt: number;
+  domain: string;
+  anomalyType: string;
+  baselineDeviation: number;
+  details: string;
+  resolved: boolean;
+  resolution?: string | null;
+  resolvedAt?: number | null;
+}
+
+export interface SecurityReport {
+  period: 'day' | 'week' | 'month';
+  generatedAt: number;
+  totalRequests: number;
+  blockedRequests: number;
+  flaggedRequests: number;
+  anomaliesDetected: number;
+  zeroDayCandidates: ZeroDayCandidate[];
+  trustChanges: TrustChange[];
+  topBlockedDomains: { domain: string; count: number }[];
+  newDomainsVisited: { domain: string; firstSeen: number }[];
+  recommendations: string[];
+}
+
+export interface TrustChange {
+  domain: string;
+  event: string;
+  oldTrust: number;
+  newTrust: number;
+  timestamp: number;
+}
+
+export interface CorrelatedThreat {
+  type: 'campaign' | 'coordinated' | 'supply_chain';
+  domains: string[];
+  eventCount: number;
+  timeSpanMs: number;
+  description: string;
+  severity: EventSeverity;
+}
+
+export interface UpdateResult {
+  sources: { name: string; domains: number; added: number }[];
+  totalAdded: number;
+  totalRemoved: number;
+  errors: string[];
+}

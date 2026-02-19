@@ -11,7 +11,10 @@ import { ScriptGuard } from './script-guard';
 import { ContentAnalyzer } from './content-analyzer';
 import { BehaviorMonitor } from './behavior-monitor';
 import { GatekeeperWebSocket } from './gatekeeper-ws';
-import { GuardianMode, GatekeeperAction } from './types';
+import { EvolutionEngine } from './evolution';
+import { ThreatIntel } from './threat-intel';
+import { BlocklistUpdater } from './blocklists/updater';
+import { GuardianMode, GatekeeperAction, PageMetrics } from './types';
 
 export class SecurityManager {
   private db: SecurityDB;
@@ -28,12 +31,20 @@ export class SecurityManager {
   // Phase 4: AI Gatekeeper Agent (initialized lazily via initGatekeeper)
   private gatekeeperWs: GatekeeperWebSocket | null = null;
 
+  // Phase 5: Evolution Engine + Agent Fleet
+  private evolution: EvolutionEngine;
+  private threatIntel: ThreatIntel;
+  private blocklistUpdater: BlocklistUpdater;
+
   constructor() {
     this.db = new SecurityDB();
     this.shield = new NetworkShield(this.db);
     this.outboundGuard = new OutboundGuard(this.db);
     this.guardian = new Guardian(this.db, this.shield, this.outboundGuard);
-    console.log('[SecurityManager] Initialized');
+    this.evolution = new EvolutionEngine(this.db);
+    this.threatIntel = new ThreatIntel(this.db, this.evolution);
+    this.blocklistUpdater = new BlocklistUpdater(this.db, this.shield);
+    console.log('[SecurityManager] Initialized (Phase 1-5)');
   }
 
   registerWith(dispatcher: RequestDispatcher): void {
@@ -96,6 +107,75 @@ export class SecurityManager {
     this.gatekeeperWs = new GatekeeperWebSocket(httpServer, this.guardian, this.db);
     this.guardian.setGatekeeper(this.gatekeeperWs);
     console.log('[SecurityManager] Phase 4: GatekeeperWebSocket initialized');
+  }
+
+  /**
+   * Called after page load (triggered by did-finish-load via IPC in main.ts).
+   * Runs content analysis → metrics extraction → anomaly detection → trust evolution → baseline update.
+   */
+  async onPageLoaded(domain: string): Promise<void> {
+    if (!domain || !this.contentAnalyzer) return;
+
+    try {
+      // 1. Run content analysis (Phase 3)
+      const analysis = await this.contentAnalyzer.analyzePage();
+
+      // 2. Extract metrics for baseline
+      const metrics: PageMetrics = {
+        script_count: analysis.scripts.length,
+        external_domain_count: new Set(analysis.scripts.filter(s => s.isExternal).map(s => s.domain).filter(Boolean)).size,
+        form_count: analysis.forms.length,
+        cookie_count: 0, // Cookie count not available from page analysis — tracked via request headers
+        request_count: analysis.scripts.length + analysis.trackers.length,
+        resource_size_total: analysis.scripts.reduce((sum, s) => sum + (s.size || 0), 0),
+      };
+
+      // 3. Check for anomalies against baseline
+      const anomalies = this.evolution.checkForAnomalies(domain, metrics);
+      if (anomalies.length > 0) {
+        // Send to Gatekeeper if connected
+        for (const anomaly of anomalies) {
+          this.gatekeeperWs?.sendAnomaly({
+            domain: anomaly.domain,
+            metric: anomaly.metric,
+            expected: anomaly.expected,
+            actual: anomaly.actual,
+            severity: anomaly.severity,
+          });
+        }
+
+        // Log anomaly events
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain,
+          tabId: null,
+          eventType: 'anomaly',
+          severity: anomalies.some(a => a.severity === 'critical' || a.severity === 'high') ? 'high' : 'medium',
+          category: 'behavior',
+          details: JSON.stringify({
+            anomalyCount: anomalies.length,
+            metrics: anomalies.map(a => ({
+              metric: a.metric,
+              expected: a.expected,
+              actual: a.actual,
+              deviation: a.deviation,
+            })),
+          }),
+          actionTaken: 'flagged',
+        });
+
+        // Evolve trust down
+        this.evolution.evolveTrust(domain, 'anomaly');
+      } else {
+        // Clean visit — evolve trust up
+        this.evolution.evolveTrust(domain, 'clean_visit');
+      }
+
+      // 4. Update baseline with new data
+      this.evolution.updateBaseline(domain, metrics);
+    } catch (e: any) {
+      console.warn('[SecurityManager] onPageLoaded error:', e.message);
+    }
   }
 
   registerRoutes(app: express.Application): void {
@@ -494,7 +574,117 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 24 API routes registered under /security/*');
+    // === Phase 5: Evolution Engine + Agent Fleet routes (25-32) ===
+
+    // 25. GET /security/baselines/:domain — Baseline metrics for a domain
+    app.get('/security/baselines/:domain', (req, res) => {
+      try {
+        const domain = req.params.domain;
+        const baselines = this.db.getBaselinesByDomain(domain);
+        res.json({ domain, baselines, total: baselines.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 26. GET /security/anomalies — Recent anomalies
+    app.get('/security/anomalies', (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 50;
+        const anomalies = this.db.getRecentAnomalies(limit);
+        res.json({ anomalies, total: anomalies.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 27. GET /security/zero-days — Open zero-day candidates
+    app.get('/security/zero-days', (_req, res) => {
+      try {
+        const candidates = this.db.getOpenZeroDayCandidates();
+        res.json({ candidates, total: candidates.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 28. POST /security/zero-days/:id/resolve — Mark zero-day candidate as resolved
+    app.post('/security/zero-days/:id/resolve', (req, res) => {
+      try {
+        const id = parseInt(req.params.id);
+        if (isNaN(id)) {
+          res.status(400).json({ error: 'Invalid id' });
+          return;
+        }
+        const { resolution } = req.body;
+        const success = this.db.resolveZeroDayCandidate(id, resolution || 'Resolved');
+        if (!success) {
+          res.status(404).json({ error: 'Zero-day candidate not found' });
+          return;
+        }
+        res.json({ ok: true, id });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 29. GET /security/report — Security report (query: ?period=day|week|month)
+    app.get('/security/report', (req, res) => {
+      try {
+        const period = (req.query.period as string) || 'day';
+        const validPeriods = ['day', 'week', 'month'];
+        if (!validPeriods.includes(period)) {
+          res.status(400).json({ error: `Invalid period. Use: ${validPeriods.join(', ')}` });
+          return;
+        }
+        const report = this.threatIntel.generateReport(period as 'day' | 'week' | 'month');
+        res.json(report);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 30. POST /security/blocklist/update — Trigger blocklist update
+    app.post('/security/blocklist/update', async (_req, res) => {
+      try {
+        const result = await this.blocklistUpdater.update();
+        res.json(result);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 31. GET /security/trust/changes — Recent trust score changes
+    app.get('/security/trust/changes', (req, res) => {
+      try {
+        const period = (req.query.period as string) || 'day';
+        const validPeriods = ['day', 'week', 'month'];
+        if (!validPeriods.includes(period)) {
+          res.status(400).json({ error: `Invalid period. Use: ${validPeriods.join(', ')}` });
+          return;
+        }
+        const since = period === 'day' ? Date.now() - 86400_000
+          : period === 'week' ? Date.now() - 604800_000
+          : Date.now() - 2592000_000;
+        const changes = this.db.getTrustChanges(since);
+        res.json({ changes, total: changes.length, period });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 32. POST /security/maintenance/prune — Prune old events (>90 days)
+    app.post('/security/maintenance/prune', (_req, res) => {
+      try {
+        const ninetyDaysMs = 90 * 86400_000;
+        const pruned = this.db.pruneOldEvents(ninetyDaysMs);
+        res.json({ ok: true, pruned, cutoffDays: 90 });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 32 API routes registered under /security/*');
   }
 
   destroy(): void {
