@@ -564,7 +564,7 @@
     .tab .tab-source { font-size: 10px; flex-shrink: 0; margin-right: 2px; }
 
     /* Chat */
-    .chat-messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; }
+    .chat-messages { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; min-width: 0; }
     .chat-messages::-webkit-scrollbar { width: 4px; }
     .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
     .chat-msg {
@@ -574,9 +574,11 @@
       line-height: 1.4;
       max-width: 85%;
       word-break: break-word;
+      overflow-wrap: break-word;
+      min-width: 0;
     }
     .chat-msg.robin { background: rgba(78, 204, 163, 0.2); border: 1px solid rgba(78, 204, 163, 0.3); align-self: flex-end; color: var(--text); }
-    .chat-msg.kees { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); }
+    .chat-msg.kees { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); overflow-wrap: break-word; }
     .chat-msg .msg-from { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
     .chat-msg .msg-time { font-size: 9px; opacity: 0.35; margin-top: 3px; text-align: right; }
 

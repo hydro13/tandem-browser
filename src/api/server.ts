@@ -2374,6 +2374,10 @@ export class TandemAPI {
     });
   }
 
+  getHttpServer(): http.Server | null {
+    return this.server;
+  }
+
   stop(): void {
     this.server?.close();
   }

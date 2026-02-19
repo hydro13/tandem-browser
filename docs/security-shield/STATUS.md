@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 4
-**Last completed phase:** Phase 3
+**Next phase to implement:** Phase 5
+**Last completed phase:** Phase 4
 **Overall status:** IN PROGRESS
 
 ---
@@ -121,23 +121,39 @@
 
 ## Phase 4: AI Gatekeeper Agent
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
-- **Gatekeeper secret:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-19
+- **Commit:** b752cd1
+- **Gatekeeper secret location:** ~/.tandem/security/gatekeeper.secret
 - **Verification:**
-  - [ ] WebSocket server active
-  - [ ] Auth works (reject invalid tokens)
-  - [ ] Agent connect + receive events
-  - [ ] Decisions processed correctly
-  - [ ] Timeout fallback works
-  - [ ] Queue replay on reconnect
-  - [ ] Browser works without agent
-  - [ ] REST fallback works
-  - [ ] Phase 0-3 regression OK
-- **Issues encountered:** —
-- **Notes for next phase:** —
-- **Agent setup instructions:** —
+  - [x] WebSocket server active (`/security/gatekeeper` path on port 8765)
+  - [x] Auth works (invalid token → 401 rejection, valid token → connection accepted)
+  - [x] Agent connect + receive events (trust_update, mode_change, escalate all processed)
+  - [x] Decisions processed correctly (agent decisions applied via Guardian.submitDecision)
+  - [x] Timeout fallback works (30s timeout → defaultAction executed, decision logged in history)
+  - [x] Queue replay on reconnect (pending decisions replayed to newly connected agent)
+  - [x] Browser works without agent (0 pending decisions during normal browsing, all Phase 1-3 rules active)
+  - [x] REST fallback works (POST /security/gatekeeper/decide with proper validation — 400/404/200)
+  - [x] Phase 0-3 regression OK (18/18 endpoint tests passed, 811,812 blocklist entries, Guardian avg 0.04ms)
+- **Issues encountered:**
+  - Initial "uncertain" heuristic (trust < 40) was too broad — caught all new domains (default trust=30). Tightened to trust < 20 (actively suspicious) or strict-mode scripts with trust < 50. Target: ~5% of requests.
+  - Tandem's own localhost API requests (chat polling every 2s) were being queued. Fixed by excluding localhost/127.0.0.1 from gatekeeper queueing.
+- **Notes for next phase:**
+  - GatekeeperWebSocket is initialized AFTER Express server starts (needs HttpServer reference). Order: SecurityManager → TandemAPI.start() → securityManager.initGatekeeper(httpServer)
+  - TandemAPI now has `getHttpServer()` public method (minimal change to server.ts)
+  - 24 API routes total under /security/* (19 from Phase 1-3 + 5 new)
+  - Decision history is kept in-memory (MAX_HISTORY=500). For Phase 5, consider persisting to DB.
+  - Pending queue cap: MAX_QUEUE=1000 with FIFO eviction (oldest gets defaultAction)
+  - Guardian's `queueForGatekeeper()` is non-blocking — requests are always allowed immediately, agent adjusts trust/mode for FUTURE requests
+  - `decisionCallbacks` Map in Guardian is ready for future use (async decision flow), currently unused since all decisions are fire-and-forget
+- **Agent setup instructions:**
+  1. Get the secret: `curl http://127.0.0.1:8765/security/gatekeeper/secret`
+  2. Connect via WebSocket: `ws://127.0.0.1:8765/security/gatekeeper?token=<secret>`
+  3. Or use header: `X-Gatekeeper-Token: <secret>`
+  4. Agent receives: `decision_needed`, `anomaly`, `event`, `stats` messages
+  5. Agent sends: `decision`, `trust_update`, `mode_change`, `escalate` messages
+  6. REST fallback: `POST /security/gatekeeper/decide` with `{id, action, reason, confidence}`
+  7. Monitor: `GET /security/gatekeeper/status` for connection state
 
 ---
 

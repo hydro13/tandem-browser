@@ -97,3 +97,49 @@ export interface WhitelistEntry {
   destinationDomain: string;
   addedAt?: string;
 }
+
+// === Phase 4: AI Gatekeeper Agent types ===
+
+export type GatekeeperAction = 'block' | 'allow' | 'monitor';
+
+export interface PendingDecision {
+  id: string;
+  category: 'request' | 'anomaly' | 'behavior';
+  domain: string;
+  context: {
+    page?: string;
+    url?: string;
+    resourceType?: string;
+    method?: string;
+    trust: number;
+    mode: GuardianMode;
+    [key: string]: unknown;
+  };
+  defaultAction: GatekeeperAction;
+  timeout: number;
+  createdAt: number;
+}
+
+export interface GatekeeperDecision {
+  action: GatekeeperAction;
+  reason: string;
+  confidence: number;
+}
+
+export interface GatekeeperStatus {
+  connected: boolean;
+  pendingDecisions: number;
+  totalDecisions: number;
+  lastAgentSeen: number | null;
+}
+
+export interface GatekeeperHistoryEntry {
+  id: string;
+  domain: string;
+  category: string;
+  action: GatekeeperAction;
+  reason: string;
+  confidence: number;
+  source: 'agent' | 'timeout' | 'queue-full' | 'rest';
+  timestamp: number;
+}

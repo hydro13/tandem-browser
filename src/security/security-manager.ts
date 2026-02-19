@@ -1,4 +1,5 @@
 import express from 'express';
+import { Server as HttpServer } from 'http';
 import { Session } from 'electron';
 import { RequestDispatcher } from '../network/dispatcher';
 import { DevToolsManager } from '../devtools/manager';
@@ -9,7 +10,8 @@ import { OutboundGuard } from './outbound-guard';
 import { ScriptGuard } from './script-guard';
 import { ContentAnalyzer } from './content-analyzer';
 import { BehaviorMonitor } from './behavior-monitor';
-import { GuardianMode } from './types';
+import { GatekeeperWebSocket } from './gatekeeper-ws';
+import { GuardianMode, GatekeeperAction } from './types';
 
 export class SecurityManager {
   private db: SecurityDB;
@@ -22,6 +24,9 @@ export class SecurityManager {
   private contentAnalyzer: ContentAnalyzer | null = null;
   private behaviorMonitor: BehaviorMonitor | null = null;
   private devToolsManager: DevToolsManager | null = null;
+
+  // Phase 4: AI Gatekeeper Agent (initialized lazily via initGatekeeper)
+  private gatekeeperWs: GatekeeperWebSocket | null = null;
 
   constructor() {
     this.db = new SecurityDB();
@@ -81,6 +86,16 @@ export class SecurityManager {
     } catch (e: any) {
       console.warn('[SecurityManager] onTabAttached error:', e.message);
     }
+  }
+
+  /**
+   * Initialize the Gatekeeper WebSocket server on the existing HTTP server.
+   * Must be called after the Express server has started listening.
+   */
+  initGatekeeper(httpServer: HttpServer): void {
+    this.gatekeeperWs = new GatekeeperWebSocket(httpServer, this.guardian, this.db);
+    this.guardian.setGatekeeper(this.gatekeeperWs);
+    console.log('[SecurityManager] Phase 4: GatekeeperWebSocket initialized');
   }
 
   registerRoutes(app: express.Application): void {
@@ -394,10 +409,96 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 19 API routes registered under /security/*');
+    // === Phase 4: AI Gatekeeper Agent routes (20-24) ===
+
+    // 20. GET /security/gatekeeper/status — WebSocket connection status + queue
+    app.get('/security/gatekeeper/status', (_req, res) => {
+      try {
+        if (!this.gatekeeperWs) {
+          res.json({ connected: false, pendingDecisions: 0, totalDecisions: 0, lastAgentSeen: null, note: 'Gatekeeper not initialized' });
+          return;
+        }
+        res.json(this.gatekeeperWs.getStatus());
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 21. GET /security/gatekeeper/queue — Pending decisions
+    app.get('/security/gatekeeper/queue', (_req, res) => {
+      try {
+        if (!this.gatekeeperWs) {
+          res.json({ queue: [], total: 0 });
+          return;
+        }
+        const queue = this.gatekeeperWs.getQueue();
+        res.json({ queue, total: queue.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 22. POST /security/gatekeeper/decide — Submit a decision via REST (fallback)
+    app.post('/security/gatekeeper/decide', (req, res) => {
+      try {
+        if (!this.gatekeeperWs) {
+          res.status(503).json({ error: 'Gatekeeper not initialized' });
+          return;
+        }
+        const { id, action, reason, confidence } = req.body;
+        if (!id || !action) {
+          res.status(400).json({ error: 'id and action required' });
+          return;
+        }
+        const validActions: GatekeeperAction[] = ['block', 'allow', 'monitor'];
+        if (!validActions.includes(action)) {
+          res.status(400).json({ error: `Invalid action. Use: ${validActions.join(', ')}` });
+          return;
+        }
+        const found = this.gatekeeperWs.submitRestDecision(id, action, reason || '', confidence || 0);
+        if (!found) {
+          res.status(404).json({ error: 'Decision not found in pending queue' });
+          return;
+        }
+        res.json({ ok: true, id, action });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 23. GET /security/gatekeeper/history — Decision history
+    app.get('/security/gatekeeper/history', (req, res) => {
+      try {
+        if (!this.gatekeeperWs) {
+          res.json({ history: [], total: 0 });
+          return;
+        }
+        const limit = parseInt(req.query.limit as string) || 50;
+        const history = this.gatekeeperWs.getHistory(limit);
+        res.json({ history, total: history.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 24. GET /security/gatekeeper/secret — Auth secret for agent setup
+    app.get('/security/gatekeeper/secret', (_req, res) => {
+      try {
+        if (!this.gatekeeperWs) {
+          res.status(503).json({ error: 'Gatekeeper not initialized' });
+          return;
+        }
+        res.json({ secret: this.gatekeeperWs.getSecret(), path: '~/.tandem/security/gatekeeper.secret' });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 24 API routes registered under /security/*');
   }
 
   destroy(): void {
+    this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();
     this.db.close();

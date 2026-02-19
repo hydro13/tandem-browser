@@ -1,9 +1,11 @@
 import { OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
+import crypto from 'crypto';
 import { RequestDispatcher } from '../network/dispatcher';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { OutboundGuard } from './outbound-guard';
-import { GuardianMode, GuardianStatus, BANKING_PATTERNS } from './types';
+import { GuardianMode, GuardianStatus, BANKING_PATTERNS, GatekeeperDecision, PendingDecision } from './types';
+import type { GatekeeperWebSocket } from './gatekeeper-ws';
 
 const DANGEROUS_EXTENSIONS = new Set(['.exe', '.scr', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.dll']);
 const OUTBOUND_METHODS = new Set(['POST', 'PUT', 'PATCH']);
@@ -15,10 +17,57 @@ export class Guardian {
   private defaultMode: GuardianMode = 'balanced';
   private stats = { total: 0, blocked: 0, allowed: 0, totalMs: 0 };
 
+  // Phase 4: Gatekeeper agent integration
+  private gatekeeperWs: GatekeeperWebSocket | null = null;
+  private decisionCallbacks: Map<string, (decision: GatekeeperDecision) => void> = new Map();
+
   constructor(db: SecurityDB, shield: NetworkShield, outboundGuard: OutboundGuard) {
     this.db = db;
     this.shield = shield;
     this.outboundGuard = outboundGuard;
+  }
+
+  // Phase 4: Set the gatekeeper reference
+  setGatekeeper(ws: GatekeeperWebSocket): void {
+    this.gatekeeperWs = ws;
+    console.log('[Guardian] Gatekeeper agent bridge connected');
+  }
+
+  // Phase 4: Handle decisions from the agent
+  submitDecision(id: string, decision: GatekeeperDecision): void {
+    const callback = this.decisionCallbacks.get(id);
+    if (callback) {
+      callback(decision);
+      this.decisionCallbacks.delete(id);
+    }
+  }
+
+  // Phase 4: Queue an uncertain case for the AI agent
+  private queueForGatekeeper(domain: string, url: string, context: Record<string, unknown>): void {
+    if (!this.gatekeeperWs) return;
+
+    const status = this.gatekeeperWs.getStatus();
+    if (!status.connected && status.pendingDecisions >= 100) return;
+
+    const trust = this.db.getDomainInfo(domain)?.trustLevel ?? 30;
+    const mode = this.getModeForDomain(domain);
+
+    const item: PendingDecision = {
+      id: crypto.randomUUID(),
+      category: 'request',
+      domain,
+      context: {
+        url: url.substring(0, 500),
+        trust,
+        mode,
+        ...context,
+      },
+      defaultAction: 'allow',
+      timeout: 30_000,
+      createdAt: Date.now(),
+    };
+
+    this.gatekeeperWs.sendDecisionRequest(item);
   }
 
   registerWith(dispatcher: RequestDispatcher): void {
@@ -198,6 +247,29 @@ export class Guardian {
               referrer: details.referrer,
             }),
             actionTaken: 'flagged',
+          });
+        }
+      }
+
+      // Phase 4: Queue uncertain cases for AI agent analysis
+      // Allow immediately but let agent adjust trust/mode for FUTURE requests
+      // Skip localhost — Tandem's own internal API requests
+      if (domain && this.gatekeeperWs && domain !== 'localhost' && domain !== '127.0.0.1') {
+        const info = this.db.getDomainInfo(domain);
+        const trust = info?.trustLevel ?? 30;
+        const mode = info?.guardianMode || this.getModeForDomain(domain);
+        const resourceType = (details as any).resourceType as string | undefined;
+
+        // Only flag genuinely uncertain cases (target: ~5% of requests)
+        const isUncertain =
+          (trust < 20 && trust > 5) ||  // Actively suspicious (trust lowered by previous events)
+          (mode === 'strict' && resourceType === 'script' && trust < 50);  // Script on strict-mode page with low trust
+
+        if (isUncertain) {
+          this.queueForGatekeeper(domain, url, {
+            resourceType,
+            method: details.method,
+            referrer: details.referrer,
           });
         }
       }
