@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode } from './types';
+import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry } from './types';
 
 export class SecurityDB {
   private db: Database.Database;
@@ -23,6 +23,11 @@ export class SecurityDB {
   private stmtDomainCount!: Database.Statement;
   private stmtSetDomainTrust!: Database.Statement;
   private stmtSetDomainMode!: Database.Statement;
+  // Phase 2: Outbound whitelist + category-filtered events
+  private stmtIsWhitelistedPair!: Database.Statement;
+  private stmtAddWhitelistPair!: Database.Statement;
+  private stmtGetWhitelistEntries!: Database.Statement;
+  private stmtGetRecentEventsByCategory!: Database.Statement;
 
   constructor() {
     const dbDir = path.join(os.homedir(), '.tandem', 'security');
@@ -183,6 +188,19 @@ export class SecurityDB {
     this.stmtSetDomainMode = this.db.prepare(
       'UPDATE domains SET guardian_mode = ?, updated_at = datetime(\'now\') WHERE domain = ?'
     );
+    // Phase 2: Outbound whitelist + category-filtered events
+    this.stmtIsWhitelistedPair = this.db.prepare(
+      'SELECT id FROM outbound_whitelist WHERE origin_domain = ? AND destination_domain = ?'
+    );
+    this.stmtAddWhitelistPair = this.db.prepare(
+      'INSERT OR IGNORE INTO outbound_whitelist (origin_domain, destination_domain) VALUES (?, ?)'
+    );
+    this.stmtGetWhitelistEntries = this.db.prepare(
+      'SELECT id, origin_domain, destination_domain, added_at FROM outbound_whitelist ORDER BY added_at DESC'
+    );
+    this.stmtGetRecentEventsByCategory = this.db.prepare(
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?'
+    );
   }
 
   // === Fast lookups (used in request handler — MUST be fast) ===
@@ -276,10 +294,15 @@ export class SecurityDB {
 
   // === Query operations ===
 
-  getRecentEvents(limit: number, severity?: string): SecurityEvent[] {
-    const rows = severity
-      ? this.stmtGetRecentEventsBySeverity.all(severity, limit)
-      : this.stmtGetRecentEvents.all(limit);
+  getRecentEvents(limit: number, severity?: string, category?: string): SecurityEvent[] {
+    let rows: unknown[];
+    if (category) {
+      rows = this.stmtGetRecentEventsByCategory.all(category, limit);
+    } else if (severity) {
+      rows = this.stmtGetRecentEventsBySeverity.all(severity, limit);
+    } else {
+      rows = this.stmtGetRecentEvents.all(limit);
+    }
 
     return (rows as any[]).map(row => ({
       id: row.id,
@@ -330,6 +353,26 @@ export class SecurityDB {
 
   getDomainCount(): number {
     return (this.stmtDomainCount.get() as { total: number }).total;
+  }
+
+  // === Phase 2: Outbound whitelist ===
+
+  isWhitelistedPair(origin: string, destination: string): boolean {
+    return !!this.stmtIsWhitelistedPair.get(origin, destination);
+  }
+
+  addWhitelistPair(origin: string, destination: string): void {
+    this.stmtAddWhitelistPair.run(origin, destination);
+  }
+
+  getWhitelistEntries(): WhitelistEntry[] {
+    const rows = this.stmtGetWhitelistEntries.all() as any[];
+    return rows.map(row => ({
+      id: row.id,
+      originDomain: row.origin_domain,
+      destinationDomain: row.destination_domain,
+      addedAt: row.added_at,
+    }));
   }
 
   // === Cleanup ===

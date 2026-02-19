@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2
-**Last completed phase:** Phase 1
+**Next phase to implement:** Phase 3
+**Last completed phase:** Phase 2
 **Overall status:** IN PROGRESS
 
 ---
@@ -65,26 +65,27 @@
 
 ## Phase 2: Outbound Data Guard
 
-- **Status:** PENDING (blocked by Phase 1)
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-19
+- **Commit:** 0bfa2ed
+- **Branch:** main
 - **Verification:**
-  - [ ] Normal forms work
-  - [ ] Cross-origin credentials blocked
-  - [ ] Same-origin credentials allowed
-  - [ ] Tracker blocking per mode
-  - [ ] Stats API accurate
-  - [ ] No false positives
-  - [ ] WebSocket monitoring works
-  - [ ] Phase 0+1 regression OK
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] Normal forms work (same-origin POST always allowed — Google, GitHub, login flows unaffected)
+  - [x] Cross-origin credentials blocked (CREDENTIAL_PATTERN regex detects password/token/secret fields → auto_block)
+  - [x] Same-origin credentials allowed (same-origin check runs first, returns allow before body analysis)
+  - [x] Tracker blocking per mode (KNOWN_TRACKERS set, strict=block, balanced/permissive=flag)
+  - [x] Stats API accurate (GET /security/outbound/stats returns totalChecked/allowed/blocked/flagged)
+  - [x] No false positives (Google, GitHub, gstatic domains all pass normally — 0 false blocks during test)
+  - [x] WebSocket monitoring works (ws:// and wss:// upgrade requests detected and flagged/allowed appropriately)
+  - [x] Phase 0+1 regression OK (NetworkInspector logs 100+ entries, 12+ domains tracked, blocklist check works, stealth active)
+- **Issues encountered:** None
+- **Notes for next phase:** OutboundGuard is called from within Guardian's checkRequest() (not registered as a separate dispatcher consumer). Guardian priority 1 handles both blocklist checks and outbound analysis. OutboundGuard analyzes POST/PUT/PATCH bodies for credentials and monitors WebSocket upgrades. Tandem's own internal WebSocket (127.0.0.1:18789) is flagged as unknown-ws-endpoint — consider adding localhost to KNOWN_WS_SERVICES or whitelisting in Phase 3 if this creates noise. 12 API routes now registered under /security/*. The events table supports category-filtered queries (GET /security/events?category=outbound).
 
 ---
 
 ## Phase 3: Script & Content Guard
 
-- **Status:** PENDING (blocked by Phase 2)
+- **Status:** PENDING
 - **Date:** —
 - **Commit:** —
 - **Verification:**

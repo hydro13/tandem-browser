@@ -2,19 +2,23 @@ import { OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnH
 import { RequestDispatcher } from '../network/dispatcher';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
+import { OutboundGuard } from './outbound-guard';
 import { GuardianMode, GuardianStatus, BANKING_PATTERNS } from './types';
 
 const DANGEROUS_EXTENSIONS = new Set(['.exe', '.scr', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.dll']);
+const OUTBOUND_METHODS = new Set(['POST', 'PUT', 'PATCH']);
 
 export class Guardian {
   private db: SecurityDB;
   private shield: NetworkShield;
+  private outboundGuard: OutboundGuard;
   private defaultMode: GuardianMode = 'balanced';
   private stats = { total: 0, blocked: 0, allowed: 0, totalMs: 0 };
 
-  constructor(db: SecurityDB, shield: NetworkShield) {
+  constructor(db: SecurityDB, shield: NetworkShield, outboundGuard: OutboundGuard) {
     this.db = db;
     this.shield = shield;
+    this.outboundGuard = outboundGuard;
   }
 
   registerWith(dispatcher: RequestDispatcher): void {
@@ -122,6 +126,79 @@ export class Guardian {
               });
             }
           }
+        }
+      }
+
+      // 4. WebSocket upgrade detection
+      if (url.startsWith('ws://') || url.startsWith('wss://')) {
+        const wsResult = this.outboundGuard.analyzeWebSocket(url, details.referrer);
+        if (wsResult.action === 'block') {
+          this.stats.blocked++;
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'exfiltration_attempt',
+            severity: wsResult.severity,
+            category: 'outbound',
+            details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
+            actionTaken: 'auto_block',
+          });
+          return { cancel: true };
+        }
+        if (wsResult.action === 'flag') {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'warned',
+            severity: wsResult.severity,
+            category: 'outbound',
+            details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
+            actionTaken: 'flagged',
+          });
+        }
+      }
+
+      // 5. Outbound data check for POST/PUT/PATCH
+      if (details.method && OUTBOUND_METHODS.has(details.method)) {
+        const mode = domain ? this.getModeForDomain(domain) : this.defaultMode;
+        const outboundResult = this.outboundGuard.analyzeOutbound(details, mode);
+        if (outboundResult.action === 'block') {
+          this.stats.blocked++;
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'exfiltration_attempt',
+            severity: outboundResult.severity,
+            category: 'outbound',
+            details: JSON.stringify({
+              url: url.substring(0, 200),
+              method: details.method,
+              reason: outboundResult.reason,
+              referrer: details.referrer,
+            }),
+            actionTaken: 'auto_block',
+          });
+          return { cancel: true };
+        }
+        if (outboundResult.action === 'flag') {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'warned',
+            severity: outboundResult.severity,
+            category: 'outbound',
+            details: JSON.stringify({
+              url: url.substring(0, 200),
+              method: details.method,
+              reason: outboundResult.reason,
+              referrer: details.referrer,
+            }),
+            actionTaken: 'flagged',
+          });
         }
       }
 
