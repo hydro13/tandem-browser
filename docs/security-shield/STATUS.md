@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 3
-**Last completed phase:** Phase 2
+**Next phase to implement:** Phase 4
+**Last completed phase:** Phase 3
 **Overall status:** IN PROGRESS
 
 ---
@@ -85,28 +85,43 @@
 
 ## Phase 3: Script & Content Guard
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-19
+- **Commit:** 7339b9f
+- **Branch:** main
 - **Verification:**
-  - [ ] CDP subscriber system works
-  - [ ] Script fingerprinting active
-  - [ ] New-script-on-known-domain flagging
-  - [ ] Typosquatting detection
-  - [ ] Permission monitoring
-  - [ ] Crypto miner detection
-  - [ ] Security injections don't break sites
-  - [ ] Stealth + Copilot Vision unaffected
-  - [ ] Phase 0-2 regression OK
-- **Issues encountered:** —
-- **Notes for next phase:** —
-- **DevToolsManager changes:** (list exactly what was added/modified)
+  - [x] CDP subscriber system works (ScriptGuard + ScriptGuard:Alerts subscribers registered, events dispatched correctly)
+  - [x] Script fingerprinting active (210 fingerprints stored after visiting GitHub + Google)
+  - [x] New-script-on-known-domain flagging (logs event when visitCount > 3 and script not in DB)
+  - [x] Typosquatting detection (Levenshtein distance ≤ 2 + common substitutions against 20 high-value targets)
+  - [x] Permission monitoring (setPermissionRequestHandler installed — blocks camera/mic in strict, notifications from first-visit sites)
+  - [x] Crypto miner detection (WASM instantiation tracking + CPU spike correlation via Performance.getMetrics every 10s)
+  - [x] Security injections don't break sites (tested GitHub, Google — 0 false blocks, 1815+ requests processed cleanly)
+  - [x] Stealth + Copilot Vision unaffected (navigator.webdriver=false, __tandemScroll binding active, security monitors in separate APIs)
+  - [x] Phase 0-2 regression OK (blocklist 811,812 entries, Guardian active, outbound guard working, all 12 previous routes working)
+- **Issues encountered:** None
+- **Notes for next phase:**
+  - SecurityManager now has `setDevToolsManager(dtm)` method called in main.ts after DevToolsManager creation (SecurityManager is created before DevToolsManager in init order)
+  - `securityManager.onTabAttached()` is called after `devToolsManager.attachToTab()` in both tab-register and tab-focus handlers
+  - `securityManager.setupPermissionHandler(session)` is called after session is available in startAPI
+  - Guardian.getModeForDomain is now public (needed by BehaviorMonitor)
+  - DevToolsManager.getAttachedWebContents() is the new public accessor for security modules
+  - 19 API routes total under /security/* (12 from Phase 1-2 + 7 new)
+  - Tandem's internal WebSocket (127.0.0.1:18789) still flagged as unknown-ws-endpoint (Phase 2 note — not addressed, not causing issues)
+- **DevToolsManager changes:**
+  - Added `CDPSubscriber` interface (exported) — { name, events[], handler(method, params) }
+  - Added `subscribers: CDPSubscriber[]` private field
+  - Added `subscribe(subscriber)` — registers subscriber, removes duplicates by name
+  - Added `unsubscribe(name)` — removes subscriber by name
+  - Added `enableSecurityDomains()` — enables Debugger.enable + Performance.enable (not enabled by default)
+  - Added `getAttachedWebContents()` — returns attached WC or null (for security modules)
+  - Modified `handleCDPEvent()` — now dispatches ALL events to subscribers after internal handling; Runtime.bindingCalled no longer early-returns (falls through to subscribers for security bindings while still handling copilot bindings internally)
 
 ---
 
 ## Phase 4: AI Gatekeeper Agent
 
-- **Status:** PENDING (blocked by Phase 3)
+- **Status:** PENDING
 - **Date:** —
 - **Commit:** —
 - **Gatekeeper secret:** —

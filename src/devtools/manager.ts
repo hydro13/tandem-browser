@@ -8,6 +8,13 @@ import { ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, D
 const MAX_NETWORK_ENTRIES = 300;
 const MAX_RESPONSE_BODY_SIZE = 1_000_000; // 1MB
 
+/** CDP event subscriber — used by security modules to receive CDP events */
+export interface CDPSubscriber {
+  name: string;
+  events: string[];  // CDP event names to subscribe to, or ['*'] for all
+  handler: (method: string, params: any) => void;
+}
+
 /**
  * DevToolsManager — Provides CDP (Chrome DevTools Protocol) access to webview tabs.
  *
@@ -35,6 +42,9 @@ export class DevToolsManager {
   private attachedWcId: number | null = null;
   private attached = false;
 
+  // CDP subscriber system (Phase 3: security modules subscribe to events)
+  private subscribers: CDPSubscriber[] = [];
+
   // Network capture (inline — simpler than separate class for MVP)
   private networkEntries: Map<string, CDPNetworkEntry> = new Map();
   private networkOrder: string[] = []; // insertion order for ring buffer
@@ -50,6 +60,46 @@ export class DevToolsManager {
 
   setActivityTracker(tracker: ActivityTracker): void {
     this.activityTracker = tracker;
+  }
+
+  // ═══ CDP Subscriber System (Phase 3) ═══
+
+  /** Register a subscriber to receive specific CDP events */
+  subscribe(subscriber: CDPSubscriber): void {
+    // Remove existing subscriber with same name to avoid duplicates
+    this.subscribers = this.subscribers.filter(s => s.name !== subscriber.name);
+    this.subscribers.push(subscriber);
+    console.log(`[CDP] Subscriber registered: ${subscriber.name} for ${subscriber.events.join(', ')}`);
+  }
+
+  /** Remove a subscriber by name */
+  unsubscribe(name: string): void {
+    this.subscribers = this.subscribers.filter(s => s.name !== name);
+  }
+
+  /**
+   * Enable CDP domains needed by security modules.
+   * Debugger.enable is NOT enabled by default — only Network, DOM, Page are.
+   * Without Debugger.enable, ScriptGuard will NOT receive Debugger.scriptParsed events.
+   */
+  async enableSecurityDomains(): Promise<void> {
+    if (!this.attached || !this.attachedWcId) return;
+    const wc = webContents.fromId(this.attachedWcId);
+    if (!wc || wc.isDestroyed()) return;
+    try {
+      await wc.debugger.sendCommand('Debugger.enable');
+      await wc.debugger.sendCommand('Performance.enable');
+      console.log('[CDP] Security domains enabled (Debugger, Performance)');
+    } catch (e: any) {
+      console.warn('[CDP] Security domain enable failed:', e.message);
+    }
+  }
+
+  /** Get the currently attached WebContents (for security modules that need it) */
+  getAttachedWebContents(): WebContents | null {
+    if (!this.attached || !this.attachedWcId) return null;
+    const wc = webContents.fromId(this.attachedWcId);
+    return (wc && !wc.isDestroyed()) ? wc : null;
   }
 
   // ═══ Lifecycle ═══
@@ -202,13 +252,22 @@ export class DevToolsManager {
     })()`;
 
     try {
+      // Use addScriptToEvaluateOnNewDocument — runs in main world, survives navigations,
+      // and has reliable access to Runtime.addBinding bindings
+      await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+        source: script,
+        worldName: '', // empty string = main world
+      });
+
+      // Also run it immediately on the current page (addScriptToEvaluateOnNewDocument
+      // only runs on FUTURE navigations)
       await wc.debugger.sendCommand('Runtime.evaluate', {
         expression: script,
         silent: true,
         returnByValue: true,
       });
     } catch {
-      // Page may not be ready yet — will retry on next navigation
+      // Page may not be ready
     }
   }
 
@@ -227,41 +286,47 @@ export class DevToolsManager {
     this.consoleCapture.reset();
   }
 
-  /** Route CDP events to sub-captures */
+  /** Route CDP events to sub-captures and subscribers */
   private handleCDPEvent(method: string, params: any): void {
     const tabId = this.attachedWcId ? this.findTabIdByWcId(this.attachedWcId) : undefined;
 
-    // Copilot Vision: binding callbacks
+    // Copilot Vision: binding callbacks (check before subscribers for __tandem* bindings)
     if (method === 'Runtime.bindingCalled') {
-      this.onCopilotBinding(params, tabId);
-      return;
-    }
-
-    // Re-inject listeners after navigation (page context is reset)
-    if (method === 'Page.frameStoppedLoading' && params.frameId) {
-      this.reinjectCopilotListeners();
-      return;
+      // Copilot bindings — handle internally
+      const copilotBindings = ['__tandemScroll', '__tandemSelection', '__tandemFormFocus'];
+      if (copilotBindings.includes(params.name)) {
+        this.onCopilotBinding(params, tabId);
+      }
+      // Fall through to subscribers (security bindings like __tandemSecurityAlert)
     }
 
     // Console events
-    if (this.consoleCapture.handleEvent(method, params, tabId)) return;
+    if (method !== 'Runtime.bindingCalled') {
+      if (this.consoleCapture.handleEvent(method, params, tabId)) {
+        // Still dispatch to subscribers even if console handled it
+      }
+    }
 
     // Network events
     if (method === 'Network.requestWillBeSent') {
       this.onNetworkRequest(params, tabId);
-      return;
-    }
-    if (method === 'Network.responseReceived') {
+    } else if (method === 'Network.responseReceived') {
       this.onNetworkResponse(params);
-      return;
-    }
-    if (method === 'Network.loadingFinished') {
+    } else if (method === 'Network.loadingFinished') {
       this.onNetworkLoadingFinished(params);
-      return;
-    }
-    if (method === 'Network.loadingFailed') {
+    } else if (method === 'Network.loadingFailed') {
       this.onNetworkFailed(params);
-      return;
+    }
+
+    // Dispatch to subscribers (always — security modules need to see all events)
+    for (const sub of this.subscribers) {
+      if (sub.events.includes(method) || sub.events.includes('*')) {
+        try {
+          sub.handler(method, params);
+        } catch (err) {
+          console.error(`[CDP] Subscriber ${sub.name} error:`, err);
+        }
+      }
     }
   }
 
@@ -770,19 +835,6 @@ export class DevToolsManager {
         } catch { /* invalid JSON, skip */ }
         break;
     }
-  }
-
-  private async reinjectCopilotListeners(): Promise<void> {
-    if (!this.copilotStream) return;
-    const wc = this.attachedWcId ? webContents.fromId(this.attachedWcId) : null;
-    if (!wc || wc.isDestroyed()) return;
-
-    // Small delay to let page initialize
-    setTimeout(async () => {
-      try {
-        await this.injectCopilotListeners(wc);
-      } catch { /* page may have navigated again */ }
-    }, 500);
   }
 
   // ═══ Helpers ═══

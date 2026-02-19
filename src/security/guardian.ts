@@ -330,7 +330,7 @@ export class Guardian {
     return BANKING_PATTERNS.some(p => p.test(domain));
   }
 
-  private getModeForDomain(domain: string): GuardianMode {
+  getModeForDomain(domain: string): GuardianMode {
     const info = this.db.getDomainInfo(domain);
     return info?.guardianMode || this.defaultMode;
   }

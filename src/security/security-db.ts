@@ -28,6 +28,11 @@ export class SecurityDB {
   private stmtAddWhitelistPair!: Database.Statement;
   private stmtGetWhitelistEntries!: Database.Statement;
   private stmtGetRecentEventsByCategory!: Database.Statement;
+  // Phase 3: Script fingerprints + permission log
+  private stmtGetScriptFingerprint!: Database.Statement;
+  private stmtUpsertScriptFingerprint!: Database.Statement;
+  private stmtGetScriptsByDomain!: Database.Statement;
+  private stmtGetScriptFingerprintCount!: Database.Statement;
 
   constructor() {
     const dbDir = path.join(os.homedir(), '.tandem', 'security');
@@ -201,6 +206,23 @@ export class SecurityDB {
     this.stmtGetRecentEventsByCategory = this.db.prepare(
       'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?'
     );
+    // Phase 3: Script fingerprints
+    this.stmtGetScriptFingerprint = this.db.prepare(
+      'SELECT id, domain, script_url, script_hash, first_seen, last_seen, trusted FROM script_fingerprints WHERE domain = ? AND script_url = ?'
+    );
+    this.stmtUpsertScriptFingerprint = this.db.prepare(`
+      INSERT INTO script_fingerprints (domain, script_url, script_hash, first_seen, last_seen, trusted)
+      VALUES (@domain, @scriptUrl, @scriptHash, @firstSeen, @lastSeen, 0)
+      ON CONFLICT(domain, script_url) DO UPDATE SET
+        last_seen = @lastSeen,
+        script_hash = COALESCE(@scriptHash, script_hash)
+    `);
+    this.stmtGetScriptsByDomain = this.db.prepare(
+      'SELECT id, domain, script_url, script_hash, first_seen, last_seen, trusted FROM script_fingerprints WHERE domain = ? ORDER BY last_seen DESC LIMIT ?'
+    );
+    this.stmtGetScriptFingerprintCount = this.db.prepare(
+      'SELECT COUNT(*) as total FROM script_fingerprints'
+    );
   }
 
   // === Fast lookups (used in request handler — MUST be fast) ===
@@ -373,6 +395,49 @@ export class SecurityDB {
       destinationDomain: row.destination_domain,
       addedAt: row.added_at,
     }));
+  }
+
+  // === Phase 3: Script fingerprints ===
+
+  getScriptFingerprint(domain: string, scriptUrl: string): { id: number; domain: string; scriptUrl: string; scriptHash: string | null; firstSeen: number; lastSeen: number; trusted: boolean } | null {
+    const row = this.stmtGetScriptFingerprint.get(domain, scriptUrl) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      domain: row.domain,
+      scriptUrl: row.script_url,
+      scriptHash: row.script_hash,
+      firstSeen: row.first_seen,
+      lastSeen: row.last_seen,
+      trusted: !!row.trusted,
+    };
+  }
+
+  upsertScriptFingerprint(domain: string, scriptUrl: string, scriptHash?: string): void {
+    const now = Date.now();
+    this.stmtUpsertScriptFingerprint.run({
+      domain,
+      scriptUrl,
+      scriptHash: scriptHash || null,
+      firstSeen: now,
+      lastSeen: now,
+    });
+  }
+
+  getScriptsByDomain(domain: string, limit = 100): { id: number; scriptUrl: string; scriptHash: string | null; firstSeen: number; lastSeen: number; trusted: boolean }[] {
+    const rows = this.stmtGetScriptsByDomain.all(domain, limit) as any[];
+    return rows.map(row => ({
+      id: row.id,
+      scriptUrl: row.script_url,
+      scriptHash: row.script_hash,
+      firstSeen: row.first_seen,
+      lastSeen: row.last_seen,
+      trusted: !!row.trusted,
+    }));
+  }
+
+  getScriptFingerprintCount(): number {
+    return (this.stmtGetScriptFingerprintCount.get() as { total: number }).total;
   }
 
   // === Cleanup ===

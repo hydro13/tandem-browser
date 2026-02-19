@@ -1,9 +1,14 @@
 import express from 'express';
+import { Session } from 'electron';
 import { RequestDispatcher } from '../network/dispatcher';
+import { DevToolsManager } from '../devtools/manager';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { Guardian } from './guardian';
 import { OutboundGuard } from './outbound-guard';
+import { ScriptGuard } from './script-guard';
+import { ContentAnalyzer } from './content-analyzer';
+import { BehaviorMonitor } from './behavior-monitor';
 import { GuardianMode } from './types';
 
 export class SecurityManager {
@@ -11,6 +16,12 @@ export class SecurityManager {
   private shield: NetworkShield;
   private guardian: Guardian;
   private outboundGuard: OutboundGuard;
+
+  // Phase 3: Script & Content Guard (initialized lazily via setDevToolsManager)
+  private scriptGuard: ScriptGuard | null = null;
+  private contentAnalyzer: ContentAnalyzer | null = null;
+  private behaviorMonitor: BehaviorMonitor | null = null;
+  private devToolsManager: DevToolsManager | null = null;
 
   constructor() {
     this.db = new SecurityDB();
@@ -24,7 +35,57 @@ export class SecurityManager {
     this.guardian.registerWith(dispatcher);
   }
 
+  /**
+   * Set the DevToolsManager reference and initialize Phase 3 modules.
+   * Called after DevToolsManager is created (it's created after SecurityManager in main.ts).
+   */
+  setDevToolsManager(devToolsManager: DevToolsManager): void {
+    this.devToolsManager = devToolsManager;
+    this.scriptGuard = new ScriptGuard(this.db, this.guardian, devToolsManager);
+    this.contentAnalyzer = new ContentAnalyzer(this.db, devToolsManager);
+    this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
+    this.behaviorMonitor.setScriptGuard(this.scriptGuard);
+    console.log('[SecurityManager] Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');
+  }
+
+  /**
+   * Setup permission handler on the session.
+   * Must be called after setDevToolsManager and before pages load.
+   */
+  setupPermissionHandler(session: Session): void {
+    if (this.behaviorMonitor) {
+      this.behaviorMonitor.setupPermissionHandler(session);
+    }
+  }
+
+  /**
+   * Called when a tab is attached/focused in DevToolsManager.
+   * Enables security CDP domains, injects monitors, starts resource monitoring.
+   */
+  async onTabAttached(): Promise<void> {
+    if (!this.devToolsManager) return;
+
+    // Reset per-tab state
+    this.scriptGuard?.reset();
+    this.behaviorMonitor?.reset();
+
+    try {
+      // Enable Debugger domain for scriptParsed events
+      await this.devToolsManager.enableSecurityDomains();
+
+      // Inject security monitors (keylogger, crypto miner, clipboard, form hijack)
+      await this.scriptGuard?.injectMonitors();
+
+      // Start CPU/memory monitoring
+      this.behaviorMonitor?.startResourceMonitoring();
+    } catch (e: any) {
+      console.warn('[SecurityManager] onTabAttached error:', e.message);
+    }
+  }
+
   registerRoutes(app: express.Application): void {
+    // === Phase 1 routes (1-9) ===
+
     // 1. GET /security/status — Overall security status + stats
     app.get('/security/status', (_req, res) => {
       try {
@@ -35,6 +96,12 @@ export class SecurityManager {
           database: {
             events: this.db.getEventCount(),
             domains: this.db.getDomainCount(),
+            scriptFingerprints: this.db.getScriptFingerprintCount(),
+          },
+          phase3: {
+            scriptGuard: !!this.scriptGuard,
+            contentAnalyzer: !!this.contentAnalyzer,
+            behaviorMonitor: !!this.behaviorMonitor,
           },
         });
       } catch (e: any) {
@@ -156,7 +223,7 @@ export class SecurityManager {
       }
     });
 
-    // === Phase 2: Outbound Data Guard routes ===
+    // === Phase 2: Outbound Data Guard routes (10-12) ===
 
     // 10. GET /security/outbound/stats — Outbound requests blocked/allowed/flagged
     app.get('/security/outbound/stats', (_req, res) => {
@@ -193,10 +260,146 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 12 API routes registered under /security/*');
+    // === Phase 3: Script & Content Guard routes (13-19) ===
+
+    // 13. GET /security/page/analysis — Full page security analysis (async)
+    app.get('/security/page/analysis', async (_req, res) => {
+      try {
+        if (!this.contentAnalyzer) {
+          res.status(503).json({ error: 'ContentAnalyzer not initialized (DevToolsManager not connected)' });
+          return;
+        }
+        const analysis = await this.contentAnalyzer.analyzePage();
+        res.json(analysis);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 14. GET /security/page/scripts — All loaded scripts + risk info
+    app.get('/security/page/scripts', (_req, res) => {
+      try {
+        if (!this.scriptGuard) {
+          res.status(503).json({ error: 'ScriptGuard not initialized' });
+          return;
+        }
+        const scripts = Array.from(this.scriptGuard.getScriptsParsed().entries()).map(([id, info]) => ({
+          scriptId: id,
+          ...info,
+        }));
+
+        // Also get fingerprinted scripts from DB for current domain
+        const wc = this.devToolsManager?.getAttachedWebContents();
+        const currentUrl = wc ? wc.getURL() : '';
+        let domain: string | null = null;
+        try { domain = new URL(currentUrl).hostname.toLowerCase(); } catch {}
+
+        const fingerprinted = domain ? this.db.getScriptsByDomain(domain) : [];
+
+        res.json({
+          sessionScripts: scripts,
+          fingerprintedScripts: fingerprinted,
+          totalFingerprints: this.db.getScriptFingerprintCount(),
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 15. GET /security/page/forms — All forms + credential risk assessment
+    app.get('/security/page/forms', async (_req, res) => {
+      try {
+        if (!this.contentAnalyzer) {
+          res.status(503).json({ error: 'ContentAnalyzer not initialized' });
+          return;
+        }
+        const analysis = await this.contentAnalyzer.analyzePage();
+        res.json({
+          forms: analysis.forms,
+          hasPasswordOnHttp: analysis.security.hasPasswordOnHttp,
+          riskScore: analysis.riskScore,
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 16. GET /security/page/trackers — Tracker inventory
+    app.get('/security/page/trackers', async (_req, res) => {
+      try {
+        if (!this.contentAnalyzer) {
+          res.status(503).json({ error: 'ContentAnalyzer not initialized' });
+          return;
+        }
+        const analysis = await this.contentAnalyzer.analyzePage();
+        res.json({
+          trackers: analysis.trackers,
+          total: analysis.trackers.length,
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 17. GET /security/monitor/resources — Resource usage per tab
+    app.get('/security/monitor/resources', (_req, res) => {
+      try {
+        if (!this.behaviorMonitor) {
+          res.status(503).json({ error: 'BehaviorMonitor not initialized' });
+          return;
+        }
+        const snapshots = this.behaviorMonitor.getResourceSnapshots();
+        const wasmCount = this.scriptGuard?.getRecentWasmCount() || 0;
+        res.json({
+          snapshots,
+          currentWasmActivity: wasmCount,
+          snapshotCount: snapshots.length,
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 18. GET /security/monitor/permissions — All permission requests + status
+    app.get('/security/monitor/permissions', (_req, res) => {
+      try {
+        if (!this.behaviorMonitor) {
+          res.status(503).json({ error: 'BehaviorMonitor not initialized' });
+          return;
+        }
+        const log = this.behaviorMonitor.getPermissionLog();
+        res.json({
+          permissions: log,
+          total: log.length,
+          blocked: log.filter(p => p.action === 'blocked').length,
+          allowed: log.filter(p => p.action === 'allowed').length,
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 19. POST /security/monitor/kill — Kill a specific script/worker via CDP
+    app.post('/security/monitor/kill', async (req, res) => {
+      try {
+        if (!this.behaviorMonitor) {
+          res.status(503).json({ error: 'BehaviorMonitor not initialized' });
+          return;
+        }
+        const { scriptId } = req.body;
+        const success = await this.behaviorMonitor.killScript(scriptId || 'current');
+        res.json({ ok: success, scriptId: scriptId || 'current' });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 19 API routes registered under /security/*');
   }
 
   destroy(): void {
+    this.scriptGuard?.destroy();
+    this.behaviorMonitor?.destroy();
     this.db.close();
     console.log('[SecurityManager] Destroyed');
   }

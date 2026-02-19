@@ -242,6 +242,12 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   devToolsManager = new DevToolsManager(tabManager!);
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
+
+  // Phase 3: Wire DevToolsManager into SecurityManager for CDP-based security analysis
+  if (securityManager) {
+    securityManager.setDevToolsManager(devToolsManager);
+  }
+
   contextMenuManager = new ContextMenuManager({
     win,
     tabManager: tabManager!,
@@ -277,6 +283,11 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   const partition = 'persist:tandem';
   const ses = session.fromPartition(partition);
   downloadManager.hookSession(ses, win);
+
+  // Phase 3: Setup permission handler for BehaviorMonitor
+  if (securityManager) {
+    securityManager.setupPermissionHandler(ses);
+  }
 
   // Load extensions from ~/.tandem/extensions/
   extensionLoader.loadAllExtensions(ses).catch((err) => {
@@ -354,9 +365,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       win.webContents.send('tab-registered', { tabId: tab.id });
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext();
-      // Auto-attach CDP for Copilot Vision on startup
-      setTimeout(() => {
-        devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
+      // Auto-attach CDP for Copilot Vision + Security on startup
+      setTimeout(async () => {
+        await devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
+        securityManager?.onTabAttached().catch(() => {});
       }, 2000);
     }
   });
@@ -558,7 +570,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     syncTabsToContext();
     // Attach CDP to the focused tab directly (avoids race with TabManager active tab state)
     if (tab?.webContentsId) {
-      devToolsManager?.attachToTab(tab.webContentsId).catch(() => {});
+      await devToolsManager?.attachToTab(tab.webContentsId).catch(() => {});
+      securityManager?.onTabAttached().catch(() => {});
     }
     return result;
   });
