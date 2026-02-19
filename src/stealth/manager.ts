@@ -1,5 +1,6 @@
 import { Session } from 'electron';
 import crypto from 'crypto';
+import { RequestDispatcher } from '../network/dispatcher';
 
 /**
  * StealthManager — Makes Tandem Browser look like a regular human browser.
@@ -27,50 +28,53 @@ export class StealthManager {
 
   async apply(): Promise<void> {
     // Set realistic User-Agent globally (LinkedIn etc. block "Electron" UA)
-    // Google auth is excluded via the onBeforeSendHeaders skip below
+    // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
     this.session.setUserAgent(this.USER_AGENT);
 
-    // Modify headers to look natural
-    this.session.webRequest.onBeforeSendHeaders((details, callback) => {
-      const headers = { ...details.requestHeaders };
-
-      // For Google auth domains: restore real Electron UA (Google blocks fake Chrome UA)
-      // but keep everything else — TotalRecall V2 works with default Electron UA on Google
-      const url = details.url || '';
-      if (url.includes('accounts.google.com') || url.includes('google.com/signin') || 
-          url.includes('googleapis.com') || url.includes('gstatic.com') ||
-          url.includes('consent.google.com')) {
-        // Remove our fake UA, let Electron's real one through
-        delete headers['User-Agent'];
-        callback({ requestHeaders: headers });
-        return;
-      }
-      
-      // Remove Electron/automation giveaways
-      delete headers['X-Electron'];
-      
-      // Remove any header containing "Electron"
-      for (const key of Object.keys(headers)) {
-        if (typeof headers[key] === 'string' && headers[key].includes('Electron')) {
-          headers[key] = headers[key].replace(/Electron\/[\d.]+\s*/g, '');
-        }
-      }
-      
-      // Ensure realistic Accept-Language
-      if (!headers['Accept-Language']) {
-        headers['Accept-Language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
-      }
-
-      // Ensure Sec-CH-UA matches our UA (Google checks these for login)
-      headers['Sec-CH-UA'] = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"';
-      headers['Sec-CH-UA-Mobile'] = '?0';
-      headers['Sec-CH-UA-Platform'] = '"macOS"';
-      headers['Sec-CH-UA-Full-Version-List'] = '"Google Chrome";v="131.0.6778.205", "Chromium";v="131.0.6778.205", "Not_A Brand";v="24.0.0.0"';
-
-      callback({ requestHeaders: headers });
-    });
-
     console.log('🛡️ Stealth patches applied (advanced fingerprint protection active)');
+  }
+
+  /** Register header modification as a dispatcher consumer */
+  registerWith(dispatcher: RequestDispatcher): void {
+    dispatcher.registerBeforeSendHeaders({
+      name: 'StealthManager',
+      priority: 10,
+      handler: (_details, headers) => {
+        // For Google auth domains: restore real Electron UA (Google blocks fake Chrome UA)
+        // but keep everything else — TotalRecall V2 works with default Electron UA on Google
+        const url = _details.url || '';
+        if (url.includes('accounts.google.com') || url.includes('google.com/signin') ||
+            url.includes('googleapis.com') || url.includes('gstatic.com') ||
+            url.includes('consent.google.com')) {
+          // Remove our fake UA, let Electron's real one through
+          delete headers['User-Agent'];
+          return headers;
+        }
+
+        // Remove Electron/automation giveaways
+        delete headers['X-Electron'];
+
+        // Remove any header containing "Electron"
+        for (const key of Object.keys(headers)) {
+          if (typeof headers[key] === 'string' && headers[key].includes('Electron')) {
+            headers[key] = headers[key].replace(/Electron\/[\d.]+\s*/g, '');
+          }
+        }
+
+        // Ensure realistic Accept-Language
+        if (!headers['Accept-Language']) {
+          headers['Accept-Language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
+        }
+
+        // Ensure Sec-CH-UA matches our UA (Google checks these for login)
+        headers['Sec-CH-UA'] = '"Google Chrome";v="131", "Chromium";v="131", "Not_A Brand";v="24"';
+        headers['Sec-CH-UA-Mobile'] = '?0';
+        headers['Sec-CH-UA-Platform'] = '"macOS"';
+        headers['Sec-CH-UA-Full-Version-List'] = '"Google Chrome";v="131.0.6778.205", "Chromium";v="131.0.6778.205", "Not_A Brand";v="24.0.0.0"';
+
+        return headers;
+      }
+    });
   }
 
   /** Get the partition seed for fingerprint noise */

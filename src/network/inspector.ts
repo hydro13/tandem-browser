@@ -1,7 +1,7 @@
-import { session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { RequestDispatcher } from './dispatcher';
 
 export interface NetworkRequest {
   id: number;
@@ -23,8 +23,8 @@ interface DomainData {
 }
 
 /**
- * NetworkInspector — Logs and analyzes network traffic via Electron's session.webRequest API.
- * 
+ * NetworkInspector — Logs and analyzes network traffic via RequestDispatcher.
+ *
  * Runs in the main process (NOT in webview) — safe for anti-detection.
  * Stores last 1000 requests in memory, flushes per-domain data to ~/.tandem/network/.
  */
@@ -41,62 +41,68 @@ export class NetworkInspector {
     if (!fs.existsSync(this.networkDir)) {
       fs.mkdirSync(this.networkDir, { recursive: true });
     }
-    this.attachListeners();
   }
 
-  /** Attach to the persist:tandem session's webRequest API */
-  private attachListeners(): void {
-    const ses = session.fromPartition('persist:tandem');
-
-    ses.webRequest.onBeforeRequest((details, callback) => {
-      const domain = this.extractDomain(details.url);
-      if (domain && !details.url.startsWith('file://') && !details.url.startsWith('devtools://')) {
-        const id = ++this.counter;
-        this.pendingRequests.set(String(details.id ?? id), {
-          id,
-          url: details.url,
-          method: details.method || 'GET',
-          timestamp: Date.now(),
-          domain,
-          initiator: details.referrer || '',
-          status: 0,
-          contentType: '',
-          size: 0,
-        });
-      }
-      callback({ cancel: false });
-    });
-
-    ses.webRequest.onCompleted((details) => {
-      const key = String(details.id ?? '');
-      const pending = this.pendingRequests.get(key);
-      if (pending) {
-        const contentType = details.responseHeaders?.['content-type']?.[0]
-          || details.responseHeaders?.['Content-Type']?.[0]
-          || '';
-
-        const req: NetworkRequest = {
-          id: pending.id!,
-          url: pending.url!,
-          method: pending.method!,
-          status: details.statusCode,
-          contentType,
-          size: details.responseHeaders?.['content-length']
-            ? parseInt(details.responseHeaders['content-length'][0], 10) || 0
-            : 0,
-          timestamp: pending.timestamp!,
-          initiator: pending.initiator!,
-          domain: pending.domain!,
-        };
-
-        this.addRequest(req);
-        this.pendingRequests.delete(key);
+  /** Register as a dispatcher consumer (late registration supported) */
+  registerWith(dispatcher: RequestDispatcher): void {
+    dispatcher.registerBeforeRequest({
+      name: 'NetworkInspector',
+      priority: 100,
+      handler: (details) => {
+        const domain = this.extractDomain(details.url);
+        if (domain && !details.url.startsWith('file://') && !details.url.startsWith('devtools://')) {
+          const id = ++this.counter;
+          this.pendingRequests.set(String(details.id ?? id), {
+            id,
+            url: details.url,
+            method: details.method || 'GET',
+            timestamp: Date.now(),
+            domain,
+            initiator: details.referrer || '',
+            status: 0,
+            contentType: '',
+            size: 0,
+          });
+        }
+        return null;
       }
     });
 
-    // Clean up pending requests that errored
-    ses.webRequest.onErrorOccurred((details) => {
-      this.pendingRequests.delete(String(details.id ?? ''));
+    dispatcher.registerCompleted({
+      name: 'NetworkInspector',
+      handler: (details) => {
+        const key = String(details.id ?? '');
+        const pending = this.pendingRequests.get(key);
+        if (pending) {
+          const contentType = details.responseHeaders?.['content-type']?.[0]
+            || details.responseHeaders?.['Content-Type']?.[0]
+            || '';
+
+          const req: NetworkRequest = {
+            id: pending.id!,
+            url: pending.url!,
+            method: pending.method!,
+            status: details.statusCode,
+            contentType,
+            size: details.responseHeaders?.['content-length']
+              ? parseInt(details.responseHeaders['content-length'][0], 10) || 0
+              : 0,
+            timestamp: pending.timestamp!,
+            initiator: pending.initiator!,
+            domain: pending.domain!,
+          };
+
+          this.addRequest(req);
+          this.pendingRequests.delete(key);
+        }
+      }
+    });
+
+    dispatcher.registerError({
+      name: 'NetworkInspector',
+      handler: (details) => {
+        this.pendingRequests.delete(String(details.id ?? ''));
+      }
     });
   }
 

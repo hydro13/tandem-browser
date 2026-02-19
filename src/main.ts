@@ -34,6 +34,7 @@ import { TabLockManager } from './agents/tab-lock-manager';
 import { ContextMenuManager } from './context-menu/manager';
 import { DevToolsManager } from './devtools/manager';
 import { CopilotStream } from './activity/copilot-stream';
+import { RequestDispatcher } from './network/dispatcher';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -67,6 +68,7 @@ let tabLockManager: TabLockManager | null = null;
 let contextMenuManager: ContextMenuManager | null = null;
 let devToolsManager: DevToolsManager | null = null;
 let copilotStream: CopilotStream | null = null;
+let dispatcher: RequestDispatcher | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 
@@ -77,28 +79,46 @@ async function createWindow(): Promise<BrowserWindow> {
   const stealth = new StealthManager(ses, partition);
   await stealth.apply();
 
-  // Fix cookie persistence: downgrade SameSite=None cookies that are missing Secure flag,
-  // and periodically flush cookie store to ensure persistence
-  ses.webRequest.onHeadersReceived((details, callback) => {
-    const headers = details.responseHeaders || {};
+  // Create RequestDispatcher — central hub for all webRequest hooks
+  dispatcher = new RequestDispatcher(ses);
 
-    // Fix Set-Cookie headers: ensure SameSite=None cookies have Secure flag
-    const cookieHeaders = headers['set-cookie'] || headers['Set-Cookie'];
-    if (cookieHeaders) {
-      const fixedCookies = cookieHeaders.map((cookie: string) => {
-        // If SameSite=None but no Secure, add Secure
-        if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
-          return cookie + '; Secure';
-        }
-        return cookie;
-      });
-      // Normalize to lowercase header name
-      delete headers['Set-Cookie'];
-      headers['set-cookie'] = fixedCookies;
+  // Register StealthManager header modification (priority 10 — runs first)
+  stealth.registerWith(dispatcher);
+
+  // Cookie fix: ensure SameSite=None cookies have Secure flag (priority 10, response headers)
+  dispatcher.registerHeadersReceived({
+    name: 'CookieFix',
+    priority: 10,
+    handler: (_details, responseHeaders) => {
+      const cookieHeaders = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
+      if (cookieHeaders) {
+        const fixedCookies = cookieHeaders.map((cookie: string) => {
+          if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
+            return cookie + '; Secure';
+          }
+          return cookie;
+        });
+        delete responseHeaders['Set-Cookie'];
+        responseHeaders['set-cookie'] = fixedCookies;
+      }
+      return responseHeaders;
     }
-
-    callback({ responseHeaders: headers });
   });
+
+  // WebSocket origin fix: Electron sends "null" origin for file:// pages (priority 50)
+  dispatcher.registerBeforeSendHeaders({
+    name: 'WebSocketOriginFix',
+    priority: 50,
+    handler: (details, headers) => {
+      if (details.url.startsWith('ws://127.0.0.1') || details.url.startsWith('ws://localhost')) {
+        headers['Origin'] = 'http://127.0.0.1:18789';
+      }
+      return headers;
+    }
+  });
+
+  // Attach dispatcher — activates all hooks with current consumers
+  dispatcher.attach();
 
   // Flush cookies to disk every 30 seconds for reliability
   setInterval(() => { ses.cookies.flushStore().catch(() => {}); }, 30000);
@@ -174,16 +194,6 @@ async function createWindow(): Promise<BrowserWindow> {
 
   mainWindow.loadFile(path.join(__dirname, '..', 'shell', 'index.html'));
 
-  // Fix origin header for WebSocket connections to OpenClaw
-  // Electron sends "null" origin for file:// pages, which OpenClaw rejects
-  mainWindow.webContents.session.webRequest.onBeforeSendHeaders(
-    { urls: ['ws://127.0.0.1:*/*', 'ws://localhost:*/*'] },
-    (details, callback) => {
-      details.requestHeaders['Origin'] = 'http://127.0.0.1:18789';
-      callback({ requestHeaders: details.requestHeaders });
-    }
-  );
-
   // Only open shell DevTools in dev mode (--dev flag)
   if (IS_DEV) {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -214,6 +224,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   contextBridge = new ContextBridge();
   pipManager = new PiPManager();
   networkInspector = new NetworkInspector();
+  if (dispatcher) networkInspector.registerWith(dispatcher);
   chromeImporter = new ChromeImporter(configManager);
   bookmarkManager = new BookmarkManager();
   historyManager = new HistoryManager();
