@@ -69,3 +69,31 @@ export const TRUSTED_CDNS = new Set([
   'ajax.googleapis.com', 'fonts.googleapis.com', 'fonts.gstatic.com',
   'cdn.cloudflare.com', 'stackpath.bootstrapcdn.com',
 ]);
+
+// === Phase 2: Outbound Data Guard types ===
+
+export interface OutboundDecision {
+  action: 'allow' | 'block' | 'flag';
+  reason: string;
+  severity: EventSeverity;
+}
+
+export interface BodyAnalysis {
+  sizeBytes: number;
+  hasCredentials: boolean;
+  hasFileUpload: boolean;
+}
+
+export interface OutboundStats {
+  totalChecked: number;
+  allowed: number;
+  blocked: number;
+  flagged: number;
+}
+
+export interface WhitelistEntry {
+  id?: number;
+  originDomain: string;
+  destinationDomain: string;
+  addedAt?: string;
+}

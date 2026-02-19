@@ -3,17 +3,20 @@ import { RequestDispatcher } from '../network/dispatcher';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { Guardian } from './guardian';
+import { OutboundGuard } from './outbound-guard';
 import { GuardianMode } from './types';
 
 export class SecurityManager {
   private db: SecurityDB;
   private shield: NetworkShield;
   private guardian: Guardian;
+  private outboundGuard: OutboundGuard;
 
   constructor() {
     this.db = new SecurityDB();
     this.shield = new NetworkShield(this.db);
-    this.guardian = new Guardian(this.db, this.shield);
+    this.outboundGuard = new OutboundGuard(this.db);
+    this.guardian = new Guardian(this.db, this.shield, this.outboundGuard);
     console.log('[SecurityManager] Initialized');
   }
 
@@ -28,6 +31,7 @@ export class SecurityManager {
         res.json({
           guardian: this.guardian.getStatus(),
           blocklist: this.shield.getStats(),
+          outbound: this.outboundGuard.getStats(),
           database: {
             events: this.db.getEventCount(),
             domains: this.db.getDomainCount(),
@@ -67,12 +71,13 @@ export class SecurityManager {
       }
     });
 
-    // 4. GET /security/events — Recent security events
+    // 4. GET /security/events — Recent security events (supports ?severity= and ?category=)
     app.get('/security/events', (req, res) => {
       try {
         const limit = parseInt(req.query.limit as string) || 50;
         const severity = req.query.severity as string | undefined;
-        const events = this.db.getRecentEvents(limit, severity);
+        const category = req.query.category as string | undefined;
+        const events = this.db.getRecentEvents(limit, severity, category);
         res.json({ events, total: events.length });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -151,7 +156,44 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 9 API routes registered under /security/*');
+    // === Phase 2: Outbound Data Guard routes ===
+
+    // 10. GET /security/outbound/stats — Outbound requests blocked/allowed/flagged
+    app.get('/security/outbound/stats', (_req, res) => {
+      try {
+        res.json(this.outboundGuard.getStats());
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 11. GET /security/outbound/recent — Recent outbound events
+    app.get('/security/outbound/recent', (req, res) => {
+      try {
+        const limit = parseInt(req.query.limit as string) || 50;
+        const events = this.db.getRecentEvents(limit, undefined, 'outbound');
+        res.json({ events, total: events.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // 12. POST /security/outbound/whitelist — Whitelist a domain pair
+    app.post('/security/outbound/whitelist', (req, res) => {
+      try {
+        const { origin, destination } = req.body;
+        if (!origin || !destination) {
+          res.status(400).json({ error: 'origin and destination domains required' });
+          return;
+        }
+        this.db.addWhitelistPair(origin.toLowerCase(), destination.toLowerCase());
+        res.json({ ok: true, origin: origin.toLowerCase(), destination: destination.toLowerCase() });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 12 API routes registered under /security/*');
   }
 
   destroy(): void {
