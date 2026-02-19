@@ -37,6 +37,7 @@ import { TaskManager } from '../agents/task-manager';
 import { TabLockManager } from '../agents/tab-lock-manager';
 import { DevToolsManager } from '../devtools/manager';
 import { CopilotStream } from '../activity/copilot-stream';
+import { SecurityManager } from '../security/security-manager';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -89,6 +90,7 @@ export interface TandemAPIOptions {
   tabLockManager: TabLockManager;
   devToolsManager: DevToolsManager;
   copilotStream: CopilotStream;
+  securityManager?: SecurityManager;
 }
 
 export class TandemAPI {
@@ -123,6 +125,7 @@ export class TandemAPI {
   private tabLockManager: TabLockManager;
   private devToolsManager: DevToolsManager;
   private copilotStream: CopilotStream;
+  private securityManager: SecurityManager | null;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -156,6 +159,7 @@ export class TandemAPI {
     this.tabLockManager = opts.tabLockManager;
     this.devToolsManager = opts.devToolsManager;
     this.copilotStream = opts.copilotStream;
+    this.securityManager = opts.securityManager || null;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -205,6 +209,11 @@ export class TandemAPI {
     });
 
     this.setupRoutes();
+
+    // Register SecurityManager API routes
+    if (this.securityManager) {
+      this.securityManager.registerRoutes(this.app);
+    }
   }
 
   /** Get active tab's WebContents, or null */
@@ -863,7 +872,16 @@ export class TandemAPI {
       try {
         const limit = parseInt(req.query.limit as string) || 100;
         const since = req.query.since ? parseInt(req.query.since as string) : undefined;
-        const entries = this.activityTracker.getLog(limit, since);
+        const types = req.query.types ? (req.query.types as string).split(',') : undefined;
+
+        let entries = this.activityTracker.getLog(limit * 2, since); // fetch extra to compensate for filtering
+
+        if (types) {
+          entries = entries.filter(e => types.includes(e.type));
+        }
+
+        entries = entries.slice(-limit);
+
         res.json({ entries, count: entries.length });
       } catch (e: any) {
         res.status(500).json({ error: e.message });

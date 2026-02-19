@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 1
-**Last completed phase:** Phase 0
+**Next phase to implement:** Phase 2
+**Last completed phase:** Phase 1
 **Overall status:** IN PROGRESS
 
 ---
@@ -35,25 +35,31 @@
 
 ## Phase 1: Security Core
 
-- **Status:** PENDING (blocked by Phase 0)
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-19
+- **Commit:** 8eea6b5
+- **Branch:** main
 - **Verification:**
-  - [ ] shield.db created with correct schema
-  - [ ] GET /security/status works
-  - [ ] Blocklist check detects known threats
-  - [ ] Blocked domain doesn't load
-  - [ ] Normal sites load fine
-  - [ ] Events logged correctly
-  - [ ] Domains tracked with trust
-  - [ ] Guardian mode switching works
-  - [ ] NetworkInspector still works
-  - [ ] Stealth still works
-  - [ ] Decision time < 5ms
-  - [ ] No performance degradation
-- **Issues encountered:** —
-- **Notes for next phase:** —
-- **Blocklist stats:** (entries loaded from each source)
+  - [x] shield.db created with correct schema (~/.tandem/security/shield.db, WAL mode)
+  - [x] GET /security/status works (guardian status + blocklist stats + DB counts)
+  - [x] Blocklist check detects known threats (phishing domains, ad domains correctly blocked)
+  - [x] Blocked domain doesn't load (confirmed via blocklist/check API)
+  - [x] Normal sites load fine (Google, GitHub, gstatic all work — no false positives)
+  - [x] Events logged correctly (block events with timestamps, domain, details JSON)
+  - [x] Domains tracked with trust (15 domains tracked after startup, trust levels working)
+  - [x] Guardian mode switching works (POST /security/guardian/mode confirmed)
+  - [x] NetworkInspector still works (GET /network/log returns entries, /network/domains tracks 13+ domains)
+  - [x] Stealth still works (StealthManager priority 10 unaffected)
+  - [x] Decision time < 5ms (avg 0.02ms — well under target)
+  - [x] No performance degradation (sub-ms dispatch times)
+- **Issues encountered:**
+  - URLhaus blocklist contains malware URLs hosted on legitimate platforms (github.com, dropbox.com, etc.). Extracting domain-level blocks from these URLs caused false positives for major sites. Fixed by adding `URL_LIST_SAFE_DOMAINS` safelist in NetworkShield to skip hosting platform domains when parsing URL-based blocklists.
+- **Notes for next phase:** SecurityManager is initialized in startAPI() via late registration pattern (same as NetworkInspector). Guardian registers as priority 1 on beforeRequest, priority 20 on beforeSendHeaders and headersReceived. All 9 API routes registered under /security/*. Database uses prepared statements for all hot-path queries. OutboundGuard (Phase 2) should register via dispatcher.registerBeforeRequest() with priority 5.
+- **Blocklist stats:**
+  - URLhaus: 11,806 domains (1,447 hosting platform entries skipped)
+  - PhishTank: 728,917 domains
+  - Steven Black: 80,916 domains
+  - Total unique in memory: 811,812 domains
 
 ---
 
