@@ -38,6 +38,7 @@ import { TabLockManager } from '../agents/tab-lock-manager';
 import { DevToolsManager } from '../devtools/manager';
 import { CopilotStream } from '../activity/copilot-stream';
 import { SecurityManager } from '../security/security-manager';
+import { SnapshotManager } from '../snapshot/manager';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -91,6 +92,7 @@ export interface TandemAPIOptions {
   devToolsManager: DevToolsManager;
   copilotStream: CopilotStream;
   securityManager?: SecurityManager;
+  snapshotManager: SnapshotManager;
 }
 
 export class TandemAPI {
@@ -126,6 +128,7 @@ export class TandemAPI {
   private devToolsManager: DevToolsManager;
   private copilotStream: CopilotStream;
   private securityManager: SecurityManager | null;
+  private snapshotManager: SnapshotManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -160,6 +163,7 @@ export class TandemAPI {
     this.devToolsManager = opts.devToolsManager;
     this.copilotStream = opts.copilotStream;
     this.securityManager = opts.securityManager || null;
+    this.snapshotManager = opts.snapshotManager;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -2346,6 +2350,20 @@ export class TandemAPI {
         } else {
           res.status(404).json({ error: 'No active tab' });
         }
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // SNAPSHOT — Accessibility Tree met @refs
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/snapshot', async (req: Request, res: Response) => {
+      try {
+        const interactive = req.query.interactive === 'true';
+        const result = await this.snapshotManager.getSnapshot({ interactive });
+        res.json({ ok: true, snapshot: result.text, count: result.count, url: result.url });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

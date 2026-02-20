@@ -36,6 +36,7 @@ import { DevToolsManager } from './devtools/manager';
 import { CopilotStream } from './activity/copilot-stream';
 import { RequestDispatcher } from './network/dispatcher';
 import { SecurityManager } from './security/security-manager';
+import { SnapshotManager } from './snapshot/manager';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -71,6 +72,7 @@ let devToolsManager: DevToolsManager | null = null;
 let copilotStream: CopilotStream | null = null;
 let dispatcher: RequestDispatcher | null = null;
 let securityManager: SecurityManager | null = null;
+let snapshotManager: SnapshotManager | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 
@@ -240,6 +242,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   taskManager = new TaskManager();
   tabLockManager = new TabLockManager();
   devToolsManager = new DevToolsManager(tabManager!);
+  snapshotManager = new SnapshotManager(devToolsManager!);
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
@@ -329,6 +332,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     devToolsManager: devToolsManager!,
     copilotStream: copilotStream!,
     securityManager: securityManager!,
+    snapshotManager: snapshotManager!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -866,6 +870,7 @@ app.on('will-quit', () => {
   if (devToolsManager) devToolsManager.destroy();
   if (copilotStream) copilotStream.destroy();
   if (securityManager) securityManager.destroy();
+  if (snapshotManager) snapshotManager.destroy();
 });
 
 app.on('window-all-closed', () => {
