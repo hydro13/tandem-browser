@@ -49,8 +49,8 @@ TOKEN=$(cat ~/.tandem/api-token)
 - [x] `GET /snapshot/text?ref=@e1` — tekst ophalen via @ref _(2026-02-21, sessie 1.2)_
 - [x] Refs resetten bij navigatie (`Page.frameNavigated` CDP subscriber) _(2026-02-21, sessie 1.2)_
 - [x] `npx tsc` — zero errors _(2026-02-21, sessie 1.2)_
-- [ ] Test: `curl -X POST -H "Authorization: Bearer $TOKEN" localhost:8765/snapshot/click -H "Content-Type: application/json" -d '{"ref":"@e1"}'`
-- [ ] Test: refs stabiel op zelfde pagina, reset na navigatie
+- [x] Test: `curl -X POST` `/snapshot/click` — klik op "Learn more" link op example.com navigeert _(2026-02-21, sessie 1.2)_
+- [x] Test: refs stabiel op zelfde pagina, reset na navigatie — old ref fails after navigate _(2026-02-21, sessie 1.2)_
 - [x] Commit: `feat: /snapshot filters + @ref click/fill/text`
 
 ---
@@ -63,25 +63,25 @@ TOKEN=$(cat ~/.tandem/api-token)
 
 ### Sessie 2.1: NetworkMocker + alle endpoints
 
-- [ ] `src/network/types.ts` — interfaces (MockRule)
-- [ ] `src/network/mocker.ts` — NetworkMocker class (met CDP subscriber voor Fetch.requestPaused)
-- [ ] **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler
-- [ ] CDP: `Fetch.enable` via `devtools.sendCommand()` bij eerste mock, `Fetch.disable` bij mock-clear
-- [ ] `handleRequestPaused()` — match URL pattern, fulfillRequest/failRequest/continueRequest
-- [ ] Glob matching voor URL patterns (bijv. `**/api/**`)
-- [ ] Body base64 encoding voor `Fetch.fulfillRequest`
-- [ ] `POST /network/mock` — mock toevoegen (body: JSON response)
-- [ ] `POST /network/mock` met `"abort":true` — request blokkeren
-- [ ] `GET /network/mocks` — actieve mocks tonen
-- [ ] `POST /network/unmock {"pattern":"..."}` — specifieke mock verwijderen
-- [ ] `POST /network/mock-clear` — alles wissen + Fetch.disable
-- [ ] Alias: `POST /network/route` → zelfde als `/network/mock`
-- [ ] Bestaande `/network/log`, `/network/apis` etc. werken nog
-- [ ] `npx tsc` — zero errors
-- [ ] Test: mock instellen → request doen → gemockte response ontvangen
-- [ ] Test: abort mock → network error in browser
-- [ ] Test: mock-clear → gewoon internet weer
-- [ ] Commit: `feat: network mocking via CDP Fetch (/network/mock)`
+- [x] `src/network/types.ts` — interfaces (MockRule) _(2026-02-21, sessie 2.1)_
+- [x] `src/network/mocker.ts` — NetworkMocker class (met CDP subscriber voor Fetch.requestPaused) _(2026-02-21, sessie 2.1)_
+- [x] **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler _(2026-02-21, sessie 2.1)_
+- [x] CDP: `Fetch.enable` via `devtools.sendCommand()` bij eerste mock, `Fetch.disable` bij mock-clear _(2026-02-21, sessie 2.1)_
+- [x] `handleRequestPaused()` — match URL pattern, fulfillRequest/failRequest/continueRequest _(2026-02-21, sessie 2.1)_
+- [x] Glob matching voor URL patterns (bijv. `**/api/**`) _(2026-02-21, sessie 2.1)_
+- [x] Body base64 encoding voor `Fetch.fulfillRequest` _(2026-02-21, sessie 2.1)_
+- [x] `POST /network/mock` — mock toevoegen (body: JSON response) _(2026-02-21, sessie 2.1)_
+- [x] `POST /network/mock` met `"abort":true` — request blokkeren _(2026-02-21, sessie 2.1)_
+- [x] `GET /network/mocks` — actieve mocks tonen _(2026-02-21, sessie 2.1)_
+- [x] `POST /network/unmock {"pattern":"..."}` — specifieke mock verwijderen _(2026-02-21, sessie 2.1)_
+- [x] `POST /network/mock-clear` — alles wissen + Fetch.disable _(2026-02-21, sessie 2.1)_
+- [x] Alias: `POST /network/route` → zelfde als `/network/mock` _(2026-02-21, sessie 2.1)_
+- [x] Bestaande `/network/log`, `/network/apis` etc. werken nog _(2026-02-21, sessie 2.1)_
+- [x] `npx tsc` — zero errors _(2026-02-21, sessie 2.1)_
+- [x] Test: mock instellen → request doen → gemockte response ontvangen _(2026-02-21, sessie 2.1)_
+- [x] Test: abort mock → network error in browser _(2026-02-21, sessie 2.1)_
+- [x] Test: mock-clear → gewoon internet weer _(2026-02-21, sessie 2.1)_
+- [x] Commit: `feat: network mocking via CDP Fetch (/network/mock)`
 
 ---
 

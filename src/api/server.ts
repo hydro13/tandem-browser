@@ -39,6 +39,7 @@ import { DevToolsManager } from '../devtools/manager';
 import { CopilotStream } from '../activity/copilot-stream';
 import { SecurityManager } from '../security/security-manager';
 import { SnapshotManager } from '../snapshot/manager';
+import { NetworkMocker } from '../network/mocker';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -93,6 +94,7 @@ export interface TandemAPIOptions {
   copilotStream: CopilotStream;
   securityManager?: SecurityManager;
   snapshotManager: SnapshotManager;
+  networkMocker: NetworkMocker;
 }
 
 export class TandemAPI {
@@ -129,6 +131,7 @@ export class TandemAPI {
   private copilotStream: CopilotStream;
   private securityManager: SecurityManager | null;
   private snapshotManager: SnapshotManager;
+  private networkMocker: NetworkMocker;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -164,6 +167,7 @@ export class TandemAPI {
     this.copilotStream = opts.copilotStream;
     this.securityManager = opts.securityManager || null;
     this.snapshotManager = opts.snapshotManager;
+    this.networkMocker = opts.networkMocker;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -1483,6 +1487,91 @@ export class TandemAPI {
       try {
         this.networkInspector.clear();
         res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // NETWORK MOCK — Request Interceptie & Mocking
+    // ═══════════════════════════════════════════════
+
+    this.app.post('/network/mock', async (req: Request, res: Response) => {
+      try {
+        const { pattern, abort, status, body, headers, delay } = req.body;
+        if (!pattern) { res.status(400).json({ error: 'pattern required' }); return; }
+        const rule = await this.networkMocker.addRule({ pattern, abort, status, body, headers, delay });
+        res.json({ ok: true, id: rule.id, pattern: rule.pattern });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Alias: agent-browser compatible
+    this.app.post('/network/route', async (req: Request, res: Response) => {
+      try {
+        const { pattern, abort, status, body, headers, delay } = req.body;
+        if (!pattern) { res.status(400).json({ error: 'pattern required' }); return; }
+        const rule = await this.networkMocker.addRule({ pattern, abort, status, body, headers, delay });
+        res.json({ ok: true, id: rule.id, pattern: rule.pattern });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/network/mocks', (_req: Request, res: Response) => {
+      try {
+        const mocks = this.networkMocker.getRules().map(r => ({
+          id: r.id,
+          pattern: r.pattern,
+          status: r.status,
+          abort: r.abort || false,
+          delay: r.delay,
+          createdAt: r.createdAt,
+        }));
+        res.json({ ok: true, mocks, count: mocks.length });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/network/unmock', async (req: Request, res: Response) => {
+      try {
+        const { pattern, id } = req.body;
+        if (!pattern && !id) { res.status(400).json({ error: 'pattern or id required' }); return; }
+        let removed = 0;
+        if (id) {
+          removed = await this.networkMocker.removeRuleById(id);
+        } else {
+          removed = await this.networkMocker.removeRule(pattern);
+        }
+        res.json({ ok: true, removed });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Alias: agent-browser compatible
+    this.app.post('/network/unroute', async (req: Request, res: Response) => {
+      try {
+        const { pattern, id } = req.body;
+        if (!pattern && !id) { res.status(400).json({ error: 'pattern or id required' }); return; }
+        let removed = 0;
+        if (id) {
+          removed = await this.networkMocker.removeRuleById(id);
+        } else {
+          removed = await this.networkMocker.removeRule(pattern);
+        }
+        res.json({ ok: true, removed });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/network/mock-clear', async (_req: Request, res: Response) => {
+      try {
+        const removed = await this.networkMocker.clearRules();
+        res.json({ ok: true, removed });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
