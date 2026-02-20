@@ -1,19 +1,22 @@
 # Fase 4 — tandem CLI: Command Line Wrapper
 
-> **Doel:** Thin CLI wrapper rond de Tandem REST API.  
-> Zelfde developer UX als agent-browser, maar dan naar jouw eigen Tandem.  
-> **Sessies:** 1  
+> **Doel:** Thin CLI wrapper rond de Tandem REST API.
+> Zelfde developer UX als agent-browser, maar dan naar jouw eigen Tandem.
+> **Sessies:** 1
 > **Vereist:** Fase 1-3 compleet (snapshot + sessions)
 
 ---
 
 ## Bestaande code te lezen (verplicht)
 
-```bash
-cat README.md                    # Alle bestaande API endpoints + beschrijvingen
-cat package.json                 # Naam, versie — cli package krijgt eigen package.json
-curl http://localhost:8765/status  # Zorg dat API draait
-```
+Lees deze bestanden (gebruik Read tool, NIET cat):
+
+1. **`README.md`** — Alle bestaande API endpoints + beschrijvingen
+2. **`package.json`** — Naam, versie, dependencies van het hoofdproject
+3. **`tsconfig.json`** — TypeScript config van het hoofdproject
+   - **LET OP:** `rootDir: ./src` → CLI zit BUITEN src/
+   - CLI heeft een **eigen** tsconfig.json nodig
+   - Root tsconfig moet `cli/` **excluden** om conflicten te voorkomen
 
 ---
 
@@ -39,6 +42,7 @@ stdout: de accessibility tree tekst
 ```
 
 ### Token ophalen
+
 API token staat in `~/.tandem/api-token` — zelfde bestand als de server gebruikt.
 
 ---
@@ -48,8 +52,8 @@ API token staat in `~/.tandem/api-token` — zelfde bestand als de server gebrui
 ```
 cli/
 ├── package.json          ← apart package: @hydro13/tandem-cli
-├── tsconfig.json         ← output naar cli/dist/
-├── index.ts              ← entry point, commander setup
+├── tsconfig.json         ← EIGEN tsconfig, output naar cli/dist/
+├── index.ts              ← entry point, commander setup + #!/usr/bin/env node
 ├── client.ts             ← HTTP client, token laden
 └── commands/
     ├── open.ts           ← tandem open <url>
@@ -60,6 +64,39 @@ cli/
     ├── screenshot.ts     ← tandem screenshot [path]
     ├── cookies.ts        ← tandem cookies [set]
     └── session.ts        ← tandem session <subcommand>
+```
+
+---
+
+## tsconfig conflict oplossen
+
+De root `tsconfig.json` heeft `rootDir: ./src`. De CLI zit in `cli/` (buiten src/).
+Je moet de root tsconfig aanpassen om `cli/` te excluden:
+
+```json
+// In root tsconfig.json, voeg toe aan "exclude":
+"exclude": ["cli", "node_modules", "dist"]
+```
+
+En maak een aparte `cli/tsconfig.json`:
+
+```json
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "lib": ["ES2022"],
+    "outDir": "./dist",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": false,
+    "sourceMap": true
+  },
+  "include": ["./**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}
 ```
 
 ---
@@ -117,18 +154,19 @@ tandem --session agent1 cookies
 ## cli/client.ts
 
 ```typescript
-import fs from "fs";
-import path from "path";
-import os from "os";
+#!/usr/bin/env node
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
-const API_BASE = process.env.TANDEM_API || "http://localhost:8765";
-const TOKEN_PATH = path.join(os.homedir(), ".tandem", "api-token");
+const API_BASE = process.env.TANDEM_API || 'http://localhost:8765';
+const TOKEN_PATH = path.join(os.homedir(), '.tandem', 'api-token');
 
 function getToken(): string {
   try {
-    return fs.readFileSync(TOKEN_PATH, "utf-8").trim();
+    return fs.readFileSync(TOKEN_PATH, 'utf-8').trim();
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -139,10 +177,10 @@ export async function api(
   session?: string
 ): Promise<unknown> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
     Authorization: `Bearer ${getToken()}`,
   };
-  if (session) headers["X-Session"] = session;
+  if (session) headers['X-Session'] = session;
 
   const res = await fetch(`${API_BASE}${endpoint}`, {
     method,
@@ -191,22 +229,25 @@ export async function api(
 ## Implementatie stappen
 
 1. Maak `cli/package.json` + `cli/tsconfig.json`
-2. `cd cli && npm install commander @types/node typescript`
-3. Maak `cli/client.ts` — token laden + fetch wrapper
-4. Maak `cli/index.ts` — commander setup + globale `--session` optie
-5. Per command (begin met de meest gebruikte):
+2. **Root tsconfig aanpassen:** voeg `"cli"` toe aan exclude array
+3. `cd cli && npm install`
+4. Maak `cli/client.ts` — token laden + fetch wrapper
+5. Maak `cli/index.ts` — commander setup + globale `--session` optie
+   - **BELANGRIJK:** Eerste regel moet `#!/usr/bin/env node` zijn
+6. Per command (begin met de meest gebruikte):
    - `open.ts` → `POST /navigate`
    - `snapshot.ts` → `GET /snapshot` met query params
    - `click.ts` → `POST /snapshot/click` (als @ref) of `POST /click`
    - `fill.ts` → `POST /snapshot/fill` (als @ref) of `POST /type`
    - `eval.ts` → `POST /devtools/evaluate`
-   - `screenshot.ts` → `GET /screenshot` → base64 → bestand
+   - `screenshot.ts` → `GET /screenshot` → base64 → `fs.writeFileSync(path, Buffer.from(base64, 'base64'))`
    - `cookies.ts` → `GET /cookies` of `POST /devtools/cdp` Network.setCookie
    - `session.ts` → `/sessions/*` endpoints
-6. `npx tsc` in cli/ — zero errors
-7. `npm link` voor globale `tandem` command
-8. Test alle commands (zie verificatie hieronder)
-9. Commit
+7. `cd cli && npx tsc` — zero errors
+8. Verifieer dat root `npx tsc` ook nog werkt (geen conflict met cli/)
+9. `cd cli && npm link` voor globale `tandem` command
+10. Test alle commands (zie verificatie hieronder)
+11. Commit
 
 ---
 
@@ -256,11 +297,27 @@ tandem cookies
 
 ## Veelgemaakte fouten
 
-❌ `fetch` is niet beschikbaar in Node.js < 18  
-✅ Check Node.js versie in tsconfig: `"lib": ["ES2022"]`, gebruik `node-fetch` als fallback
+**Node.js:**
 
-❌ Binary permissions na `npm link` (EACCES)  
-✅ Voeg toe aan `index.ts`: `#!/usr/bin/env node` als eerste regel; chmod via postinstall script
+- ❌ `fetch` is niet beschikbaar in Node.js < 18
+- ✅ Electron 40 bundelt Node.js 20+. Als de CLI ook standalone draait, check Node versie
 
-❌ Screenshot als base64 opslaan zonder decoderen  
-✅ `Buffer.from(base64, 'base64').toFile(path)`
+**Binary permissions:**
+
+- ❌ `npm link` geeft EACCES op de binary
+- ✅ Eerste regel van `index.ts`: `#!/usr/bin/env node` + na build: `chmod +x dist/index.js`
+
+**Screenshot:**
+
+- ❌ Screenshot base64 data direct als string opslaan
+- ✅ `fs.writeFileSync(path, Buffer.from(base64, 'base64'))`
+
+**tsconfig:**
+
+- ❌ CLI bestanden compileren met de root tsconfig (rootDir conflict)
+- ✅ Aparte `cli/tsconfig.json` + root tsconfig excludet `cli/`
+
+**@ref detectie:**
+
+- ❌ `@e4` als CSS selector sturen naar `/click`
+- ✅ Detecteer @-prefix: als argument begint met `@`, gebruik `/snapshot/click` endpoint; anders `/click`
