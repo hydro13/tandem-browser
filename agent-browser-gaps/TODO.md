@@ -130,25 +130,25 @@ TOKEN=$(cat ~/.tandem/api-token)
 - [x] `npx tsc` — zero errors _(2026-02-21, sessie 3.2)_
 - [x] Test: sessie aanmaken, tonen, verwijderen _(2026-02-21, sessie 3.2)_
 - [x] Test: Robin's sessie onaangetast + kan niet verwijderd worden _(2026-02-21, sessie 3.2)_
-- [ ] Commit: `feat: /sessions create/list/switch/destroy`
+- [x] Commit: `feat: /sessions create/list/switch/destroy` _(2026-02-21, sessie 3.2)_
 
 ### Sessie 3.3: State save/load + X-Session header
 
 > **Vereist:** Sessie 3.2 compleet
 
-- [ ] `src/sessions/state.ts` — StateManager class
-- [ ] `save()`: `session.fromPartition(partition).cookies.get({})` → JSON → disk
-- [ ] `load()`: disk → JSON → `session.fromPartition(partition).cookies.set()` per cookie
-- [ ] AES-256-GCM encryptie (optioneel, via env `TANDEM_SESSION_KEY`)
-- [ ] **Manager Wiring:** Voeg `stateManager` toe aan TandemAPIOptions + startAPI()
-- [ ] `POST /sessions/state/save {"name":"twitter"}`
-- [ ] `POST /sessions/state/load {"name":"twitter"}`
-- [ ] `GET /sessions/state/list`
-- [ ] `getSessionPartition()` helper methode in TandemAPI class
-- [ ] `X-Session` header op bestaande endpoints (navigate, click, page-content, etc.)
-- [ ] `npx tsc` — zero errors
-- [ ] Test: state opslaan → sessie destroyen → state laden → cookies terug
-- [ ] Test: `X-Session: agent1` header op `/navigate` werkt in agent1 sessie
+- [x] `src/sessions/state.ts` — StateManager class _(2026-02-21, sessie 3.3)_
+- [x] `save()`: `session.fromPartition(partition).cookies.get({})` → JSON → disk _(2026-02-21, sessie 3.3)_
+- [x] `load()`: disk → JSON → `session.fromPartition(partition).cookies.set()` per cookie _(2026-02-21, sessie 3.3)_
+- [x] AES-256-GCM encryptie (optioneel, via env `TANDEM_SESSION_KEY`) _(2026-02-21, sessie 3.3)_
+- [x] **Manager Wiring:** Voeg `stateManager` toe aan TandemAPIOptions + startAPI() _(2026-02-21, sessie 3.3)_
+- [x] `POST /sessions/state/save {"name":"twitter"}` _(2026-02-21, sessie 3.3)_
+- [x] `POST /sessions/state/load {"name":"twitter"}` _(2026-02-21, sessie 3.3)_
+- [x] `GET /sessions/state/list` _(2026-02-21, sessie 3.3)_
+- [x] `getSessionPartition()` helper methode in TandemAPI class _(2026-02-21, sessie 3.3)_
+- [x] `X-Session` header op bestaande endpoints (navigate, click, page-content, etc.) _(2026-02-21, sessie 3.3)_
+- [x] `npx tsc` — zero errors _(2026-02-21, sessie 3.3)_
+- [x] Test: state opslaan → sessie destroyen → state laden → cookies terug _(2026-02-21, sessie 3.3)_
+- [x] Test: `X-Session: agent1` header op `/navigate` werkt in agent1 sessie _(2026-02-21, sessie 3.3)_
 - [ ] Commit: `feat: session state save/load + X-Session header`
 
 ---

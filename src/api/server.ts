@@ -41,6 +41,7 @@ import { SecurityManager } from '../security/security-manager';
 import { SnapshotManager } from '../snapshot/manager';
 import { NetworkMocker } from '../network/mocker';
 import { SessionManager } from '../sessions/manager';
+import { StateManager } from '../sessions/state';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -97,6 +98,7 @@ export interface TandemAPIOptions {
   snapshotManager: SnapshotManager;
   networkMocker: NetworkMocker;
   sessionManager: SessionManager;
+  stateManager: StateManager;
 }
 
 export class TandemAPI {
@@ -135,6 +137,7 @@ export class TandemAPI {
   private snapshotManager: SnapshotManager;
   private networkMocker: NetworkMocker;
   private sessionManager: SessionManager;
+  private stateManager: StateManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -172,6 +175,7 @@ export class TandemAPI {
     this.snapshotManager = opts.snapshotManager;
     this.networkMocker = opts.networkMocker;
     this.sessionManager = opts.sessionManager;
+    this.stateManager = opts.stateManager;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -237,6 +241,36 @@ export class TandemAPI {
   private async execInActiveTab(code: string): Promise<any> {
     const wc = await this.getActiveWC();
     if (!wc) throw new Error('No active tab');
+    return wc.executeJavaScript(code);
+  }
+
+  /** Resolve X-Session header to partition string */
+  private getSessionPartition(req: Request): string {
+    const sessionName = req.headers['x-session'] as string;
+    if (!sessionName || sessionName === 'default') {
+      return 'persist:tandem';
+    }
+    return this.sessionManager.resolvePartition(sessionName);
+  }
+
+  /** Get WebContents for a session (via X-Session header). Focuses matching tab. */
+  private async getSessionWC(req: Request): Promise<Electron.WebContents | null> {
+    const sessionName = req.headers['x-session'] as string;
+    if (!sessionName || sessionName === 'default') {
+      return this.getActiveWC();
+    }
+    const partition = this.getSessionPartition(req);
+    const tabs = this.tabManager.listTabs().filter(t => t.partition === partition);
+    if (tabs.length === 0) return null;
+    // Focus the first matching tab so getActiveWC works for subsequent calls
+    await this.tabManager.focusTab(tabs[0].id);
+    return this.getActiveWC();
+  }
+
+  /** Run JS in a session's tab (via X-Session header) */
+  private async execInSessionTab(req: Request, code: string): Promise<any> {
+    const wc = await this.getSessionWC(req);
+    if (!wc) throw new Error('No active tab for this session');
     return wc.executeJavaScript(code);
   }
 
@@ -315,8 +349,22 @@ export class TandemAPI {
       const { url, tabId } = req.body;
       if (!url) { res.status(400).json({ error: 'url required' }); return; }
       try {
-        // If tabId specified, focus that tab first
-        if (tabId) {
+        const sessionName = req.headers['x-session'] as string;
+        if (sessionName && sessionName !== 'default') {
+          // Session-aware navigate: find or create tab for this session
+          const partition = this.getSessionPartition(req);
+          const sessionTabs = this.tabManager.listTabs().filter(t => t.partition === partition);
+          if (sessionTabs.length === 0) {
+            // No tab for this session — create one
+            const tab = await this.tabManager.openTab(url, undefined, 'kees', partition);
+            this.panelManager.logActivity('navigate', { url, source: 'kees', session: sessionName });
+            res.json({ ok: true, url, tab: tab.id });
+            return;
+          }
+          // Focus existing session tab
+          await this.tabManager.focusTab(sessionTabs[0].id);
+        } else if (tabId) {
+          // If tabId specified, focus that tab first
           await this.tabManager.focusTab(tabId);
         }
         const wc = await this.getActiveWC();
@@ -342,7 +390,7 @@ export class TandemAPI {
       try {
         const settleMs = parseInt(req.query.settle as string) || 800;
         const maxWait = parseInt(req.query.timeout as string) || 10000;
-        const content = await this.execInActiveTab(`
+        const content = await this.execInSessionTab(req, `
           new Promise((resolve) => {
             const extract = () => {
               const title = document.title;
@@ -420,7 +468,7 @@ export class TandemAPI {
       const { selector } = req.body;
       if (!selector) { res.status(400).json({ error: 'selector required' }); return; }
       try {
-        const wc = await this.getActiveWC();
+        const wc = await this.getSessionWC(req);
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
         const result = await humanizedClick(wc, selector);
         this.panelManager.logActivity('click', { selector });
@@ -441,7 +489,7 @@ export class TandemAPI {
         return;
       }
       try {
-        const wc = await this.getActiveWC();
+        const wc = await this.getSessionWC(req);
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
         const result = await humanizedType(wc, selector, text, !!clear);
         this.panelManager.logActivity('input', { selector, textLength: text.length });
@@ -472,7 +520,7 @@ export class TandemAPI {
 
     this.app.get('/screenshot', async (req: Request, res: Response) => {
       try {
-        const wc = await this.getActiveWC();
+        const wc = await this.getSessionWC(req);
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
         const image = await wc.capturePage();
         const png = image.toPNG();
@@ -513,7 +561,7 @@ export class TandemAPI {
     this.app.post('/scroll', async (req: Request, res: Response) => {
       const { direction = 'down', amount = 500 } = req.body;
       try {
-        const wc = await this.getActiveWC();
+        const wc = await this.getSessionWC(req);
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
         const deltaY = direction === 'up' ? -amount : amount;
         wc.sendInputEvent({
@@ -2556,6 +2604,39 @@ export class TandemAPI {
         res.json({ ok: true, name });
       } catch (e: any) {
         res.status(400).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/sessions/state/save', async (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const partition = this.getSessionPartition(req);
+        const filePath = await this.stateManager.save(name, partition);
+        res.json({ ok: true, path: filePath });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/sessions/state/load', async (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const partition = this.getSessionPartition(req);
+        const result = await this.stateManager.load(name, partition);
+        res.json({ ok: true, cookiesRestored: result.cookiesRestored });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/sessions/state/list', async (_req: Request, res: Response) => {
+      try {
+        const states = this.stateManager.list();
+        res.json({ ok: true, states });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
       }
     });
 
