@@ -380,6 +380,44 @@
 
 ---
 
+## Phase 7: Agent-Browser Gap Features 🤖 ⬜ GEPLAND
+> Tandem de features geven die agent-browser zo populair maken — zonder de stealth kern te breken.  
+> Plan: `AGENT-BROWSER-GAPS-PLAN.md`
+
+### 7.1 /snapshot — Accessibility Tree met @refs
+- [ ] `GET /snapshot` → volledige accessibility tree (CDP: Accessibility.getFullAXTree)
+- [ ] Element refs: `@e1`, `@e2`, ... (stabiel per pagina)
+- [ ] Filters: `?interactive=true`, `?compact=true`, `?selector=`, `?depth=`
+- [ ] `POST /snapshot/click {"ref":"@e2"}` → klik via @ref
+- [ ] `POST /snapshot/fill {"ref":"@e3","value":"..."}` → fill via @ref
+- [ ] `src/snapshot/manager.ts` + `src/snapshot/types.ts`
+
+### 7.2 /network/mock — Network Interception & Mocking
+- [ ] `POST /network/mock` → request intercepteren + fake response
+- [ ] `POST /network/mock {"abort":true}` → requests blokkeren
+- [ ] `GET /network/mocks` → actieve mocks tonen
+- [ ] `POST /network/unmock` + `POST /network/mock-clear`
+- [ ] CDP: Fetch.enable + Fetch.fulfillRequest + Fetch.continueRequest
+- [ ] `src/network/mocker.ts` + `src/network/types.ts`
+
+### 7.3 /sessions — Multi-Session Isolatie
+- [ ] `POST /sessions/create {"name":"agent1"}` → eigen Electron partition
+- [ ] `GET /sessions/list` → alle sessies + actieve
+- [ ] `POST /sessions/switch` + `POST /sessions/destroy`
+- [ ] `POST /sessions/state/save` + `/sessions/state/load` (AES-256-GCM)
+- [ ] `X-Session` header op alle bestaande endpoints
+- [ ] Robin's sessie (`default`) altijd onaangetast
+- [ ] `src/sessions/manager.ts` + `src/sessions/state.ts`
+
+### 7.4 tandem CLI — Wrapper Package
+- [ ] `cli/index.ts` — argument parsing (commander.js)
+- [ ] Commands: `open`, `snapshot`, `click`, `fill`, `eval`, `screenshot`, `cookies`, `session`
+- [ ] `--session <name>` flag → X-Session header
+- [ ] Npm package: `@hydro13/tandem-cli`
+- [ ] `cli/client.ts` — HTTP client naar localhost:8765
+
+---
+
 ## Architectuur Notities
 
 ```
