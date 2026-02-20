@@ -161,27 +161,27 @@ TOKEN=$(cat ~/.tandem/api-token)
 
 ### Sessie 4.1: CLI — alle commands
 
-- [ ] `cli/package.json` + `cli/tsconfig.json` (aparte TypeScript config)
-- [ ] Root `tsconfig.json` aanpassen: `"cli"` toevoegen aan exclude
-- [ ] `cli/client.ts` — HTTP client naar localhost:8765 (Bearer auth)
-- [ ] `cli/index.ts` — commander.js + `#!/usr/bin/env node` + globale `--session` optie
-- [ ] `tandem open <url>` → POST /navigate
-- [ ] `tandem snapshot [--interactive] [--compact] [--selector <s>] [--depth <n>]`
-- [ ] `tandem click <sel-or-@ref>` (detecteer @-prefix → /snapshot/click of /click)
-- [ ] `tandem fill <sel-or-@ref> <text>`
-- [ ] `tandem eval <javascript>`
-- [ ] `tandem screenshot [path]` (base64 → `Buffer.from(b64, 'base64')` → file)
-- [ ] `tandem cookies` + `tandem cookies set <name> <value>`
-- [ ] `tandem session list/create/switch/destroy`
-- [ ] `tandem --session <name> <command>` → X-Session header
-- [ ] `tandem --help` + `tandem <command> --help`
-- [ ] `tandem --version`
-- [ ] `cd cli && npx tsc` — zero errors
-- [ ] Root `npx tsc` — zero errors (geen conflict met cli/)
-- [ ] Test: `tandem open example.com` → navigeert
-- [ ] Test: `tandem snapshot -i` → interactive tree
-- [ ] Test: `tandem click @e2` → klik via ref
-- [ ] Test: `tandem --session agent1 open x.com` → in agent1 sessie
+- [x] `cli/package.json` + `cli/tsconfig.json` (aparte TypeScript config) _(2026-02-21, sessie 4.1)_
+- [x] Root `tsconfig.json` aanpassen: `"cli"` toevoegen aan exclude _(2026-02-21, sessie 4.1)_
+- [x] `cli/client.ts` — HTTP client naar localhost:8765 (Bearer auth) _(2026-02-21, sessie 4.1)_
+- [x] `cli/index.ts` — commander.js + `#!/usr/bin/env node` + globale `--session` optie _(2026-02-21, sessie 4.1)_
+- [x] `tandem open <url>` → POST /navigate _(2026-02-21, sessie 4.1)_
+- [x] `tandem snapshot [--interactive] [--compact] [--selector <s>] [--depth <n>]` _(2026-02-21, sessie 4.1)_
+- [x] `tandem click <sel-or-@ref>` (detecteer @-prefix → /snapshot/click of /click) _(2026-02-21, sessie 4.1)_
+- [x] `tandem fill <sel-or-@ref> <text>` _(2026-02-21, sessie 4.1)_
+- [x] `tandem eval <javascript>` _(2026-02-21, sessie 4.1)_
+- [x] `tandem screenshot [path]` (raw PNG → Buffer.from(arrayBuffer) → file) _(2026-02-21, sessie 4.1)_
+- [x] `tandem cookies` + `tandem cookies set <name> <value>` _(2026-02-21, sessie 4.1)_
+- [x] `tandem session list/create/switch/destroy` _(2026-02-21, sessie 4.1)_
+- [x] `tandem --session <name> <command>` → X-Session header _(2026-02-21, sessie 4.1)_
+- [x] `tandem --help` + `tandem <command> --help` _(2026-02-21, sessie 4.1)_
+- [x] `tandem --version` _(2026-02-21, sessie 4.1)_
+- [x] `cd cli && npx tsc` — zero errors _(2026-02-21, sessie 4.1)_
+- [x] Root `npx tsc` — zero errors (geen conflict met cli/) _(2026-02-21, sessie 4.1)_
+- [x] Test: `tandem open example.com` → navigeert _(2026-02-21, sessie 4.1)_
+- [x] Test: `tandem snapshot -i` → interactive tree _(2026-02-21, sessie 4.1)_
+- [x] Test: `tandem click @e2` → klik via ref _(2026-02-21, sessie 4.1)_
+- [x] Test: `tandem --session agent1 open x.com` → in agent1 sessie _(2026-02-21, sessie 4.1)_
 - [ ] Commit: `feat: tandem CLI wrapper (@hydro13/tandem-cli)`
 
 ---
