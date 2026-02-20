@@ -41,17 +41,17 @@ TOKEN=$(cat ~/.tandem/api-token)
 
 ### Sessie 1.2: Filters + @ref interactie
 
-- [ ] `GET /snapshot?compact=true` — lege structurele nodes weggooien
-- [ ] `GET /snapshot?selector=%23main` — scope via `DOM.querySelector` + subtree
-- [ ] `GET /snapshot?depth=3` — max diepte beperken
-- [ ] `POST /snapshot/click {"ref":"@e2"}` — klik via @ref (kopieer patroon van `/click` endpoint)
-- [ ] `POST /snapshot/fill {"ref":"@e3","value":"test"}` — fill via @ref (kopieer patroon van `/type` endpoint)
-- [ ] `GET /snapshot/text?ref=@e1` — tekst ophalen via @ref
-- [ ] Refs resetten bij navigatie (`did-navigate` event)
-- [ ] `npx tsc` — zero errors
+- [x] `GET /snapshot?compact=true` — lege structurele nodes weggooien _(2026-02-21, sessie 1.2)_
+- [x] `GET /snapshot?selector=%23main` — scope via `DOM.querySelector` + subtree _(2026-02-21, sessie 1.2)_
+- [x] `GET /snapshot?depth=3` — max diepte beperken _(2026-02-21, sessie 1.2)_
+- [x] `POST /snapshot/click {"ref":"@e2"}` — klik via @ref (kopieer patroon van `/click` endpoint) _(2026-02-21, sessie 1.2)_
+- [x] `POST /snapshot/fill {"ref":"@e3","value":"test"}` — fill via @ref (kopieer patroon van `/type` endpoint) _(2026-02-21, sessie 1.2)_
+- [x] `GET /snapshot/text?ref=@e1` — tekst ophalen via @ref _(2026-02-21, sessie 1.2)_
+- [x] Refs resetten bij navigatie (`Page.frameNavigated` CDP subscriber) _(2026-02-21, sessie 1.2)_
+- [x] `npx tsc` — zero errors _(2026-02-21, sessie 1.2)_
 - [ ] Test: `curl -X POST -H "Authorization: Bearer $TOKEN" localhost:8765/snapshot/click -H "Content-Type: application/json" -d '{"ref":"@e1"}'`
 - [ ] Test: refs stabiel op zelfde pagina, reset na navigatie
-- [ ] Commit: `feat: /snapshot filters + @ref click/fill/text`
+- [x] Commit: `feat: /snapshot filters + @ref click/fill/text`
 
 ---
 

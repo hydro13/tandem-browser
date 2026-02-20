@@ -1,5 +1,6 @@
 export interface AccessibilityNode {
   nodeId: string;
+  backendDOMNodeId?: number;  // maps to DOM.BackendNodeId for click/fill/text
   role: string;
   name?: string;
   ref?: string;           // "@e1", "@e2", etc.

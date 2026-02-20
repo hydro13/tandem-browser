@@ -2362,8 +2362,45 @@ export class TandemAPI {
     this.app.get('/snapshot', async (req: Request, res: Response) => {
       try {
         const interactive = req.query.interactive === 'true';
-        const result = await this.snapshotManager.getSnapshot({ interactive });
+        const compact = req.query.compact === 'true';
+        const selector = req.query.selector as string | undefined;
+        const depthStr = req.query.depth as string | undefined;
+        const depth = depthStr ? parseInt(depthStr, 10) : undefined;
+        const result = await this.snapshotManager.getSnapshot({ interactive, compact, selector, depth });
         res.json({ ok: true, snapshot: result.text, count: result.count, url: result.url });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/snapshot/click', async (req: Request, res: Response) => {
+      const { ref } = req.body;
+      if (!ref) { res.status(400).json({ error: 'ref required (e.g. "@e1")' }); return; }
+      try {
+        await this.snapshotManager.clickRef(ref);
+        res.json({ ok: true, ref });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/snapshot/fill', async (req: Request, res: Response) => {
+      const { ref, value } = req.body;
+      if (!ref || value === undefined) { res.status(400).json({ error: 'ref and value required' }); return; }
+      try {
+        await this.snapshotManager.fillRef(ref, value);
+        res.json({ ok: true, ref });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.get('/snapshot/text', async (req: Request, res: Response) => {
+      const ref = req.query.ref as string;
+      if (!ref) { res.status(400).json({ error: 'ref query parameter required (e.g. "?ref=@e1")' }); return; }
+      try {
+        const text = await this.snapshotManager.getTextRef(ref);
+        res.json({ ok: true, ref, text });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

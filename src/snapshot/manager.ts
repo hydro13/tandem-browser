@@ -19,11 +19,34 @@ const INTERACTIVE_ROLES = new Set([
  */
 export class SnapshotManager {
   private refMap: RefMap = {};
+  private refBackendNodeMap: Map<string, number> = new Map();
   private refCounter = 0;
   private devtools: DevToolsManager;
+  private subscribedToNavigation = false;
 
   constructor(devtools: DevToolsManager) {
     this.devtools = devtools;
+    this.setupNavigationReset();
+  }
+
+  /**
+   * Subscribe to Page.frameNavigated to reset refs on navigation.
+   */
+  private setupNavigationReset(): void {
+    if (this.subscribedToNavigation) return;
+    this.devtools.subscribe({
+      name: 'snapshot-nav-reset',
+      events: ['Page.frameNavigated'],
+      handler: (_method: string, params: Record<string, any>) => {
+        // Only reset on top-level navigation (not iframes)
+        if (!params.frame?.parentId) {
+          this.refMap = {};
+          this.refBackendNodeMap.clear();
+          this.refCounter = 0;
+        }
+      },
+    });
+    this.subscribedToNavigation = true;
   }
 
   /**
@@ -38,26 +61,41 @@ export class SnapshotManager {
     const rawNodes: Record<string, any>[] = result.nodes || [];
 
     // Build tree from flat CDP node list
-    const tree = this.buildTree(rawNodes);
+    let tree = this.buildTree(rawNodes);
 
-    // Filter if requested
-    let filtered = tree;
+    // Selector filter: scope to a CSS selector's subtree
+    if (options.selector) {
+      tree = await this.filterBySelector(tree, options.selector);
+    }
+
+    // Interactive filter
     if (options.interactive) {
-      filtered = this.filterInteractive(filtered);
+      tree = this.filterInteractive(tree);
+    }
+
+    // Compact filter: remove empty structural nodes
+    if (options.compact) {
+      tree = this.filterCompact(tree);
+    }
+
+    // Depth filter
+    if (options.depth !== undefined) {
+      tree = this.filterByDepth(tree, options.depth);
     }
 
     // Reset refs for this snapshot
     this.refMap = {};
+    this.refBackendNodeMap.clear();
     this.refCounter = 0;
 
     // Assign @refs to all nodes
-    this.assignRefs(filtered);
+    this.assignRefs(tree);
 
     // Format as text
-    const text = this.formatTree(filtered);
+    const text = this.formatTree(tree);
 
     // Count nodes
-    const count = this.countNodes(filtered);
+    const count = this.countNodes(tree);
 
     // Get current URL
     let url = '';
@@ -75,11 +113,157 @@ export class SnapshotManager {
   }
 
   /**
-   * Get the current ref map (for click/fill/text operations in session 1.2).
+   * Click an element by @ref.
+   * Resolves ref → backendDOMNodeId → DOM.getBoxModel → center coordinates → sendInputEvent.
+   */
+  async clickRef(ref: string): Promise<void> {
+    const backendNodeId = this.refBackendNodeMap.get(ref);
+    if (backendNodeId === undefined) {
+      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
+    }
+
+    // Get the box model to find element coordinates
+    await this.devtools.sendCommand('DOM.enable', {});
+    const box = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+    if (!box.model?.content) {
+      throw new Error(`Cannot get box model for ${ref}`);
+    }
+
+    // Calculate center from content quad (8 values: x1,y1,x2,y2,x3,y3,x4,y4)
+    const c = box.model.content;
+    const x = Math.round((c[0] + c[2] + c[4] + c[6]) / 4);
+    const y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
+
+    // Get WebContents via ensureAttached for sendInputEvent
+    const wc = await this.devtools.ensureAttached();
+    if (!wc) throw new Error('No active tab');
+
+    // Scroll element into view first
+    try {
+      const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+      if (resolved.object?.objectId) {
+        await this.devtools.sendCommand('Runtime.callFunctionOn', {
+          objectId: resolved.object.objectId,
+          functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }',
+          returnByValue: true,
+        });
+        // Re-get box model after scroll
+        const box2 = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+        if (box2.model?.content) {
+          const c2 = box2.model.content;
+          const x2 = Math.round((c2[0] + c2[2] + c2[4] + c2[6]) / 4);
+          const y2 = Math.round((c2[1] + c2[3] + c2[5] + c2[7]) / 4);
+          // Use updated coordinates
+          this.performClick(wc, x2, y2);
+          return;
+        }
+      }
+    } catch {
+      // fallback to original coordinates
+    }
+
+    this.performClick(wc, x, y);
+  }
+
+  /**
+   * Fill an element by @ref with text.
+   * Clicks to focus, then types char-by-char via sendInputEvent.
+   */
+  async fillRef(ref: string, value: string): Promise<void> {
+    const backendNodeId = this.refBackendNodeMap.get(ref);
+    if (backendNodeId === undefined) {
+      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
+    }
+
+    // Get box model for clicking to focus
+    await this.devtools.sendCommand('DOM.enable', {});
+    const box = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+    if (!box.model?.content) {
+      throw new Error(`Cannot get box model for ${ref}`);
+    }
+
+    const c = box.model.content;
+    let x = Math.round((c[0] + c[2] + c[4] + c[6]) / 4);
+    let y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
+
+    const wc = await this.devtools.ensureAttached();
+    if (!wc) throw new Error('No active tab');
+
+    // Scroll into view and re-get coordinates
+    try {
+      const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+      if (resolved.object?.objectId) {
+        await this.devtools.sendCommand('Runtime.callFunctionOn', {
+          objectId: resolved.object.objectId,
+          functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }',
+          returnByValue: true,
+        });
+        const box2 = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+        if (box2.model?.content) {
+          const c2 = box2.model.content;
+          x = Math.round((c2[0] + c2[2] + c2[4] + c2[6]) / 4);
+          y = Math.round((c2[1] + c2[3] + c2[5] + c2[7]) / 4);
+        }
+      }
+    } catch {
+      // use original coordinates
+    }
+
+    // Click to focus
+    this.performClick(wc, x, y);
+
+    // Small delay to ensure focus
+    await this.delay(100);
+
+    // Select all (Cmd+A) then delete to clear existing content
+    wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers: ['meta'] });
+    wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers: ['meta'] });
+    await this.delay(50);
+    wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
+    wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
+    await this.delay(50);
+
+    // Type each character
+    for (const char of value) {
+      wc.sendInputEvent({ type: 'char', keyCode: char });
+      await this.delay(30 + Math.random() * 50);
+    }
+  }
+
+  /**
+   * Get the text content of an element by @ref.
+   */
+  async getTextRef(ref: string): Promise<string> {
+    const backendNodeId = this.refBackendNodeMap.get(ref);
+    if (backendNodeId === undefined) {
+      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
+    }
+
+    await this.devtools.sendCommand('DOM.enable', {});
+    const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+    if (!resolved.object?.objectId) {
+      throw new Error(`Cannot resolve DOM node for ${ref}`);
+    }
+
+    const textResult = await this.devtools.sendCommand('Runtime.callFunctionOn', {
+      objectId: resolved.object.objectId,
+      functionDeclaration: 'function() { return this.innerText || this.textContent || ""; }',
+      returnByValue: true,
+    });
+
+    return textResult.result?.value || '';
+  }
+
+  /**
+   * Get the current ref map (for debugging / API responses).
    */
   getRefMap(): RefMap {
     return this.refMap;
   }
+
+  // ═══════════════════════════════════════════════
+  // Private — Tree building
+  // ═══════════════════════════════════════════════
 
   /**
    * Build a tree structure from CDP's flat AXNode list.
@@ -115,6 +299,7 @@ export class SnapshotManager {
 
       return {
         nodeId: raw.nodeId,
+        backendDOMNodeId: raw.backendDOMNodeId,
         role,
         name: name || undefined,
         value: value || undefined,
@@ -130,12 +315,118 @@ export class SnapshotManager {
     return [root];
   }
 
+  // ═══════════════════════════════════════════════
+  // Private — Filters
+  // ═══════════════════════════════════════════════
+
   /**
-   * Extract a string property from a CDP AXNode.
-   * CDP AXNodes have properties as { name: "role", value: { type: "role", value: "button" } }
+   * Filter tree to only include interactive elements and their ancestors.
    */
+  private filterInteractive(nodes: AccessibilityNode[]): AccessibilityNode[] {
+    const result: AccessibilityNode[] = [];
+
+    for (const node of nodes) {
+      const filteredChildren = this.filterInteractive(node.children);
+      const isInteractive = INTERACTIVE_ROLES.has(node.role);
+
+      if (isInteractive || filteredChildren.length > 0) {
+        result.push({
+          ...node,
+          children: isInteractive ? node.children : filteredChildren,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Filter compact: remove nodes that have no name, are not interactive,
+   * and have no meaningful children (i.e. structural-only containers).
+   */
+  private filterCompact(nodes: AccessibilityNode[]): AccessibilityNode[] {
+    const result: AccessibilityNode[] = [];
+
+    for (const node of nodes) {
+      const filteredChildren = this.filterCompact(node.children);
+      const hasName = !!node.name;
+      const isInteractive = INTERACTIVE_ROLES.has(node.role);
+      const hasValue = !!node.value;
+      const hasMeaningfulChildren = filteredChildren.length > 0;
+
+      if (hasName || isInteractive || hasValue || hasMeaningfulChildren) {
+        result.push({
+          ...node,
+          children: filteredChildren,
+        });
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Filter by depth: limit tree to maxDepth levels.
+   */
+  private filterByDepth(nodes: AccessibilityNode[], maxDepth: number, currentDepth: number = 0): AccessibilityNode[] {
+    if (currentDepth >= maxDepth) return [];
+
+    return nodes.map(node => ({
+      ...node,
+      children: this.filterByDepth(node.children, maxDepth, currentDepth + 1),
+    }));
+  }
+
+  /**
+   * Filter by CSS selector: find the DOM element matching the selector,
+   * then return only the AX subtree rooted at that element.
+   */
+  private async filterBySelector(tree: AccessibilityNode[], selector: string): Promise<AccessibilityNode[]> {
+    // Use CDP DOM.querySelector to find the target element
+    await this.devtools.sendCommand('DOM.enable', {});
+    const doc = await this.devtools.sendCommand('DOM.getDocument', { depth: 0 });
+    const queryResult = await this.devtools.sendCommand('DOM.querySelector', {
+      nodeId: doc.root.nodeId,
+      selector,
+    });
+
+    if (!queryResult.nodeId) {
+      throw new Error(`Selector not found: ${selector}`);
+    }
+
+    // Get the backendNodeId of the matched element
+    const nodeInfo = await this.devtools.sendCommand('DOM.describeNode', {
+      nodeId: queryResult.nodeId,
+    });
+    const targetBackendId = nodeInfo.node?.backendNodeId;
+    if (!targetBackendId) {
+      throw new Error(`Cannot resolve selector: ${selector}`);
+    }
+
+    // Find the AX node with this backendDOMNodeId and return its subtree
+    const found = this.findByBackendNodeId(tree, targetBackendId);
+    return found ? [found] : [];
+  }
+
+  /**
+   * Find an AX node by its backendDOMNodeId (recursive).
+   */
+  private findByBackendNodeId(nodes: AccessibilityNode[], targetId: number): AccessibilityNode | null {
+    for (const node of nodes) {
+      if (node.backendDOMNodeId === targetId) {
+        return node;
+      }
+      const found = this.findByBackendNodeId(node.children, targetId);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // ═══════════════════════════════════════════════
+  // Private — Property extraction from CDP AXNodes
+  // ═══════════════════════════════════════════════
+
   private extractProperty(raw: Record<string, any>, propName: string): string {
-    // Direct property (role, name, value are top-level in AXNode)
     if (propName === 'role' && raw.role) {
       return raw.role.value || '';
     }
@@ -149,7 +440,6 @@ export class SnapshotManager {
       return raw.description.value || '';
     }
 
-    // Check properties array
     if (raw.properties) {
       for (const prop of raw.properties) {
         if (prop.name === propName) {
@@ -183,40 +473,23 @@ export class SnapshotManager {
     return undefined;
   }
 
-  /**
-   * Filter tree to only include interactive elements and their ancestors.
-   * Keeps the tree structure but removes non-interactive leaf branches.
-   */
-  private filterInteractive(nodes: AccessibilityNode[]): AccessibilityNode[] {
-    const result: AccessibilityNode[] = [];
-
-    for (const node of nodes) {
-      const filteredChildren = this.filterInteractive(node.children);
-      const isInteractive = INTERACTIVE_ROLES.has(node.role);
-
-      if (isInteractive || filteredChildren.length > 0) {
-        result.push({
-          ...node,
-          children: isInteractive ? node.children : filteredChildren,
-        });
-      }
-    }
-
-    return result;
-  }
+  // ═══════════════════════════════════════════════
+  // Private — Ref assignment & formatting
+  // ═══════════════════════════════════════════════
 
   /**
    * Assign @refs (@e1, @e2, ...) to all nodes in the tree.
-   * Refs are stored in the refMap for later use by click/fill/text.
    */
   private assignRefs(nodes: AccessibilityNode[]): void {
     for (const node of nodes) {
-      // Assign ref to nodes that have a name or are interactive
       if (node.name || INTERACTIVE_ROLES.has(node.role)) {
         this.refCounter++;
         const ref = `@e${this.refCounter}`;
         node.ref = ref;
         this.refMap[ref] = node.nodeId;
+        if (node.backendDOMNodeId !== undefined) {
+          this.refBackendNodeMap.set(ref, node.backendDOMNodeId);
+        }
       }
 
       this.assignRefs(node.children);
@@ -225,11 +498,6 @@ export class SnapshotManager {
 
   /**
    * Format the tree as indented text (same style as agent-browser).
-   *
-   * Example:
-   * - document [document]
-   *   - heading "Tandem Browser" [@e1] level=1
-   *   - button "Sign In" [@e2]
    */
   private formatTree(nodes: AccessibilityNode[], indent: number = 0): string {
     const lines: string[] = [];
@@ -238,17 +506,14 @@ export class SnapshotManager {
     for (const node of nodes) {
       let line = `${prefix}- ${node.role}`;
 
-      // Add name in quotes
       if (node.name) {
         line += ` "${node.name}"`;
       }
 
-      // Add @ref
       if (node.ref) {
         line += ` [${node.ref}]`;
       }
 
-      // Add extra attributes
       const attrs: string[] = [];
       if (node.focused) attrs.push('(focused)');
       if (node.level !== undefined) attrs.push(`level=${node.level}`);
@@ -260,7 +525,6 @@ export class SnapshotManager {
 
       lines.push(line);
 
-      // Recurse into children
       if (node.children.length > 0) {
         lines.push(this.formatTree(node.children, indent + 1));
       }
@@ -281,11 +545,31 @@ export class SnapshotManager {
     return count;
   }
 
+  // ═══════════════════════════════════════════════
+  // Private — Input helpers
+  // ═══════════════════════════════════════════════
+
+  /**
+   * Perform a click at (x, y) using sendInputEvent (Event.isTrusted = true).
+   * Same pattern as humanizedClick in src/input/humanized.ts.
+   */
+  private performClick(wc: Electron.WebContents, x: number, y: number): void {
+    wc.sendInputEvent({ type: 'mouseMove', x, y });
+    wc.sendInputEvent({ type: 'mouseDown', x, y, button: 'left', clickCount: 1 });
+    wc.sendInputEvent({ type: 'mouseUp', x, y, button: 'left', clickCount: 1 });
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
   /**
    * Cleanup — called from will-quit handler.
    */
   destroy(): void {
     this.refMap = {};
+    this.refBackendNodeMap.clear();
     this.refCounter = 0;
+    this.devtools.unsubscribe('snapshot-nav-reset');
   }
 }
