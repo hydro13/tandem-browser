@@ -1282,11 +1282,12 @@
      */
     window.__tandemTabs = {
       /** Create a new webview, return its webContentsId */
-      createTab(tabId, url) {
+      createTab(tabId, url, partition) {
+        partition = partition || 'persist:tandem';
         const wv = document.createElement('webview');
         wv.setAttribute('src', url);
         wv.setAttribute('allowpopups', '');
-        wv.setAttribute('partition', 'persist:tandem');
+        wv.setAttribute('partition', partition);
         wv.dataset.tabId = tabId;
         container.appendChild(wv);
 
@@ -3006,8 +3007,8 @@
 
     // Patch __tandemTabs.createTab to add activity tracking on webview events
     const _origCreateTab = window.__tandemTabs.createTab;
-    window.__tandemTabs.createTab = function(tabId, url) {
-      const result = _origCreateTab.call(window.__tandemTabs, tabId, url);
+    window.__tandemTabs.createTab = function(tabId, url, partition) {
+      const result = _origCreateTab.call(window.__tandemTabs, tabId, url, partition);
       // After tab is created, wire activity events
       const entry = tabs.get(tabId);
       if (entry && entry.webview) {
@@ -3626,8 +3627,8 @@
 
     // Wire find events for existing and new tabs
     const _origCreateTab2 = window.__tandemTabs.createTab;
-    window.__tandemTabs.createTab = function(tabId, url) {
-      const result = _origCreateTab2.call(window.__tandemTabs, tabId, url);
+    window.__tandemTabs.createTab = function(tabId, url, partition) {
+      const result = _origCreateTab2.call(window.__tandemTabs, tabId, url, partition);
       const entry = tabs.get(tabId);
       if (entry && entry.webview) wireFindEvents(entry.webview);
       return result;

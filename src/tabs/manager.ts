@@ -13,6 +13,7 @@ export interface Tab {
   createdAt: number;
   source: TabSource;
   pinned: boolean;
+  partition: string;
 }
 
 export interface TabGroup {
@@ -66,12 +67,12 @@ export class TabManager {
   }
 
   /** Open a new tab */
-  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin'): Promise<Tab> {
+  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem'): Promise<Tab> {
     const id = this.nextId();
 
     // Tell renderer to create a webview and return its webContentsId
     const webContentsId: number = await this.win.webContents.executeJavaScript(`
-      window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)})
+      window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)}, ${JSON.stringify(partition)})
     `);
 
     const tab: Tab = {
@@ -85,6 +86,7 @@ export class TabManager {
       createdAt: Date.now(),
       source,
       pinned: false,
+      partition,
     };
 
     this.tabs.set(id, tab);
@@ -296,6 +298,7 @@ export class TabManager {
       createdAt: Date.now(),
       source: 'robin',
       pinned: false,
+      partition: 'persist:tandem',
     };
     this.tabs.set(id, tab);
     this.activeTabId = id;

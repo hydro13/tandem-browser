@@ -96,20 +96,20 @@ TOKEN=$(cat ~/.tandem/api-token)
 > Geen nieuwe bestanden of endpoints — alleen bestaande code aanpassen.
 > Na deze sessie werkt alles nog exact hetzelfde (default = 'persist:tandem').
 
-- [ ] `shell/index.html` regel ~1285: `createTab(tabId, url)` → `createTab(tabId, url, partition)`
-- [ ] `shell/index.html` regel ~1289: `'persist:tandem'` → `partition || 'persist:tandem'`
-- [ ] `shell/index.html` regel ~3009: monkey-patch 1 forward partition: `function(tabId, url, partition)`
-- [ ] `shell/index.html` regel ~3010: `_origCreateTab.call(window.__tandemTabs, tabId, url, partition)`
-- [ ] `shell/index.html` regel ~3629: monkey-patch 2 forward partition: `function(tabId, url, partition)`
-- [ ] `shell/index.html` regel ~3630: `_origCreateTab2.call(window.__tandemTabs, tabId, url, partition)`
-- [ ] Initial tab (regel ~1461) — NIET WIJZIGEN (altijd Robin's sessie)
-- [ ] `src/tabs/manager.ts` Tab interface: voeg `partition: string` toe
-- [ ] `src/tabs/manager.ts` openTab: voeg `partition` parameter toe (default `'persist:tandem'`)
-- [ ] `src/tabs/manager.ts` openTab: pas executeJavaScript call aan om partition mee te geven
-- [ ] `src/tabs/manager.ts` registerInitialTab: voeg `partition: 'persist:tandem'` toe
-- [ ] `npx tsc` — zero errors
-- [ ] `npm start` — app start normaal, tabs werken nog exact als voorheen
-- [ ] Test: `curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/tabs/list` (tabs hebben partition veld)
+- [x] `shell/index.html` regel ~1285: `createTab(tabId, url)` → `createTab(tabId, url, partition)` _(2026-02-21, sessie 3.1)_
+- [x] `shell/index.html` regel ~1289: `'persist:tandem'` → `partition || 'persist:tandem'` _(2026-02-21, sessie 3.1)_
+- [x] `shell/index.html` regel ~3009: monkey-patch 1 forward partition: `function(tabId, url, partition)` _(2026-02-21, sessie 3.1)_
+- [x] `shell/index.html` regel ~3010: `_origCreateTab.call(window.__tandemTabs, tabId, url, partition)` _(2026-02-21, sessie 3.1)_
+- [x] `shell/index.html` regel ~3629: monkey-patch 2 forward partition: `function(tabId, url, partition)` _(2026-02-21, sessie 3.1)_
+- [x] `shell/index.html` regel ~3630: `_origCreateTab2.call(window.__tandemTabs, tabId, url, partition)` _(2026-02-21, sessie 3.1)_
+- [x] Initial tab (regel ~1461) — NIET WIJZIGEN (altijd Robin's sessie) _(2026-02-21, sessie 3.1)_
+- [x] `src/tabs/manager.ts` Tab interface: voeg `partition: string` toe _(2026-02-21, sessie 3.1)_
+- [x] `src/tabs/manager.ts` openTab: voeg `partition` parameter toe (default `'persist:tandem'`) _(2026-02-21, sessie 3.1)_
+- [x] `src/tabs/manager.ts` openTab: pas executeJavaScript call aan om partition mee te geven _(2026-02-21, sessie 3.1)_
+- [x] `src/tabs/manager.ts` registerInitialTab: voeg `partition: 'persist:tandem'` toe _(2026-02-21, sessie 3.1)_
+- [x] `npx tsc` — zero errors _(2026-02-21, sessie 3.1)_
+- [x] `npm start` — app start normaal, tabs werken nog exact als voorheen _(2026-02-21, sessie 3.1)_
+- [x] Test: `curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/tabs/list` (tabs hebben partition veld) _(2026-02-21, sessie 3.1)_
 - [ ] Commit: `refactor: make partition configurable in tab creation stack`
 
 ### Sessie 3.2: SessionManager + CRUD endpoints
