@@ -110,26 +110,26 @@ TOKEN=$(cat ~/.tandem/api-token)
 - [x] `npx tsc` — zero errors _(2026-02-21, sessie 3.1)_
 - [x] `npm start` — app start normaal, tabs werken nog exact als voorheen _(2026-02-21, sessie 3.1)_
 - [x] Test: `curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/tabs/list` (tabs hebben partition veld) _(2026-02-21, sessie 3.1)_
-- [ ] Commit: `refactor: make partition configurable in tab creation stack`
+- [x] Commit: `refactor: make partition configurable in tab creation stack` _(2026-02-21, sessie 3.1)_
 
 ### Sessie 3.2: SessionManager + CRUD endpoints
 
 > **Vereist:** Sessie 3.1 compleet
 
-- [ ] `src/sessions/types.ts` — interfaces (Session, SessionState)
-- [ ] `src/sessions/manager.ts` — SessionManager class
-- [ ] **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler
-- [ ] `create(name)` — nieuwe Electron partition (`persist:session-{name}`)
-- [ ] `list()` — alle sessies + welke actief
-- [ ] `setActive(name)` — actieve API sessie wisselen
-- [ ] `destroy(name)` — tabs sluiten, gooit error bij "default"
-- [ ] `POST /sessions/create {"name":"agent1"}`
-- [ ] `GET /sessions/list`
-- [ ] `POST /sessions/switch {"name":"agent1"}`
-- [ ] `POST /sessions/destroy {"name":"agent1"}`
-- [ ] `npx tsc` — zero errors
-- [ ] Test: sessie aanmaken, tonen, verwijderen
-- [ ] Test: Robin's sessie onaangetast + kan niet verwijderd worden
+- [x] `src/sessions/types.ts` — interfaces (Session, SessionState) _(2026-02-21, sessie 3.2)_
+- [x] `src/sessions/manager.ts` — SessionManager class _(2026-02-21, sessie 3.2)_
+- [x] **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler _(2026-02-21, sessie 3.2)_
+- [x] `create(name)` — nieuwe Electron partition (`persist:session-{name}`) _(2026-02-21, sessie 3.2)_
+- [x] `list()` — alle sessies + welke actief _(2026-02-21, sessie 3.2)_
+- [x] `setActive(name)` — actieve API sessie wisselen _(2026-02-21, sessie 3.2)_
+- [x] `destroy(name)` — tabs sluiten, gooit error bij "default" _(2026-02-21, sessie 3.2)_
+- [x] `POST /sessions/create {"name":"agent1"}` _(2026-02-21, sessie 3.2)_
+- [x] `GET /sessions/list` _(2026-02-21, sessie 3.2)_
+- [x] `POST /sessions/switch {"name":"agent1"}` _(2026-02-21, sessie 3.2)_
+- [x] `POST /sessions/destroy {"name":"agent1"}` _(2026-02-21, sessie 3.2)_
+- [x] `npx tsc` — zero errors _(2026-02-21, sessie 3.2)_
+- [x] Test: sessie aanmaken, tonen, verwijderen _(2026-02-21, sessie 3.2)_
+- [x] Test: Robin's sessie onaangetast + kan niet verwijderd worden _(2026-02-21, sessie 3.2)_
 - [ ] Commit: `feat: /sessions create/list/switch/destroy`
 
 ### Sessie 3.3: State save/load + X-Session header

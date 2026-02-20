@@ -40,6 +40,7 @@ import { CopilotStream } from '../activity/copilot-stream';
 import { SecurityManager } from '../security/security-manager';
 import { SnapshotManager } from '../snapshot/manager';
 import { NetworkMocker } from '../network/mocker';
+import { SessionManager } from '../sessions/manager';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -95,6 +96,7 @@ export interface TandemAPIOptions {
   securityManager?: SecurityManager;
   snapshotManager: SnapshotManager;
   networkMocker: NetworkMocker;
+  sessionManager: SessionManager;
 }
 
 export class TandemAPI {
@@ -132,6 +134,7 @@ export class TandemAPI {
   private securityManager: SecurityManager | null;
   private snapshotManager: SnapshotManager;
   private networkMocker: NetworkMocker;
+  private sessionManager: SessionManager;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -168,6 +171,7 @@ export class TandemAPI {
     this.securityManager = opts.securityManager || null;
     this.snapshotManager = opts.snapshotManager;
     this.networkMocker = opts.networkMocker;
+    this.sessionManager = opts.sessionManager;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -2492,6 +2496,66 @@ export class TandemAPI {
         res.json({ ok: true, ref, text });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // SESSIONS — Geïsoleerde Browser Sessies
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/sessions/list', async (_req: Request, res: Response) => {
+      try {
+        const sessions = this.sessionManager.list().map(s => ({
+          ...s,
+          tabs: this.tabManager.listTabs().filter(t => t.partition === s.partition).length,
+        }));
+        res.json({ ok: true, sessions, active: this.sessionManager.getActive() });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/sessions/create', async (req: Request, res: Response) => {
+      const { name, url } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const sess = this.sessionManager.create(name);
+        let tab = null;
+        if (url) {
+          tab = await this.tabManager.openTab(url, undefined, 'kees', sess.partition);
+        }
+        res.json({ ok: true, name: sess.name, partition: sess.partition, tab: tab || undefined });
+      } catch (e: any) {
+        res.status(400).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/sessions/switch', async (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        this.sessionManager.setActive(name);
+        res.json({ ok: true, active: name });
+      } catch (e: any) {
+        res.status(400).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/sessions/destroy', async (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const sess = this.sessionManager.get(name);
+        if (!sess) { res.status(404).json({ error: `Session '${name}' does not exist` }); return; }
+        // Close all tabs belonging to this session
+        const tabsToClose = this.tabManager.listTabs().filter(t => t.partition === sess.partition);
+        for (const tab of tabsToClose) {
+          await this.tabManager.closeTab(tab.id);
+        }
+        this.sessionManager.destroy(name);
+        res.json({ ok: true, name });
+      } catch (e: any) {
+        res.status(400).json({ error: e.message });
       }
     });
 
