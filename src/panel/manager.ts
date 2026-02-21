@@ -158,7 +158,7 @@ export class PanelManager {
     const url = config.webhook.url.replace(/\/$/, '');
 
     try {
-      const response = await fetch(`${url}/api/sessions/main/events`, {
+      const response = await fetch(`${url}/hooks/tandem`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
