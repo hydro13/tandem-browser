@@ -1,6 +1,12 @@
 # Changelog
 
-## [Unreleased] — 2026-02-11
+## [Unreleased] — 2026-02-21
+
+### 🐛 Bug Fixes
+
+- **Session state path**: save/load now uses `~/.tandem/sessions/` instead of Chrome userData dir
+
+## [2026-02-11]
 
 ### 🎙️ ClaroNote Integration — Native Voice-to-Text
 

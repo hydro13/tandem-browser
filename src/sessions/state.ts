@@ -1,5 +1,5 @@
 import { session } from 'electron';
-import { app } from 'electron';
+import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
@@ -8,7 +8,7 @@ export class StateManager {
   private stateDir: string;
 
   constructor() {
-    this.stateDir = path.join(app.getPath('userData'), 'sessions');
+    this.stateDir = path.join(os.homedir(), '.tandem', 'sessions');
     if (!fs.existsSync(this.stateDir)) {
       fs.mkdirSync(this.stateDir, { recursive: true });
     }
