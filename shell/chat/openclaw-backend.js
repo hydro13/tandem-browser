@@ -125,8 +125,8 @@ class OpenClawBackend {
           this._sendRequest('connect', {
             minProtocol: 3, maxProtocol: 3,
             client: { id: 'webchat', version: '1.0', platform: 'browser', mode: 'webchat', instanceId: crypto.randomUUID() },
-            role: 'operator',
-            scopes: ['operator.admin'],
+            role: 'user',
+            scopes: ['user.chat'],
             auth: { token: this._token },
             userAgent: navigator.userAgent,
             locale: navigator.language
