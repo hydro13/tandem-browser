@@ -21,6 +21,7 @@ const URL_LIST_SAFE_DOMAINS = new Set([
 
 export class NetworkShield {
   private blockedDomains: Set<string> = new Set();
+  private blockedIpOrigins: Set<string> = new Set();
   private db: SecurityDB;
   private blocklistDir: string;
 
@@ -149,6 +150,11 @@ export class NetworkShield {
               continue;
             }
             this.blockedDomains.add(domain);
+            // Store host:port for IP-based entries (O(1) lookup in checkUrl)
+            const isRawIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(domain) || /^\[[\da-fA-F:]+\]$/.test(domain);
+            if (isRawIP) {
+              this.blockedIpOrigins.add(url.host.toLowerCase());
+            }
             count++;
           }
         } catch {
@@ -192,7 +198,15 @@ export class NetworkShield {
 
   checkUrl(url: string): { blocked: boolean; reason?: string; source?: string } {
     try {
-      const domain = new URL(url).hostname;
+      const parsed = new URL(url);
+      const domain = parsed.hostname;
+
+      // Check IP-based origin (host:port) — O(1) Set lookup
+      const parsedHost = parsed.host.toLowerCase();
+      if (this.blockedIpOrigins.has(parsedHost)) {
+        return { blocked: true, reason: `IP origin in blocklist: ${parsedHost}`, source: 'blocklist_file' };
+      }
+
       return this.checkDomain(domain);
     } catch {
       return { blocked: false };
@@ -209,6 +223,7 @@ export class NetworkShield {
 
   reload(): void {
     this.blockedDomains.clear();
+    this.blockedIpOrigins.clear();
     this.loadBlocklists();
   }
 }

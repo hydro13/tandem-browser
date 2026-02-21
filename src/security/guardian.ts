@@ -131,6 +131,38 @@ export class Guardian {
         return { cancel: true };
       }
 
+      // 1b. Risk score check (raw IPs, non-standard ports) — skip internal addresses
+      const riskHost = this.extractDomain(url);
+      if (riskHost !== 'localhost' && riskHost !== '127.0.0.1' && riskHost !== '::1') {
+      const riskResult = this.computeRiskScore(url);
+      if (riskResult.score >= 30) {
+        const riskDomain = this.extractDomain(url) ?? url.substring(0, 100);
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: riskDomain,
+          tabId: null,
+          eventType: 'warned',
+          severity: riskResult.score >= 50 ? 'high' : 'medium',
+          category: 'network',
+          details: JSON.stringify({ url: url.substring(0, 200), riskScore: riskResult.score, reasons: riskResult.reasons }),
+          actionTaken: riskResult.score >= 65 ? 'auto_block' : 'flagged',
+        });
+        if (riskResult.score >= 65) {
+          this.stats.blocked++;
+          return { cancel: true };
+        }
+        if (this.gatekeeperWs && riskDomain !== 'localhost' && riskDomain !== '127.0.0.1') {
+          this.queueForGatekeeper(riskDomain, url, {
+            resourceType: (details as any).resourceType,
+            method: details.method,
+            referrer: details.referrer,
+            riskScore: riskResult.score,
+            riskReasons: riskResult.reasons,
+          });
+        }
+      }
+      }
+
       // 2. Domain trust + mode check
       const domain = this.extractDomain(url);
       if (domain) {
@@ -261,9 +293,13 @@ export class Guardian {
         const resourceType = (details as any).resourceType as string | undefined;
 
         // Only flag genuinely uncertain cases (target: ~5% of requests)
+        const isFirstVisit = !info || (info.visitCount ?? 0) <= 1;
+        const isNavigationToUnknown = isFirstVisit && resourceType === 'mainFrame';
+
         const isUncertain =
           (trust < 20 && trust > 5) ||  // Actively suspicious (trust lowered by previous events)
-          (mode === 'strict' && resourceType === 'script' && trust < 50);  // Script on strict-mode page with low trust
+          (mode === 'strict' && resourceType === 'script' && trust < 50) ||  // Script on strict-mode page with low trust
+          isNavigationToUnknown;  // First visit to any domain → AI review
 
         if (isUncertain) {
           this.queueForGatekeeper(domain, url, {
@@ -343,6 +379,28 @@ export class Guardian {
       });
     }
 
+    // Content-type mismatch detection (e.g. bin.sh served as application/zip)
+    const contentTypeHeader = responseHeaders['content-type']?.[0] || responseHeaders['Content-Type']?.[0] || '';
+    const contentType = contentTypeHeader.split(';')[0].trim().toLowerCase();
+    const urlPath = (() => { try { return new URL(details.url).pathname; } catch { return ''; } })();
+    const urlExt = urlPath.match(/\.([a-z0-9]+)$/i)?.[1]?.toLowerCase();
+
+    const SCRIPT_EXTENSIONS = new Set(['sh', 'py', 'rb', 'pl', 'ps1', 'bat', 'cmd', 'js', 'vbs']);
+    const BINARY_CONTENT_TYPES = new Set(['application/zip', 'application/octet-stream', 'application/x-msdownload', 'application/x-executable']);
+
+    if (urlExt && SCRIPT_EXTENSIONS.has(urlExt) && BINARY_CONTENT_TYPES.has(contentType)) {
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain,
+        tabId: null,
+        eventType: 'warned',
+        severity: 'high',
+        category: 'network',
+        details: JSON.stringify({ url: details.url.substring(0, 200), reason: 'content-type-mismatch', urlExtension: urlExt, contentType }),
+        actionTaken: 'flagged',
+      });
+    }
+
     // Flag third-party Set-Cookie in strict mode
     if (mode === 'strict') {
       const cookies = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
@@ -386,6 +444,30 @@ export class Guardian {
 
   setDefaultMode(mode: GuardianMode): void {
     this.defaultMode = mode;
+  }
+
+  // === Risk scoring ===
+
+  private computeRiskScore(url: string): { score: number; reasons: string[] } {
+    const reasons: string[] = [];
+    let score = 0;
+    try {
+      const parsed = new URL(url);
+      const hostname = parsed.hostname;
+      const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
+
+      const isRawIP = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname) ||
+        /^\[[\da-fA-F:]+\]$/.test(hostname);
+      if (isRawIP) { score += 40; reasons.push(`raw-ip:${hostname}`); }
+
+      const STANDARD_PORTS = new Set([80, 443, 8080, 8443]);
+      if (parsed.port && !STANDARD_PORTS.has(port)) { score += 25; reasons.push(`non-standard-port:${port}`); }
+
+      if (parsed.protocol === 'http:' && !isRawIP) { score += 10; reasons.push('no-tls'); }
+    } catch {
+      score += 20; reasons.push('unparseable-url');
+    }
+    return { score, reasons };
   }
 
   // === Helpers ===
