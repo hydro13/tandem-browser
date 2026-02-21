@@ -2506,6 +2506,18 @@
         })
         .catch(() => switchBackend('openclaw'));
 
+      // Listen for incoming Kees messages pushed via POST /chat API
+      if (window.tandem && window.tandem.onChatMessage) {
+        window.tandem.onChatMessage((msg) => {
+          // msg: {id, from, text, timestamp, image}
+          // Skip robin messages — already shown optimistically in the UI
+          if (msg.from === 'robin') return;
+          const source = msg.from; // 'kees' or 'claude'
+          appendMessage('assistant', msg.text, msg.timestamp, source, msg.image);
+          if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;
+        });
+      }
+
       return {
         ensureConnected() { router.connectAll(); },
         disconnect() { router.disconnectAll(); },
