@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 3
-**Last completed phase:** Phase 2
+**Next phase to implement:** Phase 4
+**Last completed phase:** Phase 3
 **Overall status:** IN PROGRESS
 
 ---
@@ -63,25 +63,25 @@
 
 ## Phase 3: Device Emulation
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-21
+- **Commit:** eec70fb
 - **Verification:**
-  - [ ] `GET /device/profiles` — lists all built-in profiles
-  - [ ] `GET /device/status` — returns `{active:false}` on startup
-  - [ ] `POST /device/emulate {"device":"iPhone 15"}` — applies profile
-  - [ ] `GET /device/status` after emulate — shows active profile + dimensions
-  - [ ] Viewport visible in `window.screen.width` / `window.screen.height` in browser
-  - [ ] User-agent changed (check `navigator.userAgent` via `/execute-js`)
-  - [ ] `POST /device/emulate {"width":800,"height":600}` — custom dimensions work
-  - [ ] `POST /device/reset` — removes emulation, page returns to normal
-  - [ ] Emulation survives navigation (re-applied on new page load)
-  - [ ] `GET /device/status` returns `{active:false}` after reset
-  - [ ] `GET /screenshot` captures at emulated dimensions
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] All Phase 1 + 2 regressions pass
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `GET /device/profiles` — lists all built-in profiles
+  - [x] `GET /device/status` — returns `{active:false}` on startup
+  - [x] `POST /device/emulate {"device":"iPhone 15"}` — applies profile
+  - [x] `GET /device/status` after emulate — shows active profile + dimensions
+  - [x] Viewport visible in `window.screen.width` / `window.screen.height` in browser
+  - [x] User-agent changed (check `navigator.userAgent` via `/execute-js`)
+  - [x] `POST /device/emulate {"width":800,"height":600}` — custom dimensions work
+  - [x] `POST /device/reset` — removes emulation, page returns to normal
+  - [x] Emulation survives navigation (re-applied on new page load)
+  - [x] `GET /device/status` returns `{active:false}` after reset
+  - [x] `GET /screenshot` captures at emulated dimensions
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] All Phase 1 + 2 regressions pass
+- **Issues encountered:** None
+- **Notes for next phase:** DeviceEmulator is available as `this.deviceEmulator` in TandemAPI. Uses Electron native `enableDeviceEmulation()` / `disableDeviceEmulation()` API (not CDP). `screen.width`/`screen.height` reflect emulated dimensions; `window.innerWidth`/`innerHeight` reflects the actual webview element size (Electron limitation). The `reloadIntoTab(wc)` hook is in the `did-finish-load` block alongside ScriptInjector. User agent is set via `wc.setUserAgent()` and reset via `wc.session.getUserAgent()`.
 
 ---
 
@@ -111,6 +111,6 @@
 - [x] `src/main.ts` — MODIFIED (instantiate LocatorFinder, pass to TandemAPI)
 
 ### Phase 3
-- [ ] `src/device/emulator.ts` — NEW (DeviceEmulator class + profiles)
-- [ ] `src/main.ts` — MODIFIED (wire DeviceEmulator to did-finish-load for persistence)
-- [ ] `src/api/server.ts` — MODIFIED (register /device/* routes)
+- [x] `src/device/emulator.ts` — NEW (DeviceEmulator class + profiles)
+- [x] `src/main.ts` — MODIFIED (wire DeviceEmulator to did-finish-load for persistence)
+- [x] `src/api/server.ts` — MODIFIED (register /device/* routes)

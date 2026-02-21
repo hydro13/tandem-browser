@@ -42,6 +42,7 @@ import { SessionManager } from './sessions/manager';
 import { StateManager } from './sessions/state';
 import { ScriptInjector } from './scripts/injector';
 import { LocatorFinder } from './locators/finder';
+import { DeviceEmulator } from './device/emulator';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -83,6 +84,7 @@ let sessionManager: SessionManager | null = null;
 let stateManager: StateManager | null = null;
 let scriptInjector: ScriptInjector | null = null;
 let locatorFinder: LocatorFinder | null = null;
+let deviceEmulator: DeviceEmulator | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 
@@ -258,6 +260,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   stateManager = new StateManager();
   scriptInjector = new ScriptInjector();
   locatorFinder = new LocatorFinder(devToolsManager!, snapshotManager!);
+  deviceEmulator = new DeviceEmulator();
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
@@ -353,6 +356,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     stateManager: stateManager!,
     scriptInjector: scriptInjector!,
     locatorFinder: locatorFinder!,
+    deviceEmulator: deviceEmulator!,
   });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -508,13 +512,20 @@ async function startAPI(win: BrowserWindow): Promise<void> {
         }
       } catch { /* invalid URL, skip */ }
     }
-    // Re-inject persistent scripts and styles after page load
-    if (scriptInjector && data.type === 'did-finish-load') {
+    // Re-inject persistent scripts, styles, and device emulation after page load
+    if (data.type === 'did-finish-load') {
       tabManager?.getActiveWebContents().then(wc => {
         if (wc && !wc.isDestroyed()) {
-          scriptInjector!.reloadIntoTab(wc).catch((e) =>
-            console.warn('[ScriptInjector] reloadIntoTab failed:', e.message)
-          );
+          if (scriptInjector) {
+            scriptInjector.reloadIntoTab(wc).catch((e) =>
+              console.warn('[ScriptInjector] reloadIntoTab failed:', e.message)
+            );
+          }
+          if (deviceEmulator) {
+            deviceEmulator.reloadIntoTab(wc).catch((e) =>
+              console.warn('[DeviceEmulator] reloadIntoTab failed:', e.message)
+            );
+          }
         }
       }).catch(() => {});
     }

@@ -44,6 +44,7 @@ import { SessionManager } from '../sessions/manager';
 import { StateManager } from '../sessions/state';
 import { ScriptInjector } from '../scripts/injector';
 import { LocatorFinder, LocatorQuery } from '../locators/finder';
+import { DeviceEmulator } from '../device/emulator';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -103,6 +104,7 @@ export interface TandemAPIOptions {
   stateManager: StateManager;
   scriptInjector: ScriptInjector;
   locatorFinder: LocatorFinder;
+  deviceEmulator: DeviceEmulator;
 }
 
 export class TandemAPI {
@@ -144,6 +146,7 @@ export class TandemAPI {
   private stateManager: StateManager;
   private scriptInjector: ScriptInjector;
   private locatorFinder: LocatorFinder;
+  private deviceEmulator: DeviceEmulator;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -184,6 +187,7 @@ export class TandemAPI {
     this.stateManager = opts.stateManager;
     this.scriptInjector = opts.scriptInjector;
     this.locatorFinder = opts.locatorFinder;
+    this.deviceEmulator = opts.deviceEmulator;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -2748,6 +2752,56 @@ export class TandemAPI {
         res.json({ found: results.length > 0, count: results.length, results });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // DEVICE EMULATION
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/device/profiles', (_req: Request, res: Response) => {
+      res.json({ profiles: this.deviceEmulator.getProfiles() });
+    });
+
+    this.app.get('/device/status', (_req: Request, res: Response) => {
+      res.json(this.deviceEmulator.getStatus());
+    });
+
+    this.app.post('/device/emulate', async (req: Request, res: Response) => {
+      try {
+        const wc = await this.getSessionWC(req);
+        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+
+        const { device, width, height, deviceScaleFactor, mobile, userAgent } = req.body;
+
+        if (device) {
+          const profile = await this.deviceEmulator.emulateDevice(wc, device);
+          res.json({ ok: true, profile });
+        } else if (width && height) {
+          await this.deviceEmulator.emulateCustom(wc, {
+            width: Number(width),
+            height: Number(height),
+            deviceScaleFactor: deviceScaleFactor ? Number(deviceScaleFactor) : undefined,
+            mobile: Boolean(mobile),
+            userAgent,
+          });
+          res.json({ ok: true });
+        } else {
+          res.status(400).json({ error: '"device" or "width"+"height" required' });
+        }
+      } catch (e: unknown) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+      }
+    });
+
+    this.app.post('/device/reset', async (req: Request, res: Response) => {
+      try {
+        const wc = await this.getSessionWC(req);
+        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+        await this.deviceEmulator.reset(wc);
+        res.json({ ok: true });
+      } catch (e: unknown) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
