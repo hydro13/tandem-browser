@@ -58,7 +58,6 @@ class OpenClawBackend {
     this._sendRequest('chat.send', {
       sessionKey: this._sessionKey,
       message: text,
-      deliver: false,
       idempotencyKey: crypto.randomUUID()
     });
   }
