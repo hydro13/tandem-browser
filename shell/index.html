@@ -2471,13 +2471,10 @@
           if (router.getActiveId() === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
-            // Route via internal chat → webhook → OpenClaw AI processing
-            // (chat.send via WebSocket as operator does not trigger AI)
-            window.tandem?.sendChatMessage(text);
-          } else {
-            // For Claude, the backend emits the sent message
-            router.sendMessage(text);
           }
+          // For Claude, the backend emits the sent message
+
+          router.sendMessage(text);
         }
       }
 
