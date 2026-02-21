@@ -88,15 +88,30 @@ export class Guardian {
     });
 
     dispatcher.registerHeadersReceived({
+      name: 'Guardian:RedirectBlock',
+      priority: 5,
+      handler: (details, responseHeaders) => {
+        return this.checkRedirectHeaders(details, responseHeaders);
+      }
+    });
+
+    dispatcher.registerHeadersReceived({
       name: 'Guardian',
       priority: 20,
       handler: (details, responseHeaders) => {
         this.analyzeResponseHeaders(details, responseHeaders);
-        return responseHeaders;
+        return { responseHeaders };
       }
     });
 
-    console.log('[Guardian] Registered with dispatcher (priority 1/20/20)');
+    dispatcher.registerBeforeRedirect({
+      name: 'Guardian:Redirect',
+      handler: (details) => {
+        this.checkRedirect(details);
+      }
+    });
+
+    console.log('[Guardian] Registered with dispatcher (priority 1/20/20 + redirect)');
   }
 
   // === Request checking (synchronous, <5ms target) ===
@@ -315,6 +330,175 @@ export class Guardian {
 
     } finally {
       this.stats.totalMs += performance.now() - start;
+    }
+  }
+
+  /**
+   * Intercepts HTTP 3xx redirect responses and blocks if destination is suspicious.
+   * Fires via onHeadersReceived — BEFORE Electron follows the redirect (supports cancel).
+   * The existing checkRedirect() via onBeforeRedirect stays as observational fallback.
+   */
+  private checkRedirectHeaders(
+    details: Electron.OnHeadersReceivedListenerDetails,
+    responseHeaders: Record<string, string[]>
+  ): { cancel?: boolean; responseHeaders: Record<string, string[]> } {
+    const { statusCode, url } = details;
+
+    // Only handle redirects
+    if (statusCode < 300 || statusCode >= 400) {
+      return { responseHeaders };
+    }
+
+    // Extract Location header (case-insensitive)
+    const locationKey = Object.keys(responseHeaders).find(k => k.toLowerCase() === 'location');
+    if (!locationKey) return { responseHeaders };
+
+    const locationValues = responseHeaders[locationKey];
+    if (!locationValues || locationValues.length === 0) return { responseHeaders };
+
+    const redirectDest = locationValues[0];
+    if (!redirectDest) return { responseHeaders };
+
+    // Skip internal destinations and same-domain redirects (e.g. HTTP → HTTPS)
+    try {
+      const destUrl = new URL(redirectDest);
+      const h = destUrl.hostname;
+      if (h === 'localhost' || h === '127.0.0.1' || h === '::1') {
+        return { responseHeaders };
+      }
+      const sourceDomain = this.extractDomain(url);
+      if (sourceDomain && h === sourceDomain) {
+        return { responseHeaders };
+      }
+    } catch {
+      return { responseHeaders };
+    }
+
+    // 1. Blocklist check
+    const blockResult = this.shield.checkUrl(redirectDest);
+    if (blockResult.blocked) {
+      this.stats.blocked++;
+      const domain = this.extractDomain(redirectDest);
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain,
+        tabId: null,
+        eventType: 'redirect-blocked',
+        severity: 'high',
+        category: 'network',
+        details: JSON.stringify({
+          from: url.substring(0, 200),
+          to: redirectDest.substring(0, 200),
+          reason: blockResult.reason,
+          source: blockResult.source,
+        }),
+        actionTaken: 'auto_block',
+      });
+      return { cancel: true, responseHeaders };
+    }
+
+    // 2. Risk score check
+    const riskHost = this.extractDomain(redirectDest);
+    if (riskHost && riskHost !== 'localhost' && riskHost !== '127.0.0.1' && riskHost !== '::1') {
+      const riskResult = this.computeRiskScore(redirectDest);
+      if (riskResult.score >= 65) {
+        this.stats.blocked++;
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: riskHost,
+          tabId: null,
+          eventType: 'redirect-blocked',
+          severity: 'high',
+          category: 'network',
+          details: JSON.stringify({
+            from: url.substring(0, 200),
+            to: redirectDest.substring(0, 200),
+            score: riskResult.score,
+            reasons: riskResult.reasons,
+          }),
+          actionTaken: 'auto_block',
+        });
+        return { cancel: true, responseHeaders };
+      } else if (riskResult.score >= 30) {
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: riskHost,
+          tabId: null,
+          eventType: 'redirect-risk',
+          severity: 'medium',
+          category: 'network',
+          details: JSON.stringify({
+            from: url.substring(0, 200),
+            to: redirectDest.substring(0, 200),
+            score: riskResult.score,
+            reasons: riskResult.reasons,
+          }),
+          actionTaken: 'flagged',
+        });
+      }
+    }
+
+    return { responseHeaders };
+  }
+
+  // === Redirect analysis (observational — cannot cancel, log + flag) ===
+
+  private checkRedirect(details: Electron.OnBeforeRedirectListenerDetails): void {
+    const redirectUrl = details.redirectURL;
+    if (!redirectUrl) return;
+
+    // Skip internal redirects
+    if (redirectUrl.startsWith('devtools://') || redirectUrl.startsWith('chrome://') || redirectUrl.startsWith('file://')) return;
+
+    const originDomain = this.extractDomain(details.url);
+    const redirectDomain = this.extractDomain(redirectUrl);
+
+    // Skip same-domain redirects
+    if (originDomain && redirectDomain && originDomain === redirectDomain) return;
+
+    // 1. Blocklist check on redirect destination
+    const blockResult = this.shield.checkUrl(redirectUrl);
+    if (blockResult.blocked) {
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain: redirectDomain,
+        tabId: null,
+        eventType: 'warned',
+        severity: 'high',
+        category: 'network',
+        details: JSON.stringify({
+          url: redirectUrl.substring(0, 200),
+          originUrl: details.url.substring(0, 200),
+          reason: 'redirect-blocked',
+          blockReason: blockResult.reason,
+          source: blockResult.source,
+        }),
+        actionTaken: 'flagged',
+      });
+    }
+
+    // 2. Risk score on redirect destination
+    const riskHost = this.extractDomain(redirectUrl);
+    if (riskHost !== 'localhost' && riskHost !== '127.0.0.1' && riskHost !== '::1') {
+      const riskResult = this.computeRiskScore(redirectUrl);
+      if (riskResult.score >= 30) {
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: redirectDomain,
+          tabId: null,
+          eventType: 'warned',
+          severity: riskResult.score >= 50 ? 'high' : 'medium',
+          category: 'network',
+          details: JSON.stringify({
+            url: redirectUrl.substring(0, 200),
+            originUrl: details.url.substring(0, 200),
+            reason: 'redirect-risk',
+            riskScore: riskResult.score,
+            riskReasons: riskResult.reasons,
+          }),
+          actionTaken: 'flagged',
+        });
+      }
     }
   }
 

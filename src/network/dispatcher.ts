@@ -15,7 +15,15 @@ export interface BeforeSendHeadersConsumer {
 export interface HeadersReceivedConsumer {
   name: string;
   priority: number;
-  handler: (details: OnHeadersReceivedListenerDetails, responseHeaders: Record<string, string[]>) => Record<string, string[]>;
+  handler: (
+    details: OnHeadersReceivedListenerDetails,
+    responseHeaders: Record<string, string[]>
+  ) => { cancel?: boolean; responseHeaders: Record<string, string[]> } | Record<string, string[]>;
+}
+
+export interface BeforeRedirectConsumer {
+  name: string;
+  handler: (details: Electron.OnBeforeRedirectListenerDetails) => void;
 }
 
 export interface CompletedConsumer {
@@ -34,6 +42,7 @@ export class RequestDispatcher {
   private beforeRequestConsumers: BeforeRequestConsumer[] = [];
   private beforeSendHeadersConsumers: BeforeSendHeadersConsumer[] = [];
   private headersReceivedConsumers: HeadersReceivedConsumer[] = [];
+  private beforeRedirectConsumers: BeforeRedirectConsumer[] = [];
   private completedConsumers: CompletedConsumer[] = [];
   private errorConsumers: ErrorConsumer[] = [];
 
@@ -53,6 +62,11 @@ export class RequestDispatcher {
 
   registerHeadersReceived(consumer: HeadersReceivedConsumer): void {
     this.headersReceivedConsumers.push(consumer);
+    if (this.attached) this.reattach();
+  }
+
+  registerBeforeRedirect(consumer: BeforeRedirectConsumer): void {
+    this.beforeRedirectConsumers.push(consumer);
     if (this.attached) this.reattach();
   }
 
@@ -121,13 +135,34 @@ export class RequestDispatcher {
 
       for (const consumer of this.headersReceivedConsumers) {
         try {
-          responseHeaders = consumer.handler(details, responseHeaders);
+          const result = consumer.handler(details, responseHeaders);
+          // Support cancel (for redirect blocking)
+          if (result && typeof result === 'object' && 'cancel' in result && result.cancel) {
+            callback({ cancel: true });
+            return;
+          }
+          // Support both return shapes: { responseHeaders } or raw headers object
+          if (result && typeof result === 'object' && 'responseHeaders' in result && !Array.isArray((result as any).responseHeaders)) {
+            responseHeaders = (result as { responseHeaders: Record<string, string[]> }).responseHeaders;
+          } else {
+            responseHeaders = result as Record<string, string[]>;
+          }
         } catch (err) {
           console.error(`[Dispatcher] Error in ${consumer.name}.onHeadersReceived:`, err);
         }
       }
 
       callback({ responseHeaders });
+    });
+
+    this.session.webRequest.onBeforeRedirect((details) => {
+      for (const consumer of this.beforeRedirectConsumers) {
+        try {
+          consumer.handler(details);
+        } catch (err) {
+          console.error(`[Dispatcher] Error in ${consumer.name}.onBeforeRedirect:`, err);
+        }
+      }
     });
 
     this.session.webRequest.onCompleted((details) => {
@@ -159,6 +194,7 @@ export class RequestDispatcher {
         onBeforeRequest: this.beforeRequestConsumers.map(c => ({ name: c.name, priority: c.priority })),
         onBeforeSendHeaders: this.beforeSendHeadersConsumers.map(c => ({ name: c.name, priority: c.priority })),
         onHeadersReceived: this.headersReceivedConsumers.map(c => ({ name: c.name, priority: c.priority })),
+        onBeforeRedirect: this.beforeRedirectConsumers.map(c => c.name),
         onCompleted: this.completedConsumers.map(c => c.name),
         onError: this.errorConsumers.map(c => c.name),
       }
