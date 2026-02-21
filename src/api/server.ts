@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import crypto from 'crypto';
-import { BrowserWindow } from 'electron';
+import { BrowserWindow, webContents } from 'electron';
 import { copilotAlert } from '../main';
 import { TabManager } from '../tabs/manager';
 import { PanelManager } from '../panel/manager';
@@ -749,6 +749,31 @@ export class TandemAPI {
         }
         const ok = this.tabManager.setTabSource(tabId, source);
         res.json({ ok });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // Cleanup zombie tabs (unmanaged webContents)
+    this.app.post('/tabs/cleanup', (_req: Request, res: Response) => {
+      try {
+        const trackedIds = new Set(
+          this.tabManager.listTabs().map(t => t.webContentsId)
+        );
+        // Also include the main window's webContents
+        const mainWcId = this.win.webContents.id;
+        trackedIds.add(mainWcId);
+
+        let destroyed = 0;
+        for (const wc of webContents.getAllWebContents()) {
+          if (wc.isDestroyed()) continue;
+          if (trackedIds.has(wc.id)) continue;
+          const wcUrl = wc.getURL();
+          if (wcUrl.startsWith('file://') || wcUrl.startsWith('devtools://') || wcUrl.startsWith('chrome://')) continue;
+          wc.close();
+          destroyed++;
+        }
+        res.json({ ok: true, destroyed });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

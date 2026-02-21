@@ -251,6 +251,14 @@ export class TabManager {
     return Array.from(this.groups.values());
   }
 
+  /** Check if a webContentsId is tracked by any tab */
+  hasWebContents(wcId: number): boolean {
+    for (const tab of this.tabs.values()) {
+      if (tab.webContentsId === wcId) return true;
+    }
+    return false;
+  }
+
   /** Get tab count */
   get count(): number {
     return this.tabs.size;

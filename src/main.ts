@@ -192,6 +192,16 @@ async function createWindow(): Promise<BrowserWindow> {
         return { action: 'deny' };
       });
     }
+
+    // Catch-all: route unmanaged webContents navigations back through TabManager
+    if (tabManager && !tabManager.hasWebContents(contents.id)) {
+      contents.on('will-navigate', (_e, url) => {
+        if (mainWindow && url && url !== 'about:blank') {
+          mainWindow.webContents.send('open-url-in-new-tab', url);
+          contents.stop();
+        }
+      });
+    }
   });
 
   mainWindow = new BrowserWindow({
