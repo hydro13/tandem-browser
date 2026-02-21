@@ -158,22 +158,15 @@ export class PanelManager {
     const url = config.webhook.url.replace(/\/$/, '');
 
     try {
-      const response = await fetch(`${url}/hooks/tandem`, {
+      const response = await fetch(`${url}/hooks/wake`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(config.webhook.secret ? { 'Authorization': `Bearer ${config.webhook.secret}` } : {}),
         },
         body: JSON.stringify({
-          type: 'tandem-chat',
-          text: `[Tandem Chat] Robin: ${msg.text}${msg.image ? ' [image attached: ' + msg.image + ']' : ''}`,
-          metadata: {
-            messageId: msg.id,
-            from: msg.from,
-            timestamp: msg.timestamp,
-            source: 'tandem-browser',
-            image: msg.image || null,
-          },
+          text: `[Tandem Chat] Robin: ${msg.text}${msg.image ? ' [image attached]' : ''}`,
+          mode: 'now',
         }),
         signal: AbortSignal.timeout(5000),
       });
