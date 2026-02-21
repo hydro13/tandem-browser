@@ -2467,14 +2467,16 @@
           const backend = router.getActive();
           if (!backend || !backend.isConnected()) return;
 
-          // For OpenClaw, append user message locally (backend doesn't emit it)
+          // For OpenClaw, append user message locally + route via IPC→webhook→/hooks/wake
           if (router.getActiveId() === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
+            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Kees ontvangt het
+            window.tandem?.sendChatMessage(text);
+          } else {
+            // For Claude, the backend emits the sent message
+            router.sendMessage(text);
           }
-          // For Claude, the backend emits the sent message
-
-          router.sendMessage(text);
         }
       }
 
