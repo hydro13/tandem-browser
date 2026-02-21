@@ -42,6 +42,7 @@ import { SnapshotManager } from '../snapshot/manager';
 import { NetworkMocker } from '../network/mocker';
 import { SessionManager } from '../sessions/manager';
 import { StateManager } from '../sessions/state';
+import { ScriptInjector } from '../scripts/injector';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -99,6 +100,7 @@ export interface TandemAPIOptions {
   networkMocker: NetworkMocker;
   sessionManager: SessionManager;
   stateManager: StateManager;
+  scriptInjector: ScriptInjector;
 }
 
 export class TandemAPI {
@@ -138,6 +140,7 @@ export class TandemAPI {
   private networkMocker: NetworkMocker;
   private sessionManager: SessionManager;
   private stateManager: StateManager;
+  private scriptInjector: ScriptInjector;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -176,6 +179,7 @@ export class TandemAPI {
     this.networkMocker = opts.networkMocker;
     this.sessionManager = opts.sessionManager;
     this.stateManager = opts.stateManager;
+    this.scriptInjector = opts.scriptInjector;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -1624,6 +1628,137 @@ export class TandemAPI {
       try {
         const removed = await this.networkMocker.clearRules();
         res.json({ ok: true, removed });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // PERSISTENT SCRIPT INJECTION — Agent Tools Phase 1
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/scripts', (_req: Request, res: Response) => {
+      try {
+        const scripts = this.scriptInjector.listScripts().map(s => ({
+          name: s.name,
+          enabled: s.enabled,
+          preview: s.code.substring(0, 80),
+          addedAt: s.addedAt,
+        }));
+        res.json({ scripts });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/scripts/add', (req: Request, res: Response) => {
+      const { name, code } = req.body;
+      if (!name || !code) { res.status(400).json({ error: 'name and code required' }); return; }
+      try {
+        const entry = this.scriptInjector.addScript(name, code);
+        res.json({ ok: true, name: entry.name, active: entry.enabled });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.delete('/scripts/remove', (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const removed = this.scriptInjector.removeScript(name);
+        res.json({ ok: true, removed });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/scripts/enable', (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const ok = this.scriptInjector.enableScript(name);
+        if (!ok) { res.status(404).json({ error: `script "${name}" not found` }); return; }
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/scripts/disable', (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const ok = this.scriptInjector.disableScript(name);
+        if (!ok) { res.status(404).json({ error: `script "${name}" not found` }); return; }
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // PERSISTENT STYLE INJECTION — Agent Tools Phase 1
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/styles', (_req: Request, res: Response) => {
+      try {
+        const styles = this.scriptInjector.listStyles().map(s => ({
+          name: s.name,
+          enabled: s.enabled,
+          preview: s.css.substring(0, 80),
+          addedAt: s.addedAt,
+        }));
+        res.json({ styles });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/styles/add', async (req: Request, res: Response) => {
+      const { name, css } = req.body;
+      if (!name || !css) { res.status(400).json({ error: 'name and css required' }); return; }
+      try {
+        this.scriptInjector.addStyle(name, css);
+        // Inject immediately into active tab
+        const wc = await this.getSessionWC(req);
+        if (wc && !wc.isDestroyed()) await wc.insertCSS(css);
+        res.json({ ok: true, name });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.delete('/styles/remove', async (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const removed = this.scriptInjector.removeStyle(name);
+        res.json({ ok: true, removed });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/styles/enable', (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const ok = this.scriptInjector.enableStyle(name);
+        if (!ok) { res.status(404).json({ error: `style "${name}" not found` }); return; }
+        res.json({ ok: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/styles/disable', (req: Request, res: Response) => {
+      const { name } = req.body;
+      if (!name) { res.status(400).json({ error: 'name required' }); return; }
+      try {
+        const ok = this.scriptInjector.disableStyle(name);
+        if (!ok) { res.status(404).json({ error: `style "${name}" not found` }); return; }
+        res.json({ ok: true });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

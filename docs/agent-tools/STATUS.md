@@ -1,0 +1,114 @@
+# Agent Tools — Implementation Status
+
+> Read this file FIRST at the start of every Claude Code session.
+> Each phase updates its own section after completion.
+
+## Current State
+
+**Next phase to implement:** Phase 2
+**Last completed phase:** Phase 1
+**Overall status:** IN PROGRESS
+
+---
+
+## Phase 1: Persistent Script & Style Injection
+
+- **Status:** COMPLETED
+- **Date:** 2026-02-21
+- **Commit:** 5204c3c
+- **Verification:**
+  - [x] `GET /scripts` returns empty array on startup
+  - [x] `POST /scripts/add` stores script, returns `{ok:true,name,active:true}`
+  - [x] `POST /scripts/add` with duplicate name overwrites (no error)
+  - [x] `GET /scripts` lists registered scripts with name + preview
+  - [x] `DELETE /scripts/remove` removes by name
+  - [x] Script re-executes after navigation (navigate → wait → check `window.__x`)
+  - [x] `POST /scripts/enable` and `/disable` toggle without removing
+  - [x] Disabled script does NOT re-inject after navigation
+  - [x] `GET /styles` returns empty array on startup
+  - [x] `POST /styles/add` injects CSS, returns `{ok:true,name}`
+  - [x] CSS visible immediately on current page
+  - [x] CSS re-injected after navigation
+  - [x] `DELETE /styles/remove` removes CSS from current page + registry
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `GET /execute-js` still works (no regression)
+  - [x] `GET /snapshot` still works (no regression)
+- **Issues encountered:** None
+- **Notes for next phase:** ScriptInjector is available as `this.scriptInjector` in TandemAPI. The `reloadIntoTab(wc)` hook is in the `activity-webview-event` IPC handler in main.ts (did-finish-load block). Phase 2 can access the existing SnapshotManager for accessibility tree data.
+
+---
+
+## Phase 2: Semantic Locators (Playwright-style)
+
+- **Status:** PENDING
+- **Date:** —
+- **Commit:** —
+- **Verification:**
+  - [ ] `POST /find {"by":"role","value":"button"}` — finds first button, returns ref
+  - [ ] `POST /find {"by":"role","value":"button","name":"Submit"}` — finds by name too
+  - [ ] `POST /find {"by":"text","value":"Sign in"}` — finds by text content
+  - [ ] `POST /find {"by":"placeholder","value":"Search"}` — finds input by placeholder
+  - [ ] `POST /find {"by":"label","value":"Email"}` — finds input associated with label
+  - [ ] `POST /find {"by":"testid","value":"submit-btn"}` — finds by data-testid
+  - [ ] `POST /find/click {"by":"text","value":"Sign in"}` — finds and clicks
+  - [ ] `POST /find/fill {"by":"placeholder","value":"Search","fillValue":"hello"}` — finds and fills
+  - [ ] `POST /find {"by":"role","value":"button","name":"Nonexistent"}` — returns `{found:false}`
+  - [ ] All locators return a `ref` that's usable with existing `POST /snapshot/click`
+  - [ ] `GET /snapshot` still works (no regression)
+  - [ ] `npx tsc --noEmit` — 0 errors
+- **Issues encountered:** —
+- **Notes for next phase:** —
+
+---
+
+## Phase 3: Device Emulation
+
+- **Status:** PENDING
+- **Date:** —
+- **Commit:** —
+- **Verification:**
+  - [ ] `GET /device/profiles` — lists all built-in profiles
+  - [ ] `GET /device/status` — returns `{active:false}` on startup
+  - [ ] `POST /device/emulate {"device":"iPhone 15"}` — applies profile
+  - [ ] `GET /device/status` after emulate — shows active profile + dimensions
+  - [ ] Viewport visible in `window.screen.width` / `window.screen.height` in browser
+  - [ ] User-agent changed (check `navigator.userAgent` via `/execute-js`)
+  - [ ] `POST /device/emulate {"width":800,"height":600}` — custom dimensions work
+  - [ ] `POST /device/reset` — removes emulation, page returns to normal
+  - [ ] Emulation survives navigation (re-applied on new page load)
+  - [ ] `GET /device/status` returns `{active:false}` after reset
+  - [ ] `GET /screenshot` captures at emulated dimensions
+  - [ ] `npx tsc --noEmit` — 0 errors
+  - [ ] All Phase 1 + 2 regressions pass
+- **Issues encountered:** —
+- **Notes for next phase:** —
+
+---
+
+## Known Issues & Workarounds
+
+| Issue | Phase | Workaround | Status |
+|-------|-------|------------|--------|
+| — | — | — | — |
+
+## Dependency Changes
+
+| Phase | Dependency | Version | Reason |
+|-------|-----------|---------|--------|
+| — | — | — | — |
+
+## File Inventory
+
+### Phase 1
+- [x] `src/scripts/injector.ts` — NEW (ScriptInjector class)
+- [x] `src/main.ts` — MODIFIED (wire ScriptInjector to did-finish-load IPC)
+- [x] `src/api/server.ts` — MODIFIED (register /scripts/* and /styles/* routes)
+
+### Phase 2
+- [ ] `src/locators/finder.ts` — NEW (LocatorFinder class)
+- [ ] `src/api/server.ts` — MODIFIED (register /find and /find/click /find/fill routes)
+
+### Phase 3
+- [ ] `src/device/emulator.ts` — NEW (DeviceEmulator class + profiles)
+- [ ] `src/main.ts` — MODIFIED (wire DeviceEmulator to did-finish-load for persistence)
+- [ ] `src/api/server.ts` — MODIFIED (register /device/* routes)
