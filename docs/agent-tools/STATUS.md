@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2
-**Last completed phase:** Phase 1
+**Next phase to implement:** Phase 3
+**Last completed phase:** Phase 2
 **Overall status:** IN PROGRESS
 
 ---
@@ -40,24 +40,24 @@
 
 ## Phase 2: Semantic Locators (Playwright-style)
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** COMPLETED
+- **Date:** 2026-02-21
+- **Commit:** 83050be
 - **Verification:**
-  - [ ] `POST /find {"by":"role","value":"button"}` — finds first button, returns ref
-  - [ ] `POST /find {"by":"role","value":"button","name":"Submit"}` — finds by name too
-  - [ ] `POST /find {"by":"text","value":"Sign in"}` — finds by text content
-  - [ ] `POST /find {"by":"placeholder","value":"Search"}` — finds input by placeholder
-  - [ ] `POST /find {"by":"label","value":"Email"}` — finds input associated with label
-  - [ ] `POST /find {"by":"testid","value":"submit-btn"}` — finds by data-testid
-  - [ ] `POST /find/click {"by":"text","value":"Sign in"}` — finds and clicks
-  - [ ] `POST /find/fill {"by":"placeholder","value":"Search","fillValue":"hello"}` — finds and fills
-  - [ ] `POST /find {"by":"role","value":"button","name":"Nonexistent"}` — returns `{found:false}`
-  - [ ] All locators return a `ref` that's usable with existing `POST /snapshot/click`
-  - [ ] `GET /snapshot` still works (no regression)
-  - [ ] `npx tsc --noEmit` — 0 errors
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `POST /find {"by":"role","value":"button"}` — finds first button, returns ref
+  - [x] `POST /find {"by":"role","value":"button","name":"Submit"}` — finds by name too
+  - [x] `POST /find {"by":"text","value":"Sign in"}` — finds by text content
+  - [x] `POST /find {"by":"placeholder","value":"Search"}` — finds input by placeholder
+  - [x] `POST /find {"by":"label","value":"Email"}` — finds input associated with label
+  - [x] `POST /find {"by":"testid","value":"submit-btn"}` — finds by data-testid
+  - [x] `POST /find/click {"by":"text","value":"Sign in"}` — finds and clicks
+  - [x] `POST /find/fill {"by":"placeholder","value":"Search","fillValue":"hello"}` — finds and fills
+  - [x] `POST /find {"by":"role","value":"button","name":"Nonexistent"}` — returns `{found:false}`
+  - [x] All locators return a `ref` that's usable with existing `POST /snapshot/click`
+  - [x] `GET /snapshot` still works (no regression)
+  - [x] `npx tsc --noEmit` — 0 errors
+- **Issues encountered:** None
+- **Notes for next phase:** LocatorFinder is available as `this.locatorFinder` in TandemAPI. It uses SnapshotManager's new `getAccessibilityTree()` method for role/text-based searches, and CDP DOM queries for placeholder/label/testid. The `registerBackendNodeId()` method on SnapshotManager allows DOM-found elements to get valid `@eN` refs that work with `clickRef()`/`fillRef()`. Phase 3 can use the existing DevToolsManager for device emulation CDP calls.
 
 ---
 
@@ -105,8 +105,10 @@
 - [x] `src/api/server.ts` — MODIFIED (register /scripts/* and /styles/* routes)
 
 ### Phase 2
-- [ ] `src/locators/finder.ts` — NEW (LocatorFinder class)
-- [ ] `src/api/server.ts` — MODIFIED (register /find and /find/click /find/fill routes)
+- [x] `src/locators/finder.ts` — NEW (LocatorFinder class)
+- [x] `src/snapshot/manager.ts` — MODIFIED (added getAccessibilityTree() and registerBackendNodeId())
+- [x] `src/api/server.ts` — MODIFIED (register /find, /find/click, /find/fill, /find/all routes)
+- [x] `src/main.ts` — MODIFIED (instantiate LocatorFinder, pass to TandemAPI)
 
 ### Phase 3
 - [ ] `src/device/emulator.ts` — NEW (DeviceEmulator class + profiles)

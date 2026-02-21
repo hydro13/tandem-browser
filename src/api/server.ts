@@ -43,6 +43,7 @@ import { NetworkMocker } from '../network/mocker';
 import { SessionManager } from '../sessions/manager';
 import { StateManager } from '../sessions/state';
 import { ScriptInjector } from '../scripts/injector';
+import { LocatorFinder, LocatorQuery } from '../locators/finder';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -101,6 +102,7 @@ export interface TandemAPIOptions {
   sessionManager: SessionManager;
   stateManager: StateManager;
   scriptInjector: ScriptInjector;
+  locatorFinder: LocatorFinder;
 }
 
 export class TandemAPI {
@@ -141,6 +143,7 @@ export class TandemAPI {
   private sessionManager: SessionManager;
   private stateManager: StateManager;
   private scriptInjector: ScriptInjector;
+  private locatorFinder: LocatorFinder;
   private contentExtractor: ContentExtractor;
   private workflowEngine: WorkflowEngine;
   private loginManager: LoginManager;
@@ -180,6 +183,7 @@ export class TandemAPI {
     this.sessionManager = opts.sessionManager;
     this.stateManager = opts.stateManager;
     this.scriptInjector = opts.scriptInjector;
+    this.locatorFinder = opts.locatorFinder;
 
     // Initialize new Phase 5 managers
     this.contentExtractor = new ContentExtractor();
@@ -2677,6 +2681,71 @@ export class TandemAPI {
       try {
         const text = await this.snapshotManager.getTextRef(ref);
         res.json({ ok: true, ref, text });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // ═══════════════════════════════════════════════
+    // LOCATORS — Semantic Element Finding (Playwright-style)
+    // ═══════════════════════════════════════════════
+
+    this.app.post('/find', async (req: Request, res: Response) => {
+      const query: LocatorQuery = req.body;
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
+      try {
+        const result = await this.locatorFinder.find(query);
+        res.json(result);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/find/click', async (req: Request, res: Response) => {
+      const { fillValue, ...query } = req.body;
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
+      try {
+        const result = await this.locatorFinder.find(query);
+        if (!result.found || !result.ref) {
+          res.status(404).json({ found: false, error: 'Element not found' }); return;
+        }
+        await this.snapshotManager.clickRef(result.ref);
+        res.json({ ok: true, ref: result.ref, clicked: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/find/fill', async (req: Request, res: Response) => {
+      const { fillValue, ...query } = req.body;
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
+      if (!fillValue) { res.status(400).json({ error: 'fillValue required' }); return; }
+      try {
+        const result = await this.locatorFinder.find(query);
+        if (!result.found || !result.ref) {
+          res.status(404).json({ found: false, error: 'Element not found' }); return;
+        }
+        await this.snapshotManager.fillRef(result.ref, fillValue);
+        res.json({ ok: true, ref: result.ref, filled: true });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    this.app.post('/find/all', async (req: Request, res: Response) => {
+      const query: LocatorQuery = req.body;
+      if (!query.by || !query.value) {
+        res.status(400).json({ error: '"by" and "value" required' }); return;
+      }
+      try {
+        const results = await this.locatorFinder.findAll(query);
+        res.json({ found: results.length > 0, count: results.length, results });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }

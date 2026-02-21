@@ -255,6 +255,43 @@ export class SnapshotManager {
   }
 
   /**
+   * Get the accessibility tree with @refs assigned.
+   * Used by LocatorFinder for semantic element search.
+   */
+  async getAccessibilityTree(options?: SnapshotOptions): Promise<AccessibilityNode[]> {
+    await this.devtools.sendCommand('Accessibility.enable', {});
+    const result = await this.devtools.sendCommand('Accessibility.getFullAXTree', {});
+    const rawNodes: Record<string, any>[] = result.nodes || [];
+    let tree = this.buildTree(rawNodes);
+
+    if (options?.interactive) {
+      tree = this.filterInteractive(tree);
+    }
+    if (options?.compact) {
+      tree = this.filterCompact(tree);
+    }
+
+    // Reset and assign refs (same as getSnapshot)
+    this.refMap = {};
+    this.refBackendNodeMap.clear();
+    this.refCounter = 0;
+    this.assignRefs(tree);
+
+    return tree;
+  }
+
+  /**
+   * Register a backendNodeId found via CDP DOM queries as a new @ref.
+   * Used by LocatorFinder when elements are found via CSS/XPath but not in the tree.
+   */
+  registerBackendNodeId(backendNodeId: number): string {
+    this.refCounter++;
+    const ref = `@e${this.refCounter}`;
+    this.refBackendNodeMap.set(ref, backendNodeId);
+    return ref;
+  }
+
+  /**
    * Get the current ref map (for debugging / API responses).
    */
   getRefMap(): RefMap {
