@@ -23,6 +23,10 @@
     "turndown": "^7.2.2",
     "ws": "^8.19.0"
   },
+  "//": "Liquid Glass Lite — uncomment when package is ready",
+  "// dependencies-future": {
+    "@mblock/liquid-glass": "file:../liquid-glass-lite/packages/core"
+  },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
     "@types/better-sqlite3": "^7.6.13",

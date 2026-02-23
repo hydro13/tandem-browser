@@ -526,6 +526,58 @@
           📖 Open Help Pagina
         </button>
       </div>
+
+      <!-- Liquid Glass Lite Settings -->
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border);">
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+          ✨ Liquid Glass Effects
+        </h3>
+        <p class="section-desc" style="margin-bottom: 16px;">
+          Advanced glass morphism with subtle lensing and depth. Creates semi-transparent UI that shows through to content below.
+        </p>
+
+        <div class="field">
+          <div class="field-info">
+            <div class="field-label">Enable Liquid Glass</div>
+            <div class="field-desc">Apply glass effects to browser chrome (tab bar, toolbar, panels)</div>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" id="cfg-lgl-enabled" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="field">
+          <div class="field-info">
+            <div class="field-label">Glass blur intensity</div>
+            <div class="field-desc">
+              How much blur to apply to glass surfaces (<span id="lgl-blur-value">20</span>px)
+            </div>
+          </div>
+          <input type="range" id="cfg-lgl-blur" min="10" max="30" value="20" 
+                 style="width: 180px; height: 6px; border-radius: 3px; background: var(--input-bg); outline: none; -webkit-appearance: none;">
+        </div>
+
+        <div class="field" style="opacity: 0.5; pointer-events: none;">
+          <div class="field-info">
+            <div class="field-label">Refraction strength</div>
+            <div class="field-desc">
+              WebGL lensing intensity (<span id="lgl-refraction-value">15</span>%) — requires full LGL package
+            </div>
+          </div>
+          <input type="range" id="cfg-lgl-refraction" min="0" max="100" value="15" 
+                 style="width: 180px; height: 6px; border-radius: 3px; background: var(--input-bg); outline: none; -webkit-appearance: none;">
+        </div>
+
+        <div class="field" style="background: rgba(233, 69, 96, 0.1); border-color: rgba(233, 69, 96, 0.3);">
+          <div class="field-info">
+            <div class="field-label">⚠️ Performance Note</div>
+            <div class="field-desc">
+              CSS-first glass (T1 Static tier) is currently active. Full WebGL lensing will be available when @mblock/liquid-glass package is integrated.
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- ═══ Stealth ═══ -->
@@ -790,6 +842,7 @@
       const a = config.appearance || {};
       const st = config.stealth || {};
       const b = config.behavior || {};
+      const lgl = a.liquidGlass || {};
 
       // General
       setVal('cfg-startPage', g.startPage || 'copilot');
@@ -802,6 +855,15 @@
       setChecked('cfg-copilotPanelDefaultOpen', !!g.copilotPanelDefaultOpen);
       setChecked('cfg-showBookmarksBar', g.showBookmarksBar !== false);
       toggleField('field-customStartUrl', g.startPage === 'custom');
+
+      // Liquid Glass Lite
+      setChecked('cfg-lgl-enabled', lgl.enabled !== false);
+      const blurRadius = lgl.blurRadius || 20;
+      const refractionStrength = lgl.refractionStrength || 15;
+      setVal('cfg-lgl-blur', blurRadius);
+      setVal('cfg-lgl-refraction', refractionStrength);
+      document.getElementById('lgl-blur-value').textContent = blurRadius;
+      document.getElementById('lgl-refraction-value').textContent = refractionStrength;
 
       // Screenshots
       setChecked('cfg-localFolder', s.localFolder !== false);
@@ -901,6 +963,33 @@
     wire('cfg-chromeBookmarks', 'sync.chromeBookmarks');
     wire('cfg-chromeProfile', 'sync.chromeProfile');
     wire('cfg-trackingEnabled', 'behavior.trackingEnabled');
+
+    // Liquid Glass Lite
+    wire('cfg-lgl-enabled', 'appearance.liquidGlass.enabled');
+
+    // LGL blur radius slider
+    const lglBlurSlider = document.getElementById('cfg-lgl-blur');
+    const lglBlurValue = document.getElementById('lgl-blur-value');
+    if (lglBlurSlider && lglBlurValue) {
+      lglBlurSlider.addEventListener('input', () => {
+        lglBlurValue.textContent = lglBlurSlider.value;
+      });
+      lglBlurSlider.addEventListener('change', () => {
+        saveConfig({ appearance: { liquidGlass: { blurRadius: parseInt(lglBlurSlider.value) } } });
+      });
+    }
+
+    // LGL refraction strength slider (disabled for now, ready for WebGL)
+    const lglRefractionSlider = document.getElementById('cfg-lgl-refraction');
+    const lglRefractionValue = document.getElementById('lgl-refraction-value');
+    if (lglRefractionSlider && lglRefractionValue) {
+      lglRefractionSlider.addEventListener('input', () => {
+        lglRefractionValue.textContent = lglRefractionSlider.value;
+      });
+      lglRefractionSlider.addEventListener('change', () => {
+        saveConfig({ appearance: { liquidGlass: { refractionStrength: parseInt(lglRefractionSlider.value) } } });
+      });
+    }
 
     // Silence timeout slider
     const silenceSlider = document.getElementById('cfg-silenceTimeout');

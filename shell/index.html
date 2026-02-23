@@ -20,6 +20,16 @@
       --tab-bg: #111a30;
       --tab-active: #16213e;
       --tab-hover: #1a2744;
+      
+      /* Liquid Glass Lite (LGL) variables */
+      --lgl-blur-radius: 20px;
+      --lgl-tint-light: rgba(255, 255, 255, 0.45);
+      --lgl-tint-dark: rgba(30, 30, 30, 0.55);
+      --lgl-refraction: 0.15;
+      --lgl-saturation: 1.4;
+      --lgl-transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      --lgl-shadow-light: 0 8px 32px rgba(0, 0, 0, 0.08);
+      --lgl-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.24);
     }
 
     /* Light theme */
@@ -1047,6 +1057,185 @@
       from { transform: translateY(20px); opacity: 0; }
       to { transform: translateY(0); opacity: 1; }
     }
+
+    /* ═══════════════════════════════════════════════════════════
+       LIQUID GLASS LITE (LGL) — CSS-First Glass Effects (T1)
+       ══════════════════════════════════════════════════════════ */
+
+    /* Core glass effect */
+    .lgl-glass {
+      backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
+                       saturate(var(--lgl-saturation));
+      -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
+                               saturate(var(--lgl-saturation));
+      transition: backdrop-filter var(--lgl-transition),
+                  background var(--lgl-transition),
+                  box-shadow var(--lgl-transition);
+    }
+
+    /* Navbar glass (tab bar) — shows through to content below */
+    .lgl-glass-navbar {
+      background: var(--lgl-tint-dark) !important;
+      box-shadow: var(--lgl-shadow-dark),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+
+    [data-theme="light"] .lgl-glass-navbar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-navbar {
+        background: var(--lgl-tint-light) !important;
+        box-shadow: var(--lgl-shadow-light),
+                    inset 0 1px 0 rgba(0, 0, 0, 0.03);
+      }
+    }
+
+    /* Toolbar glass */
+    .lgl-glass-toolbar {
+      background: var(--lgl-tint-dark) !important;
+      box-shadow: var(--lgl-shadow-dark);
+    }
+
+    [data-theme="light"] .lgl-glass-toolbar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-toolbar {
+        background: var(--lgl-tint-light) !important;
+        box-shadow: var(--lgl-shadow-light);
+      }
+    }
+
+    /* Sidebar glass (copilot panel) — strongest effect */
+    .lgl-glass-sidebar {
+      background: rgba(30, 30, 30, 0.65) !important;
+      box-shadow: var(--lgl-shadow-dark),
+                  inset 1px 0 0 rgba(255, 255, 255, 0.05);
+    }
+
+    [data-theme="light"] .lgl-glass-sidebar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-sidebar {
+        background: rgba(255, 255, 255, 0.65) !important;
+        box-shadow: var(--lgl-shadow-light),
+                    inset 1px 0 0 rgba(0, 0, 0, 0.05);
+      }
+    }
+
+    /* Floating glass (draw toolbar) */
+    .lgl-glass-floating {
+      background: rgba(30, 30, 30, 0.75) !important;
+      box-shadow: var(--lgl-shadow-dark),
+                  0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+    }
+
+    [data-theme="light"] .lgl-glass-floating,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-floating {
+        background: rgba(255, 255, 255, 0.75) !important;
+        box-shadow: var(--lgl-shadow-light),
+                    0 0 0 1px rgba(0, 0, 0, 0.1) inset;
+      }
+    }
+
+    /* Overlay glass (modals) */
+    .lgl-glass-overlay {
+      background: rgba(0, 0, 0, 0.85) !important;
+      box-shadow: var(--lgl-shadow-dark);
+    }
+
+    /* Materialization animation (lensing intensity 0→1) */
+    @media (prefers-reduced-motion: no-preference) {
+      .lgl-materialize {
+        animation: lgl-materialize 400ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes lgl-materialize {
+        from {
+          backdrop-filter: blur(0px) saturate(1);
+          -webkit-backdrop-filter: blur(0px) saturate(1);
+          opacity: 0;
+        }
+        to {
+          backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
+                           saturate(var(--lgl-saturation));
+          -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
+                                   saturate(var(--lgl-saturation));
+          opacity: 1;
+        }
+      }
+    }
+
+    /* Gel press animation */
+    .lgl-pressable {
+      transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1.2);
+      will-change: transform;
+    }
+
+    .lgl-pressable:active {
+      transform: scale(0.97);
+      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Respect reduced motion */
+    @media (prefers-reduced-motion: reduce) {
+      .lgl-pressable {
+        transition: none;
+      }
+      .lgl-pressable:active {
+        transform: none;
+      }
+    }
+
+    /* Inner glow on hover */
+    .lgl-glow {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lgl-glow::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: radial-gradient(
+        circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0) 100%
+      );
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .lgl-glow:hover::after {
+      opacity: 1;
+      background: radial-gradient(
+        circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.15) 0%,
+        rgba(255, 255, 255, 0.05) 30%,
+        transparent 60%
+      );
+    }
+
+    [data-theme="light"] .lgl-glow:hover::after,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glow:hover::after {
+        background: radial-gradient(
+          circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+          rgba(0, 0, 0, 0.08) 0%,
+          rgba(0, 0, 0, 0.03) 30%,
+          transparent 60%
+        );
+      }
+    }
+
+    /* Disable glass on reduced motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      .lgl-glass {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+    }
+
+    /* END LGL STYLES */
   </style>
 </head>
 <body>
@@ -1300,6 +1489,9 @@
   <script src="chat/claude-activity-backend.js"></script>
   <script src="chat/router.js"></script>
   <script src="chat/dual-mode.js"></script>
+
+  <!-- Liquid Glass Lite Integration -->
+  <script src="lgl-integration.js"></script>
 
   <script>
     // ═══════════════════════════════════════════════
