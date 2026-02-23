@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nieuwe Tab</title>
+  <title>New Tab</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -196,7 +196,7 @@
 
   <div class="search-box">
     <span class="search-icon">&#x1F50D;</span>
-    <input type="text" id="search" placeholder="Zoek of typ een URL..." autofocus>
+    <input type="text" id="search" placeholder="Search or type a URL..." autofocus>
   </div>
 
   <div class="quick-links">
@@ -235,7 +235,7 @@
   </div>
 
   <div class="recent-section">
-    <h3>Recente tabs</h3>
+    <h3>Recent tabs</h3>
     <div class="recent-tabs" id="recent-tabs">
       <div style="color: #555; font-size: 13px; padding: 8px;">Laden...</div>
     </div>
@@ -280,13 +280,13 @@
             `).join('');
 
           if (!container.innerHTML.trim()) {
-            container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">Geen recente tabs</div>';
+            container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
           }
         } else {
-          container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">Geen recente tabs</div>';
+          container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
         }
       } catch (err) {
-        container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">Geen recente tabs</div>';
+        container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
       }
     }
 

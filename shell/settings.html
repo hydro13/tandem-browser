@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tandem — Instellingen</title>
+  <title>Tandem — Settings</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -309,7 +309,7 @@
 
   <div class="settings-header">
     <span class="logo">🧀</span>
-    <h1>Tandem Instellingen</h1>
+    <h1>Tandem Settings</h1>
     <span class="version">v0.1.0</span>
   </div>
 
@@ -330,15 +330,15 @@
     <!-- ═══ Algemeen ═══ -->
     <div class="section" id="general">
       <h2>⚙️ Algemeen</h2>
-      <p class="section-desc">Basisinstellingen voor Tandem Browser</p>
+      <p class="section-desc">Basic settings for Tandem Browser</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Startpagina</div>
-          <div class="field-desc">Welke pagina opent bij een nieuwe tab?</div>
+          <div class="field-label">Start page</div>
+          <div class="field-desc">Which page opens on a new tab?</div>
         </div>
         <select id="cfg-startPage">
-          <option value="kees">Kees.ai (New Tab)</option>
+          <option value="copilot">Copilot (New Tab)</option>
           <option value="duckduckgo">DuckDuckGo</option>
           <option value="custom">Custom URL</option>
         </select>
@@ -353,8 +353,8 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Taal</div>
-          <div class="field-desc">Interface- en zoektaal</div>
+          <div class="field-label">Language</div>
+          <div class="field-desc">Interface and search language</div>
         </div>
         <select id="cfg-language">
           <option value="nl-BE">Nederlands (België)</option>
@@ -368,22 +368,22 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Kees paneel positie</div>
-          <div class="field-desc">Aan welke kant verschijnt het Kees paneel?</div>
+          <div class="field-label">Copilot panel position</div>
+          <div class="field-desc">Which side should the Copilot panel appear?</div>
         </div>
-        <select id="cfg-keesPanelPosition">
-          <option value="right">Rechts</option>
-          <option value="left">Links</option>
+        <select id="cfg-copilotPanelPosition">
+          <option value="right">Right</option>
+          <option value="left">Left</option>
         </select>
       </div>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Kees paneel standaard open</div>
-          <div class="field-desc">Paneel automatisch openen bij opstarten</div>
+          <div class="field-label">Copilot panel default open</div>
+          <div class="field-desc">Panel auto-open on startup</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="cfg-keesPanelDefaultOpen">
+          <input type="checkbox" id="cfg-copilotPanelDefaultOpen">
           <span class="slider"></span>
         </label>
       </div>
@@ -391,7 +391,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Favorietenbalk tonen</div>
-          <div class="field-desc">Toon de bookmarks bar onder de adresbalk (Cmd+Shift+B)</div>
+          <div class="field-desc">Show the bookmarks bar below the address bar (Cmd+Shift+B)</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-showBookmarksBar">
@@ -403,12 +403,12 @@
     <!-- ═══ Screenshots ═══ -->
     <div class="section" id="screenshots">
       <h2>📸 Screenshots</h2>
-      <p class="section-desc">Waar worden screenshots opgeslagen?</p>
+      <p class="section-desc">Where are screenshots saved?</p>
 
       <div class="field">
         <div class="field-info">
           <div class="field-label">Naar clipboard</div>
-          <div class="field-desc">Altijd aan — elke screenshot gaat naar je klembord</div>
+          <div class="field-desc">Always on — every screenshot goes to your clipboard</div>
         </div>
         <label class="toggle">
           <input type="checkbox" checked disabled>
@@ -419,7 +419,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Lokale folder</div>
-          <div class="field-desc">Sla screenshots op als bestanden</div>
+          <div class="field-desc">Save screenshots as files</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-localFolder">
@@ -437,7 +437,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Apple Photos</div>
-          <div class="field-desc">Importeer screenshots automatisch in Apple Photos (alleen macOS)</div>
+          <div class="field-desc">Auto-import screenshots to Apple Photos (macOS only)</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-applePhotos">
@@ -460,12 +460,12 @@
     <!-- ═══ Voice ═══ -->
     <div class="section" id="voice">
       <h2>🎙️ Voice</h2>
-      <p class="section-desc">Spraakinvoer instellingen</p>
+      <p class="section-desc">Voice input settings</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Input taal</div>
-          <div class="field-desc">Taal voor spraakherkenning</div>
+          <div class="field-label">Input language</div>
+          <div class="field-desc">Language for speech recognition</div>
         </div>
         <select id="cfg-voiceLanguage">
           <option value="nl-BE">Nederlands (België)</option>
@@ -480,7 +480,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Auto-send na stilte</div>
-          <div class="field-desc">Stuur bericht automatisch na een pauze in het spreken</div>
+          <div class="field-desc">Auto-send message after a pause in speaking</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoSendOnSilence">
@@ -491,7 +491,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Stilte timeout</div>
-          <div class="field-desc">Wacht zo lang na laatste woord voor auto-send</div>
+          <div class="field-desc">Wait this long after last word before auto-send</div>
         </div>
         <div class="range-wrap">
           <input type="range" id="cfg-silenceTimeout" min="1" max="5" step="0.5" value="2">
@@ -503,17 +503,17 @@
     <!-- ═══ Appearance ═══ -->
     <div class="section" id="appearance">
       <h2>🎨 Thema</h2>
-      <p class="section-desc">Kleurschema en visuele instellingen</p>
+      <p class="section-desc">Color scheme and visual settings</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Kleurschema</div>
-          <div class="field-desc">Kies tussen donker, licht of systeem voorkeur</div>
+          <div class="field-label">Color scheme</div>
+          <div class="field-desc">Choose between dark, light or system preference</div>
         </div>
         <select id="cfg-theme">
-          <option value="dark">🌙 Donker</option>
-          <option value="light">☀️ Licht</option>
-          <option value="system">🔄 Systeem voorkeur</option>
+          <option value="dark">🌙 Dark</option>
+          <option value="light">☀️ Light</option>
+          <option value="system">🔄 System</option>
         </select>
       </div>
 
@@ -531,7 +531,7 @@
     <!-- ═══ Stealth ═══ -->
     <div class="section" id="stealth">
       <h2>🛡️ Stealth</h2>
-      <p class="section-desc">Anti-detectie instellingen — houd Tandem onzichtbaar</p>
+      <p class="section-desc">Anti-detection settings — keep Tandem invisible</p>
 
       <div class="field">
         <div class="field-info">
@@ -555,7 +555,7 @@
         <div class="field-info">
           <div class="field-label">Stealth Level</div>
           <div class="field-desc">
-            <span class="tooltip" data-tip="Low: Basis UA + header patches&#10;Medium: + navigator/chrome mocks, fingerprint patches&#10;High: + canvas/WebGL randomisatie, timing humanisatie">Hover voor uitleg per level</span>
+            <span class="tooltip" data-tip="Low: Basic UA + header patches&#10;Medium: + navigator/chrome mocks, fingerprint patches&#10;High: + canvas/WebGL randomization, timing humanization">Hover for explanation per level</span>
           </div>
         </div>
         <select id="cfg-stealthLevel">
@@ -568,7 +568,7 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Accept-Language</div>
-          <div class="field-desc">Auto volgt je taalinstelling</div>
+          <div class="field-desc">Auto follows your language setting</div>
         </div>
         <select id="cfg-acceptLanguage">
           <option value="auto">Auto</option>
@@ -587,12 +587,12 @@
     <!-- ═══ Sync ═══ -->
     <div class="section" id="sync">
       <h2>🔄 Sync</h2>
-      <p class="section-desc">Synchroniseer data vanuit Chrome</p>
+      <p class="section-desc">Sync data from Chrome</p>
 
       <div class="field">
         <div class="field-info">
           <div class="field-label">Chrome favorieten sync</div>
-          <div class="field-desc">Importeer en synchroniseer automatisch favorieten vanuit Google Chrome</div>
+          <div class="field-desc">Auto-import and sync bookmarks from Google Chrome</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-chromeBookmarks">
@@ -602,8 +602,8 @@
 
       <div class="field" id="field-chromeProfile">
         <div class="field-info">
-          <div class="field-label">Chrome profiel</div>
-          <div class="field-desc">Selecteer welk Chrome profiel je wilt synchroniseren</div>
+          <div class="field-label">Chrome profile</div>
+          <div class="field-desc">Select which Chrome profile to sync</div>
         </div>
         <select id="cfg-chromeProfile">
           <option value="Default">Default</option>
@@ -613,21 +613,21 @@
       <div class="field">
         <div class="field-info">
           <div class="field-label">Sync status</div>
-          <div class="field-desc" id="sync-status-text">Niet actief</div>
+          <div class="field-desc" id="sync-status-text">Not active</div>
         </div>
-        <button class="btn btn-secondary" id="btn-syncNow">🔄 Nu synchroniseren</button>
+        <button class="btn btn-secondary" id="btn-syncNow">🔄 Sync now</button>
       </div>
     </div>
 
     <!-- ═══ Behavioral Learning ═══ -->
     <div class="section" id="behavior">
       <h2>🧬 Behavioral Learning</h2>
-      <p class="section-desc">Tandem leert je browspatronen voor natuurlijke automatisering</p>
+      <p class="section-desc">Tandem learns your browsing patterns for natural automation</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Tracking aan</div>
-          <div class="field-desc">Registreer muis, scroll, toetsenbord en navigatiepatronen</div>
+          <div class="field-label">Tracking on</div>
+          <div class="field-desc">Record mouse, scroll, keyboard and navigation patterns</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-trackingEnabled">
@@ -637,10 +637,10 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Behavioral data wissen</div>
-          <div class="field-desc">Verwijder alle opgeslagen gedragsdata</div>
+          <div class="field-label">Clear behavioral data</div>
+          <div class="field-desc">Delete all stored behavioral data</div>
         </div>
-        <button class="btn btn-danger" id="btn-clearBehavior">Data wissen</button>
+        <button class="btn btn-danger" id="btn-clearBehavior">Clear data</button>
       </div>
 
       <h3 style="font-size:14px;margin:16px 0 8px;">📊 Statistieken</h3>
@@ -656,12 +656,12 @@
     <!-- ═══ AI Autonomie ═══ -->
     <div class="section" id="autonomy">
       <h2>🤖 AI Autonomie</h2>
-      <p class="section-desc">Bepaal wat Kees/Claude automatisch mag doen zonder te vragen</p>
+      <p class="section-desc">Configure what Copilot/Claude can do automatically without asking</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Pagina's lezen zonder vragen</div>
-          <div class="field-desc">Screenshots, scrollen, tekst lezen</div>
+          <div class="field-label">Read pages without asking</div>
+          <div class="field-desc">Screenshots, scrolling, reading text</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoApproveRead">
@@ -671,8 +671,8 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Navigeren zonder vragen</div>
-          <div class="field-desc">Naar URL's gaan, tabs openen/sluiten</div>
+          <div class="field-label">Navigate without asking</div>
+          <div class="field-desc">Navigate to URLs, open/close tabs</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoApproveNavigate">
@@ -682,8 +682,8 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Klikken zonder vragen</div>
-          <div class="field-desc">Links en knoppen klikken</div>
+          <div class="field-label">Click without asking</div>
+          <div class="field-desc">Click links and buttons</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoApproveClick">
@@ -693,8 +693,8 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Tekst typen zonder vragen</div>
-          <div class="field-desc">Tekst invullen in zoekvelden en inputs</div>
+          <div class="field-label">Type text without asking</div>
+          <div class="field-desc">Fill text in search fields and inputs</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoApproveType">
@@ -704,8 +704,8 @@
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Formulieren invullen zonder vragen</div>
-          <div class="field-desc">Formulieren automatisch invullen en versturen</div>
+          <div class="field-label">Fill forms without asking</div>
+          <div class="field-desc">Auto-fill and submit forms</div>
         </div>
         <label class="toggle">
           <input type="checkbox" id="cfg-autoApproveForms">
@@ -716,7 +716,7 @@
       <div class="field" style="flex-direction:column;align-items:flex-start;">
         <div class="field-info" style="margin-bottom:8px;">
           <div class="field-label">Vertrouwde sites</div>
-          <div class="field-desc">Op deze sites mag de AI meer automatisch doen</div>
+          <div class="field-desc">On these sites the AI can do more automatically</div>
         </div>
         <textarea id="cfg-trustedSites" style="width:100%;min-height:60px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;" placeholder="google.com&#10;wikipedia.org&#10;duckduckgo.com"></textarea>
       </div>
@@ -725,31 +725,31 @@
     <!-- ═══ Data ═══ -->
     <div class="section" id="data">
       <h2>💾 Data</h2>
-      <p class="section-desc">Exporteer, importeer of wis al je Tandem data</p>
+      <p class="section-desc">Export, import or clear all your Tandem data</p>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Exporteer alle data</div>
+          <div class="field-label">Export all data</div>
           <div class="field-desc">Bookmarks, history, chat, behavioral data — als JSON</div>
         </div>
-        <button class="btn btn-secondary" id="btn-export">📦 Exporteer</button>
+        <button class="btn btn-secondary" id="btn-export">📦 Export</button>
       </div>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Importeer data</div>
-          <div class="field-desc">Herstel een eerder geëxporteerde Tandem backup</div>
+          <div class="field-label">Import data</div>
+          <div class="field-desc">Restore a previously exported Tandem backup</div>
         </div>
-        <button class="btn btn-secondary" id="btn-import">📥 Importeer</button>
+        <button class="btn btn-secondary" id="btn-import">📥 Import</button>
         <input type="file" id="import-file" accept=".json" style="display:none" />
       </div>
 
       <div class="field">
         <div class="field-info">
-          <div class="field-label">Wis alle data</div>
-          <div class="field-desc">⚠️ Dit verwijdert ALLES — chat, config, behavioral data</div>
+          <div class="field-label">Clear all data</div>
+          <div class="field-desc">⚠️ This deletes EVERYTHING — chat, config, behavioral data</div>
         </div>
-        <button class="btn btn-danger" id="btn-wipe">🗑 Alles wissen</button>
+        <button class="btn btn-danger" id="btn-wipe">🗑 Clear all</button>
       </div>
     </div>
   </div>
@@ -760,8 +760,8 @@
   <!-- Confirm modal -->
   <div class="modal-overlay" id="modal-overlay">
     <div class="modal">
-      <h3 id="modal-title">Weet je het zeker?</h3>
-      <p id="modal-text">Dit kan niet ongedaan worden.</p>
+      <h3 id="modal-title">Are you sure?</h3>
+      <p id="modal-text">This cannot be undone.</p>
       <div class="btn-group">
         <button class="btn btn-secondary" id="modal-cancel">Annuleren</button>
         <button class="btn btn-danger" id="modal-confirm">Bevestigen</button>
@@ -792,14 +792,14 @@
       const b = config.behavior || {};
 
       // General
-      setVal('cfg-startPage', g.startPage || 'kees');
+      setVal('cfg-startPage', g.startPage || 'copilot');
       setVal('cfg-customStartUrl', g.customStartUrl || '');
 
       // Appearance/Theme
       setVal('cfg-theme', a.theme || 'dark');
       setVal('cfg-language', g.language || 'nl-BE');
-      setVal('cfg-keesPanelPosition', g.keesPanelPosition || 'right');
-      setChecked('cfg-keesPanelDefaultOpen', !!g.keesPanelDefaultOpen);
+      setVal('cfg-copilotPanelPosition', g.copilotPanelPosition || 'right');
+      setChecked('cfg-copilotPanelDefaultOpen', !!g.copilotPanelDefaultOpen);
       setChecked('cfg-showBookmarksBar', g.showBookmarksBar !== false);
       toggleField('field-customStartUrl', g.startPage === 'custom');
 
@@ -884,8 +884,8 @@
     wire('cfg-startPage', 'general.startPage');
     wire('cfg-customStartUrl', 'general.customStartUrl');
     wire('cfg-language', 'general.language');
-    wire('cfg-keesPanelPosition', 'general.keesPanelPosition');
-    wire('cfg-keesPanelDefaultOpen', 'general.keesPanelDefaultOpen');
+    wire('cfg-copilotPanelPosition', 'general.copilotPanelPosition');
+    wire('cfg-copilotPanelDefaultOpen', 'general.copilotPanelDefaultOpen');
     wire('cfg-localFolder', 'screenshots.localFolder');
     wire('cfg-localFolderPath', 'screenshots.localFolderPath');
     wire('cfg-voiceLanguage', 'voice.inputLanguage');
@@ -971,7 +971,7 @@
 
     // Clear behavior data
     document.getElementById('btn-clearBehavior').addEventListener('click', () => {
-      showModal('Behavioral data wissen?', 'Alle opgeslagen gedragspatronen worden verwijderd. Dit kan niet ongedaan worden.', async () => {
+      showModal('Clear behavioral data?', 'All stored behavioral patterns will be deleted. This cannot be undone.', async () => {
         try {
           await fetch(`${API}/behavior/clear`, { method: 'POST' });
           showToast('Behavioral data gewist ✓');
@@ -1022,7 +1022,7 @@
 
     // Wipe all data
     document.getElementById('btn-wipe').addEventListener('click', () => {
-      showModal('⚠️ ALLE data wissen?', 'Dit verwijdert je chat history, config, behavioral data en meer. Dit kan NIET ongedaan worden!', async () => {
+      showModal('⚠️ Clear ALL data?', 'This will delete your chat history, config, behavioral data and more. This CANNOT be undone!', async () => {
         try {
           await fetch(`${API}/data/wipe`, { method: 'POST' });
           showToast('Alle data gewist ✓');
@@ -1077,7 +1077,7 @@
             for (const p of data.profiles) {
               const opt = document.createElement('option');
               opt.value = p.path;
-              opt.textContent = p.name + (p.hasBookmarks ? '' : ' (geen favorieten)');
+              opt.textContent = p.name + (p.hasBookmarks ? '' : ' (no bookmarks)');
               select.appendChild(opt);
             }
           } else {
@@ -1099,10 +1099,10 @@
           const data = await res.json();
           const statusEl = document.getElementById('sync-status-text');
           if (data.syncing) {
-            statusEl.textContent = `Actief — synchroniseert met ${data.profile || 'Chrome'}`;
+            statusEl.textContent = `Active — syncing with ${data.profile || 'Chrome'}`;
             statusEl.style.color = 'var(--success)';
           } else {
-            statusEl.textContent = 'Niet actief';
+            statusEl.textContent = 'Not active';
             statusEl.style.color = 'var(--text-dim)';
           }
         }

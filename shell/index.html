@@ -207,7 +207,7 @@
       50% { opacity: 0.4; }
     }
 
-    .kees-badge {
+    .copilot-badge {
       font-size: 11px;
       padding: 3px 8px;
       background: rgba(233, 69, 96, 0.2);
@@ -487,8 +487,8 @@
       margin: 0 4px;
     }
 
-    /* ═══ Kees Panel ═══ */
-    .kees-panel {
+    /* ═══ Copilot Panel ═══ */
+    .copilot-panel {
       width: 0;
       min-width: 0;
       background: var(--surface);
@@ -498,7 +498,7 @@
       overflow: hidden;
       transition: width 0.25s ease, min-width 0.25s ease;
     }
-    .kees-panel.open {
+    .copilot-panel.open {
       width: 360px;
       min-width: 280px;
     }
@@ -512,7 +512,7 @@
       background: transparent;
       display: none;
     }
-    .kees-panel.open ~ .panel-resize-handle,
+    .copilot-panel.open ~ .panel-resize-handle,
     .panel-resize-handle.visible { display: block; }
 
     .panel-header {
@@ -556,7 +556,7 @@
     .activity-item .a-icon { flex-shrink: 0; }
     .activity-item .a-source { flex-shrink: 0; font-size: 10px; }
     .activity-item .a-source.robin { color: var(--success); }
-    .activity-item .a-source.kees { color: var(--accent); }
+    .activity-item .a-source.copilot { color: var(--accent); }
     .activity-item .a-text { flex: 1; word-break: break-word; }
     .activity-item .a-time { flex-shrink: 0; opacity: 0.5; font-size: 10px; }
 
@@ -578,7 +578,7 @@
       min-width: 0;
     }
     .chat-msg.robin { background: rgba(78, 204, 163, 0.2); border: 1px solid rgba(78, 204, 163, 0.3); align-self: flex-end; color: var(--text); }
-    .chat-msg.kees { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); overflow-wrap: break-word; }
+    .chat-msg.copilot { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); overflow-wrap: break-word; }
     .chat-msg .msg-from { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
     .chat-msg .msg-time { font-size: 9px; opacity: 0.35; margin-top: 3px; text-align: right; }
 
@@ -1022,11 +1022,11 @@
     <button id="btn-back" title="Terug">←</button>
     <button id="btn-forward" title="Vooruit">→</button>
     <button id="btn-reload" title="Herladen">⟳</button>
-    <input class="url-bar" id="url-bar" type="text" placeholder="Voer URL in of zoek..." value="">
+    <input class="url-bar" id="url-bar" type="text" placeholder="Search or enter URL..." value="">
     <button class="bookmark-star" id="btn-bookmark" title="Bookmark (⌘D)">☆</button>
     <button id="btn-screenshot" title="Screenshot (⌘⇧S)">📸</button>
-    <div class="status-dot" id="status-dot" title="Verbonden met Kees API"></div>
-    <span class="kees-badge">🧀 Kees</span>
+    <div class="status-dot" id="status-dot" title="Connected to Copilot API"></div>
+    <span class="copilot-badge">🤖 Copilot</span>
   </div>
 
   <!-- Bookmarks bar -->
@@ -1060,7 +1060,7 @@
         <button class="color-btn" data-color="#4285f4" style="background:#4285f4" title="Blauw"></button>
         <div class="separator"></div>
         <button id="btn-draw-clear" title="Wissen">🗑</button>
-        <button id="btn-snap-kees" title="📸 Snap voor Kees">📸</button>
+        <button id="btn-snap-copilot" title="📸 Snap for Copilot">📸</button>
       </div>
     </div>
 
@@ -1078,16 +1078,16 @@
       <div class="onboarding-content">
         <div class="onboarding-step" id="onboarding-step-1">
           <h2>👋 Welkom bij Tandem Browser</h2>
-          <p>Robin + Kees = samen browsen. Jij stuurt, Kees kijkt mee en helpt.</p>
+          <p>You + Copilot = browse together. You drive, Copilot watches and helps.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘K</span>
-            <span>Open Kees Panel</span>
+            <span>Open Copilot Panel</span>
           </div>
         </div>
 
         <div class="onboarding-step" id="onboarding-step-2" style="display:none;">
           <h2>📸 Screenshots & Annotaties</h2>
-          <p>Teken op de pagina en maak screenshots voor Kees.</p>
+          <p>Draw on the page and take screenshots for Copilot.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘⇧D</span>
             <span>Draw Mode</span>
@@ -1100,7 +1100,7 @@
 
         <div class="onboarding-step" id="onboarding-step-3" style="display:none;">
           <h2>🎙️ Voice Input</h2>
-          <p>Praat tegen Kees met je stem.</p>
+          <p>Talk to Copilot with your voice.</p>
           <div class="onboarding-feature">
             <span class="onboarding-icon">⌘⇧M</span>
             <span>Start Voice Input</span>
@@ -1126,10 +1126,10 @@
       </div>
     </div>
 
-    <!-- Kees Panel (SHELL layer, NOT in webview — anti-detect!) -->
-    <div class="kees-panel" id="kees-panel">
+    <!-- Copilot Panel (SHELL layer, NOT in webview — anti-detect!) -->
+    <div class="copilot-panel" id="copilot-panel">
       <div class="panel-header">
-        <h2>🧀 Kees</h2>
+        <h2>🤖 Copilot</h2>
         <button class="panel-tab active" data-panel-tab="activity">Activity</button>
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
@@ -1145,7 +1145,7 @@
           <div class="chat-backend-selector" id="chat-backend-selector">
             <button class="backend-option active" data-backend="openclaw" id="btn-backend-openclaw">
               <span class="backend-dot" id="dot-openclaw"></span>
-              🐙 Kees
+              🤖 Copilot
             </button>
             <button class="backend-option" data-backend="claude" id="btn-backend-claude">
               <span class="backend-dot" id="dot-claude"></span>
@@ -1164,11 +1164,11 @@
           <div class="chat-messages" id="chat-messages"></div>
           <div class="typing-indicator" id="typing-indicator">
             <div class="typing-dots"><span></span><span></span><span></span></div>
-            <span>Kees is typing...</span>
+            <span>Copilot is typing...</span>
           </div>
           <div id="chat-image-preview" class="chat-image-preview" style="display:none;"></div>
           <div class="chat-input-wrap">
-            <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
+            <textarea class="chat-input" id="chat-input" placeholder="Message to Copilot..." rows="1"></textarea>
             <button class="chat-send-btn" id="chat-send-btn">▶</button>
           </div>
         </div>
@@ -1229,7 +1229,7 @@
             <!-- Notes list -->
             <div class="claronote-notes" style="flex:1;overflow-y:auto;">
               <div style="padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;">
-                <span>Recente notities</span>
+                <span>Recent notes</span>
                 <button id="claronote-refresh" 
                         style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:2px 6px;border-radius:3px;">
                   🔄
@@ -1250,7 +1250,7 @@
   <!-- Copilot alert overlay -->
   <div class="copilot-overlay" id="copilot-overlay">
     <button class="dismiss" onclick="dismissAlert()">✕</button>
-    <h3 id="alert-title">🧀 Kees heeft je nodig</h3>
+    <h3 id="alert-title">🤖 Copilot heeft je nodig</h3>
     <p id="alert-body">...</p>
   </div>
 
@@ -1296,7 +1296,7 @@
         tabEl.className = 'tab';
         tabEl.dataset.tabId = tabId;
         tabEl.innerHTML = `
-          <span class="tab-source" title="Robin controlled">👤</span>
+          <span class="tab-source" title="You controlled">👤</span>
           <span class="group-dot" style="display:none"></span>
           <img class="tab-favicon" src="" style="display:none">
           <span class="tab-title">New Tab</span>
@@ -1467,10 +1467,10 @@
       tabEl.className = 'tab active';
       tabEl.dataset.tabId = '__initial';
       tabEl.innerHTML = `
-        <span class="tab-source" title="Robin controlled">👤</span>
+        <span class="tab-source" title="You controlled">👤</span>
         <span class="group-dot" style="display:none"></span>
         <img class="tab-favicon" src="" style="display:none">
-        <span class="tab-title">Nieuwe Tab</span>
+        <span class="tab-title">New Tab</span>
         <button class="tab-close" title="Sluit tab">✕</button>
       `;
       tabBar.insertBefore(tabEl, btnNewTab);
@@ -1637,8 +1637,8 @@
           document.getElementById('panel-claronote').style.display = 'flex';
           
           // Open panel if closed
-          if (!document.getElementById('kees-panel').classList.contains('open')) {
-            document.getElementById('kees-panel').classList.add('open');
+          if (!document.getElementById('copilot-panel').classList.contains('open')) {
+            document.getElementById('copilot-panel').classList.add('open');
           }
           
           // Initialize and toggle recording
@@ -1726,20 +1726,20 @@
     }
 
     // ═══════════════════════════════════════════════
-    // Kees badge → right-click or long-press → open settings
-    const keesBadge = document.querySelector('.kees-badge');
-    keesBadge.addEventListener('contextmenu', (e) => {
+    // Copilot badge → right-click or long-press → open settings
+    const copilotBadge = document.querySelector('.copilot-badge');
+    copilotBadge.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       openSettings();
     });
-    let keesBadgePressTimer = null;
-    keesBadge.addEventListener('mousedown', () => {
-      keesBadgePressTimer = setTimeout(() => openSettings(), 600);
+    let copilotBadgePressTimer = null;
+    copilotBadge.addEventListener('mousedown', () => {
+      copilotBadgePressTimer = setTimeout(() => openSettings(), 600);
     });
-    keesBadge.addEventListener('mouseup', () => { clearTimeout(keesBadgePressTimer); });
-    keesBadge.addEventListener('mouseleave', () => { clearTimeout(keesBadgePressTimer); });
-    keesBadge.style.cursor = 'pointer';
-    keesBadge.title = 'Rechts-klik voor instellingen';
+    copilotBadge.addEventListener('mouseup', () => { clearTimeout(copilotBadgePressTimer); });
+    copilotBadge.addEventListener('mouseleave', () => { clearTimeout(copilotBadgePressTimer); });
+    copilotBadge.style.cursor = 'pointer';
+    copilotBadge.title = 'Right-click for settings';
 
     // Screenshot toolbar button
     document.getElementById('btn-screenshot').addEventListener('click', () => {
@@ -1764,10 +1764,10 @@
     }
 
     // ═══════════════════════════════════════════════
-    // Kees Panel
+    // Copilot Panel
     // ═══════════════════════════════════════════════
 
-    const keesPanel = document.getElementById('kees-panel');
+    const copilotPanel = document.getElementById('copilot-panel');
     const panelBody = document.getElementById('panel-body');
 
     // Panel tab switching
@@ -1795,9 +1795,9 @@
     if (window.tandem) {
       window.tandem.onPanelToggle((data) => {
         if (data.open) {
-          keesPanel.classList.add('open');
+          copilotPanel.classList.add('open');
         } else {
-          keesPanel.classList.remove('open');
+          copilotPanel.classList.remove('open');
         }
       });
 
@@ -1813,7 +1813,7 @@
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
         const source = event.data.source || 'robin';
-        const sourceEmoji = source === 'kees' ? '🧀' : '👤';
+        const sourceEmoji = source === 'kees' ? '🤖' : '👤';
         const item = document.createElement('div');
         item.className = 'activity-item';
         item.innerHTML = `<span class="a-icon">${icon}</span><span class="a-source ${source}">${sourceEmoji}</span><span class="a-text">${text}</span><span class="a-time">${time}</span>`;
@@ -1830,7 +1830,7 @@
             const sourceEl = entry.tabEl.querySelector('.tab-source');
             if (sourceEl) {
               sourceEl.textContent = data.source === 'kees' ? '🤖' : '👤';
-              sourceEl.title = data.source === 'kees' ? 'AI controlled — klik om over te nemen' : 'Robin controlled';
+              sourceEl.title = data.source === 'kees' ? 'AI controlled — click to take over' : 'You controlled';
             }
             // Visual indicator: purple bottom border for AI tabs
             if (data.source === 'kees') {
@@ -1871,8 +1871,8 @@
         if (url) window.tandem.newTab(url);
       });
 
-      // Kees chat injection from context menu — fill input but let user review before sending
-      window.tandem.onKeesChatInject((text) => {
+      // Copilot chat injection from context menu — fill input but let user review before sending
+      window.tandem.onCopilotChatInject((text) => {
         // Switch to chat tab in panel
         const chatTab = document.querySelector('[data-panel-tab="chat"]');
         if (chatTab) chatTab.click();
@@ -1957,8 +1957,8 @@
           cls = 'claude';
           name = 'Claude';
         } else {
-          cls = 'kees';
-          name = 'Kees';
+          cls = 'copilot';
+          name = 'Copilot';
         }
         const el = document.createElement('div');
         el.className = `chat-msg ${cls} source-${source || sourceClass}`;
@@ -2016,15 +2016,15 @@
           const anyConnected = ocConn || clConn;
           wsDot.style.background = anyConnected ? 'var(--success)' : 'var(--accent)';
           if (ocConn && clConn) {
-            wsStatusText.textContent = 'Kees + Claude Connected';
+            wsStatusText.textContent = 'Copilot + Claude Connected';
           } else if (ocConn) {
-            wsStatusText.textContent = 'Kees Connected, Claude Disconnected';
+            wsStatusText.textContent = 'Copilot Connected, Claude Disconnected';
           } else if (clConn) {
-            wsStatusText.textContent = 'Kees Disconnected, Claude Connected';
+            wsStatusText.textContent = 'Copilot Disconnected, Claude Connected';
           } else {
             wsStatusText.textContent = 'Both Disconnected';
           }
-          inputEl.placeholder = 'Bericht aan Kees & Claude... (@kees/@claude voor specifiek)';
+          inputEl.placeholder = 'Message to Copilot & Claude... (@copilot/@claude for specific)';
         } else {
           // Single backend mode
           const backend = router.getActive();
@@ -2034,9 +2034,9 @@
             wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
           }
           if (activeId === 'claude') {
-            inputEl.placeholder = 'Bericht aan Claude...';
+            inputEl.placeholder = 'Message to Claude...';
           } else {
-            inputEl.placeholder = 'Bericht aan Kees...';
+            inputEl.placeholder = 'Message to Copilot...';
           }
         }
 
@@ -2048,7 +2048,7 @@
           } else if (activeId === 'claude') {
             typingText.textContent = 'Claude is thinking...';
           } else {
-            typingText.textContent = 'Kees is typing...';
+            typingText.textContent = 'Copilot is typing...';
           }
         }
       }
@@ -2343,7 +2343,7 @@
         typingEl.classList.toggle('active', typing);
         const typingText = typingEl.querySelector('span:last-child');
         if (typingText && typing) {
-          const name = backendId === 'openclaw' ? 'Kees' : 'Claude';
+          const name = backendId === 'openclaw' ? 'Copilot' : 'Claude';
           typingText.textContent = `${name} is typing...`;
         }
       });
@@ -2471,7 +2471,7 @@
           if (router.getActiveId() === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
-            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Kees ontvangt het
+            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Copilot receives it
             window.tandem?.sendChatMessage(text);
           } else {
             // For Claude, the backend emits the sent message
@@ -2506,7 +2506,7 @@
         })
         .catch(() => switchBackend('openclaw'));
 
-      // Listen for incoming Kees messages pushed via POST /chat API
+      // Listen for incoming Copilot messages pushed via POST /chat API
       if (window.tandem && window.tandem.onChatMessage) {
         window.tandem.onChatMessage((msg) => {
           // msg: {id, from, text, timestamp, image}
@@ -2583,7 +2583,7 @@
         const actionDesc = data.action ? `${data.action.type}: ${JSON.stringify(data.action.params || {}).slice(0, 80)}` : '';
 
         card.innerHTML = `
-          <div class="approval-title">🤖 Kees wil een actie uitvoeren:</div>
+          <div class="approval-title">🤖 Copilot wants to perform an action:</div>
           <div class="approval-desc">${escapeHtmlSimple(data.description || '')}</div>
           <div class="approval-desc" style="font-family:monospace;font-size:10px;">${escapeHtmlSimple(actionDesc)}</div>
           <span class="approval-risk ${riskClass}">${riskLabel}</span>
@@ -2644,19 +2644,19 @@
       if (!resizing) return;
       const panelWidth = window.innerWidth - e.clientX;
       if (panelWidth >= 200 && panelWidth <= 600) {
-        keesPanel.style.width = panelWidth + 'px';
+        copilotPanel.style.width = panelWidth + 'px';
       }
     });
     document.addEventListener('mouseup', () => { resizing = false; });
     // Position resize handle
     new MutationObserver(() => {
-      if (keesPanel.classList.contains('open')) {
-        resizeHandle.style.right = keesPanel.offsetWidth + 'px';
+      if (copilotPanel.classList.contains('open')) {
+        resizeHandle.style.right = copilotPanel.offsetWidth + 'px';
         resizeHandle.style.display = 'block';
       } else {
         resizeHandle.style.display = 'none';
       }
-    }).observe(keesPanel, { attributes: true, attributeFilter: ['class', 'style'] });
+    }).observe(copilotPanel, { attributes: true, attributeFilter: ['class', 'style'] });
 
     // ═══════════════════════════════════════════════
     // Draw/Annotatie Tool
@@ -2939,9 +2939,9 @@
       redraw();
     });
 
-    // Snap for Kees
-    document.getElementById('btn-snap-kees').addEventListener('click', () => {
-      if (window.tandem) window.tandem.snapForKees();
+    // Snap for Copilot
+    document.getElementById('btn-snap-copilot').addEventListener('click', () => {
+      if (window.tandem) window.tandem.snapForCopilot();
     });
 
     // Draw mode toggle from main process
@@ -3176,7 +3176,7 @@
       // Auto-snapshot request from activity tracker
       window.tandem.onAutoSnapshotRequest((data) => {
         // Trigger snap silently
-        window.tandem.snapForKees();
+        window.tandem.snapForCopilot();
       });
     }
 
@@ -4128,36 +4128,36 @@
       
       <div class="shortcuts-grid">
         <div class="shortcut-group">
-          <h3>Navigatie</h3>
+          <h3>Navigation</h3>
           <div class="shortcut-item" data-search="nieuwe tab new tab open">
-            <span class="shortcut-desc">Nieuwe tab</span>
+            <span class="shortcut-desc">New tab</span>
             <kbd class="shortcut">Cmd+T</kbd>
           </div>
-          <div class="shortcut-item" data-search="close tab sluiten">
-            <span class="shortcut-desc">Tab sluiten</span>
+          <div class="shortcut-item" data-search="close tab">
+            <span class="shortcut-desc">Close tab</span>
             <kbd class="shortcut">Cmd+W</kbd>
           </div>
           <div class="shortcut-item" data-search="tab switch wissel 1 2 3 4 5 6 7 8 9">
-            <span class="shortcut-desc">Naar tab 1-9</span>
+            <span class="shortcut-desc">Go to tab 1-9</span>
             <kbd class="shortcut">Cmd+1-9</kbd>
           </div>
-          <div class="shortcut-item" data-search="history geschiedenis">
-            <span class="shortcut-desc">Geschiedenis</span>
+          <div class="shortcut-item" data-search="history">
+            <span class="shortcut-desc">History</span>
             <kbd class="shortcut">Cmd+Y</kbd>
           </div>
-          <div class="shortcut-item" data-search="find zoek search pagina">
-            <span class="shortcut-desc">Zoeken op pagina</span>
+          <div class="shortcut-item" data-search="find search page">
+            <span class="shortcut-desc">Find on page</span>
             <kbd class="shortcut">Cmd+F</kbd>
           </div>
         </div>
 
         <div class="shortcut-group">
-          <h3>Kees</h3>
-          <div class="shortcut-item" data-search="kees panel toggle">
-            <span class="shortcut-desc">Kees panel toggle</span>
+          <h3>Copilot</h3>
+          <div class="shortcut-item" data-search="copilot panel toggle">
+            <span class="shortcut-desc">Copilot panel toggle</span>
             <kbd class="shortcut">Cmd+K</kbd>
           </div>
-          <div class="shortcut-item" data-search="voice input spraak microfoon">
+          <div class="shortcut-item" data-search="voice input microphone">
             <span class="shortcut-desc">Voice input</span>
             <kbd class="shortcut">Cmd+M</kbd>
           </div>
@@ -4170,11 +4170,11 @@
         <div class="shortcut-group">
           <h3>Tools</h3>
           <div class="shortcut-item" data-search="bookmark bladwijzer save opslaan">
-            <span class="shortcut-desc">Bookmark pagina</span>
+            <span class="shortcut-desc">Bookmark page</span>
             <kbd class="shortcut">Cmd+D</kbd>
           </div>
           <div class="shortcut-item" data-search="draw teken annotatie pen">
-            <span class="shortcut-desc">Teken mode</span>
+            <span class="shortcut-desc">Drawing mode</span>
             <kbd class="shortcut">Cmd+Shift+D</kbd>
           </div>
           <div class="shortcut-item" data-search="screenshot foto snap picture">
@@ -4182,15 +4182,15 @@
             <kbd class="shortcut">Cmd+Shift+S</kbd>
           </div>
           <div class="shortcut-item" data-search="audio record opname geluid">
-            <span class="shortcut-desc">Audio opnemen</span>
+            <span class="shortcut-desc">Record audio</span>
             <kbd class="shortcut">Cmd+R</kbd>
           </div>
         </div>
 
         <div class="shortcut-group">
           <h3>Browser</h3>
-          <div class="shortcut-item" data-search="settings instellingen config">
-            <span class="shortcut-desc">Instellingen</span>
+          <div class="shortcut-item" data-search="settings config">
+            <span class="shortcut-desc">Settings</span>
             <kbd class="shortcut">Cmd+,</kbd>
           </div>
           <div class="shortcut-item" data-search="help shortcuts hulp">
@@ -4202,7 +4202,7 @@
             <kbd class="shortcut">Cmd+=</kbd>
           </div>
           <div class="shortcut-item" data-search="zoom out uitzoomen kleiner">
-            <span class="shortcut-desc">Zoom uit</span>
+            <span class="shortcut-desc">Zoom out</span>
             <kbd class="shortcut">Cmd+-</kbd>
           </div>
           <div class="shortcut-item" data-search="zoom reset normale grootte">
@@ -4213,7 +4213,7 @@
       </div>
       
       <div class="shortcuts-footer">
-        <p>💡 Tip: Typ om te zoeken • Druk <kbd>Esc</kbd> om te sluiten</p>
+        <p>💡 Tip: Type to search • Press <kbd>Esc</kbd> to close</p>
       </div>
     </div>
   </div>
@@ -4852,10 +4852,10 @@
           statusEl.innerHTML += '<br>✅ Bookmarks geïmporteerd';
         }
         
-        statusEl.innerHTML += '<br>📚 Importeren van geschiedenis...';
+        statusEl.innerHTML += '<br>📚 Importing history...';
         const historyResp = await fetch('http://localhost:8765/import/chrome/history', { method: 'POST' });
         if (historyResp.ok) {
-          statusEl.innerHTML += '<br>✅ Geschiedenis geïmporteerd';
+          statusEl.innerHTML += '<br>✅ History imported';
         }
         
         statusEl.innerHTML += '<br>🍪 Importeren van cookies...';
@@ -4892,7 +4892,7 @@
         
         hideOnboarding();
         
-        // Show Kees panel after a brief moment
+        // Show Copilot panel after a brief moment
         setTimeout(() => {
           if (window.tandem && window.tandem.openPanel) {
             window.tandem.openPanel();

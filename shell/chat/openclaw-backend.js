@@ -1,5 +1,5 @@
 /**
- * OpenClawBackend — WebSocket chat with OpenClaw (Kees)
+ * OpenClawBackend — WebSocket chat with OpenClaw (Copilot)
  * Implements ChatBackend interface (see src/chat/interfaces.ts)
  *
  * Extracted from inline ocChat IIFE in index.html.
@@ -8,7 +8,7 @@
 class OpenClawBackend {
   constructor() {
     this.id = 'openclaw';
-    this.name = 'Kees';
+    this.name = 'Copilot';
     this.icon = '🐙';
 
     this._ws = null;
