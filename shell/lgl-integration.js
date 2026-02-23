@@ -67,7 +67,7 @@ class LiquidGlassIntegration {
     // Tab Bar — LGL Navbar treatment
     this.applyGlass('.tab-bar', {
       type: 'navbar',
-      blur: 40,
+      blur: 20,
       tint: true,
       lensing: true,
       showThrough: true
@@ -76,7 +76,7 @@ class LiquidGlassIntegration {
     // Toolbar — LGL Toolbar treatment
     this.applyGlass('.toolbar', {
       type: 'toolbar',
-      blur: 40,
+      blur: 18,
       tint: true,
       lensing: true
     });
@@ -84,7 +84,7 @@ class LiquidGlassIntegration {
     // Copilot Panel — LGL Sidebar treatment (biggest glass surface)
     this.applyGlass('.copilot-panel', {
       type: 'sidebar',
-      blur: 40,
+      blur: 24,
       tint: true,
       lensing: true,
       strongBlur: true
@@ -93,14 +93,14 @@ class LiquidGlassIntegration {
     // Draw Toolbar — Floating glass
     this.applyGlass('.draw-toolbar', {
       type: 'floating',
-      blur: 30,
+      blur: 16,
       tint: true
     });
 
     // Voice Indicator Overlay — Enhanced glass modal
     this.applyGlass('.voice-indicator-overlay', {
       type: 'overlay',
-      blur: 30,
+      blur: 15,
       tint: true,
       materialize: true
     });
@@ -108,89 +108,21 @@ class LiquidGlassIntegration {
     // Onboarding Overlay — Full glass takeover
     this.applyGlass('.onboarding-overlay', {
       type: 'overlay',
-      blur: 40,
+      blur: 24,
       tint: true,
       materialize: true
     });
 
     // Apply gel press effects to interactive elements
     this.applyGelPress('.toolbar button');
-    this.applyGelPressToTabs(); // Apply to existing and future tabs
+    this.applyGelPress('.tab');
     this.applyGelPress('.draw-toolbar button');
     this.applyGelPress('.copilot-panel-toggle');
 
     // Apply inner glow to key elements
-    this.applyInnerGlowToTabs(); // Apply to existing and future active tabs
+    this.applyInnerGlow('.tab.active');
     this.applyInnerGlow('.copilot-panel-toggle');
     this.applyInnerGlow('.toolbar button');
-    
-    // Watch for dynamically created tabs
-    this.setupTabObserver();
-  }
-  
-  applyGelPressToTabs() {
-    // Apply to existing tabs
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-      if (!tab.classList.contains('lgl-pressable')) {
-        tab.classList.add('lgl-pressable');
-      }
-    });
-  }
-  
-  applyInnerGlowToTabs() {
-    // Apply to existing active tabs
-    const activeTabs = document.querySelectorAll('.tab.active');
-    activeTabs.forEach(tab => {
-      if (!tab.classList.contains('lgl-glow')) {
-        tab.classList.add('lgl-glow');
-      }
-    });
-  }
-  
-  setupTabObserver() {
-    const tabBar = document.querySelector('.tab-bar');
-    if (!tabBar) return;
-    
-    // Observer for new tabs
-    const tabObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.classList && node.classList.contains('tab')) {
-            // Apply glass effects to new tab
-            node.classList.add('lgl-pressable');
-            
-            // If it's active, add glow
-            if (node.classList.contains('active')) {
-              node.classList.add('lgl-glow');
-            }
-          }
-        });
-      });
-      
-      // Also watch for active class changes
-      mutations.forEach((mutation) => {
-        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-          const target = mutation.target;
-          if (target.classList && target.classList.contains('tab')) {
-            if (target.classList.contains('active')) {
-              target.classList.add('lgl-glow');
-            } else {
-              target.classList.remove('lgl-glow');
-            }
-          }
-        }
-      });
-    });
-    
-    tabObserver.observe(tabBar, {
-      childList: true,
-      attributes: true,
-      attributeFilter: ['class'],
-      subtree: true
-    });
-    
-    console.log('[LGL] Tab observer active — watching for new tabs');
   }
 
   applyGlass(selector, options = {}) {
