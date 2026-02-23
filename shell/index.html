@@ -22,14 +22,16 @@
       --tab-hover: #1a2744;
       
       /* Liquid Glass Lite (LGL) variables */
-      --lgl-blur-radius: 20px;
-      --lgl-tint-light: rgba(255, 255, 255, 0.45);
-      --lgl-tint-dark: rgba(30, 30, 30, 0.55);
+      --lgl-blur-radius: 40px;
+      --lgl-tint-light: rgba(245, 245, 250, 0.72);
+      --lgl-tint-dark: rgba(22, 22, 30, 0.72);
+      --lgl-tint-toolbar-light: rgba(245, 245, 250, 0.65);
+      --lgl-tint-toolbar-dark: rgba(22, 22, 30, 0.65);
       --lgl-refraction: 0.15;
       --lgl-saturation: 1.4;
       --lgl-transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-      --lgl-shadow-light: 0 8px 32px rgba(0, 0, 0, 0.08);
-      --lgl-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.24);
+      --lgl-shadow-light: 0 2px 16px rgba(0, 0, 0, 0.12);
+      --lgl-shadow-dark: 0 2px 16px rgba(0, 0, 0, 0.4);
     }
 
     /* Light theme */
@@ -69,13 +71,17 @@
       background: var(--bg);
       color: var(--text);
       height: 100vh;
-      display: flex;
-      flex-direction: column;
+      position: relative;
       overflow: hidden;
     }
 
     /* ═══ Tab bar ═══ */
     .tab-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
       display: flex;
       align-items: center;
       background: var(--tab-bg);
@@ -110,9 +116,21 @@
     }
     .tab:hover { background: var(--tab-hover); color: var(--text); }
     .tab.active {
-      background: var(--tab-active);
+      background: rgba(255, 255, 255, 0.12);
       color: var(--text);
       border-bottom: 2px solid var(--accent);
+      backdrop-filter: blur(20px) brightness(1.1);
+      -webkit-backdrop-filter: blur(20px) brightness(1.1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+    
+    [data-theme="light"] .tab.active,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .tab.active {
+        background: rgba(255, 255, 255, 0.65);
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8),
+                    0 2px 8px rgba(0, 0, 0, 0.08);
+      }
     }
 
     .tab .group-dot {
@@ -169,6 +187,11 @@
 
     /* ═══ Toolbar ═══ */
     .toolbar {
+      position: fixed;
+      top: 38px;
+      left: 0;
+      right: 0;
+      z-index: 999;
       display: flex;
       align-items: center;
       gap: 8px;
@@ -191,16 +214,38 @@
 
     .url-bar {
       flex: 1;
-      background: var(--input-bg);
-      border: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
       border-radius: 20px;
       padding: 7px 16px;
       color: var(--text);
       font-size: 13px;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, background 0.2s;
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
     }
-    .url-bar:focus { border-color: var(--accent); }
+    .url-bar:focus { 
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.12);
+    }
+    
+    [data-theme="light"] .url-bar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .url-bar {
+        background: rgba(0, 0, 0, 0.05);
+        border-color: rgba(0,0,0,0.12);
+        box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+      }
+      [data-theme="system"] .url-bar:focus {
+        background: rgba(0, 0, 0, 0.08);
+      }
+    }
+    
+    [data-theme="light"] .url-bar:focus {
+      background: rgba(0, 0, 0, 0.08);
+    }
 
     .status-dot {
       width: 10px;
@@ -244,6 +289,11 @@
 
     /* ═══ Bookmarks bar ═══ */
     .bookmarks-bar {
+      position: fixed;
+      top: 90px; /* tab-bar (38px) + toolbar (≈52px) */
+      left: 0;
+      right: 0;
+      z-index: 998;
       display: none;
       align-items: center;
       gap: 2px;
@@ -253,8 +303,6 @@
       overflow: visible;
       white-space: nowrap;
       height: 28px;
-      position: relative;
-      z-index: 500;
       flex-wrap: nowrap;
     }
     .bookmarks-bar.visible { display: flex; }
@@ -409,10 +457,19 @@
 
     /* ═══ Main layout (browser + panel) ═══ */
     .main-layout {
-      flex: 1;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       display: flex;
       overflow: hidden;
-      position: relative;
+      padding-top: 90px; /* tab-bar (38px) + toolbar (≈52px) */
+    }
+
+    /* Adjust padding when bookmarks bar is visible */
+    body.bookmarks-visible .main-layout {
+      padding-top: 118px; /* tab-bar + toolbar + bookmarks-bar (28px) */
     }
 
     /* ═══ Browser content ═══ */
@@ -1077,7 +1134,8 @@
     .lgl-glass-navbar {
       background: var(--lgl-tint-dark) !important;
       box-shadow: var(--lgl-shadow-dark),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.05);
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1),
+                  0 1px 0 rgba(0, 0, 0, 0.2);
     }
 
     [data-theme="light"] .lgl-glass-navbar,
@@ -1085,21 +1143,24 @@
       [data-theme="system"] .lgl-glass-navbar {
         background: var(--lgl-tint-light) !important;
         box-shadow: var(--lgl-shadow-light),
-                    inset 0 1px 0 rgba(0, 0, 0, 0.03);
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+                    0 1px 0 rgba(0, 0, 0, 0.08);
       }
     }
 
     /* Toolbar glass */
     .lgl-glass-toolbar {
-      background: var(--lgl-tint-dark) !important;
-      box-shadow: var(--lgl-shadow-dark);
+      background: var(--lgl-tint-toolbar-dark) !important;
+      box-shadow: var(--lgl-shadow-dark),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
     }
 
     [data-theme="light"] .lgl-glass-toolbar,
     @media (prefers-color-scheme: light) {
       [data-theme="system"] .lgl-glass-toolbar {
-        background: var(--lgl-tint-light) !important;
-        box-shadow: var(--lgl-shadow-light);
+        background: var(--lgl-tint-toolbar-light) !important;
+        box-shadow: var(--lgl-shadow-light),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.5);
       }
     }
 
@@ -3578,8 +3639,10 @@
       bookmarksBarVisible = !bookmarksBarVisible;
       if (bookmarksBarVisible) {
         loadBookmarksBar();
+        document.body.classList.add('bookmarks-visible');
       } else {
         bookmarksBar.classList.remove('visible');
+        document.body.classList.remove('bookmarks-visible');
       }
       // Persist to config
       fetch('http://localhost:8765/config', {
@@ -3724,6 +3787,7 @@
 
       bookmarksBar.innerHTML = '';
       bookmarksBar.classList.add('visible');
+      document.body.classList.add('bookmarks-visible');
 
       // Add all items first
       const elements = [];
@@ -3833,6 +3897,7 @@
           barItems = (data.bar || []).slice(0, 30);
           if (barItems.length === 0) {
             bookmarksBar.classList.remove('visible');
+            document.body.classList.remove('bookmarks-visible');
             return;
           }
           layoutBookmarksBar();
@@ -3853,6 +3918,7 @@
           if (cfg.general && cfg.general.showBookmarksBar === false) {
             bookmarksBarVisible = false;
             bookmarksBar.classList.remove('visible');
+            document.body.classList.remove('bookmarks-visible');
             return;
           }
         }
