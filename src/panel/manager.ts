@@ -13,18 +13,18 @@ export interface ActivityEvent {
 
 export interface ChatMessage {
   id: number;
-  from: 'robin' | 'kees' | 'claude';
+  from: 'robin' | 'copilot' | 'kees' | 'claude';
   text: string;
   timestamp: number;
   image?: string;  // relative filename in ~/.tandem/chat-images/
 }
 
 /**
- * PanelManager — Manages the Kees side panel.
+ * PanelManager — Manages the Copilot side panel.
  * 
  * Tracks activity events from Electron webview events (NOT injected into webview).
  * Stores chat messages persistently in ~/.tandem/chat-history.json.
- * Supports typing indicator for Kees.
+ * Supports typing indicator for the AI copilot.
  */
 export class PanelManager {
   private win: BrowserWindow;
@@ -36,7 +36,7 @@ export class PanelManager {
   private panelOpen = false;
   private maxEvents = 500;
   private chatHistoryPath: string;
-  private keesTyping = false;
+  private copilotTyping = false;
   private chatImagesDir: string;
 
   constructor(win: BrowserWindow, configManager?: ConfigManager) {
@@ -124,7 +124,7 @@ export class PanelManager {
   }
 
   /** Add a chat message */
-  addChatMessage(from: 'robin' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
+  addChatMessage(from: 'robin' | 'copilot' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
     const msg: ChatMessage = {
       id: ++this.chatCounter,
       from,
@@ -135,9 +135,9 @@ export class PanelManager {
     this.chatMessages.push(msg);
     this.saveChatHistory();
     this.win.webContents.send('chat-message', msg);
-    // Clear typing indicator when Kees sends a message
-    if (from === 'kees' && this.keesTyping) {
-      this.setKeesTyping(false);
+    // Clear typing indicator when copilot sends a message
+    if ((from === 'copilot' || from === 'kees') && this.copilotTyping) {
+      this.setCopilotTyping(false);
     }
 
     // Fire webhook for robin messages (async, non-blocking)
@@ -151,7 +151,7 @@ export class PanelManager {
     if (!this.configManager) return;
     const config = this.configManager.getConfig();
     if (!config.webhook?.enabled || !config.webhook?.url) return;
-    // Only notify for robin messages (kees messages come FROM OpenClaw, no need to echo back)
+    // Only notify for robin messages (copilot messages come FROM OpenClaw, no need to echo back)
     if (msg.from !== 'robin') return;
     if (!config.webhook.notifyOnRobinChat) return;
 
@@ -192,15 +192,25 @@ export class PanelManager {
     return this.chatMessages.filter(m => m.id > sinceId);
   }
 
-  /** Set Kees typing indicator */
-  setKeesTyping(typing: boolean): void {
-    this.keesTyping = typing;
-    this.win.webContents.send('kees-typing', { typing });
+  /** Set Copilot typing indicator */
+  setCopilotTyping(typing: boolean): void {
+    this.copilotTyping = typing;
+    this.win.webContents.send('copilot-typing', { typing });
   }
 
-  /** Is Kees typing? */
+  /** @deprecated Use setCopilotTyping */
+  setKeesTyping(typing: boolean): void {
+    this.setCopilotTyping(typing);
+  }
+
+  /** Is Copilot typing? */
+  isCopilotTyping(): boolean {
+    return this.copilotTyping;
+  }
+
+  /** @deprecated Use isCopilotTyping */
   isKeesTyping(): boolean {
-    return this.keesTyping;
+    return this.copilotTyping;
   }
 
   /** Toggle panel open/closed */

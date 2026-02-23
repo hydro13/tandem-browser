@@ -32,7 +32,7 @@ export interface HeadlessStatus {
 }
 
 /**
- * HeadlessManager — Background BrowserWindow for Kees to browse solo.
+ * HeadlessManager — Background BrowserWindow for the AI copilot to browse solo.
  * 
  * Uses the same persist:tandem partition (cookies shared).
  * Same stealth patches as main window.
@@ -151,7 +151,7 @@ export class HeadlessManager {
       show: false,
       width: 1400,
       height: 900,
-      title: '🧀 Kees — Background',
+      title: '🤖 Copilot — Background',
       webPreferences: {
         partition,
         contextIsolation: true,
@@ -223,7 +223,7 @@ export class HeadlessManager {
 
       if (found && !this.captchaDetected) {
         this.captchaDetected = true;
-        this.showWithAlert('Captcha gedetecteerd!', 'Kees heeft hulp nodig — los de captcha op.');
+        this.showWithAlert('Captcha detected!', 'The AI copilot needs help — please solve the captcha.');
       } else if (!found) {
         this.captchaDetected = false;
       }

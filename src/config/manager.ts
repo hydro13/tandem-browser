@@ -9,13 +9,15 @@ import os from 'os';
 export interface TandemConfig {
   // Algemeen
   general: {
-    startPage: 'kees' | 'duckduckgo' | 'custom';
+    startPage: 'copilot' | 'duckduckgo' | 'custom';
     customStartUrl: string;
     language: string;
-    keesPanelPosition: 'left' | 'right';
-    keesPanelDefaultOpen: boolean;
+    copilotPanelPosition: 'left' | 'right';
+    copilotPanelDefaultOpen: boolean;
     showBookmarksBar: boolean;
     activeBackend: 'openclaw' | 'claude';
+    agentName: string;
+    agentDisplayName: string;
   };
 
   // Screenshots
@@ -84,13 +86,15 @@ export interface TandemConfig {
 
 const DEFAULT_CONFIG: TandemConfig = {
   general: {
-    startPage: 'kees',
+    startPage: 'copilot',
     customStartUrl: '',
-    language: 'nl-BE',
-    keesPanelPosition: 'right',
-    keesPanelDefaultOpen: false,
+    language: 'en-US',
+    copilotPanelPosition: 'right',
+    copilotPanelDefaultOpen: false,
     showBookmarksBar: true,
     activeBackend: 'openclaw',
+    agentName: 'Copilot',
+    agentDisplayName: 'AI Copilot',
   },
   screenshots: {
     clipboard: true,
@@ -165,6 +169,20 @@ export class ConfigManager {
     try {
       if (fs.existsSync(this.configPath)) {
         const raw = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
+        // Backward compat: migrate old kees* config keys
+        if (raw.general) {
+          if (raw.general.keesPanelPosition && !raw.general.copilotPanelPosition) {
+            raw.general.copilotPanelPosition = raw.general.keesPanelPosition;
+          }
+          if (raw.general.keesPanelDefaultOpen !== undefined && raw.general.copilotPanelDefaultOpen === undefined) {
+            raw.general.copilotPanelDefaultOpen = raw.general.keesPanelDefaultOpen;
+          }
+          if (raw.general.startPage === 'kees') {
+            raw.general.startPage = 'copilot';
+          }
+          delete raw.general.keesPanelPosition;
+          delete raw.general.keesPanelDefaultOpen;
+        }
         return this.deepMerge(DEFAULT_CONFIG, raw);
       }
     } catch (e: any) {

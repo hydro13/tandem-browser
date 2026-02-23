@@ -9,7 +9,7 @@ interface CopilotEvent {
 
 /**
  * CopilotStream — Pushes real-time activity events to OpenClaw
- * so Kees can see what Robin is doing in Tandem.
+ * so the AI copilot can see what the human is doing in Tandem.
  *
  * Same webhook pattern as PanelManager.fireWebhook().
  * Non-blocking, silent fail if OpenClaw is not running.
@@ -76,7 +76,7 @@ export class CopilotStream {
     }, delayMs));
   }
 
-  /** Format event as readable text for Kees */
+  /** Format event as readable text for the AI copilot */
   private formatEventText(event: CopilotEvent): string {
     switch (event.type) {
       case 'tab-switched':

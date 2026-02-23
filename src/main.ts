@@ -1,3 +1,7 @@
+// EPIPE crash fix for Linux (pipe errors on stdout/stderr)
+process.stdout?.on('error', () => {});
+process.stderr?.on('error', () => {});
+
 import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
@@ -384,7 +388,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-kees', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image'];
+  const ipcHandlers = ['snap-for-copilot', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -435,7 +439,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   });
 
   // ═══ Screenshot Snap — composites webview + canvas, saves + clipboard ═══
-  ipcMain.handle('snap-for-kees', async () => {
+  ipcMain.handle('snap-for-copilot', async () => {
     try {
       const activeTab = tabManager?.getActiveTab();
       if (!activeTab) return { ok: false, error: 'No active tab' };
@@ -668,7 +672,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (taskManager) {
       const result = taskManager.emergencyStop();
       if (panelManager) {
-        panelManager.addChatMessage('kees', `🛑 Noodrem! ${result.stopped} taken gestopt door Robin.`);
+        panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
       }
       return result;
     }
@@ -812,7 +816,7 @@ function buildAppMenu(): void {
       ],
     },
     {
-      label: 'Kees',
+      label: configManager?.getConfig().general.agentName || 'Copilot',
       submenu: [
         { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
           panelManager?.togglePanel();
@@ -878,7 +882,7 @@ function buildAppMenu(): void {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-// Copilot alert — notify Robin when Kees needs help
+// Copilot alert — notify the human when the AI copilot needs help
 export function copilotAlert(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title: `🧀 ${title}`, body }).show();

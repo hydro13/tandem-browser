@@ -368,8 +368,8 @@ export class TandemAPI {
           const sessionTabs = this.tabManager.listTabs().filter(t => t.partition === partition);
           if (sessionTabs.length === 0) {
             // No tab for this session — create one
-            const tab = await this.tabManager.openTab(url, undefined, 'kees', partition);
-            this.panelManager.logActivity('navigate', { url, source: 'kees', session: sessionName });
+            const tab = await this.tabManager.openTab(url, undefined, 'copilot', partition);
+            this.panelManager.logActivity('navigate', { url, source: 'copilot', session: sessionName });
             res.json({ ok: true, url, tab: tab.id });
             return;
           }
@@ -382,12 +382,12 @@ export class TandemAPI {
         const wc = await this.getActiveWC();
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
         wc.loadURL(url);
-        // Mark tab as Kees-controlled when navigated via API
+        // Mark tab as copilot-controlled when navigated via API
         const activeTab = this.tabManager.getActiveTab();
         if (activeTab) {
-          this.tabManager.setTabSource(activeTab.id, 'kees');
+          this.tabManager.setTabSource(activeTab.id, 'copilot');
         }
-        this.panelManager.logActivity('navigate', { url, source: 'kees' });
+        this.panelManager.logActivity('navigate', { url, source: 'copilot' });
         res.json({ ok: true, url });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -685,7 +685,7 @@ export class TandemAPI {
     this.app.post('/tabs/open', async (req: Request, res: Response) => {
       const { url = 'about:blank', groupId, source = 'robin' } = req.body;
       try {
-        const tabSource = source === 'kees' ? 'kees' as const : 'robin' as const;
+        const tabSource = source === 'kees' || source === 'copilot' ? 'copilot' as const : 'robin' as const;
         const tab = await this.tabManager.openTab(url, groupId, tabSource);
         this.panelManager.logActivity('tab-open', { url, source: tabSource });
         res.json({ ok: true, tab });
@@ -740,7 +740,7 @@ export class TandemAPI {
       }
     });
 
-    // Set tab source (robin/kees)
+    // Set tab source (robin/copilot)
     this.app.post('/tabs/source', (req: Request, res: Response) => {
       try {
         const { tabId, source } = req.body;
@@ -780,7 +780,7 @@ export class TandemAPI {
     });
 
     // ═══════════════════════════════════════════════
-    // PANEL — Kees side panel
+    // PANEL — Copilot side panel
     // ═══════════════════════════════════════════════
 
     this.app.post('/panel/toggle', (req: Request, res: Response) => {
@@ -810,11 +810,11 @@ export class TandemAPI {
       }
     });
 
-    /** Send chat message (default: kees, 'from' param allows robin/claude) */
+    /** Send chat message (default: copilot, 'from' param allows robin/claude) */
     this.app.post('/chat', (req: Request, res: Response) => {
       const { text, from, image } = req.body;
       if (!text && !image) { res.status(400).json({ error: 'text or image required' }); return; }
-      const sender: 'robin' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'kees';
+      const sender: 'robin' | 'copilot' | 'kees' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'copilot';
       try {
         let savedImage: string | undefined;
         if (image) {
@@ -843,11 +843,11 @@ export class TandemAPI {
       res.sendFile(filePath);
     });
 
-    /** Set Kees typing indicator */
+    /** Set Copilot typing indicator */
     this.app.post('/chat/typing', (req: Request, res: Response) => {
       try {
         const { typing = true } = req.body;
-        this.panelManager.setKeesTyping(typing);
+        this.panelManager.setCopilotTyping(typing);
         res.json({ ok: true, typing });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -1101,7 +1101,7 @@ export class TandemAPI {
       try {
         const result = this.taskManager.emergencyStop();
         if (this.panelManager) {
-          this.panelManager.addChatMessage('kees', `🛑 Noodrem! ${result.stopped} taken gestopt.`);
+          this.panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
         }
         res.json(result);
       } catch (e: any) {
@@ -1509,7 +1509,7 @@ export class TandemAPI {
       try {
         const { tabId, source } = req.body;
         if (!tabId || !source) { res.status(400).json({ error: 'tabId and source required' }); return; }
-        if (source !== 'robin' && source !== 'kees') { res.status(400).json({ error: 'source must be robin or kees' }); return; }
+        if (source !== 'robin' && source !== 'kees' && source !== 'copilot') { res.status(400).json({ error: 'source must be robin, copilot, or kees' }); return; }
         const ok = this.tabManager.setTabSource(tabId, source);
         res.json({ ok });
       } catch (e: any) {
@@ -2472,7 +2472,7 @@ export class TandemAPI {
     });
 
     // ═══════════════════════════════════════════════
-    // DEVTOOLS — CDP Bridge for Kees
+    // DEVTOOLS — CDP Bridge for Copilot
     // ═══════════════════════════════════════════════
 
     /** DevTools status */
@@ -2853,7 +2853,7 @@ export class TandemAPI {
         const sess = this.sessionManager.create(name);
         let tab = null;
         if (url) {
-          tab = await this.tabManager.openTab(url, undefined, 'kees', sess.partition);
+          tab = await this.tabManager.openTab(url, undefined, 'copilot', sess.partition);
         }
         res.json({ ok: true, name: sess.name, partition: sess.partition, tab: tab || undefined });
       } catch (e: any) {

@@ -38,7 +38,7 @@ export interface SiteData {
 }
 
 /**
- * SiteMemoryManager — Remembers every site Kees & Robin visit.
+ * SiteMemoryManager — Remembers every site the AI copilot & human visit.
  * 
  * Stores structured data per domain in ~/.tandem/site-memory/{domain}.json
  * Tracks changes between visits (diff detection).

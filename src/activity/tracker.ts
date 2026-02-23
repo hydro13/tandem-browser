@@ -54,9 +54,9 @@ export class ActivityTracker {
       data as Record<string, unknown>
     );
 
-    // Stream to Kees (Copilot Vision)
+    // Stream to Copilot (Copilot Vision)
     if (this.copilotStream) {
-      this.streamToKees(data);
+      this.streamToCopilot(data);
     }
 
     // Auto-snapshot on navigation (skip initial loads and internal pages)
@@ -72,8 +72,8 @@ export class ActivityTracker {
     }
   }
 
-  /** Stream activity events to Kees via CopilotStream */
-  private streamToKees(data: Record<string, unknown>): void {
+  /** Stream activity events to Copilot via CopilotStream */
+  private streamToCopilot(data: Record<string, unknown>): void {
     if (!this.copilotStream) return;
     const tabId = (data.tabId as string) || 'unknown';
     const timestamp = Date.now();

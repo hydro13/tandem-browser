@@ -120,7 +120,7 @@ async function getPageContent(): Promise<any> {
 }
 
 async function chat(text: string): Promise<void> {
-  await api('/chat', 'POST', { from: 'kees', text });
+  await api('/chat', 'POST', { from: 'copilot', text });
 }
 
 // ============ State Management ============

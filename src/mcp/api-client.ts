@@ -43,7 +43,7 @@ export async function apiCall(method: string, endpoint: string, body?: any): Pro
   return response.json();
 }
 
-/** Log an activity message to the Kees panel */
+/** Log an activity message to the Copilot panel */
 export async function logActivity(toolName: string, details?: string): Promise<void> {
   const text = details ? `🤖 ${toolName}: ${details}` : `🤖 ${toolName}`;
   try {

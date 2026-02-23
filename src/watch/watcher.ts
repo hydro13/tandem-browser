@@ -27,7 +27,7 @@ interface WatchState {
  * 
  * Uses a hidden BrowserWindow to periodically check pages for changes.
  * Hashes page text content and compares with previous check.
- * Alerts Robin/Kees when something changes.
+ * Alerts the human/copilot when something changes.
  */
 export class WatchManager {
   private watchFile: string;

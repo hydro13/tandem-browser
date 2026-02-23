@@ -67,7 +67,7 @@ export class ContextMenuBuilder {
     this.addSeparator(menu);
     this.addToolItems(menu, params, wc);
 
-    // Phase 5: Tandem-specific items (Kees AI, Bookmark, Screenshot)
+    // Phase 5: Tandem-specific items (Copilot AI, Bookmark, Screenshot)
     this.addTandemItems(menu, params, wc);
 
     return menu;
@@ -324,19 +324,19 @@ export class ContextMenuBuilder {
 
   // ═══ Phase 5: Tandem-specific Items ═══
 
-  /** Kees AI integration, Quick Bookmark, Screenshot */
+  /** Copilot AI integration, Quick Bookmark, Screenshot */
   private addTandemItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
     this.addSeparator(menu);
 
-    // Kees AI items
+    // Copilot AI items
     if (params.selectionText) {
       const safeText = params.selectionText.replace(/[\u0000-\u001f]/g, ' ').trim();
       const truncatedForPrompt = safeText.length > 500 ? safeText.substring(0, 500) + '...' : safeText;
       menu.append(new MenuItem({
-        label: 'Ask Kees about Selection',
+        label: 'Ask Copilot about Selection',
         click: () => {
           this.deps.panelManager.togglePanel(true);
-          this.deps.win.webContents.send('kees-chat-inject',
+          this.deps.win.webContents.send('copilot-chat-inject',
             `What can you tell me about this: "${truncatedForPrompt}"`
           );
         },
@@ -346,10 +346,10 @@ export class ContextMenuBuilder {
     if (params.mediaType === 'image' && params.srcURL) {
       const safeSrc = params.srcURL.replace(/[\u0000-\u001f]/g, '').trim();
       menu.append(new MenuItem({
-        label: 'Ask Kees about this Image',
+        label: 'Ask Copilot about this Image',
         click: () => {
           this.deps.panelManager.togglePanel(true);
-          this.deps.win.webContents.send('kees-chat-inject',
+          this.deps.win.webContents.send('copilot-chat-inject',
             `Analyze this image: ${safeSrc}`
           );
         },
@@ -357,7 +357,7 @@ export class ContextMenuBuilder {
     }
 
     menu.append(new MenuItem({
-      label: 'Summarize Page with Kees',
+      label: 'Summarize Page with Copilot',
       click: async () => {
         if (wc.isDestroyed()) return;
         this.deps.panelManager.togglePanel(true);
@@ -378,7 +378,7 @@ export class ContextMenuBuilder {
           ? 'Please summarize this page:\\n\\n' + excerpt
           : 'Please summarize the current page for me.';
 
-        this.deps.win.webContents.send('kees-chat-inject', prompt);
+        this.deps.win.webContents.send('copilot-chat-inject', prompt);
       },
     }));
 
@@ -534,7 +534,7 @@ export class ContextMenuBuilder {
     }));
     const currentSource = this.deps.tabManager.getTabSource(tabId);
     menu.append(new MenuItem({
-      label: currentSource === 'kees' ? 'Take back from Kees' : 'Let Kees handle this tab',
+      label: currentSource === 'kees' ? 'Take back from Copilot' : 'Let Copilot handle this tab',
       click: () => {
         const newSource = this.deps.tabManager.getTabSource(tabId) === 'kees' ? 'robin' : 'kees';
         this.deps.tabManager.setTabSource(tabId, newSource);

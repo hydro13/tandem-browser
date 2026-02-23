@@ -87,7 +87,9 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('screenshot-taken', handler);
     return () => ipcRenderer.removeListener('screenshot-taken', handler);
   },
-  snapForKees: () => ipcRenderer.invoke('snap-for-kees'),
+  snapForCopilot: () => ipcRenderer.invoke('snap-for-copilot'),
+  /** @deprecated Use snapForCopilot */
+  snapForKees: () => ipcRenderer.invoke('snap-for-copilot'),
   quickScreenshot: () => ipcRenderer.invoke('quick-screenshot'),
 
   // Voice
@@ -118,11 +120,17 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('auto-snapshot-request', handler);
   },
 
-  // Kees typing indicator
+  // Copilot typing indicator
+  onCopilotTyping: (callback: (data: { typing: boolean }) => void) => {
+    const handler = (_event: any, data: { typing: boolean }) => callback(data);
+    ipcRenderer.on('copilot-typing', handler);
+    return () => ipcRenderer.removeListener('copilot-typing', handler);
+  },
+  /** @deprecated Use onCopilotTyping */
   onKeesTyping: (callback: (data: { typing: boolean }) => void) => {
     const handler = (_event: any, data: { typing: boolean }) => callback(data);
-    ipcRenderer.on('kees-typing', handler);
-    return () => ipcRenderer.removeListener('kees-typing', handler);
+    ipcRenderer.on('copilot-typing', handler);
+    return () => ipcRenderer.removeListener('copilot-typing', handler);
   },
 
   // Emergency stop — stops all agent activity
@@ -135,7 +143,7 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('approval-request', handler);
   },
 
-  // Tab source changes (robin/kees control indicator)
+  // Tab source changes (robin/copilot control indicator)
   onTabSourceChanged: (callback: (data: { tabId: string; source: string }) => void) => {
     const handler = (_event: any, data: { tabId: string; source: string }) => callback(data);
     ipcRenderer.on('tab-source-changed', handler);
@@ -156,11 +164,17 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('open-url-in-new-tab', handler);
   },
 
-  // Kees chat injection (from context menu)
+  // Copilot chat injection (from context menu)
+  onCopilotChatInject: (callback: (text: string) => void) => {
+    const handler = (_event: any, text: string) => callback(text);
+    ipcRenderer.on('copilot-chat-inject', handler);
+    return () => ipcRenderer.removeListener('copilot-chat-inject', handler);
+  },
+  /** @deprecated Use onCopilotChatInject */
   onKeesChatInject: (callback: (text: string) => void) => {
     const handler = (_event: any, text: string) => callback(text);
-    ipcRenderer.on('kees-chat-inject', handler);
-    return () => ipcRenderer.removeListener('kees-chat-inject', handler);
+    ipcRenderer.on('copilot-chat-inject', handler);
+    return () => ipcRenderer.removeListener('copilot-chat-inject', handler);
   },
 
   // Bookmark status change (from context menu)

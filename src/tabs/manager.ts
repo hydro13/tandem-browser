@@ -1,6 +1,6 @@
 import { BrowserWindow, session, WebContents, webContents } from 'electron';
 
-export type TabSource = 'robin' | 'kees';
+export type TabSource = 'robin' | 'kees' | 'copilot';
 
 export interface Tab {
   id: string;

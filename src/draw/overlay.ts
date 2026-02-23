@@ -109,7 +109,7 @@ export class DrawOverlayManager {
 
   /**
    * Full screenshot pipeline: capture + composite + clipboard + file save + panel notify.
-   * Called from IPC 'snap-for-kees'.
+   * Called from IPC 'snap-for-copilot'.
    */
   async captureAnnotatedFull(activeWebContentsId: number, currentUrl: string): Promise<{ ok: boolean; path?: string; error?: string }> {
     try {
