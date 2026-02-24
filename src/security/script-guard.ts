@@ -99,6 +99,55 @@ function computeASTHash(node: acorn.Node): string {
   return createHash('sha256').update(features.join('|')).digest('hex').substring(0, 32);
 }
 
+// Phase 6-B: Similarity scoring — cosine similarity between AST feature vectors
+const SIMILARITY_THRESHOLD = 0.85;    // "structurally similar" — flag for review
+const SIMILARITY_IDENTICAL = 0.95;    // "structurally identical" — same as AST hash match
+
+/** Build AST feature vector: count occurrences of each node type/structural feature */
+function computeASTFeatureVector(node: acorn.Node): Map<string, number> {
+  const features = new Map<string, number>();
+  walkForFeatures(node, features);
+  return features;
+}
+
+function walkForFeatures(node: any, features: Map<string, number>): void {
+  if (!node || typeof node !== 'object') return;
+  if (node.type) {
+    const feature = buildNodeFeature(node);
+    features.set(feature, (features.get(feature) || 0) + 1);
+  }
+  for (const key of Object.keys(node)) {
+    if (key === 'start' || key === 'end' || key === 'loc' || key === 'raw') continue;
+    const child = node[key];
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        if (item && typeof item === 'object' && item.type) {
+          walkForFeatures(item, features);
+        }
+      }
+    } else if (child && typeof child === 'object' && child.type) {
+      walkForFeatures(child, features);
+    }
+  }
+}
+
+/** Cosine similarity between two feature vectors (0 = completely different, 1 = identical) */
+function computeSimilarity(vec1: Map<string, number>, vec2: Map<string, number>): number {
+  const allKeys = new Set([...vec1.keys(), ...vec2.keys()]);
+  let dotProduct = 0;
+  let norm1 = 0;
+  let norm2 = 0;
+  for (const key of allKeys) {
+    const a = vec1.get(key) || 0;
+    const b = vec2.get(key) || 0;
+    dotProduct += a * b;
+    norm1 += a * a;
+    norm2 += b * b;
+  }
+  if (norm1 === 0 || norm2 === 0) return 0;
+  return dotProduct / (Math.sqrt(norm1) * Math.sqrt(norm2));
+}
+
 // Entropy thresholds (reference: normal JS = 4.5-5.5, minified = 5.0-5.8, obfuscated = 5.8-6.5, encrypted = 7.5-8.0)
 const ENTROPY_THRESHOLD = 6.0;
 const ENTROPY_HIGH = 6.5;
@@ -315,6 +364,141 @@ export class ScriptGuard {
     }
   }
 
+  /** Cross-domain AST correlation: catch obfuscated variants of malware (Phase 6-B) */
+  private correlateAstHash(astHash: string, currentDomain: string, scriptUrl: string): void {
+    const domains = this.db.getDomainsForAstHash(astHash);
+
+    // 1. Check if any domain with the same AST structure is blocked
+    if (this.isDomainBlocked) {
+      for (const seenDomain of domains) {
+        if (seenDomain === currentDomain) continue;
+        if (this.isDomainBlocked(seenDomain)) {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain: currentDomain,
+            tabId: null,
+            eventType: 'obfuscated-script-from-blocked-domain',
+            severity: 'critical',
+            category: 'script',
+            details: JSON.stringify({
+              scriptUrl: scriptUrl.substring(0, 500),
+              astHash,
+              blockedDomain: seenDomain,
+              totalDomains: domains.length,
+              reason: 'ast-hash-matches-blocked-domain',
+            }),
+            actionTaken: 'flagged',
+            confidence: AnalysisConfidence.KNOWN_MALWARE_HASH,
+          });
+          this.onCriticalDetection?.(currentDomain, {
+            totalScore: 100,
+            matches: [],
+            severity: 'critical',
+            scriptUrl,
+            scriptLength: 0,
+          });
+          return; // One blocked-domain event is enough
+        }
+      }
+    }
+
+    // 2. Check for obfuscation variants: 3+ domains share same AST hash with different regular hashes
+    if (domains.length >= 3) {
+      const matches = this.db.getAstMatches(astHash);
+      const distinctHashes = new Set(matches.map(m => m.scriptHash).filter(Boolean));
+      if (distinctHashes.size >= 2) {
+        // Same AST structure, different surface form = likely obfuscation variants
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: currentDomain,
+          tabId: null,
+          eventType: 'obfuscation-variant-detected',
+          severity: 'medium',
+          category: 'script',
+          details: JSON.stringify({
+            scriptUrl: scriptUrl.substring(0, 500),
+            astHash,
+            domainCount: domains.length,
+            hashVariantCount: distinctHashes.size,
+            domains: domains.slice(0, 10),
+            reason: 'ast-same-structure-different-hashes',
+          }),
+          actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
+        });
+      }
+    }
+  }
+
+  /** Approximate similarity matching for flagged scripts against stored feature vectors (Phase 6-B) */
+  private runSimilarityCheck(astNode: acorn.Node, currentDomain: string, scriptUrl: string): void {
+    const currentVector = computeASTFeatureVector(astNode);
+    const currentAstHash = computeASTHash(astNode);
+
+    // Get all scripts with stored feature vectors (capped at 200 for performance)
+    const candidates = this.db.getScriptsWithAstFeatures();
+
+    for (const candidate of candidates) {
+      // Skip same domain (pointless) and exact AST hash matches (already caught by correlateAstHash)
+      if (candidate.domain === currentDomain) continue;
+      if (candidate.astHash === currentAstHash) continue;
+
+      // Only compare against scripts on blocked domains (performance gate)
+      if (!this.isDomainBlocked || !this.isDomainBlocked(candidate.domain)) continue;
+
+      // Deserialize stored feature vector
+      let storedVector: Map<string, number>;
+      try {
+        const entries = JSON.parse(candidate.astFeatures) as [string, number][];
+        storedVector = new Map(entries);
+      } catch {
+        continue; // Invalid stored data — skip
+      }
+
+      const similarity = computeSimilarity(currentVector, storedVector);
+
+      if (similarity >= SIMILARITY_IDENTICAL) {
+        // Structurally identical (but different AST hash — edge case)
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: currentDomain,
+          tabId: null,
+          eventType: 'ast-similarity-match',
+          severity: 'high',
+          category: 'script',
+          details: JSON.stringify({
+            scriptUrl: scriptUrl.substring(0, 500),
+            similarity: Math.round(similarity * 1000) / 1000,
+            matchedDomain: candidate.domain,
+            matchedUrl: candidate.scriptUrl.substring(0, 500),
+            reason: 'structurally-identical-to-blocked-script',
+          }),
+          actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
+        });
+      } else if (similarity >= SIMILARITY_THRESHOLD) {
+        // Structurally similar — flag for review
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: currentDomain,
+          tabId: null,
+          eventType: 'ast-similarity-match',
+          severity: 'medium',
+          category: 'script',
+          details: JSON.stringify({
+            scriptUrl: scriptUrl.substring(0, 500),
+            similarity: Math.round(similarity * 1000) / 1000,
+            matchedDomain: candidate.domain,
+            matchedUrl: candidate.scriptUrl.substring(0, 500),
+            reason: 'structurally-similar-to-blocked-script',
+          }),
+          actionTaken: 'flagged',
+          confidence: AnalysisConfidence.ANOMALY,
+        });
+      }
+    }
+  }
+
   /** Get the current page domain from the attached webContents */
   private getCurrentPageDomain(): string | null {
     const wc = this.devToolsManager.getAttachedWebContents();
@@ -339,11 +523,20 @@ export class ScriptGuard {
       this.correlateScriptHash(normalizedHash, domain, url, 'normalized');
 
       // 0c. AST hash for obfuscation-resistant fingerprinting (Phase 6-A)
+      let astNode: acorn.Node | null = null;
       if (source.length <= MAX_AST_PARSE_SIZE) {
-        const ast = parseToAST(source);
-        if (ast) {
-          const astHash = computeASTHash(ast);
+        astNode = parseToAST(source);
+        if (astNode) {
+          const astHash = computeASTHash(astNode);
           this.db.updateAstHash(domain, url, astHash);
+
+          // 0d. Compute and store feature vector for similarity scoring (Phase 6-B)
+          const featureVector = computeASTFeatureVector(astNode);
+          const serialized = JSON.stringify(Array.from(featureVector.entries()));
+          this.db.updateAstFeatures(domain, url, serialized);
+
+          // 0e. Cross-domain AST correlation (Phase 6-B)
+          this.correlateAstHash(astHash, domain, url);
         }
         // If parse fails (syntax error), ast_hash stays null — graceful degradation
       }
@@ -421,6 +614,13 @@ export class ScriptGuard {
         if (analysis.severity === 'critical') {
           this.onCriticalDetection?.(domain, analysis);
         }
+      }
+
+      // 6. Similarity scoring for flagged scripts (Phase 6-B)
+      // Only run for scripts that triggered rules or had high entropy (performance gate)
+      const isFlagged = analysis.severity !== 'none' || (entropy !== undefined && entropy >= ENTROPY_THRESHOLD);
+      if (isFlagged && astNode) {
+        this.runSimilarityCheck(astNode, domain, url);
       }
     } catch {
       // CDP command failed (tab closed, debugger detached) — silently ignore

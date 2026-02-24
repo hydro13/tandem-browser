@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 6-B
-**Last completed phase:** Phase 6-A
+**Next phase to implement:** Phase 7-A
+**Last completed phase:** Phase 6-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -219,19 +219,19 @@
 
 ## Phase 6-B: Similarity Matching + DB Integration
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** ebe4188
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] AST-based cross-domain lookup works
-  - [ ] Obfuscated variants matched by AST hash
-  - [ ] Script matching blocked domain AST → critical event
-  - [ ] Similarity scoring produces values 0-1
-  - [ ] `GET /security/scripts/correlations` includes AST data
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] AST-based cross-domain lookup works (`getDomainsForAstHash`, `getAstMatches`, `getWidespreadAstScripts`)
+  - [x] Obfuscated variants matched by AST hash (`obfuscation-variant-detected` event for 3+ domains with same AST hash but different regular hashes)
+  - [x] Script matching blocked domain AST → critical event (`obfuscated-script-from-blocked-domain` event + Gatekeeper notification)
+  - [x] Similarity scoring produces values 0-1 (cosine similarity via `computeSimilarity()`)
+  - [x] `GET /security/scripts/correlations` includes AST data (`astMatches` array + `astCorrelations` count)
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `correlateAstHash()` is a private method in ScriptGuard that runs after AST hash computation in `analyzeExternalScript()` (step 0e). It checks two things: (1) blocked-domain match — if any domain with the same AST structure is blocked, log critical event with `KNOWN_MALWARE_HASH` confidence and notify Gatekeeper; (2) obfuscation variant — if 3+ domains share the same AST hash with 2+ distinct regular hashes, log medium-severity event with `HEURISTIC` confidence. Similarity scoring uses cosine similarity between AST feature vectors (stored as serialized `Map<string, number>` in new `ast_features` TEXT column). Feature vectors are built by `computeASTFeatureVector()` which counts occurrences of each structural node feature (reuses `buildNodeFeature()` from Phase 6-A). `runSimilarityCheck()` is gated: only runs for scripts that triggered threat rules OR had high entropy (performance gate per phase doc). It queries stored feature vectors (capped at 200 candidates) and only compares against scripts on blocked domains. Thresholds: >= 0.95 = "structurally identical" (high severity), >= 0.85 = "structurally similar" (medium severity). The correlations API endpoint now returns `astMatches` (from `getWidespreadAstScripts`) with `isObfuscationVariant` and `hasBlockedDomain` flags per entry, plus `astCorrelations` count at top level.
 
 ---
 
@@ -363,7 +363,9 @@
 - `src/security/security-db.ts` — Added `ast_hash TEXT` column migration (ALTER TABLE), `idx_script_fp_ast_hash` index, `stmtUpdateAstHash` prepared statement, `updateAstHash()` method
 
 ### Phase 6-B
-*(to be filled after completion)*
+- `src/security/security-db.ts` — Added `ast_features TEXT` column migration, `stmtGetDomainsForAstHash`/`stmtGetAstMatches`/`stmtGetWidespreadAstScripts`/`stmtUpdateAstFeatures`/`stmtGetAstFeaturesForBlockedCheck` prepared statements, `getDomainsForAstHash()`/`getAstMatches()`/`getWidespreadAstScripts()`/`updateAstFeatures()`/`getScriptsWithAstFeatures()` methods
+- `src/security/script-guard.ts` — Added `SIMILARITY_THRESHOLD`/`SIMILARITY_IDENTICAL` constants, `computeASTFeatureVector()`/`walkForFeatures()`/`computeSimilarity()` module-level functions, `correlateAstHash()` private method (blocked-domain + obfuscation-variant detection), `runSimilarityCheck()` private method (cosine similarity against stored feature vectors), integrated AST correlation (step 0d-0e) and similarity check (step 6) in `analyzeExternalScript()`
+- `src/security/security-manager.ts` — Extended route 33 (`GET /security/scripts/correlations`) to include `astMatches` array and `astCorrelations` count from `getWidespreadAstScripts()`/`getAstMatches()`
 
 ### Phase 7-A
 *(to be filled after completion)*

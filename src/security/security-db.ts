@@ -46,6 +46,12 @@ export class SecurityDB {
   private stmtGetCrossDomainScriptCount!: Database.Statement;
   // Phase 6-A: AST hash
   private stmtUpdateAstHash!: Database.Statement;
+  // Phase 6-B: AST-based correlation + similarity
+  private stmtGetDomainsForAstHash!: Database.Statement;
+  private stmtGetAstMatches!: Database.Statement;
+  private stmtGetWidespreadAstScripts!: Database.Statement;
+  private stmtUpdateAstFeatures!: Database.Statement;
+  private stmtGetAstFeaturesForBlockedCheck!: Database.Statement;
   // Phase 5: Baselines, zero-day candidates, analytics
   private stmtGetBaseline!: Database.Statement;
   private stmtGetBaselinesByDomain!: Database.Statement;
@@ -196,6 +202,13 @@ export class SecurityDB {
       // Column already exists — ignore
     }
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_script_fp_ast_hash ON script_fingerprints(ast_hash)');
+
+    // Phase 6-B: Add ast_features column for similarity scoring (stores serialized feature vector)
+    try {
+      this.db.exec('ALTER TABLE script_fingerprints ADD COLUMN ast_features TEXT');
+    } catch {
+      // Column already exists — ignore
+    }
   }
 
   private prepareStatements(): void {
@@ -321,6 +334,37 @@ export class SecurityDB {
     this.stmtUpdateAstHash = this.db.prepare(
       'UPDATE script_fingerprints SET ast_hash = ? WHERE domain = ? AND script_url = ?'
     );
+    // Phase 6-B: AST-based correlation
+    this.stmtGetDomainsForAstHash = this.db.prepare(
+      'SELECT DISTINCT domain FROM script_fingerprints WHERE ast_hash = ? AND ast_hash IS NOT NULL'
+    );
+    this.stmtGetAstMatches = this.db.prepare(`
+      SELECT script_hash, normalized_hash, ast_hash, domain, script_url, first_seen
+      FROM script_fingerprints
+      WHERE ast_hash = ? AND ast_hash IS NOT NULL
+      ORDER BY first_seen ASC
+    `);
+    this.stmtGetWidespreadAstScripts = this.db.prepare(`
+      SELECT ast_hash, COUNT(DISTINCT domain) as domain_count,
+             COUNT(DISTINCT script_hash) as hash_variant_count,
+             MIN(first_seen) as first_seen
+      FROM script_fingerprints
+      WHERE ast_hash IS NOT NULL
+      GROUP BY ast_hash
+      HAVING domain_count >= 2
+      ORDER BY domain_count DESC
+      LIMIT 50
+    `);
+    this.stmtUpdateAstFeatures = this.db.prepare(
+      'UPDATE script_fingerprints SET ast_features = ? WHERE domain = ? AND script_url = ?'
+    );
+    this.stmtGetAstFeaturesForBlockedCheck = this.db.prepare(`
+      SELECT domain, script_url, ast_hash, ast_features
+      FROM script_fingerprints
+      WHERE ast_features IS NOT NULL
+      ORDER BY last_seen DESC
+      LIMIT 200
+    `);
     // Phase 5: Baselines
     this.stmtGetBaseline = this.db.prepare(
       'SELECT domain, metric, expected_value, tolerance, sample_count, last_updated FROM baselines WHERE domain = ? AND metric = ?'
@@ -624,6 +668,49 @@ export class SecurityDB {
 
   updateAstHash(domain: string, scriptUrl: string, astHash: string): void {
     this.stmtUpdateAstHash.run(astHash, domain, scriptUrl);
+  }
+
+  // === Phase 6-B: AST-based correlation ===
+
+  getDomainsForAstHash(astHash: string): string[] {
+    const rows = this.stmtGetDomainsForAstHash.all(astHash) as { domain: string }[];
+    return rows.map(row => row.domain);
+  }
+
+  getAstMatches(astHash: string): { scriptHash: string | null; normalizedHash: string | null; astHash: string; domain: string; scriptUrl: string; firstSeen: number }[] {
+    const rows = this.stmtGetAstMatches.all(astHash) as any[];
+    return rows.map(row => ({
+      scriptHash: row.script_hash,
+      normalizedHash: row.normalized_hash,
+      astHash: row.ast_hash,
+      domain: row.domain,
+      scriptUrl: row.script_url,
+      firstSeen: row.first_seen,
+    }));
+  }
+
+  getWidespreadAstScripts(): { astHash: string; domainCount: number; hashVariantCount: number; firstSeen: number }[] {
+    const rows = this.stmtGetWidespreadAstScripts.all() as any[];
+    return rows.map(row => ({
+      astHash: row.ast_hash,
+      domainCount: row.domain_count,
+      hashVariantCount: row.hash_variant_count,
+      firstSeen: row.first_seen,
+    }));
+  }
+
+  updateAstFeatures(domain: string, scriptUrl: string, features: string): void {
+    this.stmtUpdateAstFeatures.run(features, domain, scriptUrl);
+  }
+
+  getScriptsWithAstFeatures(): { domain: string; scriptUrl: string; astHash: string | null; astFeatures: string }[] {
+    const rows = this.stmtGetAstFeaturesForBlockedCheck.all() as any[];
+    return rows.map(row => ({
+      domain: row.domain,
+      scriptUrl: row.script_url,
+      astHash: row.ast_hash,
+      astFeatures: row.ast_features,
+    }));
   }
 
   getDomainsForNormalizedHash(normalizedHash: string): string[] {
