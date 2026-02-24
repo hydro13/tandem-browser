@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 7-A
-**Last completed phase:** Phase 6-B
+**Next phase to implement:** Phase 7-B
+**Last completed phase:** Phase 7-A
 **Overall status:** IN PROGRESS
 
 ---
@@ -237,19 +237,19 @@
 
 ## Phase 7-A: Plugin Interface + AnalyzerManager + Example Plugin
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 2ee0c86
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `SecurityAnalyzer` interface exported from `types.ts`
-  - [ ] AnalyzerManager registers, routes, and destroys analyzers
-  - [ ] Example analyzer receives events and detects bursts
-  - [ ] Crashing analyzer doesn't break pipeline
-  - [ ] `GET /security/analyzers/status` returns loaded analyzers
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `SecurityAnalyzer` interface exported from `types.ts`
+  - [x] AnalyzerManager registers, routes, and destroys analyzers
+  - [x] Example analyzer receives events and detects bursts
+  - [x] Crashing analyzer doesn't break pipeline
+  - [x] `GET /security/analyzers/status` returns loaded analyzers
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `SecurityAnalyzer` and `AnalyzerContext` interfaces are in `types.ts`. `AnalyzerManager` is in `src/security/analyzer-manager.ts` — it sorts analyzers by priority (lower first), routes events to matching analyzers (by `eventTypes` subscription + `canAnalyze()` check), and catches all analyzer exceptions so a crashing plugin never breaks the pipeline. It also has a `routing` re-entrancy guard to prevent infinite loops when analyzers call `context.logEvent()` during analysis. `EventBurstAnalyzer` is in `src/security/analyzers/example-analyzer.ts` — subscribes to all events ('*'), tracks timestamps per domain in a Map, fires an `event-burst` meta-event when 10+ events from one domain occur within 60 seconds, then resets the counter. It filters out its own events via `canAnalyze()` to prevent self-triggering. SecurityManager builds the `AnalyzerContext` from existing module methods: `logEvent` → `db.logEvent()`, `isDomainBlocked` → `shield.checkDomain()`, `getTrustScore` → `db.getDomainInfo()`, `db.getEventsForDomain` → new `SecurityDB.getEventsForDomain()` method. Event routing is wired via the `db.onEventLogged` callback (updated signature from `() => void` to `(event: SecurityEvent) => void`). Cascade events (produced by analyzers) are logged with a `analyzerCascadeLogging` guard to prevent re-routing. Route 34: `GET /security/analyzers/status`. Phase 7-B should create a `ContentAnalyzerPlugin` that wraps ContentAnalyzer and registers it with AnalyzerManager.
 
 ---
 
@@ -368,7 +368,11 @@
 - `src/security/security-manager.ts` — Extended route 33 (`GET /security/scripts/correlations`) to include `astMatches` array and `astCorrelations` count from `getWidespreadAstScripts()`/`getAstMatches()`
 
 ### Phase 7-A
-*(to be filled after completion)*
+- `src/security/types.ts` — Added `SecurityAnalyzer` interface (name, version, eventTypes, priority, description, initialize, canAnalyze, analyze, destroy) and `AnalyzerContext` interface (logEvent, isDomainBlocked, getTrustScore, db.getEventsForDomain)
+- `src/security/security-db.ts` — Updated `onEventLogged` callback signature to pass `SecurityEvent`, updated `logEvent()` to construct and pass logged event, added `stmtGetEventsForDomain` prepared statement, added `getEventsForDomain()` method
+- New file: `src/security/analyzer-manager.ts` — `AnalyzerManager` class with register(), routeEvent(), destroy(), getStatus() methods; priority-sorted analyzer list, re-entrancy guard, crash-safe try/catch per analyzer
+- New file: `src/security/analyzers/example-analyzer.ts` — `EventBurstAnalyzer` class implementing `SecurityAnalyzer`; subscribes to all events, detects 10+ events/60s per domain, produces `event-burst` meta-events
+- `src/security/security-manager.ts` — Imported AnalyzerManager + EventBurstAnalyzer, added `analyzerManager` field + `analyzerCascadeLogging` guard, created AnalyzerContext in constructor, registered EventBurstAnalyzer, updated `onEventLogged` callback to route events to analyzers with cascade guard, added route 34 (`GET /security/analyzers/status`), added `analyzerManager.destroy()` to cleanup
 
 ### Phase 7-B
 *(to be filled after completion)*

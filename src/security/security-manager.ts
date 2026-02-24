@@ -14,6 +14,8 @@ import { GatekeeperWebSocket } from './gatekeeper-ws';
 import { EvolutionEngine } from './evolution';
 import { ThreatIntel } from './threat-intel';
 import { BlocklistUpdater } from './blocklists/updater';
+import { AnalyzerManager } from './analyzer-manager';
+import { EventBurstAnalyzer } from './analyzers/example-analyzer';
 import { GuardianMode, GatekeeperAction, PageMetrics, AnalysisConfidence } from './types';
 
 export class SecurityManager {
@@ -36,6 +38,10 @@ export class SecurityManager {
   private threatIntel: ThreatIntel;
   private blocklistUpdater: BlocklistUpdater;
 
+  // Phase 7-A: Analyzer plugin manager
+  private analyzerManager: AnalyzerManager;
+  private analyzerCascadeLogging: boolean = false;
+
   // Phase 0-B: Auto-correlation trigger
   private eventCounter: number = 0;
   private correlationRunning: boolean = false;
@@ -53,20 +59,62 @@ export class SecurityManager {
     this.threatIntel = new ThreatIntel(this.db, this.evolution);
     this.blocklistUpdater = new BlocklistUpdater(this.db, this.shield);
 
+    // Phase 7-A: Create AnalyzerManager with controlled context
+    this.analyzerManager = new AnalyzerManager({
+      logEvent: (event) => {
+        this.db.logEvent({
+          ...event,
+          timestamp: Date.now(),
+        });
+      },
+      isDomainBlocked: (domain) => this.shield.checkDomain(domain).blocked,
+      getTrustScore: (domain) => {
+        const info = this.db.getDomainInfo(domain);
+        return info ? info.trustLevel : undefined;
+      },
+      db: {
+        getEventsForDomain: (domain, limit) => this.db.getEventsForDomain(domain, limit),
+      },
+    });
+
+    // Register built-in analyzers
+    this.analyzerManager.register(new EventBurstAnalyzer()).catch(e => {
+      console.warn('[SecurityManager] Failed to register EventBurstAnalyzer:', e.message);
+    });
+
     // Phase 0-B: Auto-trigger correlateEvents() every 100 events or every hour
-    this.db.onEventLogged = () => {
+    // Phase 7-A: Also route events to analyzer plugins
+    this.db.onEventLogged = (event) => {
       this.eventCounter++;
       if (this.eventCounter >= 100) {
         this.eventCounter = 0;
         this.runCorrelation();
       }
+
+      // Skip routing for cascade events (prevents analyzer loops)
+      if (this.analyzerCascadeLogging) return;
+
+      // Route to analyzer plugins (async, fire-and-forget)
+      this.analyzerManager.routeEvent(event).then(newEvents => {
+        // Log cascade events with guard to prevent re-routing
+        this.analyzerCascadeLogging = true;
+        for (const newEvent of newEvents) {
+          this.db.logEvent({
+            ...newEvent,
+            timestamp: newEvent.timestamp || Date.now(),
+          });
+        }
+        this.analyzerCascadeLogging = false;
+      }).catch(e => {
+        console.warn('[SecurityManager] Analyzer routing error:', e.message);
+      });
     };
     this.correlationInterval = setInterval(() => this.runCorrelation(), 3_600_000); // 1 hour
 
     // Phase 0-B: Blocklist update scheduling (24-hour cycle)
     this.scheduleBlocklistUpdate();
 
-    console.log('[SecurityManager] Initialized (Phase 1-5)');
+    console.log('[SecurityManager] Initialized (Phase 1-7)');
   }
 
   registerWith(dispatcher: RequestDispatcher): void {
@@ -849,12 +897,28 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 33 API routes registered under /security/*');
+    // === Phase 7-A: Analyzer plugin routes (34) ===
+
+    // 34. GET /security/analyzers/status — Loaded analyzer plugins
+    app.get('/security/analyzers/status', (_req, res) => {
+      try {
+        const analyzers = this.analyzerManager.getStatus();
+        res.json({
+          analyzers,
+          total: analyzers.length,
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 34 API routes registered under /security/*');
   }
 
   destroy(): void {
     if (this.correlationInterval) clearInterval(this.correlationInterval);
     if (this.blocklistInterval) clearInterval(this.blocklistInterval);
+    this.analyzerManager.destroy().catch(() => {});
     this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();

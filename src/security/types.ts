@@ -299,6 +299,46 @@ export const JS_THREAT_RULES: ThreatRule[] = [
   { id: 'window_open_data', pattern: /window\.open\s*\(\s*['"]data:/, score: 25, category: 'redirect', severity: 'high', description: 'window.open with data: URI' },
 ];
 
+// === Phase 7-A: Security Analyzer Plugin Interface ===
+
+export interface SecurityAnalyzer {
+  /** Unique identifier */
+  readonly name: string;
+  /** Semantic version */
+  readonly version: string;
+  /** Event types this analyzer can handle ('*' = all events) */
+  readonly eventTypes: string[];
+  /** Priority (lower = runs first). Use AnalysisConfidence values as guide. */
+  readonly priority: number;
+  /** Human-readable description */
+  readonly description: string;
+
+  /** Called once when the analyzer is loaded */
+  initialize(context: AnalyzerContext): Promise<void>;
+
+  /** Check if this analyzer can handle a specific event */
+  canAnalyze(event: SecurityEvent): boolean;
+
+  /** Perform analysis. Returns additional events to log, or empty array. */
+  analyze(event: SecurityEvent): Promise<SecurityEvent[]>;
+
+  /** Called when the analyzer is unloaded */
+  destroy(): Promise<void>;
+}
+
+export interface AnalyzerContext {
+  /** Log a security event */
+  logEvent(event: Omit<SecurityEvent, 'id' | 'timestamp'>): void;
+  /** Check if a domain is on the blocklist */
+  isDomainBlocked(domain: string): boolean;
+  /** Get trust score for a domain */
+  getTrustScore(domain: string): number | undefined;
+  /** Access security database (read-only) */
+  db: {
+    getEventsForDomain(domain: string, limit: number): SecurityEvent[];
+  };
+}
+
 // === Phase 4: CyberChef-inspired extraction regex patterns ===
 
 // URL extraction — requires protocol prefix

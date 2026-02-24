@@ -8,7 +8,8 @@ export class SecurityDB {
   private db: Database.Database;
 
   // Phase 0-B: Optional callback fired after every logEvent() call
-  onEventLogged: (() => void) | null = null;
+  // Phase 7-A: Updated to pass the logged event for analyzer routing
+  onEventLogged: ((event: SecurityEvent) => void) | null = null;
 
   // Prepared statements (cached for hot-path performance)
   private stmtIsDomainBlocked!: Database.Statement;
@@ -68,6 +69,8 @@ export class SecurityDB {
   private stmtPruneOldEvents!: Database.Statement;
   private stmtDeleteBlocklistBySource!: Database.Statement;
   private stmtGetRecentAnomalyEvents!: Database.Statement;
+  // Phase 7-A: Events by domain (for AnalyzerContext)
+  private stmtGetEventsForDomain!: Database.Statement;
   // Phase 0-B: Blocklist metadata
   private stmtGetBlocklistMeta!: Database.Statement;
   private stmtUpsertBlocklistMeta!: Database.Statement;
@@ -279,6 +282,10 @@ export class SecurityDB {
     );
     this.stmtGetRecentEventsByCategory = this.db.prepare(
       'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?'
+    );
+    // Phase 7-A: Events by domain (for AnalyzerContext)
+    this.stmtGetEventsForDomain = this.db.prepare(
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events WHERE domain = ? ORDER BY timestamp DESC LIMIT ?'
     );
     // Phase 3: Script fingerprints
     this.stmtGetScriptFingerprint = this.db.prepare(
@@ -508,8 +515,13 @@ export class SecurityDB {
       falsePositive: event.falsePositive ? 1 : 0,
       confidence: event.confidence ?? 500,
     });
-    this.onEventLogged?.();
-    return Number(result.lastInsertRowid);
+    const loggedEvent: SecurityEvent = {
+      ...event,
+      id: Number(result.lastInsertRowid),
+      confidence: event.confidence ?? 500,
+    };
+    this.onEventLogged?.(loggedEvent);
+    return loggedEvent.id!;
   }
 
   addToBlocklist(entry: BlocklistEntry): void {
@@ -533,6 +545,23 @@ export class SecurityDB {
     }
 
     return (rows as any[]).map(row => ({
+      id: row.id,
+      timestamp: row.timestamp,
+      domain: row.domain,
+      tabId: row.tab_id,
+      eventType: row.event_type,
+      severity: row.severity,
+      category: row.category,
+      details: row.details,
+      actionTaken: row.action_taken,
+      confidence: row.confidence ?? 500,
+      falsePositive: !!row.false_positive,
+    }));
+  }
+
+  getEventsForDomain(domain: string, limit: number): SecurityEvent[] {
+    const rows = this.stmtGetEventsForDomain.all(domain, limit) as any[];
+    return rows.map(row => ({
       id: row.id,
       timestamp: row.timestamp,
       domain: row.domain,
