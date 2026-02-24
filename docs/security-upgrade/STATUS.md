@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 5-A
-**Last completed phase:** Phase 4
+**Next phase to implement:** Phase 5-B
+**Last completed phase:** Phase 5-A
 **Overall status:** IN PROGRESS
 
 ---
@@ -150,18 +150,18 @@
 
 ## Phase 5-A: Confidence Type System + DB Layer
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** b273bb0
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `AnalysisConfidence` enum exported from `types.ts`
-  - [ ] `confidence` column exists in events table (default 500)
-  - [ ] `logEvent()` accepts and stores confidence values
-  - [ ] Existing `logEvent()` calls still work without new parameter
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `AnalysisConfidence` enum exported from `types.ts`
+  - [x] `confidence` column exists in events table (default 500)
+  - [x] `logEvent()` accepts and stores confidence values
+  - [x] Existing `logEvent()` calls still work without new parameter
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `AnalysisConfidence` is a numeric enum in `types.ts` with 7 levels: BLOCKLIST(100), CREDENTIAL_EXFIL(200), KNOWN_MALWARE_HASH(300), BEHAVIORAL(500), HEURISTIC(700), ANOMALY(800), SPECULATIVE(900). Lower = more certain. `SecurityEvent.confidence` is optional (`number | undefined`); `logEvent()` defaults to 500 (BEHAVIORAL) when not provided via `event.confidence ?? 500`. The DB column uses `INTEGER DEFAULT 500` and is added via backward-compatible `ALTER TABLE` with try/catch. All 5 event SELECT queries now include the `confidence` column, and both row mapping functions (`getRecentEvents` and `getRecentAnomalies`) map it back with `?? 500` fallback. Phase 5-B should add confidence values to all `logEvent()` calls in Guardian, OutboundGuard, and ScriptGuard using the enum values.
 
 ---
 
@@ -342,7 +342,8 @@
 - `src/security/security-manager.ts` — Wired `contentAnalyzer.isDomainBlocked` to `shield.checkDomain()` in `setDevToolsManager()`
 
 ### Phase 5-A
-*(to be filled after completion)*
+- `src/security/types.ts` — Added `AnalysisConfidence` enum (7 levels), added `confidence?: number` to `SecurityEvent` interface
+- `src/security/security-db.ts` — Added `confidence INTEGER DEFAULT 500` column migration, updated INSERT statement and `logEvent()` to store confidence, updated all 5 event SELECT queries to include confidence, updated both row mapping functions to return confidence
 
 ### Phase 5-B
 *(to be filled after completion)*

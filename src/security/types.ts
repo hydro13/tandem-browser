@@ -15,6 +15,7 @@ export interface SecurityEvent {
   category: EventCategory;
   details: string;         // JSON string with full event details
   actionTaken: EventAction;
+  confidence?: number;      // AnalysisConfidence value (lower = more certain). Default 500 (BEHAVIORAL)
   falsePositive?: boolean;
 }
 
@@ -223,6 +224,18 @@ export interface UpdateResult {
   totalAdded: number;
   totalRemoved: number;
   errors: string[];
+}
+
+// === Phase 5-A: Confidence-weighted pipeline ===
+
+export enum AnalysisConfidence {
+  BLOCKLIST = 100,          // Domain/URL on verified blocklist
+  CREDENTIAL_EXFIL = 200,   // Credential data leaving to third party
+  KNOWN_MALWARE_HASH = 300, // Script hash matches known malware
+  BEHAVIORAL = 500,         // Runtime behavior anomaly (CPU, permissions)
+  HEURISTIC = 700,          // Pattern-based detection (rules, entropy)
+  ANOMALY = 800,            // Statistical anomaly (evolution baseline)
+  SPECULATIVE = 900,        // Low-confidence signal (new domain, unusual pattern)
 }
 
 // === Phase 2-A: Script Analysis Threat Rules ===

@@ -179,6 +179,13 @@ export class SecurityDB {
       // Column already exists — ignore
     }
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_script_fp_normalized_hash ON script_fingerprints(normalized_hash)');
+
+    // Phase 5-A: Add confidence column to events (backward-compatible, default 500 = BEHAVIORAL)
+    try {
+      this.db.exec('ALTER TABLE events ADD COLUMN confidence INTEGER DEFAULT 500');
+    } catch {
+      // Column already exists — ignore
+    }
   }
 
   private prepareStatements(): void {
@@ -203,18 +210,18 @@ export class SecurityDB {
       'UPDATE domains SET last_seen = ?, visit_count = visit_count + 1, updated_at = datetime(\'now\') WHERE domain = ?'
     );
     this.stmtInsertEvent = this.db.prepare(`
-      INSERT INTO events (timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive)
-      VALUES (@timestamp, @domain, @tabId, @eventType, @severity, @category, @details, @actionTaken, @falsePositive)
+      INSERT INTO events (timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence)
+      VALUES (@timestamp, @domain, @tabId, @eventType, @severity, @category, @details, @actionTaken, @falsePositive, @confidence)
     `);
     this.stmtAddBlocklist = this.db.prepare(`
       INSERT OR IGNORE INTO blocklist (domain, source, category)
       VALUES (@domain, @source, @category)
     `);
     this.stmtGetRecentEvents = this.db.prepare(
-      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events ORDER BY timestamp DESC LIMIT ?'
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events ORDER BY timestamp DESC LIMIT ?'
     );
     this.stmtGetRecentEventsBySeverity = this.db.prepare(
-      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE severity = ? ORDER BY timestamp DESC LIMIT ?'
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events WHERE severity = ? ORDER BY timestamp DESC LIMIT ?'
     );
     this.stmtGetDomains = this.db.prepare(
       'SELECT id, domain, first_seen, last_seen, visit_count, trust_level, guardian_mode, category, notes FROM domains ORDER BY last_seen DESC LIMIT ?'
@@ -248,7 +255,7 @@ export class SecurityDB {
       'SELECT id, origin_domain, destination_domain, added_at FROM outbound_whitelist ORDER BY added_at DESC'
     );
     this.stmtGetRecentEventsByCategory = this.db.prepare(
-      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?'
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events WHERE category = ? ORDER BY timestamp DESC LIMIT ?'
     );
     // Phase 3: Script fingerprints
     this.stmtGetScriptFingerprint = this.db.prepare(
@@ -353,7 +360,7 @@ export class SecurityDB {
       'DELETE FROM blocklist WHERE source = ?'
     );
     this.stmtGetRecentAnomalyEvents = this.db.prepare(
-      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = \'behavior\' AND event_type = \'anomaly\' ORDER BY timestamp DESC LIMIT ?'
+      'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive, confidence FROM events WHERE category = \'behavior\' AND event_type = \'anomaly\' ORDER BY timestamp DESC LIMIT ?'
     );
     // Phase 0-B: Blocklist metadata
     this.stmtGetBlocklistMeta = this.db.prepare(
@@ -441,6 +448,7 @@ export class SecurityDB {
       details: event.details,
       actionTaken: event.actionTaken,
       falsePositive: event.falsePositive ? 1 : 0,
+      confidence: event.confidence ?? 500,
     });
     this.onEventLogged?.();
     return Number(result.lastInsertRowid);
@@ -476,6 +484,7 @@ export class SecurityDB {
       category: row.category,
       details: row.details,
       actionTaken: row.action_taken,
+      confidence: row.confidence ?? 500,
       falsePositive: !!row.false_positive,
     }));
   }
@@ -755,6 +764,7 @@ export class SecurityDB {
       category: row.category,
       details: row.details,
       actionTaken: row.action_taken,
+      confidence: row.confidence ?? 500,
       falsePositive: !!row.false_positive,
     }));
   }
