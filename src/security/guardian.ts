@@ -4,7 +4,7 @@ import { RequestDispatcher } from '../network/dispatcher';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { OutboundGuard } from './outbound-guard';
-import { GuardianMode, GuardianStatus, BANKING_PATTERNS, GatekeeperDecision, PendingDecision } from './types';
+import { GuardianMode, GuardianStatus, BANKING_PATTERNS, GatekeeperDecision, PendingDecision, AnalysisConfidence } from './types';
 import type { GatekeeperWebSocket } from './gatekeeper-ws';
 
 const DANGEROUS_EXTENSIONS = new Set(['.exe', '.scr', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.dll']);
@@ -145,6 +145,7 @@ export class Guardian {
           category: 'network',
           details: JSON.stringify({ url: url.substring(0, 200), reason: blockResult.reason, source: blockResult.source }),
           actionTaken: 'auto_block',
+          confidence: AnalysisConfidence.BLOCKLIST,
         });
         return { cancel: true };
       }
@@ -164,6 +165,7 @@ export class Guardian {
           category: 'network',
           details: JSON.stringify({ url: url.substring(0, 200), riskScore: riskResult.score, reasons: riskResult.reasons }),
           actionTaken: riskResult.score >= 65 ? 'auto_block' : 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
         if (riskResult.score >= 65) {
           this.stats.blocked++;
@@ -210,6 +212,7 @@ export class Guardian {
                 category: 'network',
                 details: JSON.stringify({ url: url.substring(0, 200), reason: `Dangerous download (${ext}) blocked in strict mode` }),
                 actionTaken: 'auto_block',
+                confidence: AnalysisConfidence.HEURISTIC,
               });
               return { cancel: true };
             } else if (mode === 'balanced') {
@@ -222,6 +225,7 @@ export class Guardian {
                 category: 'network',
                 details: JSON.stringify({ url: url.substring(0, 200), reason: `Dangerous download (${ext}) in balanced mode` }),
                 actionTaken: 'flagged',
+                confidence: AnalysisConfidence.HEURISTIC,
               });
             }
           }
@@ -242,6 +246,7 @@ export class Guardian {
             category: 'outbound',
             details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
             actionTaken: 'auto_block',
+            confidence: AnalysisConfidence.BEHAVIORAL,
           });
           return { cancel: true };
         }
@@ -255,6 +260,7 @@ export class Guardian {
             category: 'outbound',
             details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
             actionTaken: 'flagged',
+            confidence: AnalysisConfidence.BEHAVIORAL,
           });
         }
       }
@@ -279,6 +285,7 @@ export class Guardian {
               referrer: details.referrer,
             }),
             actionTaken: 'auto_block',
+            confidence: AnalysisConfidence.CREDENTIAL_EXFIL,
           });
           return { cancel: true };
         }
@@ -297,6 +304,7 @@ export class Guardian {
               referrer: details.referrer,
             }),
             actionTaken: 'flagged',
+            confidence: AnalysisConfidence.HEURISTIC,
           });
         }
       }
@@ -396,6 +404,7 @@ export class Guardian {
           source: blockResult.source,
         }),
         actionTaken: 'auto_block',
+        confidence: AnalysisConfidence.BLOCKLIST,
       });
       return { cancel: true, responseHeaders };
     }
@@ -420,6 +429,7 @@ export class Guardian {
             reasons: riskResult.reasons,
           }),
           actionTaken: 'auto_block',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
         return { cancel: true, responseHeaders };
       } else if (riskResult.score >= 30) {
@@ -437,6 +447,7 @@ export class Guardian {
             reasons: riskResult.reasons,
           }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
       }
     }
@@ -477,6 +488,7 @@ export class Guardian {
           source: blockResult.source,
         }),
         actionTaken: 'flagged',
+        confidence: AnalysisConfidence.BLOCKLIST,
       });
     }
 
@@ -500,6 +512,7 @@ export class Guardian {
             riskReasons: riskResult.reasons,
           }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
       }
     }
@@ -569,6 +582,7 @@ export class Guardian {
         category: 'network',
         details: JSON.stringify({ url: details.url.substring(0, 200), missingHeaders }),
         actionTaken: 'logged',
+        confidence: AnalysisConfidence.SPECULATIVE,
       });
     }
 
@@ -591,6 +605,7 @@ export class Guardian {
         category: 'network',
         details: JSON.stringify({ url: details.url.substring(0, 200), reason: 'content-type-mismatch', urlExtension: urlExt, contentType }),
         actionTaken: 'flagged',
+        confidence: AnalysisConfidence.HEURISTIC,
       });
     }
 
@@ -609,6 +624,7 @@ export class Guardian {
           category: 'network',
           details: JSON.stringify({ url: details.url.substring(0, 200), cookieCount: cookies.length, note: 'Cookies set in strict mode' }),
           actionTaken: 'logged',
+          confidence: AnalysisConfidence.SPECULATIVE,
         });
       }
     }

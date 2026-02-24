@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 5-B
-**Last completed phase:** Phase 5-A
+**Next phase to implement:** Phase 5-C
+**Last completed phase:** Phase 5-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -167,18 +167,18 @@
 
 ## Phase 5-B: Confidence Wiring — Guardian + OutboundGuard + ScriptGuard
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 2f33eca
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] All `logEvent()` calls in Guardian include confidence
-  - [ ] All `logEvent()` calls in OutboundGuard include confidence
-  - [ ] All `logEvent()` calls in ScriptGuard include confidence
-  - [ ] Events in DB have correct confidence values (not all 500)
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] All `logEvent()` calls in Guardian include confidence (16 calls, 16 confidence values)
+  - [x] All `logEvent()` calls in OutboundGuard include confidence (OutboundGuard has 0 direct logEvent calls — it returns OutboundDecision objects; Guardian logs them)
+  - [x] All `logEvent()` calls in ScriptGuard include confidence (10 calls, 10 confidence values)
+  - [x] Events in DB have correct confidence values (not all 500) — verified code logic; only correlation/gatekeeper events fired during idle test (those are SecurityManager scope, Phase 5-C)
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** OutboundGuard does NOT call `logEvent()` directly — it returns `OutboundDecision` objects to Guardian which logs them. Guardian logs outbound exfiltration blocks with `CREDENTIAL_EXFIL` (200) and outbound flags with `HEURISTIC` (700). For ScriptGuard's rule engine events, confidence varies by severity: critical/high → `HEURISTIC` (700), medium/low → `ANOMALY` (800). The `AnalysisConfidence` enum is imported from `types.ts` in both guardian.ts and script-guard.ts. Phase 5-C should wire confidence into the remaining modules (ContentAnalyzer, BehaviorMonitor, SecurityManager's own correlation/gatekeeper events) and implement the Gatekeeper routing logic (high-confidence events resolved locally, low-confidence sent to Gatekeeper).
 
 ---
 
@@ -346,7 +346,8 @@
 - `src/security/security-db.ts` — Added `confidence INTEGER DEFAULT 500` column migration, updated INSERT statement and `logEvent()` to store confidence, updated all 5 event SELECT queries to include confidence, updated both row mapping functions to return confidence
 
 ### Phase 5-B
-*(to be filled after completion)*
+- `src/security/guardian.ts` — Imported `AnalysisConfidence`, added `confidence` to all 16 `logEvent()` calls (BLOCKLIST for blocklist matches, HEURISTIC for risk/download/redirect/content-type/outbound-flag, CREDENTIAL_EXFIL for outbound exfiltration blocks, BEHAVIORAL for WebSocket events, SPECULATIVE for missing headers and strict-mode cookies)
+- `src/security/script-guard.ts` — Imported `AnalysisConfidence`, added `confidence` to all 10 `logEvent()` calls (SPECULATIVE for new-script-on-known-domain, KNOWN_MALWARE_HASH for blocked-domain scripts, BEHAVIORAL for widespread/keylogger/WASM/clipboard/form-action, ANOMALY for entropy and low-severity rules, HEURISTIC for high-severity rules and crypto-miner console)
 
 ### Phase 5-C
 *(to be filled after completion)*

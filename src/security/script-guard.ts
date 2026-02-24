@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
-import { JS_THREAT_RULES, ThreatRuleMatch, ScriptAnalysisResult } from './types';
+import { JS_THREAT_RULES, ThreatRuleMatch, ScriptAnalysisResult, AnalysisConfidence } from './types';
 
 /** Shannon entropy (bits per character) — detects obfuscated/encrypted content */
 function calculateEntropy(input: string): number {
@@ -154,6 +154,7 @@ export class ScriptGuard {
           category: 'script',
           details: JSON.stringify({ url: url.substring(0, 500), reason: 'new-script-on-known-domain', length }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.SPECULATIVE,
         });
       }
     }
@@ -207,6 +208,7 @@ export class ScriptGuard {
               reason: `script-hash-seen-on-blocked-domain${reasonSuffix}`,
             }),
             actionTaken: 'flagged',
+            confidence: AnalysisConfidence.KNOWN_MALWARE_HASH,
           });
           // Notify Gatekeeper via critical detection callback
           this.onCriticalDetection?.(currentDomain, {
@@ -238,6 +240,7 @@ export class ScriptGuard {
           reason: `script-hash-on-many-domains${reasonSuffix}`,
         }),
         actionTaken: 'flagged',
+        confidence: AnalysisConfidence.BEHAVIORAL,
       });
     }
   }
@@ -301,11 +304,15 @@ export class ScriptGuard {
             length: source.length,
           }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.ANOMALY,
         });
       }
 
       // 4. Log rule engine results
       if (analysis.severity !== 'none') {
+        const ruleConfidence = (analysis.severity === 'critical' || analysis.severity === 'high')
+          ? AnalysisConfidence.HEURISTIC
+          : AnalysisConfidence.ANOMALY;
         this.db.logEvent({
           timestamp: Date.now(),
           domain,
@@ -327,6 +334,7 @@ export class ScriptGuard {
             entropy: analysis.entropy,
           }),
           actionTaken: 'flagged',
+          confidence: ruleConfidence,
         });
 
         // 5. For critical severity: notify Gatekeeper via callback
@@ -354,6 +362,7 @@ export class ScriptGuard {
           category: 'script',
           details: JSON.stringify({ reason: 'crypto-miner-console', text: text.substring(0, 500) }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
       }
     }
@@ -504,6 +513,7 @@ export class ScriptGuard {
           category: 'script',
           details: JSON.stringify(alert),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
         });
         break;
 
@@ -523,6 +533,7 @@ export class ScriptGuard {
           category: 'behavior',
           details: JSON.stringify({ ...alert, domain, wasmCount: this.wasmEvents.length }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
         });
         break;
 
@@ -536,6 +547,7 @@ export class ScriptGuard {
           category: 'behavior',
           details: JSON.stringify({ ...alert, domain }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
         });
         break;
 
@@ -552,6 +564,7 @@ export class ScriptGuard {
             category: 'script',
             details: JSON.stringify({ ...alert, domain, externalTarget: newDomain }),
             actionTaken: 'flagged',
+            confidence: AnalysisConfidence.BEHAVIORAL,
           });
         }
         break;
