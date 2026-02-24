@@ -208,10 +208,17 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
-  // macOS: native vibrancy for glass sidebar effect (hardware-accelerated, no CSS hacks needed)
-  // Linux/Windows: no vibrancy option — keeps window plain (Max's LGL CSS handles Linux styling)
+  // macOS: hiddenInset titlebar (tabs inline with traffic lights, Chrome-style)
+  //        + native vibrancy for glass effect (hardware-accelerated)
+  //        + trafficLightPosition centered in the 36px tab bar
+  // Linux/Windows: no changes — Max's LGL CSS handles Linux styling
   const platformWindowOptions: Partial<Electron.BrowserWindowConstructorOptions> = process.platform === 'darwin'
-    ? { vibrancy: 'sidebar', visualEffectState: 'active' }
+    ? {
+        titleBarStyle: 'hiddenInset',
+        trafficLightPosition: { x: 16, y: 10 },
+        vibrancy: 'sidebar',
+        visualEffectState: 'active',
+      }
     : {};
 
   mainWindow = new BrowserWindow({
