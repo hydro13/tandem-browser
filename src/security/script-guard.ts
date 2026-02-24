@@ -87,6 +87,9 @@ export class ScriptGuard {
   /** Callback for critical script-analysis detections (wired by SecurityManager for Gatekeeper notification) */
   onCriticalDetection: ((domain: string, analysis: ScriptAnalysisResult) => void) | null = null;
 
+  /** Callback for checking if a domain is blocked (wired by SecurityManager to NetworkShield.checkDomain) */
+  isDomainBlocked: ((domain: string) => boolean) | null = null;
+
   constructor(db: SecurityDB, guardian: Guardian, devToolsManager: DevToolsManager) {
     this.db = db;
     this.guardian = guardian;
@@ -148,6 +151,11 @@ export class ScriptGuard {
     // 3. Store/update fingerprint
     this.db.upsertScriptFingerprint(domain, url, hash);
 
+    // 3b. Cross-domain correlation (Phase 3-A) — only if hash is available
+    if (hash) {
+      this.correlateScriptHash(hash, domain, url);
+    }
+
     // 4. Static analysis + entropy for external scripts (async — fires in background)
     const scriptLength = length || 0;
     if (scriptLength <= MAX_SCRIPT_SIZE) {
@@ -155,6 +163,67 @@ export class ScriptGuard {
       if (pageDomain && domain !== pageDomain) {
         this.analyzeExternalScript(scriptId, url, domain).catch(() => {});
       }
+    }
+  }
+
+  /** Cross-domain correlation: check if a script hash appears on blocked or many domains (Phase 3-A) */
+  private correlateScriptHash(hash: string, currentDomain: string, scriptUrl: string): void {
+    // Get all domains where this script hash has been seen
+    const domains = this.db.getDomainsForHash(hash);
+    const domainCount = domains.length;
+
+    // 1. Check if this hash has been seen on any blocked domain
+    if (this.isDomainBlocked) {
+      for (const seenDomain of domains) {
+        if (seenDomain === currentDomain) continue; // skip self
+        if (this.isDomainBlocked(seenDomain)) {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain: currentDomain,
+            tabId: null,
+            eventType: 'script-on-blocked-domain',
+            severity: 'critical',
+            category: 'script',
+            details: JSON.stringify({
+              scriptUrl: scriptUrl.substring(0, 500),
+              hash,
+              blockedDomain: seenDomain,
+              totalDomains: domainCount,
+              reason: 'script-hash-seen-on-blocked-domain',
+            }),
+            actionTaken: 'flagged',
+          });
+          // Notify Gatekeeper via critical detection callback
+          this.onCriticalDetection?.(currentDomain, {
+            totalScore: 100,
+            matches: [],
+            severity: 'critical',
+            scriptUrl,
+            scriptLength: 0,
+          });
+          return; // One blocked-domain event is enough
+        }
+      }
+    }
+
+    // 2. Flag scripts seen on 5+ distinct domains (could be CDN or malware kit)
+    if (domainCount >= 5) {
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain: currentDomain,
+        tabId: null,
+        eventType: 'widespread-script',
+        severity: 'low',
+        category: 'script',
+        details: JSON.stringify({
+          scriptUrl: scriptUrl.substring(0, 500),
+          hash,
+          domainCount,
+          domains: domains.slice(0, 10), // cap at 10 for readability
+          reason: 'script-hash-on-many-domains',
+        }),
+        actionTaken: 'flagged',
+      });
     }
   }
 

@@ -36,6 +36,9 @@ export class SecurityDB {
   private stmtUpsertScriptFingerprint!: Database.Statement;
   private stmtGetScriptsByDomain!: Database.Statement;
   private stmtGetScriptFingerprintCount!: Database.Statement;
+  // Phase 3-A: Cross-domain script correlation
+  private stmtGetDomainsForHash!: Database.Statement;
+  private stmtGetDomainCountForHash!: Database.Statement;
   // Phase 5: Baselines, zero-day candidates, analytics
   private stmtGetBaseline!: Database.Statement;
   private stmtGetBaselinesByDomain!: Database.Statement;
@@ -159,6 +162,7 @@ export class SecurityDB {
       CREATE INDEX IF NOT EXISTS idx_baselines_domain ON baselines(domain);
       CREATE INDEX IF NOT EXISTS idx_blocklist_domain ON blocklist(domain);
       CREATE INDEX IF NOT EXISTS idx_script_fp_domain ON script_fingerprints(domain);
+      CREATE INDEX IF NOT EXISTS idx_script_fp_hash ON script_fingerprints(script_hash);
       CREATE INDEX IF NOT EXISTS idx_zeroday_domain ON zero_day_candidates(domain);
       CREATE INDEX IF NOT EXISTS idx_zeroday_resolved ON zero_day_candidates(resolved);
     `);
@@ -249,6 +253,13 @@ export class SecurityDB {
     );
     this.stmtGetScriptFingerprintCount = this.db.prepare(
       'SELECT COUNT(*) as total FROM script_fingerprints'
+    );
+    // Phase 3-A: Cross-domain script correlation
+    this.stmtGetDomainsForHash = this.db.prepare(
+      'SELECT DISTINCT domain FROM script_fingerprints WHERE script_hash = ?'
+    );
+    this.stmtGetDomainCountForHash = this.db.prepare(
+      'SELECT COUNT(DISTINCT domain) as count FROM script_fingerprints WHERE script_hash = ?'
     );
     // Phase 5: Baselines
     this.stmtGetBaseline = this.db.prepare(
@@ -528,6 +539,17 @@ export class SecurityDB {
 
   getScriptFingerprintCount(): number {
     return (this.stmtGetScriptFingerprintCount.get() as { total: number }).total;
+  }
+
+  // === Phase 3-A: Cross-domain script correlation ===
+
+  getDomainsForHash(scriptHash: string): string[] {
+    const rows = this.stmtGetDomainsForHash.all(scriptHash) as { domain: string }[];
+    return rows.map(row => row.domain);
+  }
+
+  getDomainCountForHash(scriptHash: string): number {
+    return (this.stmtGetDomainCountForHash.get(scriptHash) as { count: number }).count;
   }
 
   // === Phase 5: Baselines ===

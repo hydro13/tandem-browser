@@ -80,6 +80,8 @@ export class SecurityManager {
   setDevToolsManager(devToolsManager: DevToolsManager): void {
     this.devToolsManager = devToolsManager;
     this.scriptGuard = new ScriptGuard(this.db, this.guardian, devToolsManager);
+    // Phase 3-A: Wire blocklist check for cross-domain script correlation
+    this.scriptGuard.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
     this.contentAnalyzer = new ContentAnalyzer(this.db, devToolsManager);
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);

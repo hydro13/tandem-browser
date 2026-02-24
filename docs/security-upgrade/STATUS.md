@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 3-A
-**Last completed phase:** Phase 2-B
+**Next phase to implement:** Phase 3-B
+**Last completed phase:** Phase 3-A
 **Overall status:** IN PROGRESS
 
 ---
@@ -99,18 +99,18 @@
 
 ## Phase 3-A: Cross-Domain Script Correlation (DB + Logic)
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** 249fd1a
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Index on `script_fingerprints.hash` exists
-  - [ ] `getDomainsForHash()` prepared statement works
-  - [ ] Script on blocked domain generates `script-on-blocked-domain` event
-  - [ ] Script on 5+ domains generates `widespread-script` event
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Index on `script_fingerprints.script_hash` exists (`idx_script_fp_hash`)
+  - [x] `getDomainsForHash()` prepared statement works
+  - [x] Script on blocked domain generates `script-on-blocked-domain` event (logic verified, awaiting real-world trigger)
+  - [x] Script on 5+ domains generates `widespread-script` event (logic verified, awaiting real-world trigger)
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** The phase doc referenced `hash` but the actual column is `script_hash` — all SQL uses the correct column name. `correlateScriptHash()` is a synchronous private method in ScriptGuard that runs after `upsertScriptFingerprint()` in `analyzeScript()`, only when a hash is available. Blocklist access uses a callback pattern (`isDomainBlocked`) wired by SecurityManager to `NetworkShield.checkDomain()` — same pattern as `onCriticalDetection`. The blocked-domain check iterates all domains for the hash (excluding current domain) and checks each against NetworkShield (in-memory Set + DB blocklist + parent domain matching). If a blocked domain is found, a critical event is logged AND Gatekeeper is notified via `onCriticalDetection`. The widespread-script check fires at 5+ distinct domains (including current) with low severity (informational — could be CDN). `getDomainCountForHash()` is also exposed as a prepared statement for Phase 3-B's API endpoint.
 
 ---
 
@@ -327,7 +327,9 @@
 - `src/security/security-manager.ts` — Wired `scriptGuard.onCriticalDetection` to `gatekeeperWs.sendAnomaly()` in `initGatekeeper()`
 
 ### Phase 3-A
-*(to be filled after completion)*
+- `src/security/security-db.ts` — Added `idx_script_fp_hash` index on `script_fingerprints(script_hash)`, `getDomainsForHash`/`getDomainCountForHash` prepared statements and methods
+- `src/security/script-guard.ts` — Added `isDomainBlocked` callback, `correlateScriptHash()` method for cross-domain hash correlation (blocked-domain + widespread detection)
+- `src/security/security-manager.ts` — Wired `scriptGuard.isDomainBlocked` to `shield.checkDomain()` in `setDevToolsManager()`
 
 ### Phase 3-B
 *(to be filled after completion)*
