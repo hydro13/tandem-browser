@@ -791,7 +791,36 @@ export class SecurityManager {
       }
     });
 
-    console.log('[SecurityManager] 32 API routes registered under /security/*');
+    // === Phase 3-B: Script correlation routes (33) ===
+
+    // 33. GET /security/scripts/correlations — Cross-domain script correlation data
+    app.get('/security/scripts/correlations', (_req, res) => {
+      try {
+        const widespread = this.db.getWidespreadScripts();
+        const results = widespread.map(script => {
+          const domains = this.db.getDomainsForHash(script.scriptHash);
+          const blockedDomains = domains.filter(d => this.shield.checkDomain(d).blocked);
+          return {
+            hash: script.scriptHash,
+            normalizedHash: script.normalizedHash,
+            domains,
+            domainCount: script.domainCount,
+            firstSeen: new Date(script.firstSeen).toISOString(),
+            blockedDomains,
+          };
+        });
+
+        res.json({
+          widespread: results,
+          totalTrackedScripts: this.db.getScriptFingerprintCount(),
+          crossDomainScripts: this.db.getCrossDomainScriptCount(),
+        });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    console.log('[SecurityManager] 33 API routes registered under /security/*');
   }
 
   destroy(): void {

@@ -1,3 +1,4 @@
+import { createHash } from 'crypto';
 import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
@@ -17,6 +18,15 @@ function calculateEntropy(input: string): number {
     entropy -= p * Math.log2(p);
   }
   return entropy;
+}
+
+/** Strip comments and normalize whitespace for obfuscation-resistant hashing */
+function normalizeScriptSource(source: string): string {
+  return source
+    .replace(/\/\/[^\n]*/g, '')           // strip single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '')     // strip multi-line comments
+    .replace(/\s+/g, ' ')                 // collapse whitespace
+    .trim();
 }
 
 // Entropy thresholds (reference: normal JS = 4.5-5.5, minified = 5.0-5.8, obfuscated = 5.8-6.5, encrypted = 7.5-8.0)
@@ -166,11 +176,16 @@ export class ScriptGuard {
     }
   }
 
-  /** Cross-domain correlation: check if a script hash appears on blocked or many domains (Phase 3-A) */
-  private correlateScriptHash(hash: string, currentDomain: string, scriptUrl: string): void {
+  /** Cross-domain correlation: check if a script hash appears on blocked or many domains (Phase 3-A, extended in Phase 3-B for normalized hashes) */
+  private correlateScriptHash(hash: string, currentDomain: string, scriptUrl: string, hashType: 'original' | 'normalized' = 'original'): void {
     // Get all domains where this script hash has been seen
-    const domains = this.db.getDomainsForHash(hash);
+    const domains = hashType === 'normalized'
+      ? this.db.getDomainsForNormalizedHash(hash)
+      : this.db.getDomainsForHash(hash);
     const domainCount = domains.length;
+
+    const hashLabel = hashType === 'normalized' ? 'normalizedHash' : 'hash';
+    const reasonSuffix = hashType === 'normalized' ? '-normalized' : '';
 
     // 1. Check if this hash has been seen on any blocked domain
     if (this.isDomainBlocked) {
@@ -186,10 +201,10 @@ export class ScriptGuard {
             category: 'script',
             details: JSON.stringify({
               scriptUrl: scriptUrl.substring(0, 500),
-              hash,
+              [hashLabel]: hash,
               blockedDomain: seenDomain,
               totalDomains: domainCount,
-              reason: 'script-hash-seen-on-blocked-domain',
+              reason: `script-hash-seen-on-blocked-domain${reasonSuffix}`,
             }),
             actionTaken: 'flagged',
           });
@@ -217,10 +232,10 @@ export class ScriptGuard {
         category: 'script',
         details: JSON.stringify({
           scriptUrl: scriptUrl.substring(0, 500),
-          hash,
+          [hashLabel]: hash,
           domainCount,
           domains: domains.slice(0, 10), // cap at 10 for readability
-          reason: 'script-hash-on-many-domains',
+          reason: `script-hash-on-many-domains${reasonSuffix}`,
         }),
         actionTaken: 'flagged',
       });
@@ -241,6 +256,14 @@ export class ScriptGuard {
       const source = (result as any)?.scriptSource;
       if (!source || typeof source !== 'string') return;
       if (source.length > MAX_SCRIPT_SIZE) return;
+
+      // 0. Compute and store normalized hash (Phase 3-B)
+      const normalized = normalizeScriptSource(source);
+      const normalizedHash = createHash('sha256').update(normalized).digest('hex');
+      this.db.updateNormalizedHash(domain, url, normalizedHash);
+
+      // 0b. Cross-domain correlation on normalized hash (Phase 3-B)
+      this.correlateScriptHash(normalizedHash, domain, url, 'normalized');
 
       // 1. Run rule engine
       const analysis = analyzeScriptContent(source, url);

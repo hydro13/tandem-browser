@@ -39,6 +39,11 @@ export class SecurityDB {
   // Phase 3-A: Cross-domain script correlation
   private stmtGetDomainsForHash!: Database.Statement;
   private stmtGetDomainCountForHash!: Database.Statement;
+  // Phase 3-B: Normalized hashing + correlation API
+  private stmtUpdateNormalizedHash!: Database.Statement;
+  private stmtGetDomainsForNormalizedHash!: Database.Statement;
+  private stmtGetWidespreadScripts!: Database.Statement;
+  private stmtGetCrossDomainScriptCount!: Database.Statement;
   // Phase 5: Baselines, zero-day candidates, analytics
   private stmtGetBaseline!: Database.Statement;
   private stmtGetBaselinesByDomain!: Database.Statement;
@@ -166,6 +171,14 @@ export class SecurityDB {
       CREATE INDEX IF NOT EXISTS idx_zeroday_domain ON zero_day_candidates(domain);
       CREATE INDEX IF NOT EXISTS idx_zeroday_resolved ON zero_day_candidates(resolved);
     `);
+
+    // Phase 3-B: Add normalized_hash column to script_fingerprints (backward-compatible)
+    try {
+      this.db.exec('ALTER TABLE script_fingerprints ADD COLUMN normalized_hash TEXT');
+    } catch {
+      // Column already exists — ignore
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_script_fp_normalized_hash ON script_fingerprints(normalized_hash)');
   }
 
   private prepareStatements(): void {
@@ -261,6 +274,32 @@ export class SecurityDB {
     this.stmtGetDomainCountForHash = this.db.prepare(
       'SELECT COUNT(DISTINCT domain) as count FROM script_fingerprints WHERE script_hash = ?'
     );
+    // Phase 3-B: Normalized hashing + correlation API
+    this.stmtUpdateNormalizedHash = this.db.prepare(
+      'UPDATE script_fingerprints SET normalized_hash = ? WHERE domain = ? AND script_url = ?'
+    );
+    this.stmtGetDomainsForNormalizedHash = this.db.prepare(
+      'SELECT DISTINCT domain FROM script_fingerprints WHERE normalized_hash = ?'
+    );
+    this.stmtGetWidespreadScripts = this.db.prepare(`
+      SELECT script_hash, MAX(normalized_hash) as normalized_hash,
+             COUNT(DISTINCT domain) as domain_count,
+             MIN(first_seen) as first_seen
+      FROM script_fingerprints
+      WHERE script_hash IS NOT NULL
+      GROUP BY script_hash
+      HAVING domain_count >= 2
+      ORDER BY domain_count DESC
+      LIMIT 50
+    `);
+    this.stmtGetCrossDomainScriptCount = this.db.prepare(`
+      SELECT COUNT(*) as total FROM (
+        SELECT script_hash FROM script_fingerprints
+        WHERE script_hash IS NOT NULL
+        GROUP BY script_hash
+        HAVING COUNT(DISTINCT domain) >= 2
+      )
+    `);
     // Phase 5: Baselines
     this.stmtGetBaseline = this.db.prepare(
       'SELECT domain, metric, expected_value, tolerance, sample_count, last_updated FROM baselines WHERE domain = ? AND metric = ?'
@@ -550,6 +589,31 @@ export class SecurityDB {
 
   getDomainCountForHash(scriptHash: string): number {
     return (this.stmtGetDomainCountForHash.get(scriptHash) as { count: number }).count;
+  }
+
+  // === Phase 3-B: Normalized hashing + correlation API ===
+
+  updateNormalizedHash(domain: string, scriptUrl: string, normalizedHash: string): void {
+    this.stmtUpdateNormalizedHash.run(normalizedHash, domain, scriptUrl);
+  }
+
+  getDomainsForNormalizedHash(normalizedHash: string): string[] {
+    const rows = this.stmtGetDomainsForNormalizedHash.all(normalizedHash) as { domain: string }[];
+    return rows.map(row => row.domain);
+  }
+
+  getWidespreadScripts(): { scriptHash: string; normalizedHash: string | null; domainCount: number; firstSeen: number }[] {
+    const rows = this.stmtGetWidespreadScripts.all() as { script_hash: string; normalized_hash: string | null; domain_count: number; first_seen: number }[];
+    return rows.map(row => ({
+      scriptHash: row.script_hash,
+      normalizedHash: row.normalized_hash,
+      domainCount: row.domain_count,
+      firstSeen: row.first_seen,
+    }));
+  }
+
+  getCrossDomainScriptCount(): number {
+    return (this.stmtGetCrossDomainScriptCount.get() as { total: number }).total;
   }
 
   // === Phase 5: Baselines ===

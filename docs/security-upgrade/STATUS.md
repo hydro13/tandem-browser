@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 3-B
-**Last completed phase:** Phase 3-A
+**Next phase to implement:** Phase 4
+**Last completed phase:** Phase 3-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -116,17 +116,17 @@
 
 ## Phase 3-B: Normalized Hashing + API Endpoint
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** 90fa186
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `normalized_hash` column exists in `script_fingerprints`
-  - [ ] Scripts differing only in comments/whitespace produce same normalized hash
-  - [ ] `GET /security/scripts/correlations` returns valid JSON
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `normalized_hash` column exists in `script_fingerprints`
+  - [x] Scripts differing only in comments/whitespace produce same normalized hash
+  - [x] `GET /security/scripts/correlations` returns valid JSON
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `normalizeScriptSource()` is a module-level function in `script-guard.ts` (not exported) — strips `//` and `/* */` comments, collapses whitespace, trims. Normalized hash is SHA-256 hex of the normalized source, computed in `analyzeExternalScript()` after fetching source via CDP. Stored via a separate `updateNormalizedHash()` DB method (not part of the main upsert, since the source is only available async). `correlateScriptHash()` was extended with a `hashType` parameter ('original' | 'normalized') to reuse the same blocked-domain and widespread-script logic for both hash types — normalized correlation runs in `analyzeExternalScript()` after the hash is computed. The API endpoint `GET /security/scripts/correlations` (route 33) queries `getWidespreadScripts()` which groups by `script_hash` with `HAVING COUNT(DISTINCT domain) >= 2`, returning up to 50 results sorted by domain count. For each result, domains are fetched and checked against NetworkShield blocklist. Response includes `totalTrackedScripts` and `crossDomainScripts` counts. Normalized hash is only available for external scripts (different domain than page) under 500KB — first-party scripts will have `normalized_hash = NULL`.
 
 ---
 
@@ -332,7 +332,9 @@
 - `src/security/security-manager.ts` — Wired `scriptGuard.isDomainBlocked` to `shield.checkDomain()` in `setDevToolsManager()`
 
 ### Phase 3-B
-*(to be filled after completion)*
+- `src/security/security-db.ts` — Added `normalized_hash` column (ALTER TABLE), `idx_script_fp_normalized_hash` index, `updateNormalizedHash`/`getDomainsForNormalizedHash`/`getWidespreadScripts`/`getCrossDomainScriptCount` prepared statements and methods
+- `src/security/script-guard.ts` — Added `normalizeScriptSource()` function, `crypto` import, normalized hash computation+storage in `analyzeExternalScript()`, extended `correlateScriptHash()` with `hashType` parameter for normalized hash correlation
+- `src/security/security-manager.ts` — Added route 33: `GET /security/scripts/correlations` (cross-domain script correlation API)
 
 ### Phase 4
 *(to be filled after completion)*
