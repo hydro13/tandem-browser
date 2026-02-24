@@ -208,10 +208,17 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
+  // macOS: native vibrancy for glass sidebar effect (hardware-accelerated, no CSS hacks needed)
+  // Linux/Windows: no vibrancy option — keeps window plain (Max's LGL CSS handles Linux styling)
+  const platformWindowOptions: Partial<Electron.BrowserWindowConstructorOptions> = process.platform === 'darwin'
+    ? { vibrancy: 'sidebar', visualEffectState: 'active' }
+    : {};
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
     title: 'Tandem Browser',
+    ...platformWindowOptions,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       partition,
