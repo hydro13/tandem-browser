@@ -23,6 +23,16 @@ const KNOWN_WS_SERVICES = new Set([
 // Credential field patterns in POST bodies
 const CREDENTIAL_PATTERN = /(?:^|&|"|,\s*")(?:password|passwd|pw|pass|secret|token|api[_-]?key|access[_-]?token|credit[_-]?card|card[_-]?number|cvv|cvc|ssn|social[_-]?security)(?:"|]?\s*[:=])/i;
 
+// Trusted media/binary Content-Types — skip body credential scanning for these
+const TRUSTED_OUTBOUND_CONTENT_TYPES = new Set([
+  'image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml',
+  'image/bmp', 'image/tiff', 'image/x-icon', 'image/avif',
+  'audio/mpeg', 'audio/ogg', 'audio/wav', 'audio/webm', 'audio/aac',
+  'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime',
+  'font/woff', 'font/woff2', 'font/ttf', 'font/otf',
+  'application/octet-stream', 'application/zip', 'application/gzip',
+]);
+
 // Max body size to scan for credentials (100KB)
 const MAX_SCAN_SIZE = 100_000;
 
@@ -79,7 +89,16 @@ export class OutboundGuard {
       return { action: 'flag', reason: 'tracker-detected', severity: 'info' };
     }
 
-    // 4. Check POST body for credential-like data
+    // 4. Content-Type whitelist — skip body scan for known-safe media types
+    if (details.uploadData?.length) {
+      const contentType = this.extractUploadContentType(details.uploadData);
+      if (contentType && TRUSTED_OUTBOUND_CONTENT_TYPES.has(contentType)) {
+        this.stats.allowed++;
+        return { action: 'allow', reason: 'trusted-content-type', severity: 'info' };
+      }
+    }
+
+    // 5. Check POST body for credential-like data
     if (details.uploadData?.length) {
       const bodyAnalysis = this.analyzeBody(details.uploadData);
 
@@ -102,7 +121,7 @@ export class OutboundGuard {
       }
     }
 
-    // 5. Cross-origin POST from trusted to untrusted
+    // 6. Cross-origin POST from trusted to untrusted
     if (originDomain && this.isTrustedDomain(originDomain) && !this.isTrustedDomain(destDomain)) {
       this.stats.flagged++;
       return { action: 'flag', reason: 'cross-origin-trusted-to-untrusted', severity: 'medium' };
@@ -195,6 +214,31 @@ export class OutboundGuard {
   }
 
   // === Helpers ===
+
+  /**
+   * Extract Content-Type from upload data.
+   * Checks multipart form-data headers embedded in the bytes (e.g. "Content-Type: image/jpeg").
+   * Returns null if Content-Type cannot be determined.
+   */
+  private extractUploadContentType(uploadData: Electron.UploadData[]): string | null {
+    for (const part of uploadData) {
+      if (part.bytes && part.bytes.length > 0) {
+        // Look for Content-Type header in multipart form data (first 2KB)
+        const header = part.bytes.subarray(0, 2048).toString('utf-8');
+
+        // Safety: if multipart form has multiple fields, don't skip scanning
+        // (mixed forms may have text fields with credentials alongside file uploads)
+        const dispositions = header.match(/Content-Disposition:/gi);
+        if (dispositions && dispositions.length > 1) return null;
+
+        const match = header.match(/Content-Type:\s*([^\r\n;]+)/i);
+        if (match) {
+          return match[1].trim().toLowerCase();
+        }
+      }
+    }
+    return null;
+  }
 
   private extractDomain(url: string): string | null {
     try {

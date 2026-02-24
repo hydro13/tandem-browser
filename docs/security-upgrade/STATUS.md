@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 1
-**Last completed phase:** Phase 0-B
+**Next phase to implement:** Phase 2-A
+**Last completed phase:** Phase 1
 **Overall status:** IN PROGRESS
 
 ---
@@ -46,19 +46,19 @@
 
 ## Phase 1: Shannon Entropy Check + MIME Whitelist
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** a2dfa40
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Entropy function returns correct values (~0 for "aaaa", ~7+ for random data)
-  - [ ] High-entropy external scripts (>6.0, >1000 chars) generate security events
-  - [ ] Trusted Content-Type whitelist skips body scan for media uploads
-  - [ ] `application/json` and `x-www-form-urlencoded` are still scanned
-  - [ ] Normal form submissions still trigger credential scanning
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Entropy function returns correct values (~0 for "aaaa", ~7+ for random data)
+  - [x] High-entropy external scripts (>6.0, >1000 chars) generate security events
+  - [x] Trusted Content-Type whitelist skips body scan for media uploads
+  - [x] `application/json` and `x-www-form-urlencoded` are still scanned
+  - [x] Normal form submissions still trigger credential scanning
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `calculateEntropy()` is a module-level function in `script-guard.ts` (not exported — used only internally). Entropy check is async (uses `Debugger.getScriptSource` CDP call) and fires in background after the sync `analyzeScript()` completes. Only external scripts are checked (script domain != page domain), with size bounds 1000 chars to 500KB. Severity tiers: 6.0-6.5 = medium, 6.5-7.0 = high, 7.0+ = critical. MIME whitelist in OutboundGuard extracts Content-Type from multipart form-data bytes; includes a safety guard that skips the whitelist for multi-field forms (multiple `Content-Disposition` headers) to avoid missing credential exfiltration in mixed uploads. The `EventCategory` type doesn't include 'obfuscation' so entropy events use category 'script' with reason 'high-entropy-script' in details.
 
 ---
 
@@ -316,7 +316,8 @@
 - `src/security/security-manager.ts` — Wired cookie_count in `onPageLoaded()`, added `runCorrelation()` with event counter + hourly interval, added `scheduleBlocklistUpdate()`/`runBlocklistUpdate()` with 24h interval
 
 ### Phase 1
-*(to be filled after completion)*
+- `src/security/script-guard.ts` — Added `calculateEntropy()` function, entropy constants, `getCurrentPageDomain()` helper, `checkScriptEntropy()` async method, integrated entropy check in `analyzeScript()`
+- `src/security/outbound-guard.ts` — Added `TRUSTED_OUTBOUND_CONTENT_TYPES` constant, `extractUploadContentType()` method, Content-Type whitelist check in `analyzeOutbound()` (step 4, before body scan)
 
 ### Phase 2-A
 *(to be filled after completion)*

@@ -2,13 +2,37 @@ import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
 
+/** Shannon entropy (bits per character) — detects obfuscated/encrypted content */
+function calculateEntropy(input: string): number {
+  if (input.length === 0) return 0;
+  const freq = new Map<number, number>();
+  for (let i = 0; i < input.length; i++) {
+    const code = input.charCodeAt(i);
+    freq.set(code, (freq.get(code) || 0) + 1);
+  }
+  let entropy = 0;
+  for (const count of freq.values()) {
+    const p = count / input.length;
+    entropy -= p * Math.log2(p);
+  }
+  return entropy;
+}
+
+// Entropy thresholds (reference: normal JS = 4.5-5.5, minified = 5.0-5.8, obfuscated = 5.8-6.5, encrypted = 7.5-8.0)
+const ENTROPY_THRESHOLD = 6.0;
+const ENTROPY_HIGH = 6.5;
+const ENTROPY_CRITICAL = 7.0;
+const ENTROPY_MIN_LENGTH = 1000;
+const ENTROPY_MAX_LENGTH = 500_000; // 500KB
+
 /**
  * ScriptGuard — CDP-based script analysis and security monitor injection.
  *
  * Uses the DevToolsManager subscriber system to:
  * 1. Track all loaded scripts via Debugger.scriptParsed
  * 2. Fingerprint scripts per domain (detect new/changed scripts)
- * 3. Inject invisible security monitors via Runtime.addBinding:
+ * 3. Shannon entropy analysis on external scripts (detect obfuscation)
+ * 4. Inject invisible security monitors via Runtime.addBinding:
  *    - Keylogger detection (addEventListener on input fields from external scripts)
  *    - Crypto miner detection (WebAssembly.instantiate monitoring)
  *    - Clipboard hijack detection (clipboard.readText monitoring)
@@ -86,6 +110,54 @@ export class ScriptGuard {
 
     // 3. Store/update fingerprint
     this.db.upsertScriptFingerprint(domain, url, hash);
+
+    // 4. Entropy analysis for external scripts (async — fires in background)
+    const scriptLength = length || 0;
+    if (scriptLength >= ENTROPY_MIN_LENGTH && scriptLength <= ENTROPY_MAX_LENGTH) {
+      const pageDomain = this.getCurrentPageDomain();
+      if (pageDomain && domain !== pageDomain) {
+        this.checkScriptEntropy(scriptId, url, domain).catch(() => {});
+      }
+    }
+  }
+
+  /** Get the current page domain from the attached webContents */
+  private getCurrentPageDomain(): string | null {
+    const wc = this.devToolsManager.getAttachedWebContents();
+    if (!wc) return null;
+    return this.extractDomain(wc.getURL());
+  }
+
+  /** Async entropy check on external script source via CDP */
+  private async checkScriptEntropy(scriptId: string, url: string, domain: string): Promise<void> {
+    try {
+      const result = await this.devToolsManager.sendCommand('Debugger.getScriptSource', { scriptId });
+      const source = (result as any)?.scriptSource;
+      if (!source || typeof source !== 'string') return;
+      if (source.length < ENTROPY_MIN_LENGTH || source.length > ENTROPY_MAX_LENGTH) return;
+
+      const entropy = calculateEntropy(source);
+      if (entropy < ENTROPY_THRESHOLD) return;
+
+      const severity = entropy >= ENTROPY_CRITICAL ? 'critical' : entropy >= ENTROPY_HIGH ? 'high' : 'medium';
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain,
+        tabId: null,
+        eventType: 'warned',
+        severity,
+        category: 'script',
+        details: JSON.stringify({
+          url: url.substring(0, 500),
+          reason: 'high-entropy-script',
+          entropy: Math.round(entropy * 100) / 100,
+          length: source.length,
+        }),
+        actionTaken: 'flagged',
+      });
+    } catch {
+      // CDP command failed (tab closed, debugger detached) — silently ignore
+    }
   }
 
   /** Monitor console for suspicious patterns */
