@@ -36,6 +36,14 @@ export class SecurityManager {
   private threatIntel: ThreatIntel;
   private blocklistUpdater: BlocklistUpdater;
 
+  // Phase 0-B: Auto-correlation trigger
+  private eventCounter: number = 0;
+  private correlationRunning: boolean = false;
+  private correlationInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Phase 0-B: Blocklist update scheduling
+  private blocklistInterval: ReturnType<typeof setInterval> | null = null;
+
   constructor() {
     this.db = new SecurityDB();
     this.shield = new NetworkShield(this.db);
@@ -44,6 +52,20 @@ export class SecurityManager {
     this.evolution = new EvolutionEngine(this.db);
     this.threatIntel = new ThreatIntel(this.db, this.evolution);
     this.blocklistUpdater = new BlocklistUpdater(this.db, this.shield);
+
+    // Phase 0-B: Auto-trigger correlateEvents() every 100 events or every hour
+    this.db.onEventLogged = () => {
+      this.eventCounter++;
+      if (this.eventCounter >= 100) {
+        this.eventCounter = 0;
+        this.runCorrelation();
+      }
+    };
+    this.correlationInterval = setInterval(() => this.runCorrelation(), 3_600_000); // 1 hour
+
+    // Phase 0-B: Blocklist update scheduling (24-hour cycle)
+    this.scheduleBlocklistUpdate();
+
     console.log('[SecurityManager] Initialized (Phase 1-5)');
   }
 
@@ -121,14 +143,17 @@ export class SecurityManager {
       const analysis = await this.contentAnalyzer.analyzePage();
 
       // 2. Extract metrics for baseline
+      const cookieCount = this.guardian.getCookieCount(domain);
       const metrics: PageMetrics = {
         script_count: analysis.scripts.length,
         external_domain_count: new Set(analysis.scripts.filter(s => s.isExternal).map(s => s.domain).filter(Boolean)).size,
         form_count: analysis.forms.length,
-        cookie_count: 0, // Cookie count not available from page analysis — tracked via request headers
+        cookie_count: cookieCount,
         request_count: analysis.scripts.length + analysis.trackers.length,
         resource_size_total: analysis.scripts.reduce((sum, s) => sum + (s.size || 0), 0),
       };
+      // Reset accumulator after reading
+      this.guardian.resetCookieCount(domain);
 
       // 3. Check for anomalies against baseline
       const anomalies = this.evolution.checkForAnomalies(domain, metrics);
@@ -175,6 +200,72 @@ export class SecurityManager {
       this.evolution.updateBaseline(domain, metrics);
     } catch (e: any) {
       console.warn('[SecurityManager] onPageLoaded error:', e.message);
+    }
+  }
+
+  /**
+   * Run event correlation and log any detected threats.
+   */
+  private runCorrelation(): void {
+    if (this.correlationRunning) return;
+    this.correlationRunning = true;
+    try {
+      const threats = this.threatIntel.correlateEvents();
+      if (threats.length > 0) {
+        console.log(`[SecurityManager] Correlation found ${threats.length} threat(s)`);
+        for (const threat of threats) {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain: threat.domains[0] || null,
+            tabId: null,
+            eventType: 'correlation',
+            severity: threat.severity,
+            category: 'behavior',
+            details: JSON.stringify({
+              type: threat.type,
+              domains: threat.domains,
+              eventCount: threat.eventCount,
+              description: threat.description,
+            }),
+            actionTaken: 'logged',
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn('[SecurityManager] Correlation error:', e.message);
+    } finally {
+      this.correlationRunning = false;
+    }
+  }
+
+  /**
+   * Check if blocklist update is overdue (>24h) and schedule recurring updates.
+   */
+  private scheduleBlocklistUpdate(): void {
+    const TWENTY_FOUR_HOURS = 86_400_000;
+
+    // Check if update is overdue
+    const lastUpdated = this.db.getBlocklistMeta('lastUpdated');
+    if (!lastUpdated || (Date.now() - new Date(lastUpdated).getTime()) > TWENTY_FOUR_HOURS) {
+      // Run asynchronously — don't block constructor
+      this.runBlocklistUpdate();
+    }
+
+    // Schedule recurring updates every 24 hours
+    this.blocklistInterval = setInterval(() => this.runBlocklistUpdate(), TWENTY_FOUR_HOURS);
+  }
+
+  /**
+   * Run blocklist update and persist lastUpdated timestamp on success.
+   */
+  private async runBlocklistUpdate(): Promise<void> {
+    try {
+      console.log('[SecurityManager] Running scheduled blocklist update...');
+      const result = await this.blocklistUpdater.update();
+      this.db.setBlocklistMeta('lastUpdated', new Date().toISOString());
+      console.log(`[SecurityManager] Blocklist update complete: ${result.totalAdded} entries, ${result.errors.length} errors`);
+    } catch (e: any) {
+      console.warn('[SecurityManager] Blocklist update failed:', e.message);
     }
   }
 
@@ -688,6 +779,8 @@ export class SecurityManager {
   }
 
   destroy(): void {
+    if (this.correlationInterval) clearInterval(this.correlationInterval);
+    if (this.blocklistInterval) clearInterval(this.blocklistInterval);
     this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();

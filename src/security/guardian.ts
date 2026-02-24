@@ -17,6 +17,9 @@ export class Guardian {
   private defaultMode: GuardianMode = 'balanced';
   private stats = { total: 0, blocked: 0, allowed: 0, totalMs: 0 };
 
+  // Phase 0-B: Accumulated Set-Cookie counts per domain (all resource types)
+  private cookieCounts: Map<string, number> = new Map();
+
   // Phase 4: Gatekeeper agent integration
   private gatekeeperWs: GatekeeperWebSocket | null = null;
   private decisionCallbacks: Map<string, (decision: GatekeeperDecision) => void> = new Map();
@@ -538,6 +541,12 @@ export class Guardian {
     const domain = this.extractDomain(details.url);
     if (!domain) return;
 
+    // Count Set-Cookie headers for ALL resource types (not just mainFrame)
+    const cookies = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
+    if (cookies && cookies.length > 0) {
+      this.cookieCounts.set(domain, (this.cookieCounts.get(domain) || 0) + cookies.length);
+    }
+
     // Only analyze main frame navigations to reduce noise
     if ((details as any).resourceType !== 'mainFrame') return;
 
@@ -628,6 +637,15 @@ export class Guardian {
 
   setDefaultMode(mode: GuardianMode): void {
     this.defaultMode = mode;
+  }
+
+  // Phase 0-B: Cookie count accumulator for EvolutionEngine
+  getCookieCount(domain: string): number {
+    return this.cookieCounts.get(domain) || 0;
+  }
+
+  resetCookieCount(domain: string): void {
+    this.cookieCounts.delete(domain);
   }
 
   // === Risk scoring ===

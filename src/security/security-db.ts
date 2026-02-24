@@ -7,6 +7,9 @@ import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry
 export class SecurityDB {
   private db: Database.Database;
 
+  // Phase 0-B: Optional callback fired after every logEvent() call
+  onEventLogged: (() => void) | null = null;
+
   // Prepared statements (cached for hot-path performance)
   private stmtIsDomainBlocked!: Database.Statement;
   private stmtGetDomainInfo!: Database.Statement;
@@ -49,6 +52,9 @@ export class SecurityDB {
   private stmtPruneOldEvents!: Database.Statement;
   private stmtDeleteBlocklistBySource!: Database.Statement;
   private stmtGetRecentAnomalyEvents!: Database.Statement;
+  // Phase 0-B: Blocklist metadata
+  private stmtGetBlocklistMeta!: Database.Statement;
+  private stmtUpsertBlocklistMeta!: Database.Statement;
 
   constructor() {
     const dbDir = path.join(os.homedir(), '.tandem', 'security');
@@ -139,6 +145,11 @@ export class SecurityDB {
         destination_domain TEXT NOT NULL,
         added_at TEXT DEFAULT (datetime('now')),
         UNIQUE(origin_domain, destination_domain)
+      );
+
+      CREATE TABLE IF NOT EXISTS blocklist_metadata (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
       );
 
       CREATE INDEX IF NOT EXISTS idx_events_domain ON events(domain);
@@ -294,6 +305,13 @@ export class SecurityDB {
     this.stmtGetRecentAnomalyEvents = this.db.prepare(
       'SELECT id, timestamp, domain, tab_id, event_type, severity, category, details, action_taken, false_positive FROM events WHERE category = \'behavior\' AND event_type = \'anomaly\' ORDER BY timestamp DESC LIMIT ?'
     );
+    // Phase 0-B: Blocklist metadata
+    this.stmtGetBlocklistMeta = this.db.prepare(
+      'SELECT value FROM blocklist_metadata WHERE key = ?'
+    );
+    this.stmtUpsertBlocklistMeta = this.db.prepare(
+      'INSERT INTO blocklist_metadata (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value'
+    );
   }
 
   // === Fast lookups (used in request handler — MUST be fast) ===
@@ -374,6 +392,7 @@ export class SecurityDB {
       actionTaken: event.actionTaken,
       falsePositive: event.falsePositive ? 1 : 0,
     });
+    this.onEventLogged?.();
     return Number(result.lastInsertRowid);
   }
 
@@ -674,6 +693,17 @@ export class SecurityDB {
     });
     insertMany(domains);
     return added;
+  }
+
+  // === Phase 0-B: Blocklist metadata ===
+
+  getBlocklistMeta(key: string): string | null {
+    const row = this.stmtGetBlocklistMeta.get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  setBlocklistMeta(key: string, value: string): void {
+    this.stmtUpsertBlocklistMeta.run(key, value);
   }
 
   // === Cleanup ===

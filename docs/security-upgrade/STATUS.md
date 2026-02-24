@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 0-B
-**Last completed phase:** Phase 0-A
+**Next phase to implement:** Phase 1
+**Last completed phase:** Phase 0-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -29,18 +29,18 @@
 
 ## Phase 0-B: Wire Cookie Count + Correlation Trigger + Blocklist Scheduling
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** fd9496c
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `cookie_count` in EvolutionEngine receives real values (not hardcoded 0)
-  - [ ] `correlateEvents()` triggered automatically (per 100 events or hourly)
-  - [ ] Blocklist update runs on 24-hour schedule
-  - [ ] `lastUpdated` timestamp persisted in DB
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `cookie_count` in EvolutionEngine receives real values (not hardcoded 0)
+  - [x] `correlateEvents()` triggered automatically (per 100 events or hourly)
+  - [x] Blocklist update runs on 24-hour schedule
+  - [x] `lastUpdated` timestamp persisted in DB
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** Cookie counting is done in Guardian's `analyzeResponseHeaders()` for ALL resource types (before the mainFrame filter). Counts are accumulated in a `Map<string, number>` and read+reset by SecurityManager in `onPageLoaded()`. Correlation uses a re-entrancy guard (`correlationRunning`) to prevent recursive loops since correlation itself logs events. SecurityDB has an `onEventLogged` callback that SecurityManager uses to count events across all modules (Guardian, OutboundGuard, etc.) — not just events logged by SecurityManager itself. Blocklist metadata uses a simple key-value table (`blocklist_metadata`); on startup, if `lastUpdated` is missing or >24h old, an immediate async update runs.
 
 ---
 
@@ -311,7 +311,9 @@
 - `src/security/blocklists/updater.ts` — Removed local `URL_LIST_SAFE_DOMAINS`, imports from `types.ts`
 
 ### Phase 0-B
-*(to be filled after completion)*
+- `src/security/guardian.ts` — Added `cookieCounts` Map, cookie counting in `analyzeResponseHeaders()`, `getCookieCount()`/`resetCookieCount()` methods
+- `src/security/security-db.ts` — Added `blocklist_metadata` table, `onEventLogged` callback in `logEvent()`, `getBlocklistMeta()`/`setBlocklistMeta()` methods
+- `src/security/security-manager.ts` — Wired cookie_count in `onPageLoaded()`, added `runCorrelation()` with event counter + hourly interval, added `scheduleBlocklistUpdate()`/`runBlocklistUpdate()` with 24h interval
 
 ### Phase 1
 *(to be filled after completion)*
