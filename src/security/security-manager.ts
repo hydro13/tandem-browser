@@ -797,11 +797,12 @@ export class SecurityManager {
 
     // === Phase 3-B: Script correlation routes (33) ===
 
-    // 33. GET /security/scripts/correlations — Cross-domain script correlation data
+    // 33. GET /security/scripts/correlations — Cross-domain script correlation data (extended Phase 6-B: AST matches)
     app.get('/security/scripts/correlations', (_req, res) => {
       try {
+        // Hash-based widespread scripts (Phase 3-B)
         const widespread = this.db.getWidespreadScripts();
-        const results = widespread.map(script => {
+        const hashResults = widespread.map(script => {
           const domains = this.db.getDomainsForHash(script.scriptHash);
           const blockedDomains = domains.filter(d => this.shield.checkDomain(d).blocked);
           return {
@@ -814,10 +815,34 @@ export class SecurityManager {
           };
         });
 
+        // AST-based correlations (Phase 6-B)
+        const widespreadAst = this.db.getWidespreadAstScripts();
+        const astResults = widespreadAst.map(entry => {
+          const matches = this.db.getAstMatches(entry.astHash);
+          const variants = matches.map(m => ({
+            domain: m.domain,
+            hash: m.scriptHash,
+            url: m.scriptUrl,
+          }));
+          const distinctHashes = new Set(matches.map(m => m.scriptHash).filter(Boolean));
+          const blockedVariants = matches.filter(m => this.shield.checkDomain(m.domain).blocked);
+          return {
+            astHash: entry.astHash,
+            variants,
+            isObfuscationVariant: distinctHashes.size >= 2,
+            hasBlockedDomain: blockedVariants.length > 0,
+            domainCount: entry.domainCount,
+            hashVariantCount: entry.hashVariantCount,
+            firstSeen: new Date(entry.firstSeen).toISOString(),
+          };
+        });
+
         res.json({
-          widespread: results,
+          widespread: hashResults,
+          astMatches: astResults,
           totalTrackedScripts: this.db.getScriptFingerprintCount(),
           crossDomainScripts: this.db.getCrossDomainScriptCount(),
+          astCorrelations: astResults.length,
         });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
