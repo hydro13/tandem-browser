@@ -67,7 +67,7 @@ export class TabManager {
   }
 
   /** Open a new tab */
-  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem'): Promise<Tab> {
+  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem', focus: boolean = true): Promise<Tab> {
     const id = this.nextId();
 
     // Tell renderer to create a webview and return its webContentsId
@@ -98,7 +98,11 @@ export class TabManager {
     // Focus the new tab BEFORE sending source indicator,
     // because focusTab's renderer patch (origTabClickHandler) checks
     // the source indicator and resets AI tabs back to robin.
-    await this.focusTab(id);
+    // When focus=false, the tab is created in the background — useful when
+    // an existing tab (e.g. Discord) must stay active and retain its JS memory state.
+    if (focus) {
+      await this.focusTab(id);
+    }
 
     // Now notify renderer of source indicator (after focus is done)
     this.win.webContents.send('tab-source-changed', { tabId: id, source });
