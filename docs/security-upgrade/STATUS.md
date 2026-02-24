@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 6-A
-**Last completed phase:** Phase 5-C
+**Next phase to implement:** Phase 6-B
+**Last completed phase:** Phase 6-A
 **Overall status:** IN PROGRESS
 
 ---
@@ -201,19 +201,19 @@
 
 ## Phase 6-A: Acorn Parser + AST Hash Algorithm
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 9cfd6bb
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Acorn parser installed and working
-  - [ ] AST hash consistent for same-structure scripts
-  - [ ] Different variable names → same AST hash
-  - [ ] Scripts with syntax errors degrade gracefully
-  - [ ] `ast_hash` column exists in `script_fingerprints`
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Acorn parser installed and working
+  - [x] AST hash consistent for same-structure scripts
+  - [x] Different variable names → same AST hash
+  - [x] Scripts with syntax errors degrade gracefully
+  - [x] `ast_hash` column exists in `script_fingerprints`
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `parseToAST()`, `buildNodeFeature()`, `walkAST()`, and `computeASTHash()` are all module-level functions in `script-guard.ts` (not exported — used only internally). Acorn is configured with `ecmaVersion: 'latest'`, `sourceType: 'module'`, `allowImportExportEverywhere: true`, and `allowReturnOutsideFunction: true` for maximum compatibility with real-world scripts. The AST hash algorithm is Ghidra BSim-inspired: it walks the AST, collects structural features per node (node type, operators, parameter/argument arity, control flow presence, async/generator flags), excludes variable names and literal values, then SHA-256 hashes the feature string (truncated to 32 hex chars). `MAX_AST_PARSE_SIZE` = 200KB — scripts larger than this skip AST parsing (too expensive). AST hashing runs in `analyzeExternalScript()` after normalized hash computation (step 0c), only for external scripts under 200KB. If parsing fails (syntax errors), `ast_hash` stays NULL — graceful degradation. The `updateAstHash()` DB method uses the same UPDATE pattern as `updateNormalizedHash()`. Phase 6-B should add `getDomainsForAstHash()` for cross-domain AST-based correlation and extend the `/security/scripts/correlations` API to include AST data.
 
 ---
 
@@ -297,7 +297,8 @@
 
 | Phase | Dependency | Version | Reason |
 |-------|-----------|---------|--------|
-| 6-A | acorn | TBD | Lightweight JS parser for AST fingerprinting |
+| 6-A | acorn | ^8.16.0 | Lightweight JS parser for AST fingerprinting |
+| 6-A | @types/acorn | ^4.0.6 | TypeScript types for acorn (devDependency) |
 
 ## File Inventory
 
@@ -357,7 +358,9 @@
 - `src/security/security-manager.ts` — Imported `AnalysisConfidence`, added `confidence` to anomaly `logEvent()` (ANOMALY) and correlation `logEvent()` (HEURISTIC), passed `AnalysisConfidence.ANOMALY` to `evolveTrust()` call for baseline anomalies
 
 ### Phase 6-A
-*(to be filled after completion)*
+- `package.json` — Added `acorn` (^8.16.0) dependency, `@types/acorn` (^4.0.6) devDependency
+- `src/security/script-guard.ts` — Added `acorn` import, `MAX_AST_PARSE_SIZE` constant (200KB), `parseToAST()` function, `buildNodeFeature()` function, `walkAST()` function, `computeASTHash()` function; integrated AST hash computation as step 0c in `analyzeExternalScript()`
+- `src/security/security-db.ts` — Added `ast_hash TEXT` column migration (ALTER TABLE), `idx_script_fp_ast_hash` index, `stmtUpdateAstHash` prepared statement, `updateAstHash()` method
 
 ### Phase 6-B
 *(to be filled after completion)*

@@ -44,6 +44,8 @@ export class SecurityDB {
   private stmtGetDomainsForNormalizedHash!: Database.Statement;
   private stmtGetWidespreadScripts!: Database.Statement;
   private stmtGetCrossDomainScriptCount!: Database.Statement;
+  // Phase 6-A: AST hash
+  private stmtUpdateAstHash!: Database.Statement;
   // Phase 5: Baselines, zero-day candidates, analytics
   private stmtGetBaseline!: Database.Statement;
   private stmtGetBaselinesByDomain!: Database.Statement;
@@ -186,6 +188,14 @@ export class SecurityDB {
     } catch {
       // Column already exists — ignore
     }
+
+    // Phase 6-A: Add ast_hash column to script_fingerprints (backward-compatible)
+    try {
+      this.db.exec('ALTER TABLE script_fingerprints ADD COLUMN ast_hash TEXT');
+    } catch {
+      // Column already exists — ignore
+    }
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_script_fp_ast_hash ON script_fingerprints(ast_hash)');
   }
 
   private prepareStatements(): void {
@@ -307,6 +317,10 @@ export class SecurityDB {
         HAVING COUNT(DISTINCT domain) >= 2
       )
     `);
+    // Phase 6-A: AST hash
+    this.stmtUpdateAstHash = this.db.prepare(
+      'UPDATE script_fingerprints SET ast_hash = ? WHERE domain = ? AND script_url = ?'
+    );
     // Phase 5: Baselines
     this.stmtGetBaseline = this.db.prepare(
       'SELECT domain, metric, expected_value, tolerance, sample_count, last_updated FROM baselines WHERE domain = ? AND metric = ?'
@@ -604,6 +618,12 @@ export class SecurityDB {
 
   updateNormalizedHash(domain: string, scriptUrl: string, normalizedHash: string): void {
     this.stmtUpdateNormalizedHash.run(normalizedHash, domain, scriptUrl);
+  }
+
+  // === Phase 6-A: AST hash ===
+
+  updateAstHash(domain: string, scriptUrl: string, astHash: string): void {
+    this.stmtUpdateAstHash.run(astHash, domain, scriptUrl);
   }
 
   getDomainsForNormalizedHash(normalizedHash: string): string[] {

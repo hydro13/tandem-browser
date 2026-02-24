@@ -165,13 +165,13 @@
 ## Phase 6-A: Acorn Parser + AST Hash Algorithm
 **Priority:** LOW-MEDIUM | **Effort:** ~2 hours | **Dependencies:** Phase 3-A
 
-- [ ] **6A.1** Install Acorn parser (`npm install acorn`)
-- [ ] **6A.2** Add `ast_hash` column to `script_fingerprints`
-- [ ] **6A.3** Implement AST parsing utility (`parseToAST()`)
-- [ ] **6A.4** Implement iterative AST hash algorithm
+- [x] **6A.1** Install Acorn parser (`npm install acorn`)
+- [x] **6A.2** Add `ast_hash` column to `script_fingerprints`
+- [x] **6A.3** Implement AST parsing utility (`parseToAST()`)
+- [x] **6A.4** Implement iterative AST hash algorithm
   - Hash node type + operator + arity, ignore variable names and constants
   - Produces obfuscation-resistant fingerprint
-- [ ] **6A.5** Wire into fingerprinting flow
+- [x] **6A.5** Wire into fingerprinting flow
   - Parse scripts < 200KB, store `ast_hash` alongside other hashes
   - Degrade gracefully on syntax errors
 
@@ -241,10 +241,10 @@
 | 5-A | Confidence Types + DB | TODO | 0/4 |
 | 5-B | Confidence in Core Modules | TODO | 0/3 |
 | 5-C | Confidence Routing + Evolution | DONE | 5/5 |
-| 6-A | Acorn + AST Hash | TODO | 0/5 |
+| 6-A | Acorn + AST Hash | DONE | 5/5 |
 | 6-B | Similarity Matching | TODO | 0/4 |
 | 7-A | Plugin Interface + Manager | TODO | 0/4 |
 | 7-B | ContentAnalyzer Migration | TODO | 0/3 |
 | 7-C | BehaviorMonitor Migration | TODO | 0/4 |
 
-**Total:** 7/57 tasks completed
+**Total:** 12/57 tasks completed

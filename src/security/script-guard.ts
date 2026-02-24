@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import * as acorn from 'acorn';
 import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
@@ -27,6 +28,75 @@ function normalizeScriptSource(source: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, '')     // strip multi-line comments
     .replace(/\s+/g, ' ')                 // collapse whitespace
     .trim();
+}
+
+// Phase 6-A: AST parsing + hashing (Ghidra BSim-inspired obfuscation-resistant fingerprinting)
+const MAX_AST_PARSE_SIZE = 200 * 1024; // 200KB — larger scripts too expensive to parse
+
+/** Parse JavaScript source to AST using Acorn. Returns null on syntax errors. */
+function parseToAST(source: string): acorn.Node | null {
+  try {
+    return acorn.parse(source, {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      allowImportExportEverywhere: true,
+      allowReturnOutsideFunction: true,
+    });
+  } catch {
+    return null;
+  }
+}
+
+/** Build a structural feature string for a single AST node (excludes variable names and literal values) */
+function buildNodeFeature(node: any): string {
+  const parts = [node.type];
+
+  // Operators are structural
+  if (node.operator) parts.push(node.operator);
+
+  // Parameter/argument count (arity)
+  if (node.params) parts.push(`params:${node.params.length}`);
+  if (node.arguments) parts.push(`args:${node.arguments.length}`);
+
+  // Control flow structure
+  if (node.consequent) parts.push('has:consequent');
+  if (node.alternate) parts.push('has:alternate');
+
+  // Function characteristics
+  if (node.async) parts.push('async');
+  if (node.generator) parts.push('generator');
+
+  return parts.join(':');
+}
+
+/** Recursively walk AST and collect structural feature strings */
+function walkAST(node: any, features: string[]): void {
+  if (!node || typeof node !== 'object') return;
+
+  if (node.type) {
+    features.push(buildNodeFeature(node));
+  }
+
+  for (const key of Object.keys(node)) {
+    if (key === 'start' || key === 'end' || key === 'loc' || key === 'raw') continue;
+    const child = node[key];
+    if (Array.isArray(child)) {
+      for (const item of child) {
+        if (item && typeof item === 'object' && item.type) {
+          walkAST(item, features);
+        }
+      }
+    } else if (child && typeof child === 'object' && child.type) {
+      walkAST(child, features);
+    }
+  }
+}
+
+/** Compute obfuscation-resistant AST hash (Ghidra BSim-inspired iterative graph hashing) */
+function computeASTHash(node: acorn.Node): string {
+  const features: string[] = [];
+  walkAST(node, features);
+  return createHash('sha256').update(features.join('|')).digest('hex').substring(0, 32);
 }
 
 // Entropy thresholds (reference: normal JS = 4.5-5.5, minified = 5.0-5.8, obfuscated = 5.8-6.5, encrypted = 7.5-8.0)
@@ -267,6 +337,16 @@ export class ScriptGuard {
 
       // 0b. Cross-domain correlation on normalized hash (Phase 3-B)
       this.correlateScriptHash(normalizedHash, domain, url, 'normalized');
+
+      // 0c. AST hash for obfuscation-resistant fingerprinting (Phase 6-A)
+      if (source.length <= MAX_AST_PARSE_SIZE) {
+        const ast = parseToAST(source);
+        if (ast) {
+          const astHash = computeASTHash(ast);
+          this.db.updateAstHash(domain, url, astHash);
+        }
+        // If parse fails (syntax error), ast_hash stays null — graceful degradation
+      }
 
       // 1. Run rule engine
       const analysis = analyzeScriptContent(source, url);
