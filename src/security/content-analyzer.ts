@@ -1,6 +1,6 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
-import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX } from './types';
+import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence } from './types';
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -153,6 +153,7 @@ export class ContentAnalyzer {
           category: 'form',
           details: JSON.stringify({ url: currentUrl, reason: 'password-on-http' }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.HEURISTIC,
         });
       }
 
@@ -254,6 +255,7 @@ export class ContentAnalyzer {
             ...analysis.security.typosquat,
           }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.ANOMALY,
         });
       }
     }
@@ -351,6 +353,7 @@ export class ContentAnalyzer {
           context,
         }),
         actionTaken: 'flagged',
+        confidence: AnalysisConfidence.HEURISTIC,
       });
     }
   }
@@ -380,6 +383,7 @@ export class ContentAnalyzer {
         context,
       }),
       actionTaken: 'flagged',
+      confidence: AnalysisConfidence.BLOCKLIST,
     });
   }
 

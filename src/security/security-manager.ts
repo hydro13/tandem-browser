@@ -14,7 +14,7 @@ import { GatekeeperWebSocket } from './gatekeeper-ws';
 import { EvolutionEngine } from './evolution';
 import { ThreatIntel } from './threat-intel';
 import { BlocklistUpdater } from './blocklists/updater';
-import { GuardianMode, GatekeeperAction, PageMetrics } from './types';
+import { GuardianMode, GatekeeperAction, PageMetrics, AnalysisConfidence } from './types';
 
 export class SecurityManager {
   private db: SecurityDB;
@@ -205,10 +205,11 @@ export class SecurityManager {
             })),
           }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.ANOMALY,
         });
 
-        // Evolve trust down
-        this.evolution.evolveTrust(domain, 'anomaly');
+        // Evolve trust down (weighted by anomaly confidence)
+        this.evolution.evolveTrust(domain, 'anomaly', AnalysisConfidence.ANOMALY);
       } else {
         // Clean visit — evolve trust up
         this.evolution.evolveTrust(domain, 'clean_visit');
@@ -246,6 +247,7 @@ export class SecurityManager {
               description: threat.description,
             }),
             actionTaken: 'logged',
+            confidence: AnalysisConfidence.HEURISTIC,
           });
         }
       }

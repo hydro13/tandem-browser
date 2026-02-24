@@ -148,14 +148,14 @@
 ## Phase 5-C: Remaining Modules + Gatekeeper Routing + Evolution Weighting
 **Priority:** MEDIUM | **Effort:** ~2 hours | **Dependencies:** Phase 5-B
 
-- [ ] **5C.1** Add confidence to ContentAnalyzer events
-- [ ] **5C.2** Add confidence to BehaviorMonitor events
-- [ ] **5C.3** Add confidence to NetworkShield events
-- [ ] **5C.4** Confidence-based Gatekeeper routing
+- [x] **5C.1** Add confidence to ContentAnalyzer events
+- [x] **5C.2** Add confidence to BehaviorMonitor events
+- [x] **5C.3** Add confidence to NetworkShield events (N/A — no logEvent calls)
+- [x] **5C.4** Confidence-based Gatekeeper routing
   - <=300: resolve locally (block/allow), don't send to AI agent
   - 301-600: send with medium priority
   - >600: send with high priority (needs AI judgment)
-- [ ] **5C.5** Confidence-weighted trust evolution
+- [x] **5C.5** Confidence-weighted trust evolution
   - Confidence <=300: full trust impact
   - Confidence 301-600: 70% trust impact
   - Confidence >600: 40% trust impact
@@ -240,11 +240,11 @@
 | 4 | CyberChef Regex Patterns | TODO | 0/3 |
 | 5-A | Confidence Types + DB | TODO | 0/4 |
 | 5-B | Confidence in Core Modules | TODO | 0/3 |
-| 5-C | Confidence Routing + Evolution | TODO | 0/5 |
+| 5-C | Confidence Routing + Evolution | DONE | 5/5 |
 | 6-A | Acorn + AST Hash | TODO | 0/5 |
 | 6-B | Similarity Matching | TODO | 0/4 |
 | 7-A | Plugin Interface + Manager | TODO | 0/4 |
 | 7-B | ContentAnalyzer Migration | TODO | 0/3 |
 | 7-C | BehaviorMonitor Migration | TODO | 0/4 |
 
-**Total:** 2/57 tasks completed
+**Total:** 7/57 tasks completed

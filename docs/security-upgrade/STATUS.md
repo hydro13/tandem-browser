@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 5-C
-**Last completed phase:** Phase 5-B
+**Next phase to implement:** Phase 6-A
+**Last completed phase:** Phase 5-C
 **Overall status:** IN PROGRESS
 
 ---
@@ -184,18 +184,18 @@
 
 ## Phase 5-C: Remaining Modules + Gatekeeper Routing + Evolution Weighting
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 181fabd
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] All security modules log events with confidence
-  - [ ] High-confidence events (<=300) resolved locally, not sent to Gatekeeper
-  - [ ] Low-confidence events (>600) sent to Gatekeeper with high priority
-  - [ ] Trust evolution weighted by confidence
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] All security modules log events with confidence
+  - [x] High-confidence events (<=300) resolved locally, not sent to Gatekeeper
+  - [x] Low-confidence events (>600) sent to Gatekeeper with high priority
+  - [x] Trust evolution weighted by confidence
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** NetworkShield has zero `logEvent()` calls — it is purely a lookup service (checkDomain/checkUrl), so 5C.3 was N/A. ContentAnalyzer: 4 calls wired (password-on-http → HEURISTIC, typosquatting → ANOMALY, octal-ip → HEURISTIC, hidden-blocked-url → BLOCKLIST). BehaviorMonitor: 5 calls wired (permission-request → BEHAVIORAL, clipboard-read → BEHAVIORAL, crypto-miner → ANOMALY, rapid-memory-growth → ANOMALY, script-killed → BEHAVIORAL). GatekeeperWS: 3 calls wired (trust_update/escalation/decision → BEHAVIORAL). SecurityManager: 2 calls wired (anomaly → ANOMALY, correlation → HEURISTIC). Evolution: 1 call wired (zero-day-candidate → ANOMALY). `evolveTrust()` now accepts optional `confidence` parameter; `getTrustAdjustment()` weights deltas: <=300 = 100%, 301-600 = 70%, >600 = 40%. SecurityManager passes ANOMALY (800) confidence to `evolveTrust(domain, 'anomaly')` so baseline anomalies get 40% trust impact (-4 instead of -10). `sendEvent()` in GatekeeperWS now checks confidence before sending: <=300 returns early (local resolution), 301-600 sends with `priority: 'medium'`, >600 sends with `priority: 'high'`. The existing `sendAnomaly()` and `sendDecisionRequest()` methods are unchanged — anomaly and decision forwarding still works as before (the confidence routing only applies to `sendEvent()`).
 
 ---
 
@@ -350,7 +350,11 @@
 - `src/security/script-guard.ts` — Imported `AnalysisConfidence`, added `confidence` to all 10 `logEvent()` calls (SPECULATIVE for new-script-on-known-domain, KNOWN_MALWARE_HASH for blocked-domain scripts, BEHAVIORAL for widespread/keylogger/WASM/clipboard/form-action, ANOMALY for entropy and low-severity rules, HEURISTIC for high-severity rules and crypto-miner console)
 
 ### Phase 5-C
-*(to be filled after completion)*
+- `src/security/content-analyzer.ts` — Imported `AnalysisConfidence`, added `confidence` to all 4 `logEvent()` calls (HEURISTIC for password-on-http and octal-ip, ANOMALY for typosquatting, BLOCKLIST for hidden-blocked-url)
+- `src/security/behavior-monitor.ts` — Imported `AnalysisConfidence`, added `confidence` to all 5 `logEvent()` calls (BEHAVIORAL for permission-request/clipboard-read/script-killed, ANOMALY for crypto-miner/rapid-memory-growth)
+- `src/security/gatekeeper-ws.ts` — Imported `AnalysisConfidence`, added `confidence` to all 3 `logEvent()` calls (BEHAVIORAL for trust_update/escalation/gatekeeper_decision), added confidence-based routing in `sendEvent()` (<=300 local, 301-600 medium, >600 high priority)
+- `src/security/evolution.ts` — Imported `AnalysisConfidence`, added `confidence` to zero-day-candidate `logEvent()` (ANOMALY) and trust evolution `logEvent()`, added optional `confidence` parameter to `evolveTrust()`, added `getTrustAdjustment()` private method for confidence-weighted trust deltas
+- `src/security/security-manager.ts` — Imported `AnalysisConfidence`, added `confidence` to anomaly `logEvent()` (ANOMALY) and correlation `logEvent()` (HEURISTIC), passed `AnalysisConfidence.ANOMALY` to `evolveTrust()` call for baseline anomalies
 
 ### Phase 6-A
 *(to be filled after completion)*

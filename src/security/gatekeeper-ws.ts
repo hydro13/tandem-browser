@@ -15,6 +15,7 @@ import {
   GatekeeperAction,
   SecurityEvent,
   GuardianMode,
+  AnalysisConfidence,
 } from './types';
 
 const MAX_QUEUE = 1000;
@@ -119,7 +120,24 @@ export class GatekeeperWebSocket {
 
   // === Send events TO agent ===
 
+  /**
+   * Send a security event to the connected AI agent.
+   * Confidence-based routing:
+   * - confidence <= 300 (BLOCKLIST, CREDENTIAL_EXFIL, KNOWN_MALWARE_HASH): resolve locally, don't send
+   * - confidence 301-600 (BEHAVIORAL): send with medium priority
+   * - confidence > 600 (HEURISTIC, ANOMALY, SPECULATIVE): send with high priority (needs AI judgment)
+   */
   sendEvent(event: SecurityEvent): void {
+    const confidence = event.confidence ?? AnalysisConfidence.BEHAVIORAL;
+
+    // High-confidence events (<=300): resolve locally, don't waste AI agent time
+    if (confidence <= 300) {
+      return;
+    }
+
+    // Determine priority based on confidence
+    const priority = confidence > 600 ? 'high' : 'medium';
+
     this.send({
       type: 'event',
       severity: event.severity,
@@ -127,6 +145,8 @@ export class GatekeeperWebSocket {
       domain: event.domain,
       eventType: event.eventType,
       details: event.details,
+      confidence,
+      priority,
     });
   }
 
@@ -190,6 +210,7 @@ export class GatekeeperWebSocket {
             category: 'behavior',
             details: JSON.stringify({ trust: msg.trust, reason: msg.reason, source: 'gatekeeper-agent' }),
             actionTaken: 'logged',
+            confidence: AnalysisConfidence.BEHAVIORAL,
           });
           console.log(`[Gatekeeper] Trust update: ${msg.domain} → ${msg.trust}`);
         }
@@ -215,6 +236,7 @@ export class GatekeeperWebSocket {
           category: 'behavior',
           details: JSON.stringify(msg),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
         });
         console.warn(`[Gatekeeper] ESCALATION: ${msg.message || 'Critical alert from agent'}`);
         break;
@@ -274,6 +296,7 @@ export class GatekeeperWebSocket {
       category: 'behavior',
       details: JSON.stringify({ decisionId: id, ...decision, source }),
       actionTaken: decision.action === 'block' ? 'agent_block' : 'logged',
+      confidence: AnalysisConfidence.BEHAVIORAL,
     });
   }
 

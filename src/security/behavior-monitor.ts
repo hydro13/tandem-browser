@@ -3,6 +3,7 @@ import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
 import { ScriptGuard } from './script-guard';
+import { AnalysisConfidence } from './types';
 
 /** Permission request record */
 export interface PermissionRecord {
@@ -75,6 +76,7 @@ export class BehaviorMonitor {
         category: 'behavior',
         details: JSON.stringify({ permission, url, mode }),
         actionTaken: 'logged',
+        confidence: AnalysisConfidence.BEHAVIORAL,
       });
 
       // Camera/microphone from strict mode domain = BLOCK
@@ -95,6 +97,7 @@ export class BehaviorMonitor {
           category: 'behavior',
           details: JSON.stringify({ permission, url, reason: 'clipboard-read-attempt' }),
           actionTaken: 'flagged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
         });
       }
 
@@ -173,6 +176,7 @@ export class BehaviorMonitor {
                 jsHeapMB: Math.round(jsHeapUsedSize / 1048576),
               }),
               actionTaken: 'flagged',
+              confidence: AnalysisConfidence.ANOMALY,
             });
           }
 
@@ -195,6 +199,7 @@ export class BehaviorMonitor {
                 jsHeapMB: Math.round(jsHeapUsedSize / 1048576),
               }),
               actionTaken: 'flagged',
+              confidence: AnalysisConfidence.ANOMALY,
             });
           }
         }
@@ -255,6 +260,7 @@ export class BehaviorMonitor {
         category: 'behavior',
         details: JSON.stringify({ reason: 'script-killed', scriptId }),
         actionTaken: 'auto_block',
+        confidence: AnalysisConfidence.BEHAVIORAL,
       });
       return true;
     } catch (e: any) {

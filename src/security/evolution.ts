@@ -1,5 +1,5 @@
 import { SecurityDB } from './security-db';
-import { PageMetrics, Anomaly, EventSeverity } from './types';
+import { PageMetrics, Anomaly, EventSeverity, AnalysisConfidence } from './types';
 
 /**
  * EvolutionEngine — Baseline learning, anomaly detection, and trust evolution.
@@ -124,6 +124,7 @@ export class EvolutionEngine {
         maxDeviation: Math.max(...anomalies.map(a => a.deviation / a.tolerance)),
       }),
       actionTaken: 'flagged',
+      confidence: AnalysisConfidence.ANOMALY,
     });
 
     // Check if high-trust domain → needs escalation
@@ -134,8 +135,10 @@ export class EvolutionEngine {
   /**
    * Evolve trust score for a domain based on observed behavior.
    * Asymmetric: up slow (+1, max 90), down fast (-10/-15), blocklist_hit → 0.
+   * Trust deltas are weighted by confidence: high confidence (low number) = full impact,
+   * low confidence (high number) = reduced impact.
    */
-  evolveTrust(domain: string, event: 'clean_visit' | 'anomaly' | 'blocked' | 'blocklist_hit'): void {
+  evolveTrust(domain: string, event: 'clean_visit' | 'anomaly' | 'blocked' | 'blocklist_hit', confidence?: number): void {
     const info = this.db.getDomainInfo(domain);
     if (!info) return;
 
@@ -143,18 +146,21 @@ export class EvolutionEngine {
 
     switch (event) {
       case 'clean_visit':
-        newTrust = Math.min(90, newTrust + 1);
+        newTrust = Math.min(90, newTrust + this.getTrustAdjustment(1, confidence));
         break;
       case 'anomaly':
-        newTrust = Math.max(0, newTrust - 10);
+        newTrust = Math.max(0, newTrust + this.getTrustAdjustment(-10, confidence));
         break;
       case 'blocked':
-        newTrust = Math.max(0, newTrust - 15);
+        newTrust = Math.max(0, newTrust + this.getTrustAdjustment(-15, confidence));
         break;
       case 'blocklist_hit':
         newTrust = 0;
         break;
     }
+
+    // Round to avoid floating point drift
+    newTrust = Math.round(newTrust);
 
     if (newTrust !== info.trustLevel) {
       this.db.upsertDomain(domain, { trustLevel: newTrust });
@@ -169,10 +175,23 @@ export class EvolutionEngine {
           event,
           oldTrust: info.trustLevel,
           newTrust,
+          confidence,
         }),
         actionTaken: 'logged',
+        confidence: confidence ?? AnalysisConfidence.BEHAVIORAL,
       });
     }
+  }
+
+  /**
+   * Weight trust adjustment by confidence level.
+   * High confidence (<=300) = full impact, medium (301-600) = 70%, low (>600) = 40%.
+   */
+  private getTrustAdjustment(baseDelta: number, confidence?: number): number {
+    if (confidence === undefined) return baseDelta;
+    if (confidence <= 300) return baseDelta;
+    if (confidence <= 600) return baseDelta * 0.7;
+    return baseDelta * 0.4;
   }
 
   /**
