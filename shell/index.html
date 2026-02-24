@@ -177,6 +177,35 @@
     body.platform-win32 .tab-bar {
       padding-right: 140px; /* Space for custom window controls */
     }
+
+    /* ═══ macOS native glass chrome ═══
+     * Window background is transparent (#00000000) so macOS vibrancy shows through.
+     * Tab bar + toolbar use semi-transparent backgrounds + backdrop-filter.
+     * Webviews render normally (opaque web content is unaffected).
+     */
+    body.platform-darwin {
+      background: transparent !important;
+    }
+
+    body.platform-darwin .tab-bar {
+      background: rgba(18, 18, 32, 0.52) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    }
+
+    body.platform-darwin .toolbar {
+      background: rgba(16, 16, 28, 0.48) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    body.platform-darwin .bookmarks-bar {
+      background: rgba(14, 14, 24, 0.42) !important;
+      -webkit-backdrop-filter: blur(30px) saturate(160%);
+      backdrop-filter: blur(30px) saturate(160%);
+    }
     
     .tab-bar::-webkit-scrollbar { height: 0; }
 
