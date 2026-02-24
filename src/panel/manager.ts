@@ -220,6 +220,11 @@ export class PanelManager {
     return this.panelOpen;
   }
 
+  /** Notify UI about live mode change */
+  sendLiveModeChanged(enabled: boolean): void {
+    this.win.webContents.send('live-mode-changed', { enabled });
+  }
+
   /** Get panel state */
   isPanelOpen(): boolean {
     return this.panelOpen;

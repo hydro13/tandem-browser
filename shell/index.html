@@ -7,8 +7,79 @@
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
-    /* Dark theme (default) */
+    /* === Liquid Glass Lite Design Tokens === */
+    
+    /* LGL Base Tokens */
     :root {
+      /* Lensing Parameters */
+      --lgl-refraction-strength: 0.15;
+      --lgl-displacement-max: 15px;
+      
+      /* Blur */
+      --lgl-blur-radius: 20px;
+      --lgl-blur-radius-subtle: 12px;
+      --lgl-blur-radius-strong: 30px;
+      
+      /* Saturation Boost */
+      --lgl-saturation: 1.4;
+      --lgl-saturation-subtle: 1.2;
+      --lgl-saturation-strong: 1.6;
+      
+      /* Shadow */
+      --lgl-shadow-opacity: 0.08;
+      --lgl-shadow-opacity-text: 0.18;
+      --lgl-shadow-opacity-image: 0.12;
+      --lgl-shadow-spread: 8px;
+      --lgl-shadow-spread-text: 12px;
+      
+      /* Base Shadow */
+      --lgl-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.05);
+      --lgl-shadow-depth: 0 8px var(--lgl-shadow-spread) rgba(0, 0, 0, var(--lgl-shadow-opacity));
+      --lgl-shadow: var(--lgl-shadow-contact), var(--lgl-shadow-depth);
+      
+      /* Border Radius */
+      --lgl-radius-none: 0;
+      --lgl-radius-small: 8px;
+      --lgl-radius-medium: 12px;
+      --lgl-radius-large: 16px;
+      --lgl-radius-xlarge: 20px;
+      --lgl-radius-pill: 9999px;
+      
+      /* Spacing */
+      --lgl-space-xs: 4px;
+      --lgl-space-sm: 8px;
+      --lgl-space-md: 12px;
+      --lgl-space-lg: 16px;
+      --lgl-space-xl: 24px;
+      --lgl-space-2xl: 32px;
+      
+      /* Transitions */
+      --lgl-transition-fast: 150ms ease-out;
+      --lgl-transition-normal: 300ms ease-out;
+      --lgl-transition-slow: 400ms ease-out;
+      --lgl-transition-spring: 400ms cubic-bezier(0.5, 0.9, 0.1, 1.0);
+      
+      /* Z-index layers */
+      --lgl-z-background: 0;
+      --lgl-z-content: 1;
+      --lgl-z-glass: 10;
+      --lgl-z-overlay: 100;
+      --lgl-z-modal: 1000;
+      
+      /* LGL Light Mode Tokens */
+      --lgl-tint-light: rgba(255, 255, 255, 0.45);
+      --lgl-tint: var(--lgl-tint-light);
+      --lgl-solid-bg: rgba(255, 255, 255, 0.95);
+      --lgl-text-primary: rgba(0, 0, 0, 0.9);
+      --lgl-text-secondary: rgba(0, 0, 0, 0.6);
+      --lgl-text-tertiary: rgba(0, 0, 0, 0.4);
+      --lgl-border: rgba(0, 0, 0, 0.1);
+      --lgl-border-subtle: rgba(0, 0, 0, 0.05);
+      --lgl-contrast-border: rgba(0, 0, 0, 0.2);
+      --lgl-edge-color: rgba(0, 0, 0, 0.15);
+      --lgl-focus-ring: rgba(0, 122, 255, 0.6);
+      
+      /* Tandem-specific variables */
       --bg: #1a1a2e;
       --surface: #16213e;
       --accent: #e94560;
@@ -20,16 +91,26 @@
       --tab-bg: #111a30;
       --tab-active: #16213e;
       --tab-hover: #1a2744;
-      
-      /* Liquid Glass Lite (LGL) variables */
-      --lgl-blur-radius: 12px;
-      --lgl-tint-light: rgba(245, 245, 250, 0.85);
-      --lgl-tint-dark: rgba(22, 22, 30, 0.82);
-      --lgl-refraction: 0.15;
-      --lgl-saturation: 1.4;
-      --lgl-transition: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-      --lgl-shadow-light: 0 8px 32px rgba(0, 0, 0, 0.08);
-      --lgl-shadow-dark: 0 8px 32px rgba(0, 0, 0, 0.24);
+    }
+    
+    /* LGL Dark Mode Tokens */
+    [data-theme="dark"],
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --lgl-tint-dark: rgba(30, 30, 30, 0.55);
+        --lgl-tint: var(--lgl-tint-dark);
+        --lgl-solid-bg: rgba(30, 30, 30, 0.95);
+        --lgl-text-primary: rgba(255, 255, 255, 0.9);
+        --lgl-text-secondary: rgba(255, 255, 255, 0.6);
+        --lgl-text-tertiary: rgba(255, 255, 255, 0.4);
+        --lgl-border: rgba(255, 255, 255, 0.1);
+        --lgl-border-subtle: rgba(255, 255, 255, 0.05);
+        --lgl-contrast-border: rgba(255, 255, 255, 0.2);
+        --lgl-edge-color: rgba(255, 255, 255, 0.10);
+        --lgl-focus-ring: rgba(10, 132, 255, 0.6);
+        --lgl-shadow-opacity: 0.18;
+        --lgl-shadow-opacity-text: 0.25;
+      }
     }
 
     /* Light theme */
@@ -74,18 +155,29 @@
       overflow: hidden;
     }
 
-    /* ═══ Tab bar ═══ */
+    /* ═══ Tab bar (Chrome-style compact title bar) ═══ */
     .tab-bar {
       display: flex;
       align-items: center;
       background: var(--tab-bg);
       border-bottom: 1px solid rgba(255,255,255,0.03);
-      height: 38px;
+      height: 36px;
       -webkit-app-region: drag;
-      padding-left: 80px; /* macOS traffic lights */
       overflow-x: auto;
       overflow-y: hidden;
+      position: relative;
     }
+    
+    /* Platform-specific padding for native controls */
+    body.platform-darwin .tab-bar {
+      padding-left: 80px; /* macOS traffic lights */
+    }
+    
+    body.platform-linux .tab-bar,
+    body.platform-win32 .tab-bar {
+      padding-right: 140px; /* Space for custom window controls */
+    }
+    
     .tab-bar::-webkit-scrollbar { height: 0; }
 
     .tab {
@@ -164,8 +256,89 @@
       padding: 0 10px;
       height: 100%;
       transition: color 0.15s;
+      flex-shrink: 0;
     }
     .tab-new-btn:hover { color: var(--text); }
+
+    /* Hamburger menu button */
+    .menu-btn {
+      -webkit-app-region: no-drag;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 14px;
+      height: 100%;
+      transition: color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .menu-btn:hover { 
+      color: var(--text); 
+      background: var(--tab-hover);
+    }
+
+    /* Hide menu button on macOS (uses native menu bar) */
+    body.platform-darwin .menu-btn {
+      display: none;
+    }
+
+    /* Tab bar spacer (for window controls) */
+    .tab-bar-spacer {
+      flex: 1;
+      min-width: 20px;
+      -webkit-app-region: drag;
+    }
+
+    /* Window controls (Linux/Windows only) */
+    .window-controls {
+      -webkit-app-region: no-drag;
+      display: none; /* Hidden by default */
+      align-items: center;
+      height: 100%;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    body.platform-linux .window-controls,
+    body.platform-win32 .window-controls {
+      display: flex;
+    }
+
+    .window-control-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      width: 46px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      font-size: 12px;
+    }
+
+    .window-control-btn:hover {
+      background: var(--tab-hover);
+      color: var(--text);
+    }
+
+    .window-control-btn.close:hover {
+      background: #e81123;
+      color: white;
+    }
+
+    /* Window control icons */
+    .window-control-btn svg {
+      width: 10px;
+      height: 10px;
+      fill: currentColor;
+    }
 
     /* ═══ Toolbar ═══ */
     .toolbar {
@@ -1212,9 +1385,25 @@
 </head>
 <body>
 
-  <!-- Tab bar -->
+  <!-- Tab bar (Chrome-style compact title bar) -->
   <div class="tab-bar" id="tab-bar">
+    <button class="menu-btn" id="btn-app-menu" title="Menu">☰</button>
+    <!-- Tabs will be inserted here dynamically -->
     <button class="tab-new-btn" id="btn-new-tab" title="Nieuwe tab (Cmd+T)">+</button>
+    <div class="tab-bar-spacer"></div>
+    
+    <!-- Window controls (Linux/Windows only) -->
+    <div class="window-controls">
+      <button class="window-control-btn minimize" id="btn-window-minimize" title="Minimize">
+        <svg viewBox="0 0 10 1"><path d="M0,0 L10,0 L10,1 L0,1 Z" /></svg>
+      </button>
+      <button class="window-control-btn maximize" id="btn-window-maximize" title="Maximize">
+        <svg viewBox="0 0 10 10"><path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" /></svg>
+      </button>
+      <button class="window-control-btn close" id="btn-window-close" title="Close">
+        <svg viewBox="0 0 10 10"><path d="M0,0 L10,10 M10,0 L0,10" stroke="currentColor" stroke-width="1.5" /></svg>
+      </button>
+    </div>
   </div>
 
   <!-- Navigation toolbar -->
@@ -1336,6 +1525,7 @@
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
         <button class="panel-tab" data-panel-tab="claronote">🎙️</button>
+        <button class="live-toggle-btn" id="live-toggle-btn" title="Live Mode — Copilot kijkt mee" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text-dim);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all 0.15s;">👁️</button>
         <button class="noodrem-btn" id="noodrem-btn" title="Noodrem — stop alle AI activiteit (Escape)">🛑</button>
       </div>
       <div class="panel-body" id="panel-body">
@@ -1466,6 +1656,86 @@
   <script src="lgl-integration.js"></script>
 
   <script>
+    // ═══════════════════════════════════════════════
+    // Platform detection & Chrome-style title bar setup
+    // ═══════════════════════════════════════════════
+    
+    // Detect platform and add class to body for CSS targeting
+    (async () => {
+      const platform = await window.tandem?.getPlatform?.() || 'unknown';
+      document.body.classList.add(`platform-${platform}`);
+    })();
+
+    // Hamburger menu button
+    const btnAppMenu = document.getElementById('btn-app-menu');
+    if (btnAppMenu) {
+      btnAppMenu.addEventListener('click', () => {
+        if (window.tandem) {
+          window.tandem.showAppMenu();
+        }
+      });
+    }
+
+    // Window control buttons (Linux/Windows)
+    const btnMinimize = document.getElementById('btn-window-minimize');
+    const btnMaximize = document.getElementById('btn-window-maximize');
+    const btnClose = document.getElementById('btn-window-close');
+
+    if (btnMinimize) {
+      btnMinimize.addEventListener('click', () => {
+        if (window.tandem) window.tandem.minimizeWindow();
+      });
+    }
+
+    if (btnMaximize) {
+      btnMaximize.addEventListener('click', () => {
+        if (window.tandem) window.tandem.maximizeWindow();
+      });
+    }
+
+    if (btnClose) {
+      btnClose.addEventListener('click', () => {
+        if (window.tandem) window.tandem.closeWindow();
+      });
+    }
+
+    // Double-click on tab bar (empty areas) to maximize/restore
+    const tabBarEl = document.getElementById('tab-bar');
+    if (tabBarEl) {
+      tabBarEl.addEventListener('dblclick', (e) => {
+        // Only trigger if clicking on the tab bar itself (not on tabs or buttons)
+        if (e.target === tabBarEl || e.target.classList.contains('tab-bar-spacer')) {
+          if (window.tandem) window.tandem.maximizeWindow();
+        }
+      });
+    }
+
+    // Update maximize button icon when window state changes
+    async function updateMaximizeButton() {
+      if (btnMaximize && window.tandem?.isWindowMaximized) {
+        const isMaximized = await window.tandem.isWindowMaximized();
+        if (isMaximized) {
+          // Restore icon (two overlapping squares)
+          btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M2,2 L8,2 L8,8 L2,8 Z M3,3 L3,7 L7,7 L7,3 Z M3,1 L9,1 L9,7 M1,3 L1,9 L7,9" stroke="currentColor" fill="none" stroke-width="1" /></svg>';
+          btnMaximize.title = 'Restore';
+        } else {
+          // Maximize icon (single square)
+          btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" /></svg>';
+          btnMaximize.title = 'Maximize';
+        }
+      }
+    }
+
+    // Update on resize with debounce
+    let resizeTimeout;
+    window.addEventListener('resize', () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(updateMaximizeButton, 100);
+    });
+
+    // Initial update
+    updateMaximizeButton();
+
     // ═══════════════════════════════════════════════
     // Tab management system (renderer side)
     // ═══════════════════════════════════════════════
@@ -2217,26 +2487,22 @@
         btnBoth.classList.toggle('active', activeId === 'both');
 
         if (activeId === 'both') {
-          // In both mode, show combined status
-          const ocConn = openclawBackend.isConnected();
+          // In both mode — OpenClaw always available via webhook
           const clConn = claudeBackend.isConnected();
-          const anyConnected = ocConn || clConn;
-          wsDot.style.background = anyConnected ? 'var(--success)' : 'var(--accent)';
-          if (ocConn && clConn) {
+          wsDot.style.background = 'var(--success)'; // Always connected (OpenClaw via webhook)
+          if (clConn) {
             wsStatusText.textContent = 'Copilot + Claude Connected';
-          } else if (ocConn) {
-            wsStatusText.textContent = 'Copilot Connected, Claude Disconnected';
-          } else if (clConn) {
-            wsStatusText.textContent = 'Copilot Disconnected, Claude Connected';
           } else {
-            wsStatusText.textContent = 'Both Disconnected';
+            wsStatusText.textContent = 'Copilot Connected, Claude Disconnected';
           }
           inputEl.placeholder = 'Message to Copilot & Claude... (@copilot/@claude for specific)';
         } else {
           // Single backend mode
           const backend = router.getActive();
           if (backend) {
-            const connected = backend.isConnected();
+            // OpenClaw uses webhook path (always available if Tandem API is running)
+            const isOC = router.getActiveId() === 'openclaw';
+            const connected = isOC ? true : backend.isConnected();
             wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
             wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
           }
@@ -2333,21 +2599,23 @@
 
       router.onConnectionChange((connected, backendId) => {
         if (backendId === 'openclaw') {
-          dotOC.classList.toggle('connected', connected);
+          // OpenClaw always "connected" via webhook path (WebSocket is optional for receiving)
+          dotOC.classList.add('connected');
         } else if (backendId === 'claude') {
           dotCL.classList.toggle('connected', connected);
         }
-        // Update "both" dot — green if any backend connected
-        const anyConnected = openclawBackend.isConnected() || claudeBackend.isConnected();
-        dotBoth.classList.toggle('connected', anyConnected);
+        // Update "both" dot — OpenClaw always available
+        dotBoth.classList.add('connected');
 
         // Update status bar for current mode
         if (currentMode === 'both') {
           updateBackendUI('both');
         } else if (backendId === router.getActiveId()) {
           const backend = router.getActive();
-          wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
-          wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
+          const isOC = backendId === 'openclaw';
+          const effectiveConnected = isOC ? true : connected;
+          wsDot.style.background = effectiveConnected ? 'var(--success)' : 'var(--accent)';
+          wsStatusText.textContent = effectiveConnected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
         }
       });
 
@@ -2670,18 +2938,19 @@
 
           dualMode.sendMessage(text);
         } else {
-          // Single backend mode (existing behavior)
+          // Single backend mode
           const backend = router.getActive();
-          if (!backend || !backend.isConnected()) return;
+          const activeId = router.getActiveId();
 
-          // For OpenClaw, append user message locally + route via IPC→webhook→/hooks/wake
-          if (router.getActiveId() === 'openclaw') {
+          // OpenClaw: always send via IPC→webhook (doesn't need WebSocket to be connected)
+          if (activeId === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
             // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Copilot receives it
             window.tandem?.sendChatMessage(text);
           } else {
-            // For Claude, the backend emits the sent message
+            // For Claude, needs WebSocket connection
+            if (!backend || !backend.isConnected()) return;
             router.sendMessage(text);
           }
         }
@@ -2759,6 +3028,36 @@
 
       if (noodremBtn) {
         noodremBtn.addEventListener('click', fireNoodrem);
+      }
+
+      // ═══ Live Mode Toggle ═══
+      const liveToggleBtn = document.getElementById('live-toggle-btn');
+      let liveEnabled = false;
+      if (liveToggleBtn) {
+        liveToggleBtn.addEventListener('click', async () => {
+          try {
+            const res = await fetch('http://localhost:8765/live/toggle', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ enabled: !liveEnabled }),
+            });
+            const data = await res.json();
+            liveEnabled = data.enabled;
+            liveToggleBtn.style.color = liveEnabled ? '#e94560' : 'var(--text-dim)';
+            liveToggleBtn.style.borderColor = liveEnabled ? '#e94560' : 'rgba(255,255,255,0.15)';
+            liveToggleBtn.title = liveEnabled ? 'Live Mode AAN — Copilot kijkt mee' : 'Live Mode UIT';
+          } catch (e) {
+            console.error('Live toggle failed:', e);
+          }
+        });
+        // Listen for live mode changes from main process
+        if (window.tandem && window.tandem.onLiveModeChanged) {
+          window.tandem.onLiveModeChanged((data) => {
+            liveEnabled = data.enabled;
+            liveToggleBtn.style.color = liveEnabled ? '#e94560' : 'var(--text-dim)';
+            liveToggleBtn.style.borderColor = liveEnabled ? '#e94560' : 'rgba(255,255,255,0.15)';
+          });
+        }
       }
 
       // Escape key = noodrem (global handler, always works)

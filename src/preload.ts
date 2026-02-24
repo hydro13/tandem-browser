@@ -133,6 +133,13 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('copilot-typing', handler);
   },
 
+  // Live mode change events
+  onLiveModeChanged: (callback: (data: { enabled: boolean }) => void) => {
+    const handler = (_event: any, data: { enabled: boolean }) => callback(data);
+    ipcRenderer.on('live-mode-changed', handler);
+    return () => ipcRenderer.removeListener('live-mode-changed', handler);
+  },
+
   // Emergency stop — stops all agent activity
   emergencyStop: () => ipcRenderer.invoke('emergency-stop'),
 
@@ -188,4 +195,12 @@ contextBridge.exposeInMainWorld('tandem', {
   bookmarkPage: (url: string, title: string) => ipcRenderer.invoke('bookmark-page', url, title),
   unbookmarkPage: (url: string) => ipcRenderer.invoke('unbookmark-page', url),
   isBookmarked: (url: string) => ipcRenderer.invoke('is-bookmarked', url),
+
+  // Chrome-style compact title bar: platform detection and window controls
+  getPlatform: () => process.platform,
+  showAppMenu: () => ipcRenderer.send('show-app-menu'),
+  minimizeWindow: () => ipcRenderer.send('window-minimize'),
+  maximizeWindow: () => ipcRenderer.send('window-maximize'),
+  closeWindow: () => ipcRenderer.send('window-close'),
+  isWindowMaximized: () => ipcRenderer.invoke('is-window-maximized'),
 });

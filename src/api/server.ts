@@ -299,6 +299,23 @@ export class TandemAPI {
           return;
         }
         const wc = await this.getActiveWC();
+        let viewport = undefined;
+        if (wc) {
+          try {
+            const info = await wc.executeJavaScript(`
+              JSON.stringify({
+                innerWidth: window.innerWidth,
+                innerHeight: window.innerHeight,
+                scrollTop: Math.round(document.documentElement.scrollTop),
+                scrollHeight: document.documentElement.scrollHeight,
+                clientHeight: document.documentElement.clientHeight,
+                screenWidth: screen.width,
+                screenHeight: screen.height
+              })
+            `);
+            viewport = JSON.parse(info);
+          } catch (_) { /* viewport info is best-effort */ }
+        }
         res.json({
           ready: !!wc,
           url: tab.url,
@@ -306,6 +323,7 @@ export class TandemAPI {
           loading: wc ? wc.isLoading() : false,
           activeTab: tab.id,
           tabs: this.tabManager.count,
+          viewport,
         });
       } catch (e: any) {
         res.json({ ready: false, error: e.message });
@@ -351,6 +369,53 @@ export class TandemAPI {
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
+    });
+
+    // ═══════════════════════════════════════════════
+    // LIVE MODE — Copilot live monitoring toggle
+    // ═══════════════════════════════════════════════
+
+    let liveMode = false;
+
+    this.app.get('/live/status', (_req: Request, res: Response) => {
+      res.json({ enabled: liveMode });
+    });
+
+    this.app.post('/live/toggle', (req: Request, res: Response) => {
+      const { enabled } = req.body;
+      liveMode = (enabled !== undefined) ? !!enabled : !liveMode;
+      // Notify panel UI about live mode change
+      this.panelManager.sendLiveModeChanged(liveMode);
+      res.json({ ok: true, enabled: liveMode });
+    });
+
+    // Filtered SSE stream — only active when live mode is on
+    this.app.get('/live/stream', (req: Request, res: Response) => {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      });
+      res.write(': connected\n\n');
+      res.write(`data: ${JSON.stringify({ type: 'live-status', enabled: liveMode })}\n\n`);
+
+      const unsubscribe = this.eventStream.subscribe((event) => {
+        if (!liveMode) return; // Skip events when live mode is off
+        // Filter: only send meaningful events (skip scroll noise)
+        if (event.type === 'scroll') return;
+        try {
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+        } catch {
+          unsubscribe();
+        }
+      });
+
+      const heartbeat = setInterval(() => {
+        try { res.write(': heartbeat\n\n'); } catch { clearInterval(heartbeat); unsubscribe(); }
+      }, 30000);
+
+      req.on('close', () => { clearInterval(heartbeat); unsubscribe(); });
     });
 
     // ═══════════════════════════════════════════════
@@ -566,26 +631,78 @@ export class TandemAPI {
       }
     });
 
+    this.app.post('/cookies/clear', async (req: Request, res: Response) => {
+      try {
+        const { domain } = req.body;
+        if (!domain) { res.status(400).json({ error: 'domain required' }); return; }
+        const allCookies = await this.win.webContents.session.cookies.get({});
+        const matching = allCookies.filter(c => (c.domain || '').includes(domain));
+        let removed = 0;
+        for (const c of matching) {
+          const protocol = c.secure ? 'https' : 'http';
+          const cookieUrl = `${protocol}://${(c.domain || '').replace(/^\./, '')}${c.path}`;
+          await this.win.webContents.session.cookies.remove(cookieUrl, c.name);
+          removed++;
+        }
+        res.json({ ok: true, removed, domain });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // SCROLL — via sendInputEvent (mouseWheel)
     // ═══════════════════════════════════════════════
 
     this.app.post('/scroll', async (req: Request, res: Response) => {
-      const { direction = 'down', amount = 500 } = req.body;
+      const { direction = 'down', amount = 500, target, selector } = req.body;
       try {
         const wc = await this.getSessionWC(req);
         if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-        const deltaY = direction === 'up' ? -amount : amount;
-        wc.sendInputEvent({
-          type: 'mouseWheel',
-          x: 400,
-          y: 400,
-          deltaX: 0,
-          deltaY,
-        });
-        this.panelManager.logActivity('scroll', { direction, amount });
-        this.behaviorObserver.recordScroll(deltaY);
-        res.json({ ok: true });
+
+        // Smart scroll: target="top"|"bottom", selector=CSS selector, or classic deltaY
+        if (target === 'top') {
+          await wc.executeJavaScript('window.scrollTo({ top: 0, behavior: "smooth" })');
+        } else if (target === 'bottom') {
+          await wc.executeJavaScript('window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" })');
+        } else if (selector) {
+          const scrolled = await wc.executeJavaScript(`
+            (() => {
+              const el = document.querySelector(${JSON.stringify(selector)});
+              if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); return true; }
+              return false;
+            })()
+          `);
+          if (!scrolled) {
+            res.status(404).json({ error: 'Selector not found', selector });
+            return;
+          }
+        } else {
+          const deltaY = direction === 'up' ? -amount : amount;
+          wc.sendInputEvent({
+            type: 'mouseWheel',
+            x: 400,
+            y: 400,
+            deltaX: 0,
+            deltaY,
+          });
+        }
+
+        // Always return scroll position info
+        const scrollInfo = await wc.executeJavaScript(`
+          JSON.stringify({
+            scrollTop: Math.round(document.documentElement.scrollTop),
+            scrollHeight: document.documentElement.scrollHeight,
+            clientHeight: document.documentElement.clientHeight,
+            atTop: document.documentElement.scrollTop <= 0,
+            atBottom: Math.ceil(document.documentElement.scrollTop + document.documentElement.clientHeight) >= document.documentElement.scrollHeight
+          })
+        `);
+        const scroll = JSON.parse(scrollInfo);
+
+        this.panelManager.logActivity('scroll', { direction, amount, target, selector });
+        this.behaviorObserver.recordScroll(target === 'up' ? -amount : amount);
+        res.json({ ok: true, scroll });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
