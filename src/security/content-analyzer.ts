@@ -1,5 +1,6 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
+import { KNOWN_TRACKERS } from './types';
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -59,17 +60,6 @@ const TYPOSQUAT_TARGETS = [
   'chase.com', 'wellsfargo.com', 'youtube.com', 'reddit.com',
   'outlook.com', 'yahoo.com', 'gmail.com', 'dropbox.com',
 ];
-
-// Known tracker domains
-const KNOWN_TRACKERS = new Set([
-  'google-analytics.com', 'googletagmanager.com', 'doubleclick.net',
-  'facebook.net', 'fbcdn.net', 'analytics.google.com',
-  'hotjar.com', 'mixpanel.com', 'segment.com', 'amplitude.com',
-  'fullstory.com', 'mouseflow.com', 'crazyegg.com',
-  'newrelic.com', 'nr-data.net', 'sentry.io',
-  'ads-twitter.com', 'adsrvr.org', 'adnxs.com',
-  'criteo.com', 'outbrain.com', 'taboola.com',
-]);
 
 /**
  * ContentAnalyzer — Analyzes page content for phishing indicators and security risks.

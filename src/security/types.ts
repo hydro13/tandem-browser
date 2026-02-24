@@ -224,3 +224,53 @@ export interface UpdateResult {
   totalRemoved: number;
   errors: string[];
 }
+
+// Known analytics/tracker domains (merged from outbound-guard + content-analyzer)
+export const KNOWN_TRACKERS = new Set([
+  // Google Analytics / Tag Manager / Ads
+  'www.google-analytics.com', 'google-analytics.com',
+  'analytics.google.com', 'www.googletagmanager.com',
+  'googletagmanager.com', 'stats.g.doubleclick.net',
+  'pagead2.googlesyndication.com', 'doubleclick.net',
+  // Facebook/Meta
+  'www.facebook.com', 'connect.facebook.net',
+  'pixel.facebook.com', 'graph.facebook.com',
+  'facebook.net', 'fbcdn.net',
+  // Microsoft/LinkedIn
+  'bat.bing.com', 'px.ads.linkedin.com',
+  'snap.licdn.com',
+  // Twitter/X
+  'ads-twitter.com',
+  // Other ad networks
+  'adsrvr.org', 'adnxs.com',
+  'criteo.com', 'outbrain.com', 'taboola.com',
+  // Analytics platforms
+  'mc.yandex.ru', 'cdn.mxpnl.com', 'api.mixpanel.com', 'mixpanel.com',
+  'api.segment.io', 'cdn.segment.com', 'segment.com',
+  'api.amplitude.com', 'cdn.amplitude.com', 'amplitude.com',
+  'rum-http-intake.logs.datadoghq.com',
+  'sentry.io', 'o0.ingest.sentry.io',
+  'plausible.io', 'stats.wp.com',
+  'api.hubspot.com', 'track.hubspot.com',
+  'hotjar.com', 'fullstory.com', 'mouseflow.com', 'crazyegg.com',
+  'newrelic.com', 'nr-data.net',
+  // Social media pixels
+  'ct.pinterest.com', 'analytics.tiktok.com',
+  'sc-static.net', 'tr.snapchat.com',
+]);
+
+// Major hosting platforms that appear in URL-based blocklists as malware hosts
+// but should never be domain-level blocked (the threat is the specific URL, not the domain)
+export const URL_LIST_SAFE_DOMAINS = new Set([
+  'github.com', 'raw.githubusercontent.com', 'githubusercontent.com',
+  'dropbox.com', 'dl.dropboxusercontent.com',
+  'drive.google.com', 'docs.google.com', 'storage.googleapis.com',
+  'onedrive.live.com', '1drv.ms',
+  'cdn.discordapp.com', 'discord.com', 'media.discordapp.net',
+  'bitbucket.org', 'gitlab.com',
+  'amazonaws.com', 's3.amazonaws.com',
+  'blob.core.windows.net', 'azurewebsites.net',
+  'pastebin.com', 'transfer.sh', 'anonfiles.com',
+  'mediafire.com', 'mega.nz', 'mega.co.nz',
+  'archive.org', 'web.archive.org',
+]);

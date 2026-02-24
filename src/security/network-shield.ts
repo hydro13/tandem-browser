@@ -2,22 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { SecurityDB } from './security-db';
-
-// Major hosting platforms that appear in URL-based blocklists as malware hosts
-// but should never be domain-level blocked (the threat is the specific URL, not the domain)
-const URL_LIST_SAFE_DOMAINS = new Set([
-  'github.com', 'raw.githubusercontent.com', 'githubusercontent.com',
-  'dropbox.com', 'dl.dropboxusercontent.com',
-  'drive.google.com', 'docs.google.com', 'storage.googleapis.com',
-  'onedrive.live.com', '1drv.ms',
-  'cdn.discordapp.com', 'discord.com', 'media.discordapp.net',
-  'bitbucket.org', 'gitlab.com',
-  'amazonaws.com', 's3.amazonaws.com',
-  'blob.core.windows.net', 'azurewebsites.net',
-  'pastebin.com', 'transfer.sh', 'anonfiles.com',
-  'mediafire.com', 'mega.nz', 'mega.co.nz',
-  'archive.org', 'web.archive.org',
-]);
+import { URL_LIST_SAFE_DOMAINS } from './types';
 
 export class NetworkShield {
   private blockedDomains: Set<string> = new Set();

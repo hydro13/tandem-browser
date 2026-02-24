@@ -1,31 +1,6 @@
 import { OnBeforeRequestListenerDetails } from 'electron';
 import { SecurityDB } from './security-db';
-import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode } from './types';
-
-// Known analytics/tracker domains (outbound POST targets)
-const KNOWN_TRACKERS = new Set([
-  // Google Analytics / Tag Manager
-  'www.google-analytics.com', 'google-analytics.com',
-  'analytics.google.com', 'www.googletagmanager.com',
-  'googletagmanager.com', 'stats.g.doubleclick.net',
-  'pagead2.googlesyndication.com',
-  // Facebook/Meta
-  'www.facebook.com', 'connect.facebook.net',
-  'pixel.facebook.com', 'graph.facebook.com',
-  // Microsoft/LinkedIn
-  'bat.bing.com', 'px.ads.linkedin.com',
-  'snap.licdn.com',
-  // Other trackers
-  'mc.yandex.ru', 'cdn.mxpnl.com', 'api.mixpanel.com',
-  'api.segment.io', 'cdn.segment.com',
-  'api.amplitude.com', 'cdn.amplitude.com',
-  'rum-http-intake.logs.datadoghq.com',
-  'sentry.io', 'o0.ingest.sentry.io',
-  'plausible.io', 'stats.wp.com',
-  'api.hubspot.com', 'track.hubspot.com',
-  'ct.pinterest.com', 'analytics.tiktok.com',
-  'sc-static.net', 'tr.snapchat.com',
-]);
+import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, KNOWN_TRACKERS } from './types';
 
 // Known WebSocket service providers (not suspicious)
 const KNOWN_WS_SERVICES = new Set([

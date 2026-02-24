@@ -4,23 +4,7 @@ import path from 'path';
 import os from 'os';
 import { SecurityDB } from '../security-db';
 import { NetworkShield } from '../network-shield';
-import { UpdateResult } from '../types';
-
-// Major hosting platforms — skip domain-level blocks for these
-// (same list as NetworkShield URL_LIST_SAFE_DOMAINS — Phase 1 fix for false positives)
-const URL_LIST_SAFE_DOMAINS = new Set([
-  'github.com', 'raw.githubusercontent.com', 'githubusercontent.com',
-  'dropbox.com', 'dl.dropboxusercontent.com',
-  'drive.google.com', 'docs.google.com', 'storage.googleapis.com',
-  'onedrive.live.com', '1drv.ms',
-  'cdn.discordapp.com', 'discord.com', 'media.discordapp.net',
-  'bitbucket.org', 'gitlab.com',
-  'amazonaws.com', 's3.amazonaws.com',
-  'blob.core.windows.net', 'azurewebsites.net',
-  'pastebin.com', 'transfer.sh', 'anonfiles.com',
-  'mediafire.com', 'mega.nz', 'mega.co.nz',
-  'archive.org', 'web.archive.org',
-]);
+import { UpdateResult, URL_LIST_SAFE_DOMAINS } from '../types';
 
 /** Download timeout in milliseconds */
 const DOWNLOAD_TIMEOUT = 60_000;
