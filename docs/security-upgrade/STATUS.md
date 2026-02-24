@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2-B
-**Last completed phase:** Phase 2-A
+**Next phase to implement:** Phase 3-A
+**Last completed phase:** Phase 2-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -80,20 +80,20 @@
 
 ## Phase 2-B: Rule Engine + CDP Integration + Event Logging
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** 4419aad
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `analyzeScriptContent()` function exists and works
-  - [ ] Script source retrieved via `Debugger.getScriptSource()`
-  - [ ] Rule matches logged as security events with type `script-analysis`
-  - [ ] Critical severity events notify Gatekeeper
-  - [ ] Scripts > 500KB skipped
-  - [ ] CDP errors caught gracefully
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `analyzeScriptContent()` function exists and works
+  - [x] Script source retrieved via `Debugger.getScriptSource()`
+  - [x] Rule matches logged as security events with type `script-analysis`
+  - [x] Critical severity events notify Gatekeeper
+  - [x] Scripts > 500KB skipped
+  - [x] CDP errors caught gracefully
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `analyzeScriptContent()` is a module-level function in `script-guard.ts` (not exported — used only internally). It runs all 25 `JS_THREAT_RULES` against script source and returns a `ScriptAnalysisResult` with scored matches. Score thresholds: 0=none, 1-14=low, 15-29=medium, 30-49=high, 50+=critical. The old `checkScriptEntropy()` method was replaced with `analyzeExternalScript()` which fetches CDP source once and runs both the rule engine AND entropy check. If both high entropy (>=6.0) AND rules match, the total score is boosted by 25%. Phase 1 entropy logging is preserved as a separate event. Rule engine events use `eventType: 'script-analysis'` with details containing `topMatches` (max 5). Critical detections notify Gatekeeper via `onCriticalDetection` callback wired by SecurityManager in `initGatekeeper()` — this required a small addition to `security-manager.ts` (callback wiring only, ~10 lines). The analysis only runs on external scripts (different domain than page) with length <= 500KB (`MAX_SCRIPT_SIZE`).
 
 ---
 
@@ -323,7 +323,8 @@
 - `src/security/types.ts` — Added `ThreatRule`, `ThreatRuleMatch`, `ScriptAnalysisResult` interfaces and `JS_THREAT_RULES` constant (25 rules)
 
 ### Phase 2-B
-*(to be filled after completion)*
+- `src/security/script-guard.ts` — Added `analyzeScriptContent()` function, `MAX_SCRIPT_SIZE` constant, `onCriticalDetection` callback, replaced `checkScriptEntropy()` with combined `analyzeExternalScript()` method
+- `src/security/security-manager.ts` — Wired `scriptGuard.onCriticalDetection` to `gatekeeperWs.sendAnomaly()` in `initGatekeeper()`
 
 ### Phase 3-A
 *(to be filled after completion)*

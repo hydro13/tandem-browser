@@ -128,6 +128,20 @@ export class SecurityManager {
   initGatekeeper(httpServer: HttpServer): void {
     this.gatekeeperWs = new GatekeeperWebSocket(httpServer, this.guardian, this.db);
     this.guardian.setGatekeeper(this.gatekeeperWs);
+
+    // Wire ScriptGuard critical detections to Gatekeeper (Phase 2-B)
+    if (this.scriptGuard) {
+      this.scriptGuard.onCriticalDetection = (domain, analysis) => {
+        this.gatekeeperWs?.sendAnomaly({
+          domain,
+          metric: 'script_threat_score',
+          expected: 0,
+          actual: analysis.totalScore,
+          severity: analysis.severity,
+        });
+      };
+    }
+
     console.log('[SecurityManager] Phase 4: GatekeeperWebSocket initialized');
   }
 

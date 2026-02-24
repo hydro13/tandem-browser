@@ -1,6 +1,7 @@
 import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
+import { JS_THREAT_RULES, ThreatRuleMatch, ScriptAnalysisResult } from './types';
 
 /** Shannon entropy (bits per character) — detects obfuscated/encrypted content */
 function calculateEntropy(input: string): number {
@@ -24,6 +25,39 @@ const ENTROPY_HIGH = 6.5;
 const ENTROPY_CRITICAL = 7.0;
 const ENTROPY_MIN_LENGTH = 1000;
 const ENTROPY_MAX_LENGTH = 500_000; // 500KB
+const MAX_SCRIPT_SIZE = 500 * 1024; // 500KB — skip analysis for very large scripts
+
+/** Run JS_THREAT_RULES against script source, return scored analysis result */
+function analyzeScriptContent(source: string, url: string): ScriptAnalysisResult {
+  const matches: ThreatRuleMatch[] = [];
+  let totalScore = 0;
+
+  for (const rule of JS_THREAT_RULES) {
+    const match = rule.pattern.exec(source);
+    if (match) {
+      totalScore += rule.score;
+      matches.push({
+        rule,
+        offset: match.index,
+        matchedText: match[0].substring(0, 100),
+      });
+    }
+  }
+
+  let severity: ScriptAnalysisResult['severity'] = 'none';
+  if (totalScore >= 50) severity = 'critical';
+  else if (totalScore >= 30) severity = 'high';
+  else if (totalScore >= 15) severity = 'medium';
+  else if (totalScore > 0) severity = 'low';
+
+  return {
+    totalScore,
+    matches,
+    severity,
+    scriptUrl: url,
+    scriptLength: source.length,
+  };
+}
 
 /**
  * ScriptGuard — CDP-based script analysis and security monitor injection.
@@ -49,6 +83,9 @@ export class ScriptGuard {
   private monitorInjected = false;
   private scriptsParsed: Map<string, { url: string; length: number }> = new Map();
   private wasmEvents: number[] = []; // timestamps of WASM instantiations
+
+  /** Callback for critical script-analysis detections (wired by SecurityManager for Gatekeeper notification) */
+  onCriticalDetection: ((domain: string, analysis: ScriptAnalysisResult) => void) | null = null;
 
   constructor(db: SecurityDB, guardian: Guardian, devToolsManager: DevToolsManager) {
     this.db = db;
@@ -111,12 +148,12 @@ export class ScriptGuard {
     // 3. Store/update fingerprint
     this.db.upsertScriptFingerprint(domain, url, hash);
 
-    // 4. Entropy analysis for external scripts (async — fires in background)
+    // 4. Static analysis + entropy for external scripts (async — fires in background)
     const scriptLength = length || 0;
-    if (scriptLength >= ENTROPY_MIN_LENGTH && scriptLength <= ENTROPY_MAX_LENGTH) {
+    if (scriptLength <= MAX_SCRIPT_SIZE) {
       const pageDomain = this.getCurrentPageDomain();
       if (pageDomain && domain !== pageDomain) {
-        this.checkScriptEntropy(scriptId, url, domain).catch(() => {});
+        this.analyzeExternalScript(scriptId, url, domain).catch(() => {});
       }
     }
   }
@@ -128,33 +165,83 @@ export class ScriptGuard {
     return this.extractDomain(wc.getURL());
   }
 
-  /** Async entropy check on external script source via CDP */
-  private async checkScriptEntropy(scriptId: string, url: string, domain: string): Promise<void> {
+  /** Combined static analysis + entropy check on external script source via CDP */
+  private async analyzeExternalScript(scriptId: string, url: string, domain: string): Promise<void> {
     try {
       const result = await this.devToolsManager.sendCommand('Debugger.getScriptSource', { scriptId });
       const source = (result as any)?.scriptSource;
       if (!source || typeof source !== 'string') return;
-      if (source.length < ENTROPY_MIN_LENGTH || source.length > ENTROPY_MAX_LENGTH) return;
+      if (source.length > MAX_SCRIPT_SIZE) return;
 
-      const entropy = calculateEntropy(source);
-      if (entropy < ENTROPY_THRESHOLD) return;
+      // 1. Run rule engine
+      const analysis = analyzeScriptContent(source, url);
 
-      const severity = entropy >= ENTROPY_CRITICAL ? 'critical' : entropy >= ENTROPY_HIGH ? 'high' : 'medium';
-      this.db.logEvent({
-        timestamp: Date.now(),
-        domain,
-        tabId: null,
-        eventType: 'warned',
-        severity,
-        category: 'script',
-        details: JSON.stringify({
-          url: url.substring(0, 500),
-          reason: 'high-entropy-script',
-          entropy: Math.round(entropy * 100) / 100,
-          length: source.length,
-        }),
-        actionTaken: 'flagged',
-      });
+      // 2. Run entropy check (if within size bounds)
+      let entropy: number | undefined;
+      if (source.length >= ENTROPY_MIN_LENGTH && source.length <= ENTROPY_MAX_LENGTH) {
+        entropy = calculateEntropy(source);
+        analysis.entropy = entropy;
+
+        // Boost score by 25% if both high entropy AND rules match (Phase 2-B.4)
+        if (entropy >= ENTROPY_THRESHOLD && analysis.matches.length > 0) {
+          analysis.totalScore = Math.round(analysis.totalScore * 1.25);
+          // Recalculate severity with boosted score
+          if (analysis.totalScore >= 50) analysis.severity = 'critical';
+          else if (analysis.totalScore >= 30) analysis.severity = 'high';
+          else if (analysis.totalScore >= 15) analysis.severity = 'medium';
+        }
+      }
+
+      // 3. Log entropy event if high (preserves Phase 1 behavior)
+      if (entropy !== undefined && entropy >= ENTROPY_THRESHOLD) {
+        const entropySeverity = entropy >= ENTROPY_CRITICAL ? 'critical' : entropy >= ENTROPY_HIGH ? 'high' : 'medium';
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain,
+          tabId: null,
+          eventType: 'warned',
+          severity: entropySeverity,
+          category: 'script',
+          details: JSON.stringify({
+            url: url.substring(0, 500),
+            reason: 'high-entropy-script',
+            entropy: Math.round(entropy * 100) / 100,
+            length: source.length,
+          }),
+          actionTaken: 'flagged',
+        });
+      }
+
+      // 4. Log rule engine results
+      if (analysis.severity !== 'none') {
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain,
+          tabId: null,
+          eventType: 'script-analysis',
+          severity: analysis.severity as 'low' | 'medium' | 'high' | 'critical',
+          category: 'script',
+          details: JSON.stringify({
+            totalScore: analysis.totalScore,
+            matchCount: analysis.matches.length,
+            topMatches: analysis.matches.slice(0, 5).map(m => ({
+              ruleId: m.rule.id,
+              category: m.rule.category,
+              score: m.rule.score,
+              matchedText: m.matchedText,
+            })),
+            scriptUrl: analysis.scriptUrl.substring(0, 500),
+            scriptLength: analysis.scriptLength,
+            entropy: analysis.entropy,
+          }),
+          actionTaken: 'flagged',
+        });
+
+        // 5. For critical severity: notify Gatekeeper via callback
+        if (analysis.severity === 'critical') {
+          this.onCriticalDetection?.(domain, analysis);
+        }
+      }
     } catch {
       // CDP command failed (tab closed, debugger detached) — silently ignore
     }
