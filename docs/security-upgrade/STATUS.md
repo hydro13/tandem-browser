@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2-A
-**Last completed phase:** Phase 1
+**Next phase to implement:** Phase 2-B
+**Last completed phase:** Phase 2-A
 **Overall status:** IN PROGRESS
 
 ---
@@ -64,17 +64,17 @@
 
 ## Phase 2-A: ThreatRule Interface + Rule Set Definition
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-24
+- **Commit:** ce9d1af
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `ThreatRule`, `ThreatRuleMatch`, `ScriptAnalysisResult` interfaces exported
-  - [ ] `JS_THREAT_RULES` array exported with 25 rules
-  - [ ] All regex patterns compile without errors
-  - [ ] App still starts (no runtime errors)
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `ThreatRule`, `ThreatRuleMatch`, `ScriptAnalysisResult` interfaces exported
+  - [x] `JS_THREAT_RULES` array exported with 25 rules
+  - [x] All regex patterns compile without errors
+  - [x] App still starts (no runtime errors)
+- **Issues encountered:** None
+- **Notes for next phase:** All 25 rules are in `JS_THREAT_RULES` in `types.ts`, grouped by category: 9 obfuscation + 1 evasion (silent_catch) + 6 exfiltration + 6 injection + 3 redirect. The `ThreatRule.category` union includes 'evasion' alongside the 4 main categories. `ScriptAnalysisResult.entropy` is optional (will be filled by Phase 2-B when it integrates with the existing entropy check from Phase 1). Compound proximity patterns (e.g. `cookie_to_fetch`) use `[\s\S]{0,100}` for cross-line matching within 100 chars — Phase 2-B should be aware these patterns may match across lines.
 
 ---
 
@@ -320,7 +320,7 @@
 - `src/security/outbound-guard.ts` — Added `TRUSTED_OUTBOUND_CONTENT_TYPES` constant, `extractUploadContentType()` method, Content-Type whitelist check in `analyzeOutbound()` (step 4, before body scan)
 
 ### Phase 2-A
-*(to be filled after completion)*
+- `src/security/types.ts` — Added `ThreatRule`, `ThreatRuleMatch`, `ScriptAnalysisResult` interfaces and `JS_THREAT_RULES` constant (25 rules)
 
 ### Phase 2-B
 *(to be filled after completion)*

@@ -225,6 +225,67 @@ export interface UpdateResult {
   errors: string[];
 }
 
+// === Phase 2-A: Script Analysis Threat Rules ===
+
+export interface ThreatRule {
+  id: string;
+  pattern: RegExp;
+  score: number;
+  category: 'obfuscation' | 'exfiltration' | 'injection' | 'evasion' | 'redirect';
+  severity: 'low' | 'medium' | 'high' | 'critical';
+  description: string;
+}
+
+export interface ThreatRuleMatch {
+  rule: ThreatRule;
+  offset: number;
+  matchedText: string;  // first 100 chars
+}
+
+export interface ScriptAnalysisResult {
+  totalScore: number;
+  matches: ThreatRuleMatch[];
+  severity: 'none' | 'low' | 'medium' | 'high' | 'critical';
+  scriptUrl: string;
+  scriptLength: number;
+  entropy?: number;
+}
+
+export const JS_THREAT_RULES: ThreatRule[] = [
+  // --- Obfuscation ---
+  { id: 'eval_string', pattern: /\beval\s*\(\s*['"]/, score: 25, category: 'obfuscation', severity: 'high', description: 'eval() called with string literal' },
+  { id: 'eval_fromcharcode', pattern: /eval\s*\(\s*String\.fromCharCode/, score: 35, category: 'obfuscation', severity: 'critical', description: 'eval() with String.fromCharCode decoding' },
+  { id: 'eval_atob', pattern: /eval\s*\(\s*atob\s*\(/, score: 30, category: 'obfuscation', severity: 'high', description: 'eval() with base64 decoding' },
+  { id: 'eval_function', pattern: /eval\s*\(\s*function/, score: 20, category: 'obfuscation', severity: 'medium', description: 'eval() with function expression' },
+  { id: 'function_constructor', pattern: /new\s+Function\s*\(\s*['"]/, score: 25, category: 'obfuscation', severity: 'high', description: 'Function constructor with string body' },
+  { id: 'fromcharcode_chain', pattern: /String\.fromCharCode\s*\(\s*\d+\s*,\s*\d+\s*,\s*\d+/, score: 15, category: 'obfuscation', severity: 'medium', description: 'String.fromCharCode chain (3+ codes)' },
+  { id: 'charcode_loop', pattern: /for\s*\([^)]*\)\s*\{[^}]*String\.fromCharCode/, score: 20, category: 'obfuscation', severity: 'medium', description: 'Loop-based character code decoding' },
+  { id: 'hex_escape_heavy', pattern: /(?:\\x[0-9a-fA-F]{2}){10,}/, score: 20, category: 'obfuscation', severity: 'medium', description: 'Heavy hex escape sequences (10+)' },
+  { id: 'unicode_escape_heavy', pattern: /(?:\\u[0-9a-fA-F]{4}){8,}/, score: 20, category: 'obfuscation', severity: 'medium', description: 'Heavy unicode escape sequences (8+)' },
+  { id: 'silent_catch', pattern: /catch\s*\(\w*\)\s*\{\s*\}/, score: 8, category: 'evasion', severity: 'low', description: 'Silent catch block (error suppression)' },
+
+  // --- Exfiltration ---
+  { id: 'cookie_access', pattern: /document\.cookie/, score: 10, category: 'exfiltration', severity: 'low', description: 'Access to document.cookie' },
+  { id: 'cookie_to_fetch', pattern: /document\.cookie[\s\S]{0,100}fetch\s*\(/, score: 40, category: 'exfiltration', severity: 'critical', description: 'Cookie access near fetch() call' },
+  { id: 'cookie_to_xhr', pattern: /document\.cookie[\s\S]{0,100}XMLHttpRequest/, score: 40, category: 'exfiltration', severity: 'critical', description: 'Cookie access near XMLHttpRequest' },
+  { id: 'cookie_to_img', pattern: /document\.cookie[\s\S]{0,100}\.src\s*=/, score: 35, category: 'exfiltration', severity: 'critical', description: 'Cookie access near image src assignment' },
+  { id: 'localstorage_exfil', pattern: /localStorage[\s\S]{0,100}(?:fetch|XMLHttpRequest|\.src\s*=)/, score: 30, category: 'exfiltration', severity: 'high', description: 'localStorage access near exfiltration vector' },
+  { id: 'credential_harvest', pattern: /querySelector\s*\([^)]*(?:password|passwd|credit|ssn)[^)]*\)[\s\S]{0,100}(?:fetch|XMLHttpRequest)/i, score: 45, category: 'exfiltration', severity: 'critical', description: 'Credential field query near exfiltration vector' },
+
+  // --- Injection ---
+  { id: 'innerhtml_dynamic', pattern: /\.innerHTML\s*=\s*(?!\s*['"]<)/, score: 10, category: 'injection', severity: 'low', description: 'Dynamic innerHTML assignment' },
+  { id: 'document_write', pattern: /document\.write\s*\(/, score: 12, category: 'injection', severity: 'medium', description: 'document.write() call' },
+  { id: 'dynamic_script_create', pattern: /createElement\s*\(\s*['"]script['"]\)/, score: 15, category: 'injection', severity: 'medium', description: 'Dynamic script element creation' },
+  { id: 'dynamic_iframe_create', pattern: /createElement\s*\(\s*['"]iframe['"]\)/, score: 15, category: 'injection', severity: 'medium', description: 'Dynamic iframe element creation' },
+  { id: 'activex_object', pattern: /new\s+ActiveXObject\s*\(/, score: 40, category: 'injection', severity: 'critical', description: 'ActiveX object creation' },
+  { id: 'wscript_shell', pattern: /WScript\.(?:CreateObject|Shell)/, score: 40, category: 'injection', severity: 'critical', description: 'WScript shell access' },
+
+  // --- Redirect ---
+  { id: 'location_redirect', pattern: /(?:window\.)?location\s*(?:\.href\s*)?=\s*[^=!]/, score: 12, category: 'redirect', severity: 'medium', description: 'Dynamic location redirect' },
+  { id: 'meta_refresh_inject', pattern: /\.innerHTML[\s\S]{0,50}meta[\s\S]{0,50}refresh/i, score: 30, category: 'redirect', severity: 'high', description: 'Meta refresh injection via innerHTML' },
+  { id: 'window_open_data', pattern: /window\.open\s*\(\s*['"]data:/, score: 25, category: 'redirect', severity: 'high', description: 'window.open with data: URI' },
+];
+
 // Known analytics/tracker domains (merged from outbound-guard + content-analyzer)
 export const KNOWN_TRACKERS = new Set([
   // Google Analytics / Tag Manager / Ads
