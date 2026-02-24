@@ -800,10 +800,10 @@ export class TandemAPI {
     // ═══════════════════════════════════════════════
 
     this.app.post('/tabs/open', async (req: Request, res: Response) => {
-      const { url = 'about:blank', groupId, source = 'robin' } = req.body;
+      const { url = 'about:blank', groupId, source = 'robin', focus = true } = req.body;
       try {
         const tabSource = source === 'kees' || source === 'copilot' ? 'copilot' as const : 'robin' as const;
-        const tab = await this.tabManager.openTab(url, groupId, tabSource);
+        const tab = await this.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
         this.panelManager.logActivity('tab-open', { url, source: tabSource });
         res.json({ ok: true, tab });
       } catch (e: any) {
