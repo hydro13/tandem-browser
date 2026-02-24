@@ -83,6 +83,8 @@ export class SecurityManager {
     // Phase 3-A: Wire blocklist check for cross-domain script correlation
     this.scriptGuard.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
     this.contentAnalyzer = new ContentAnalyzer(this.db, devToolsManager);
+    // Phase 4: Wire blocklist check for deep page source scanning
+    this.contentAnalyzer.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
     console.log('[SecurityManager] Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');

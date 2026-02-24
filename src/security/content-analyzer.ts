@@ -1,6 +1,6 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
-import { KNOWN_TRACKERS } from './types';
+import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX } from './types';
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -52,6 +52,17 @@ export interface TyposquatResult {
   substitution?: boolean;
 }
 
+// Deep scan size limit (1MB)
+const MAX_SCAN_SIZE = 1024 * 1024;
+
+// Inline script extraction regex
+const INLINE_SCRIPT_REGEX = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+
+/** Convert octal IP notation to decimal (e.g., 0177.0.0.01 → 127.0.0.1) */
+function octalIpToDecimal(octalIp: string): string {
+  return octalIp.split('.').map(part => parseInt(part, 8).toString()).join('.');
+}
+
 // High-value domains to check for typosquatting
 const TYPOSQUAT_TARGETS = [
   'paypal.com', 'google.com', 'facebook.com', 'linkedin.com',
@@ -75,6 +86,9 @@ const TYPOSQUAT_TARGETS = [
 export class ContentAnalyzer {
   private db: SecurityDB;
   private devToolsManager: DevToolsManager;
+
+  /** Callback to check if a domain is on the blocklist (wired by SecurityManager) */
+  isDomainBlocked: ((domain: string) => boolean) | null = null;
 
   constructor(db: SecurityDB, devToolsManager: DevToolsManager) {
     this.db = db;
@@ -244,10 +258,129 @@ export class ContentAnalyzer {
       }
     }
 
+    // 8. Deep page source scan (CyberChef-inspired regex extraction)
+    await this.deepScanPageSource(domain);
+
     // Calculate risk score
     analysis.riskScore = this.calculateRiskScore(analysis);
 
     return analysis;
+  }
+
+  /**
+   * Deep page source scan — extracts URLs, domains, and IPs from raw page HTML.
+   * Checks found URLs/domains against the blocklist, flags octal IPs.
+   * Also scans inline <script> blocks separately.
+   */
+  private async deepScanPageSource(pageDomain: string | null): Promise<void> {
+    try {
+      const sourceResult = await this.devToolsManager.sendCommand('Runtime.evaluate', {
+        expression: 'document.documentElement.outerHTML',
+        returnByValue: true,
+      });
+      if (!sourceResult.result?.value) return;
+
+      let source: string = sourceResult.result.value;
+      if (source.length > MAX_SCAN_SIZE) {
+        source = source.substring(0, MAX_SCAN_SIZE);
+      }
+
+      // Scan the full page source
+      this.scanSourceForThreats(source, pageDomain, 'page');
+
+      // Extract and scan inline script blocks separately
+      let match: RegExpExecArray | null;
+      const scriptRegex = new RegExp(INLINE_SCRIPT_REGEX.source, INLINE_SCRIPT_REGEX.flags);
+      while ((match = scriptRegex.exec(source)) !== null) {
+        const scriptContent = match[1];
+        if (scriptContent && scriptContent.trim().length > 0) {
+          this.scanSourceForThreats(scriptContent, pageDomain, 'inline-script');
+        }
+      }
+    } catch (e: any) {
+      console.warn('[ContentAnalyzer] Deep scan error:', e.message);
+    }
+  }
+
+  /**
+   * Scan a source string for blocked URLs/domains and suspicious IPs.
+   * @param source - The source text to scan
+   * @param pageDomain - The current page domain (to avoid self-flagging)
+   * @param sourceType - Where the source came from ('page' or 'inline-script')
+   */
+  private scanSourceForThreats(source: string, pageDomain: string | null, sourceType: string): void {
+    // 1. Extract and check URLs
+    const urlRegex = new RegExp(URL_REGEX.source, URL_REGEX.flags);
+    let match: RegExpExecArray | null;
+    while ((match = urlRegex.exec(source)) !== null) {
+      const foundUrl = match[0];
+      const domain = this.extractDomain(foundUrl);
+      if (!domain || domain === pageDomain) continue;
+      this.checkDomainAgainstBlocklist(domain, foundUrl, match.index, source, pageDomain);
+    }
+
+    // 2. Extract and check bare domains
+    const domainRegex = new RegExp(DOMAIN_REGEX.source, DOMAIN_REGEX.flags);
+    while ((match = domainRegex.exec(source)) !== null) {
+      const foundDomain = match[0].toLowerCase();
+      if (foundDomain === pageDomain) continue;
+      this.checkDomainAgainstBlocklist(foundDomain, null, match.index, source, pageDomain);
+    }
+
+    // 3. Check for octal IPs (evasion technique)
+    const octalRegex = new RegExp(IPV4_OCTAL_REGEX.source, IPV4_OCTAL_REGEX.flags);
+    while ((match = octalRegex.exec(source)) !== null) {
+      const octalIp = match[0];
+      const decimalIp = octalIpToDecimal(octalIp);
+      const context = source.substring(
+        Math.max(0, match.index - 50),
+        Math.min(source.length, match.index + octalIp.length + 50)
+      );
+
+      this.db.logEvent({
+        timestamp: Date.now(),
+        domain: pageDomain,
+        tabId: null,
+        eventType: 'octal-ip-evasion',
+        severity: 'medium',
+        category: 'network',
+        details: JSON.stringify({
+          octalIp,
+          decimalIp,
+          sourceType,
+          context,
+        }),
+        actionTaken: 'flagged',
+      });
+    }
+  }
+
+  /** Check a domain against the blocklist and log an event if blocked */
+  private checkDomainAgainstBlocklist(
+    domain: string, url: string | null, offset: number, source: string, pageDomain: string | null
+  ): void {
+    if (!this.isDomainBlocked) return;
+    if (!this.isDomainBlocked(domain)) return;
+
+    const context = source.substring(
+      Math.max(0, offset - 50),
+      Math.min(source.length, offset + (url || domain).length + 50)
+    );
+
+    this.db.logEvent({
+      timestamp: Date.now(),
+      domain: pageDomain,
+      tabId: null,
+      eventType: 'hidden-blocked-url',
+      severity: 'high',
+      category: 'network',
+      details: JSON.stringify({
+        blockedDomain: domain,
+        url: url || undefined,
+        context,
+      }),
+      actionTaken: 'flagged',
+    });
   }
 
   /** Check if a domain is a potential typosquat of a high-value target */

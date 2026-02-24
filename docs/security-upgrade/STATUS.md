@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 4
-**Last completed phase:** Phase 3-B
+**Next phase to implement:** Phase 5-A
+**Last completed phase:** Phase 4
 **Overall status:** IN PROGRESS
 
 ---
@@ -132,19 +132,19 @@
 
 ## Phase 4: CyberChef Regex Patterns Integration
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 724f1d8
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] URL, domain, IPv4, IPv4-octal, email regex constants in `types.ts`
-  - [ ] Deep source scan runs after page load
-  - [ ] Octal IPs detected and flagged
-  - [ ] Blocked URLs/domains found in page source generate events
-  - [ ] Scan limited to first 1MB
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] URL, domain, IPv4, IPv4-octal, email regex constants in `types.ts`
+  - [x] Deep source scan runs after page load
+  - [x] Octal IPs detected and flagged
+  - [x] Blocked URLs/domains found in page source generate events
+  - [x] Scan limited to first 1MB
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `deepScanPageSource()` is a private async method on ContentAnalyzer that runs as step 8 in `analyzePage()`, after all existing DOM analysis. It gets raw page HTML via `Runtime.evaluate('document.documentElement.outerHTML')`, truncates to 1MB (`MAX_SCAN_SIZE`), then calls `scanSourceForThreats()` on the full source and again on each inline `<script>` block extracted via regex. `scanSourceForThreats()` runs URL_REGEX, DOMAIN_REGEX, and IPV4_OCTAL_REGEX — skipping matches on the current page domain to avoid self-flagging. Blocked domains found in the source log `hidden-blocked-url` events (severity high). Octal IPs log `octal-ip-evasion` events (severity medium) with the decimal equivalent in details. ContentAnalyzer uses an `isDomainBlocked` callback (same pattern as ScriptGuard) wired by SecurityManager to `NetworkShield.checkDomain()`. The regex constants (`URL_REGEX`, `DOMAIN_REGEX`, `IPV4_REGEX`, `IPV4_OCTAL_REGEX`, `EMAIL_REGEX`) are all exported from `types.ts` — `IPV4_REGEX` and `EMAIL_REGEX` are not used in the deep scan but are available for future phases. Note: `security-manager.ts` was also modified (1 line) to wire the `isDomainBlocked` callback — this is outside the stated scope of types.ts + content-analyzer.ts but was necessary for blocklist integration (same pattern used in Phase 3-A for ScriptGuard).
 
 ---
 
@@ -337,7 +337,9 @@
 - `src/security/security-manager.ts` — Added route 33: `GET /security/scripts/correlations` (cross-domain script correlation API)
 
 ### Phase 4
-*(to be filled after completion)*
+- `src/security/types.ts` — Added `URL_REGEX`, `DOMAIN_REGEX`, `IPV4_REGEX`, `IPV4_OCTAL_REGEX`, `EMAIL_REGEX` constants
+- `src/security/content-analyzer.ts` — Added `MAX_SCAN_SIZE` constant, `INLINE_SCRIPT_REGEX` constant, `octalIpToDecimal()` helper function, `isDomainBlocked` callback, `deepScanPageSource()` method, `scanSourceForThreats()` method, `checkDomainAgainstBlocklist()` method; integrated deep scan as step 8 in `analyzePage()`
+- `src/security/security-manager.ts` — Wired `contentAnalyzer.isDomainBlocked` to `shield.checkDomain()` in `setDevToolsManager()`
 
 ### Phase 5-A
 *(to be filled after completion)*

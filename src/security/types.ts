@@ -286,6 +286,23 @@ export const JS_THREAT_RULES: ThreatRule[] = [
   { id: 'window_open_data', pattern: /window\.open\s*\(\s*['"]data:/, score: 25, category: 'redirect', severity: 'high', description: 'window.open with data: URI' },
 ];
 
+// === Phase 4: CyberChef-inspired extraction regex patterns ===
+
+// URL extraction — requires protocol prefix
+export const URL_REGEX = /https?:\/\/[-\w.]+(?::\d{1,5})?(?:\/[-\w.~:/?#[\]@!$&'()*+,;=%]*)?/gi;
+
+// Domain extraction — bare domain names
+export const DOMAIN_REGEX = /(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+(?:com|net|org|io|co|dev|app|xyz|info|biz|me|tv|cc|ru|cn|tk|ml|ga|cf|gq|top|pw|ws|click|link|download|stream|online|site|tech|store|cloud|host|fun|space|press|live|rocks|world|email|trade|date|party|review|science|work|racing|win|bid|accountant|loan|cricket|faith)\b/gi;
+
+// IPv4 — standard decimal notation
+export const IPV4_REGEX = /(?:(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)/g;
+
+// IPv4 Octal — evasion technique (e.g., 0177.0.0.01 = 127.0.0.1)
+export const IPV4_OCTAL_REGEX = /(?:0[0-3][0-7]{0,2}\.){3}0[0-3][0-7]{0,2}/g;
+
+// Email extraction
+export const EMAIL_REGEX = /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*/g;
+
 // Known analytics/tracker domains (merged from outbound-guard + content-analyzer)
 export const KNOWN_TRACKERS = new Set([
   // Google Analytics / Tag Manager / Ads
