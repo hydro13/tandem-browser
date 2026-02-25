@@ -91,6 +91,11 @@ export class SecurityManager {
         this.runCorrelation();
       }
 
+      // Phase 5-C: Confidence-based Gatekeeper routing
+      // sendEvent() handles the confidence check internally:
+      // <=300 returns early, 301-600 medium priority, >600 high priority
+      this.gatekeeperWs?.sendEvent(event);
+
       // Skip routing for cascade events (prevents analyzer loops)
       if (this.analyzerCascadeLogging) return;
 

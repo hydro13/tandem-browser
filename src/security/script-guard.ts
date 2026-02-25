@@ -247,8 +247,8 @@ export class ScriptGuard {
   private analyzeScript(scriptInfo: any): void {
     const { scriptId, url, length, hash } = scriptInfo;
 
-    // Skip inline scripts (no URL), chrome-extension, and devtools scripts
-    if (!url || url.startsWith('chrome-extension://') || url.startsWith('devtools://')) return;
+    // Skip inline scripts (no URL), chrome-extension, devtools, and debugger scripts
+    if (!url || url.startsWith('chrome-extension://') || url.startsWith('devtools://') || url.startsWith('debugger://')) return;
 
     // Track in memory
     this.scriptsParsed.set(scriptId, { url, length: length || 0 });
@@ -281,8 +281,9 @@ export class ScriptGuard {
     // 3. Store/update fingerprint
     this.db.upsertScriptFingerprint(domain, url, hash);
 
-    // 3b. Cross-domain correlation (Phase 3-A) — only if hash is available
-    if (hash) {
+    // 3b. Cross-domain correlation (Phase 3-A) — fast-path if CDP provided a hash
+    // (Reliable correlation from fetched source happens in analyzeExternalScript)
+    if (hash && typeof hash === 'string' && hash.length > 0) {
       this.correlateScriptHash(hash, domain, url);
     }
 
@@ -443,8 +444,9 @@ export class ScriptGuard {
       if (candidate.domain === currentDomain) continue;
       if (candidate.astHash === currentAstHash) continue;
 
-      // Only compare against scripts on blocked domains (performance gate)
-      if (!this.isDomainBlocked || !this.isDomainBlocked(candidate.domain)) continue;
+      // Phase 8: Compare against ALL cross-domain scripts (not just blocked)
+      // Blocked-domain status determines severity, not eligibility
+      const isBlocked = this.isDomainBlocked?.(candidate.domain) ?? false;
 
       // Deserialize stored feature vector
       let storedVector: Map<string, number>;
@@ -459,41 +461,56 @@ export class ScriptGuard {
 
       if (similarity >= SIMILARITY_IDENTICAL) {
         // Structurally identical (but different AST hash — edge case)
+        const severity = isBlocked ? 'critical' : 'medium';
+        const reason = isBlocked ? 'structurally-identical-to-blocked-script' : 'structurally-identical-cross-domain';
         this.db.logEvent({
           timestamp: Date.now(),
           domain: currentDomain,
           tabId: null,
           eventType: 'ast-similarity-match',
-          severity: 'high',
+          severity,
           category: 'script',
           details: JSON.stringify({
             scriptUrl: scriptUrl.substring(0, 500),
             similarity: Math.round(similarity * 1000) / 1000,
             matchedDomain: candidate.domain,
             matchedUrl: candidate.scriptUrl.substring(0, 500),
-            reason: 'structurally-identical-to-blocked-script',
+            matchedDomainBlocked: isBlocked,
+            reason,
           }),
           actionTaken: 'flagged',
-          confidence: AnalysisConfidence.HEURISTIC,
+          confidence: isBlocked ? AnalysisConfidence.HEURISTIC : AnalysisConfidence.ANOMALY,
         });
+        if (isBlocked) {
+          this.onCriticalDetection?.(currentDomain, {
+            totalScore: 100,
+            matches: [],
+            severity: 'critical',
+            scriptUrl,
+            scriptLength: 0,
+          });
+        }
       } else if (similarity >= SIMILARITY_THRESHOLD) {
         // Structurally similar — flag for review
+        const severity = isBlocked ? 'high' : 'low';
+        const reason = isBlocked ? 'structurally-similar-to-blocked-script' : 'structurally-similar-cross-domain';
         this.db.logEvent({
           timestamp: Date.now(),
           domain: currentDomain,
           tabId: null,
           eventType: 'ast-similarity-match',
-          severity: 'medium',
+          severity,
           category: 'script',
           details: JSON.stringify({
             scriptUrl: scriptUrl.substring(0, 500),
             similarity: Math.round(similarity * 1000) / 1000,
             matchedDomain: candidate.domain,
             matchedUrl: candidate.scriptUrl.substring(0, 500),
-            reason: 'structurally-similar-to-blocked-script',
+            matchedDomainBlocked: isBlocked,
+            reason,
           }),
           actionTaken: 'flagged',
-          confidence: AnalysisConfidence.ANOMALY,
+          confidence: isBlocked ? AnalysisConfidence.HEURISTIC : AnalysisConfidence.ANOMALY,
         });
       }
     }
@@ -514,7 +531,12 @@ export class ScriptGuard {
       if (!source || typeof source !== 'string') return;
       if (source.length > MAX_SCRIPT_SIZE) return;
 
-      // 0. Compute and store normalized hash (Phase 3-B)
+      // 0. Compute reliable script_hash from source (Phase 8 — CDP hash param is unreliable)
+      const sourceHash = createHash('sha256').update(source).digest('hex');
+      this.db.updateScriptHash(domain, url, sourceHash);
+      this.correlateScriptHash(sourceHash, domain, url);
+
+      // 0a. Compute and store normalized hash (Phase 3-B)
       const normalized = normalizeScriptSource(source);
       const normalizedHash = createHash('sha256').update(normalized).digest('hex');
       this.db.updateNormalizedHash(domain, url, normalizedHash);

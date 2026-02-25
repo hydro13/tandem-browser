@@ -6,7 +6,7 @@
 ## Current State
 
 **Next phase to implement:** None — all phases complete
-**Last completed phase:** Phase 7-C
+**Last completed phase:** Phase 8
 **Overall status:** COMPLETE
 
 ---
@@ -288,6 +288,31 @@
 
 ---
 
+## Phase 8: Post-Review Fix Round
+
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
+- **Verification:**
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `sendEvent()` is called from `onEventLogged` in SecurityManager
+  - [x] Events with confidence > 300 reach Gatekeeper (via `sendEvent()` routing)
+  - [x] Events with confidence <= 300 do NOT reach Gatekeeper (`sendEvent()` returns early)
+  - [x] `script_hash` reliably computed from source for external scripts (SHA-256 in `analyzeExternalScript()`)
+  - [x] Tracker/iframe/mixed-content detections produce events in DB (`trackers-detected`, `hidden-iframe`, `mixed-content`)
+  - [x] `@types/acorn` removed from package.json (`npm uninstall @types/acorn`)
+  - [x] Similarity matching compares all cross-domain scripts (blocked status determines severity, not eligibility)
+  - [x] `debugger://` URLs filtered in ScriptGuard
+  - [x] IPv4 addresses in page source checked against blocklist (`hidden-blocked-ip` events)
+  - [x] WebSocket flag confidence is HEURISTIC (700)
+  - [x] MIME whitelist has Electron limitation doc comment
+  - [x] App launches, browsing works
+  - [x] All regression endpoints valid: /security/status, /security/outbound/stats, /security/gatekeeper/status, /security/page/analysis, /security/scripts/correlations, /security/analyzers/status
+- **Issues encountered:** `EventCategory` type does not include `'content'` — used `'network'` for tracker/iframe/mixed-content/IP events (consistent with existing page-level events in ContentAnalyzer).
+- **Notes:** This is the final phase of the security upgrade project. All 10 issues from REVIEW.md (1 critical, 5 important, 4 minor) have been resolved. The `EventCategory` type union (`'network' | 'script' | 'form' | 'outbound' | 'behavior'`) was not extended — new events use `'network'` since they are page-level content/network concerns. Phase 8 fix: `updateScriptHash()` uses `AND script_hash IS NULL` so it only fills in missing hashes — CDP-provided hashes are preserved when available. Similarity matching now compares all cross-domain scripts: blocked domains get critical/high severity + Gatekeeper notification, non-blocked domains get medium/low severity (informational).
+
+---
+
 ## Known Issues & Workarounds
 
 | Issue | Phase | Workaround | Status |
@@ -299,7 +324,7 @@
 | Phase | Dependency | Version | Reason |
 |-------|-----------|---------|--------|
 | 6-A | acorn | ^8.16.0 | Lightweight JS parser for AST fingerprinting |
-| 6-A | @types/acorn | ^4.0.6 | TypeScript types for acorn (devDependency) |
+| ~~6-A~~ | ~~@types/acorn~~ | ~~^4.0.6~~ | ~~Removed in Phase 8 — acorn v8 bundles its own types~~ |
 
 ## File Inventory
 
@@ -383,3 +408,13 @@
 - `src/security/behavior-monitor.ts` — Added `SecurityAnalyzer`, `AnalyzerContext`, `SecurityEvent` imports from `types.ts`; added `BehaviorMonitorPlugin` wrapper class implementing `SecurityAnalyzer` (name='behavior-monitor', priority=500, subscribes to 'page-loaded', restarts resource monitoring on page load)
 - `src/security/security-manager.ts` — Imported `BehaviorMonitorPlugin`; registered it with AnalyzerManager in `setDevToolsManager()` after BehaviorMonitor creation
 - `src/security/analyzer-manager.ts` — Added developer documentation comment block: how to create analyzers, event types, priority conventions, registration pattern
+
+### Phase 8
+
+- `src/security/security-manager.ts` — Wired `gatekeeperWs.sendEvent(event)` in `onEventLogged` callback for confidence-based Gatekeeper routing
+- `src/security/script-guard.ts` — Added `debugger://` URL filter; computed source-based SHA-256 hash in `analyzeExternalScript()` via `db.updateScriptHash()`; relaxed similarity candidate pool (blocked status → severity, not filter)
+- `src/security/security-db.ts` — Added `stmtUpdateScriptHash` prepared statement and `updateScriptHash()` method
+- `src/security/content-analyzer.ts` — Added `logEvent()` calls for hidden-iframe (HEURISTIC), mixed-content (HEURISTIC), trackers-detected (BEHAVIORAL); added `IPV4_REGEX` import and IPv4 blocklist scan in `scanSourceForThreats()`
+- `src/security/guardian.ts` — Changed WebSocket flag confidence from `BEHAVIORAL` (500) to `HEURISTIC` (700)
+- `src/security/outbound-guard.ts` — Added doc comment documenting Electron API limitation for MIME Content-Type whitelist
+- `package.json` / `package-lock.json` — Removed `@types/acorn` from devDependencies

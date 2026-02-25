@@ -260,7 +260,7 @@ export class Guardian {
             category: 'outbound',
             details: JSON.stringify({ url: url.substring(0, 200), reason: wsResult.reason, referrer: details.referrer }),
             actionTaken: 'flagged',
-            confidence: AnalysisConfidence.BEHAVIORAL,
+            confidence: AnalysisConfidence.HEURISTIC,
           });
         }
       }

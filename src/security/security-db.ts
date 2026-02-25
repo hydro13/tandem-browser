@@ -45,6 +45,8 @@ export class SecurityDB {
   private stmtGetDomainsForNormalizedHash!: Database.Statement;
   private stmtGetWidespreadScripts!: Database.Statement;
   private stmtGetCrossDomainScriptCount!: Database.Statement;
+  // Phase 8: Reliable script_hash from source
+  private stmtUpdateScriptHash!: Database.Statement;
   // Phase 6-A: AST hash
   private stmtUpdateAstHash!: Database.Statement;
   // Phase 6-B: AST-based correlation + similarity
@@ -337,6 +339,10 @@ export class SecurityDB {
         HAVING COUNT(DISTINCT domain) >= 2
       )
     `);
+    // Phase 8: Reliable script_hash from source (update when CDP didn't provide one)
+    this.stmtUpdateScriptHash = this.db.prepare(
+      'UPDATE script_fingerprints SET script_hash = ? WHERE domain = ? AND script_url = ? AND script_hash IS NULL'
+    );
     // Phase 6-A: AST hash
     this.stmtUpdateAstHash = this.db.prepare(
       'UPDATE script_fingerprints SET ast_hash = ? WHERE domain = ? AND script_url = ?'
@@ -691,6 +697,12 @@ export class SecurityDB {
 
   updateNormalizedHash(domain: string, scriptUrl: string, normalizedHash: string): void {
     this.stmtUpdateNormalizedHash.run(normalizedHash, domain, scriptUrl);
+  }
+
+  // === Phase 8: Reliable script_hash from source ===
+
+  updateScriptHash(domain: string, scriptUrl: string, hash: string): void {
+    this.stmtUpdateScriptHash.run(hash, domain, scriptUrl);
   }
 
   // === Phase 6-A: AST hash ===

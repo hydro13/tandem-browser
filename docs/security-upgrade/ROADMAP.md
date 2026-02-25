@@ -226,25 +226,41 @@
 
 ---
 
+## Phase 8: Post-Review Fix Round
+**Priority:** HIGH | **Effort:** ~1 hour | **Dependencies:** All phases complete
+
+- [x] **8.1** [CRITICAL] Wire `sendEvent()` in SecurityManager `onEventLogged` callback
+- [x] **8.2** [IMPORTANT] Compute `script_hash` from source in `analyzeExternalScript()`
+- [x] **8.3** [IMPORTANT] Add `logEvent()` calls for tracker/iframe/mixed-content detections
+- [x] **8.4** [IMPORTANT] Remove `@types/acorn` from devDependencies
+- [x] **8.5** [IMPORTANT] Relax similarity candidate pool (not just blocked domains)
+- [x] **8.6** [MINOR] Filter `debugger://` URLs in ScriptGuard
+- [x] **8.7** [MINOR] Add `IPV4_REGEX` scan to `deepScanPageSource()`
+- [x] **8.8** [MINOR] Fix WebSocket flag confidence (BEHAVIORAL → HEURISTIC)
+- [x] **8.9** [MINOR] Document MIME whitelist Electron API limitation
+
+---
+
 ## Progress Summary
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
 | 0-A | Deduplicate Constants | DONE | 2/2 |
-| 0-B | Cookie Count + Correlation + Scheduling | TODO | 0/3 |
-| 1 | Entropy + MIME Whitelist | TODO | 0/3 |
-| 2-A | ThreatRule Interface + Rules | TODO | 0/2 |
-| 2-B | Rule Engine + CDP | TODO | 0/4 |
-| 3-A | Cross-Domain Correlation DB | TODO | 0/4 |
-| 3-B | Normalized Hash + API | TODO | 0/4 |
-| 4 | CyberChef Regex Patterns | TODO | 0/3 |
-| 5-A | Confidence Types + DB | TODO | 0/4 |
-| 5-B | Confidence in Core Modules | TODO | 0/3 |
+| 0-B | Cookie Count + Correlation + Scheduling | DONE | 3/3 |
+| 1 | Entropy + MIME Whitelist | DONE | 3/3 |
+| 2-A | ThreatRule Interface + Rules | DONE | 2/2 |
+| 2-B | Rule Engine + CDP | DONE | 4/4 |
+| 3-A | Cross-Domain Correlation DB | DONE | 4/4 |
+| 3-B | Normalized Hash + API | DONE | 4/4 |
+| 4 | CyberChef Regex Patterns | DONE | 3/3 |
+| 5-A | Confidence Types + DB | DONE | 4/4 |
+| 5-B | Confidence in Core Modules | DONE | 3/3 |
 | 5-C | Confidence Routing + Evolution | DONE | 5/5 |
 | 6-A | Acorn + AST Hash | DONE | 5/5 |
-| 6-B | Similarity Matching | TODO | 0/4 |
-| 7-A | Plugin Interface + Manager | TODO | 0/4 |
-| 7-B | ContentAnalyzer Migration | TODO | 0/3 |
-| 7-C | BehaviorMonitor Migration | TODO | 0/4 |
+| 6-B | Similarity Matching | DONE | 4/4 |
+| 7-A | Plugin Interface + Manager | DONE | 4/4 |
+| 7-B | ContentAnalyzer Migration | DONE | 3/3 |
+| 7-C | BehaviorMonitor Migration | DONE | 4/4 |
+| 8 | Post-Review Fixes | DONE | 9/9 |
 
-**Total:** 12/57 tasks completed
+**Total:** 66/66 tasks completed

@@ -1,6 +1,6 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
-import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -200,6 +200,21 @@ export class ContentAnalyzer {
       });
       if (iframeResult.result?.value) {
         analysis.security.hiddenIframesWithForms = iframeResult.result.value;
+        if (analysis.security.hiddenIframesWithForms > 0) {
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'hidden-iframe',
+            severity: 'medium',
+            category: 'network',
+            details: JSON.stringify({
+              count: analysis.security.hiddenIframesWithForms,
+            }),
+            actionTaken: 'logged',
+            confidence: AnalysisConfidence.HEURISTIC,
+          });
+        }
       }
 
       // 5. Check mixed content
@@ -214,6 +229,17 @@ export class ContentAnalyzer {
         });
         if (mixedResult.result?.value) {
           analysis.security.mixedContent = true;
+          this.db.logEvent({
+            timestamp: Date.now(),
+            domain,
+            tabId: null,
+            eventType: 'mixed-content',
+            severity: 'medium',
+            category: 'network',
+            details: JSON.stringify({ mixedContent: true }),
+            actionTaken: 'logged',
+            confidence: AnalysisConfidence.HEURISTIC,
+          });
         }
       }
 
@@ -241,6 +267,24 @@ export class ContentAnalyzer {
             analysis.trackers.push({ domain: pDomain, type: 'pixel', url });
           }
         }
+      }
+
+      // Log tracker summary event (after both script trackers and pixel trackers collected)
+      if (analysis.trackers.length > 0) {
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain,
+          tabId: null,
+          eventType: 'trackers-detected',
+          severity: 'low',
+          category: 'network',
+          details: JSON.stringify({
+            count: analysis.trackers.length,
+            trackers: analysis.trackers.slice(0, 10),
+          }),
+          actionTaken: 'logged',
+          confidence: AnalysisConfidence.BEHAVIORAL,
+        });
       }
 
     } catch (e: any) {
@@ -366,6 +410,31 @@ export class ContentAnalyzer {
         actionTaken: 'flagged',
         confidence: AnalysisConfidence.HEURISTIC,
       });
+    }
+
+    // 4. Check bare IPv4 addresses against blocklist
+    const ipv4Regex = new RegExp(IPV4_REGEX.source, IPV4_REGEX.flags);
+    while ((match = ipv4Regex.exec(source)) !== null) {
+      const ip = match[0];
+      // Skip private ranges and localhost (not suspicious)
+      if (ip.startsWith('127.') || ip.startsWith('10.') || ip.startsWith('192.168.') || ip.startsWith('0.')) continue;
+      if (this.isDomainBlocked?.(ip)) {
+        const context = source.substring(
+          Math.max(0, match.index - 50),
+          Math.min(source.length, match.index + ip.length + 50)
+        );
+        this.db.logEvent({
+          timestamp: Date.now(),
+          domain: pageDomain,
+          tabId: null,
+          eventType: 'hidden-blocked-ip',
+          severity: 'high',
+          category: 'network',
+          details: JSON.stringify({ ip, sourceType, context }),
+          actionTaken: 'logged',
+          confidence: AnalysisConfidence.BLOCKLIST,
+        });
+      }
     }
   }
 

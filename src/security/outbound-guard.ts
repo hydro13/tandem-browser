@@ -89,7 +89,11 @@ export class OutboundGuard {
       return { action: 'flag', reason: 'tracker-detected', severity: 'info' };
     }
 
-    // 4. Content-Type whitelist — skip body scan for known-safe media types
+    // 4. Content-Type whitelist — skip body scan for known-safe media types.
+    // NOTE: Electron's onBeforeRequest does not expose request headers, so we extract
+    // Content-Type from multipart form-data body bytes. This means non-multipart binary
+    // POSTs (e.g., raw image PUT) will not match and their body will still be scanned.
+    // This is a known limitation of the Electron webRequest API.
     if (details.uploadData?.length) {
       const contentType = this.extractUploadContentType(details.uploadData);
       if (contentType && TRUSTED_OUTBOUND_CONTENT_TYPES.has(contentType)) {
