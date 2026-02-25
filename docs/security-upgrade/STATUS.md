@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Next phase to implement:** None — all phases complete
+**Next phase to implement:** Phase 9
 **Last completed phase:** Phase 8
-**Overall status:** COMPLETE
+**Overall status:** IN PROGRESS
 
 ---
 
@@ -310,6 +310,17 @@
   - [x] All regression endpoints valid: /security/status, /security/outbound/stats, /security/gatekeeper/status, /security/page/analysis, /security/scripts/correlations, /security/analyzers/status
 - **Issues encountered:** `EventCategory` type does not include `'content'` — used `'network'` for tracker/iframe/mixed-content/IP events (consistent with existing page-level events in ContentAnalyzer).
 - **Notes:** This is the final phase of the security upgrade project. All 10 issues from REVIEW.md (1 critical, 5 important, 4 minor) have been resolved. The `EventCategory` type union (`'network' | 'script' | 'form' | 'outbound' | 'behavior'`) was not extended — new events use `'network'` since they are page-level content/network concerns. Phase 8 fix: `updateScriptHash()` uses `AND script_hash IS NULL` so it only fills in missing hashes — CDP-provided hashes are preserved when available. Similarity matching now compares all cross-domain scripts: blocked domains get critical/high severity + Gatekeeper notification, non-blocked domains get medium/low severity (informational).
+
+---
+
+## Phase 9: Test Coverage, Type Cleanup + CDP Timing Fix
+
+- **Status:** PENDING
+- **Date:** —
+- **Commit:** —
+- **Verification:** (to be filled after completion)
+- **Issues encountered:** —
+- **Notes for this phase:** See `phases/PHASE-9.md` for full spec. Key tasks: (1) ROADMAP.md checkbox update, (2) unit tests via vitest for pure functions, (3) EventCategory 'content' type, (4) CDP attachment timing fix, (5) performance logging.
 
 ---
 

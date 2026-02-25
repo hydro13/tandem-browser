@@ -42,6 +42,7 @@
 | 7-B | [PHASE-7B.md](phases/PHASE-7B.md) | ContentAnalyzer migration to plugin interface |
 | 7-C | [PHASE-7C.md](phases/PHASE-7C.md) | BehaviorMonitor migration to plugin interface |
 | 8 | [PHASE-8.md](phases/PHASE-8.md) | Post-review fix round (1 critical + 5 important + 4 minor) |
+| 9 | [PHASE-9.md](phases/PHASE-9.md) | Test coverage, EventCategory type cleanup + CDP timing fix |
 
 ## Review
 
