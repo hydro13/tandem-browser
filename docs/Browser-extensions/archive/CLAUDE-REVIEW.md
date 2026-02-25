@@ -1,336 +1,336 @@
-# Claude's Review — Verificatie van Kees' Review + Eigen Bevindingen
+# Claude's Review — Verification of Kees' Review + Own Findings
 
-**Datum:** 25 februari 2026
+**Date:** February 25, 2026
 **Reviewer:** Claude (Opus 4.6)
-**Beoordeeld:** Kees' review (KEES-REVIEW.md) geverifieerd tegen de Tandem codebase
-**Methode:** Alle claims geverifieerd door de broncode te lezen en de architectuur te traceren
+**Reviewed:** Kees' review (KEES-REVIEW.md) verified against the Tandem codebase
+**Method:** All claims verified by reading the source code and tracing the architecture
 
 ---
 
-## Werkwijze
+## Approach
 
-Ik heb elk punt van Kees geverifieerd door de relevante bronbestanden te lezen:
+I verified each of Kees' points by reading the relevant source files:
 
-- `src/network/dispatcher.ts` — RequestDispatcher hook-registratie en consumer-prioriteiten
-- `src/security/guardian.ts` — Guardian registratie (priority 1) en request-analyse
+- `src/network/dispatcher.ts` — RequestDispatcher hook registration and consumer priorities
+- `src/security/guardian.ts` — Guardian registration (priority 1) and request analysis
 - `src/security/outbound-guard.ts` — POST/PUT/PATCH credential scanning
-- `src/security/security-manager.ts` — SecurityManager wiring en component-initialisatie
-- `src/extensions/loader.ts` — ExtensionLoader en `session.loadExtension()` aanroep
-- `src/main.ts` — Volledige initialisatievolgorde (sessie → dispatcher → security → extensions)
-- `src/sessions/manager.ts` — Isolated session creatie
+- `src/security/security-manager.ts` — SecurityManager wiring and component initialization
+- `src/extensions/loader.ts` — ExtensionLoader and `session.loadExtension()` call
+- `src/main.ts` — Full initialization order (session → dispatcher → security → extensions)
+- `src/sessions/manager.ts` — Isolated session creation
 
 ---
 
-## Punt 1: Security stack conflict met extensions — BEVESTIGD, met nuance
+## Point 1: Security stack conflict with extensions — CONFIRMED, with nuance
 
 ### Kees' claim: DNR vs webRequest conflict
 
-Extensions in dezelfde sessie (`persist:tandem`) interacteren met de security stack. Ad-blockers met `declarativeNetRequest` (DNR) blokkeren requests vóór `webRequest` handlers → NetworkShield mist events → telemetrie corrupt.
+Extensions in the same session (`persist:tandem`) interact with the security stack. Ad blockers with `declarativeNetRequest` (DNR) block requests before `webRequest` handlers → NetworkShield misses events → telemetry corrupt.
 
 ### Verification: What the codebase shows
 
-**De initialisatievolgorde in `main.ts` bevestigt dat alles op dezelfde sessie draait:**
+**The initialization order in `main.ts` confirms that everything runs on the same session:**
 
 ```text
 Line 97:  ses = session.fromPartition('persist:tandem')
 Line 103: dispatcher = new RequestDispatcher(ses)
-Line 141: dispatcher.attach()          ← webRequest hooks actief
+Line 141: dispatcher.attach()          ← webRequest hooks active
 Line 275: securityManager.registerWith(dispatcher)  ← Guardian hooks
-Line 344: extensionLoader.loadAllExtensions(ses)    ← ZELFDE sessie
+Line 344: extensionLoader.loadAllExtensions(ses)    ← SAME session
 ```
 
-**Guardian registreert als priority 1 op de dispatcher** (`guardian.ts:77-82`). Dit is de laagste priority in het systeem — Guardian draait vóór alles.
+**Guardian registers as priority 1 on the dispatcher** (`guardian.ts:77-82`). This is the lowest priority in the system — Guardian runs before everything else.
 
-**De cruciale vraag is: draait Electron's `session.webRequest` vóór of ná extension `declarativeNetRequest`?**
+**The crucial question is: does Electron's `session.webRequest` fire before or after extension `declarativeNetRequest`?**
 
-In Chromium's architectuur is het antwoord niet eenduidig:
+In Chromium's architecture, the answer is not straightforward:
 
-- Electron's `session.webRequest` is geïmplementeerd via Chromium's `ElectronNetworkDelegate` — dit zit diep in de network stack
-- Extension `declarativeNetRequest` is geïmplementeerd via Chromium's `RulesetManager` — dit zit op een ander niveau
-- In Chrome zelf vuren DNR rules **vóór** de extension `webRequest` API, maar Electron's `session.webRequest` is een **native** hook, geen extension API
+- Electron's `session.webRequest` is implemented via Chromium's `ElectronNetworkDelegate` — this sits deep in the network stack
+- Extension `declarativeNetRequest` is implemented via Chromium's `RulesetManager` — this sits at a different level
+- In Chrome itself, DNR rules fire **before** the extension `webRequest` API, but Electron's `session.webRequest` is a **native** hook, not an extension API
 
-**Dit moet empirisch getest worden.** Het plan kan niet aannemen dat het de ene of andere kant op werkt. De test is eenvoudig: installeer uBlock Origin, laad een pagina met bekende trackers, en controleer of Guardian's `onBeforeRequest` handler nog steeds getriggerd wordt voor requests die uBlock ook blokkeert.
+**This must be tested empirically.** The plan cannot assume it works one way or the other. The test is simple: install uBlock Origin, load a page with known trackers, and check whether Guardian's `onBeforeRequest` handler still gets triggered for requests that uBlock also blocks.
 
-### Benodigde planwijzigingen: security stack
+### Required plan changes: security stack
 
-**In Phase 1 (verificatie):**
+**In Phase 1 (verification):**
 
-- Voeg een expliciete test toe: installeer een extension met DNR regels (uBlock), browse naar een pagina, en verifieer in de security logs of Guardian de requests nog ziet
-- Documenteer het resultaat in STATUS.md — dit bepaalt of ad-blockers een compatibiliteitsprobleem zijn of niet
+- Add an explicit test: install an extension with DNR rules (uBlock), browse to a page, and verify in the security logs whether Guardian still sees the requests
+- Document the result in STATUS.md — this determines whether ad blockers have a compatibility issue or not
 
 **In Phase 4 (gallery):**
 
-- Voeg een `securityConflict` veld toe aan `GalleryExtension`: `'none' | 'dnr-overlap' | 'native-messaging'`
-- Alle extensions met `declarativeNetRequest` mechanisme krijgen `securityConflict: 'dnr-overlap'`
-- De gallery endpoint moet dit veld teruggeven zodat de UI een waarschuwing kan tonen
+- Add a `securityConflict` field to `GalleryExtension`: `'none' | 'dnr-overlap' | 'native-messaging'`
+- All extensions with `declarativeNetRequest` mechanism get `securityConflict: 'dnr-overlap'`
+- The gallery endpoint must return this field so the UI can show a warning
 
 **In CLAUDE.md:**
 
-- Voeg Kees' voorgestelde "Security Stack Rules" sectie toe — zijn formulering is correct en volledig
+- Add Kees' proposed "Security Stack Rules" section — his wording is correct and complete
 
-**Wat betreft OutboundGuard:** Ik heb geverifieerd dat Guardian (`guardian.ts:268-310`) voor ALLE POST/PUT/PATCH requests `outboundGuard.analyzeOutbound()` aanroept. Dit geldt voor elke request in de sessie — inclusief requests van extension content scripts en service workers. OutboundGuard scant de eerste 100KB van de body (`outbound-guard.ts:37`) met credential-patronen (`password`, `token`, `api_key`, `credit_card`, `ssn`, etc.). Extension-initiated exfiltration wordt dus wel gepakt, mits Guardian de request ziet (terug naar de DNR-vraag).
+**Regarding OutboundGuard:** I verified that Guardian (`guardian.ts:268-310`) calls `outboundGuard.analyzeOutbound()` for ALL POST/PUT/PATCH requests. This applies to every request in the session — including requests from extension content scripts and service workers. OutboundGuard scans the first 100KB of the body (`outbound-guard.ts:37`) with credential patterns (`password`, `token`, `api_key`, `credit_card`, `ssn`, etc.). Extension-initiated exfiltration is therefore caught, provided Guardian sees the request (back to the DNR question).
 
 ---
 
-## Punt 2: Phase 7 preloads werken niet voor MV3 — BEVESTIGD
+## Point 2: Phase 7 preloads don't work for MV3 — CONFIRMED
 
 ### Kees' claim: MV3 incompatibility with preloads
 
-`session.setPreloads()` werkt alleen voor renderer processes. MV3 extensions gebruiken service workers. Preloads draaien niet in service workers.
+`session.setPreloads()` only works for renderer processes. MV3 extensions use service workers. Preloads don't run in service workers.
 
 ### Verification: MV3 preloads confirmed
 
-Dit is correct. Electron's preload scripts worden geïnjecteerd in `BrowserWindow` en `webContents` renderer processes. MV3 service workers zijn geen renderers — ze draaien in een apart process type. Een preload script bereikt ze niet.
+This is correct. Electron's preload scripts are injected into `BrowserWindow` and `webContents` renderer processes. MV3 service workers are not renderers — they run in a separate process type. A preload script cannot reach them.
 
-Grammarly en Notion Web Clipper zijn inderdaad gemigreerd naar MV3.
+Grammarly and Notion Web Clipper have indeed migrated to MV3.
 
-### Kees' drie opties
+### Kees' three options
 
-- **Optie A (companion extension):** Technisch haalbaar maar complex. Vereist cross-extension messaging (`chrome.runtime.sendMessage`) en de target extension moet dit ondersteunen of gepatcht worden.
-- **Optie B (`ses.protocol.handle()`):** Intercepteert protocol-level requests. Zou kunnen werken voor het onderscheppen van de OAuth flow, maar vereist diepgaand begrip van hoe Electron extension protocol handling doet.
-- **Optie C (test fallback eerst):** Het meest verstandig. Veel MV3 extensions hebben een fallback OAuth flow die een gewone browser tab opent in plaats van `chrome.identity`. Als die fallback werkt in Electron, is de hele polyfill overbodig.
+- **Option A (companion extension):** Technically feasible but complex. Requires cross-extension messaging (`chrome.runtime.sendMessage`) and the target extension must support this or be patched.
+- **Option B (`ses.protocol.handle()`):** Intercepts protocol-level requests. Could work for intercepting the OAuth flow, but requires deep understanding of how Electron handles extension protocols.
+- **Option C (test fallback first):** The most sensible approach. Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead of `chrome.identity`. If that fallback works in Electron, the entire polyfill is unnecessary.
 
-### Benodigde planwijzigingen: MV3 preloads
+### Required plan changes: MV3 preloads
 
-**Phase 7 moet herschreven worden met deze structuur:**
+**Phase 7 must be rewritten with this structure:**
 
-1. **Stap 1: Empirische test** — Installeer Grammarly en Notion Web Clipper. Probeer in te loggen. Documenteer wat er gebeurt:
-   - Werkt de fallback OAuth (tab-based login)? → Phase 7 wordt documentatie-only
-   - Faalt het volledig? → Ga door naar stap 2
-2. **Stap 2: MV3-compatible polyfill** — Als fallback niet werkt, implementeer via companion extension (Optie A) of protocol interception (Optie B). De `session.setPreloads()` aanpak moet volledig uit het plan.
-3. **Stap 3: BrowserWindow met sessie** — Als er toch een OAuth popup nodig is, MOET die de `persist:tandem` sessie gebruiken (zie punt 3)
+1. **Step 1: Empirical test** — Install Grammarly and Notion Web Clipper. Try to log in. Document what happens:
+   - Does the fallback OAuth (tab-based login) work? → Phase 7 becomes documentation-only
+   - Does it fail completely? → Proceed to step 2
+2. **Step 2: MV3-compatible polyfill** — If fallback doesn't work, implement via companion extension (Option A) or protocol interception (Option B). The `session.setPreloads()` approach must be completely removed from the plan.
+3. **Step 3: BrowserWindow with session** — If an OAuth popup is still needed, it MUST use the `persist:tandem` session (see point 3)
 
 ---
 
-## Punt 3: OAuth popup zonder security stack — BEVESTIGD
+## Point 3: OAuth popup without security stack — CONFIRMED
 
 ### Kees' claim: Default session bypasses security stack
 
-Een `new BrowserWindow()` zonder expliciete sessie gebruikt de default Electron sessie, niet `persist:tandem`. De security stack is dan niet actief.
+A `new BrowserWindow()` without an explicit session uses the default Electron session, not `persist:tandem`. The security stack is not active in that case.
 
 ### Verification: OAuth session gap confirmed
 
-Correct. De RequestDispatcher is gekoppeld aan de `persist:tandem` sessie (`main.ts:103`). Een BrowserWindow zonder `session` in `webPreferences` krijgt Electron's default sessie — daar draait geen dispatcher, geen Guardian, geen OutboundGuard.
+Correct. The RequestDispatcher is attached to the `persist:tandem` session (`main.ts:103`). A BrowserWindow without `session` in `webPreferences` gets Electron's default session — no dispatcher, no Guardian, no OutboundGuard runs there.
 
-### Benodigde planwijzigingen: OAuth popup
+### Required plan changes: OAuth popup
 
 **In Phase 7:**
 
-- Elke BrowserWindow die voor OAuth wordt aangemaakt MOET `webPreferences: { session: ses }` bevatten, waar `ses` de `persist:tandem` sessie is
-- De sessie-referentie moet beschikbaar zijn in de context waar de popup wordt aangemaakt (doorgeven via ExtensionManager of een singleton)
-- Dit moet in de verificatie-checklist staan als hard requirement
+- Every BrowserWindow created for OAuth MUST include `webPreferences: { session: ses }`, where `ses` is the `persist:tandem` session
+- The session reference must be available in the context where the popup is created (pass via ExtensionManager or a singleton)
+- This must be in the verification checklist as a hard requirement
 
 ---
 
-## Punt 4: Extension ID preservatie — BEVESTIGD
+## Point 4: Extension ID preservation — CONFIRMED
 
 ### Kees' claim: Missing key field causes ID mismatch
 
-Als de `key` field in `manifest.json` ontbreekt na CRX extractie, genereert Electron een random ID. OAuth redirects breken dan.
+If the `key` field in `manifest.json` is missing after CRX extraction, Electron generates a random ID. OAuth redirects break as a result.
 
 ### Verification: ID preservation gap confirmed
 
-Ik heb `loader.ts:93` bekeken:
+I examined `loader.ts:93`:
 
 ```typescript
 const ext = await ses.loadExtension(extPath, { allowFileAccess: true });
 ```
 
-Het resultaat `ext.id` wordt opgeslagen maar nergens geverifieerd tegen het verwachte CWS ID. Er is geen check op de `key` field.
+The result `ext.id` is stored but never verified against the expected CWS ID. There is no check on the `key` field.
 
-CWS extensions bevatten altijd een `key` field in hun manifest.json — dit is hoe Chrome de extension ID deterministisch berekent. Als deze field ontbreekt (corrupte download, bug in de extractor), genereert Electron een random ID op basis van het pad. OAuth redirect URLs zijn gebonden aan het originele Chrome extension ID (`{id}.chromiumapp.org`), dus die matchen dan niet meer.
+CWS extensions always contain a `key` field in their manifest.json — this is how Chrome deterministically calculates the extension ID. If this field is missing (corrupt download, bug in the extractor), Electron generates a random ID based on the path. OAuth redirect URLs are bound to the original Chrome extension ID (`{id}.chromiumapp.org`), so they won't match.
 
-### Benodigde planwijzigingen: extension ID
+### Required plan changes: extension ID
 
 **In Phase 1 (CRX Downloader):**
 
-- Na extractie: verifieer dat `manifest.json` een `key` field bevat
-- Indien `key` ontbreekt: markeer de installatie als `warning` in het `InstallResult`
-- Na `session.loadExtension()`: log het toegewezen ID en vergelijk met het verwachte CWS ID
-- Als de IDs niet matchen: log een warning — de extension werkt mogelijk maar OAuth en sommige APIs zullen falen
+- After extraction: verify that `manifest.json` contains a `key` field
+- If `key` is missing: mark the installation as `warning` in the `InstallResult`
+- After `session.loadExtension()`: log the assigned ID and compare with the expected CWS ID
+- If the IDs don't match: log a warning — the extension may work but OAuth and some APIs will fail
 
-**In Phase 1 (verificatie-checklist):**
+**In Phase 1 (verification checklist):**
 
 ```markdown
-- [ ] Geëxtraheerde manifest.json bevat 'key' field
-- [ ] Extension ID van Electron matcht het CWS extension ID
+- [ ] Extracted manifest.json contains 'key' field
+- [ ] Extension ID from Electron matches the CWS extension ID
 ```
 
 ---
 
-## Punt 5: `session.removeExtension()` bestaat in Electron 40 — BEVESTIGD
+## Point 5: `session.removeExtension()` exists in Electron 40 — CONFIRMED
 
 ### Kees' claim: Hot unload available in Electron 40
 
-Phase 2 zegt dat uninstall een restart vereist. `session.removeExtension(extensionId)` is beschikbaar in Electron 40.
+Phase 2 says uninstall requires a restart. `session.removeExtension(extensionId)` is available in Electron 40.
 
 ### Verification: removeExtension API confirmed
 
-De codebase bevat geen enkele aanroep van `removeExtension` — het wordt nergens gebruikt. Maar de API bestaat in Electron sinds versie 12. Tandem draait Electron 40.
+The codebase contains no calls to `removeExtension` — it's not used anywhere. But the API has existed in Electron since version 12. Tandem runs Electron 40.
 
-Ik heb ook `session.getAllExtensions()` gevonden in de Electron API — dit kan gebruikt worden om te verifiëren welke extensions geladen zijn.
+I also found `session.getAllExtensions()` in the Electron API — this can be used to verify which extensions are loaded.
 
-### Benodigde planwijzigingen: removeExtension
+### Required plan changes: removeExtension
 
 **In Phase 2:**
 
-- Verwijder de "restart needed" caveat volledig
-- De uninstall flow wordt: `session.removeExtension(id)` → verwijder bestanden van disk → bevestig
-- Voeg `session.removeExtension()` toe aan de taakbeschrijving
-- Voeg toe aan verificatie: "Extension is direct unloaded uit de sessie zonder restart"
+- Remove the "restart needed" caveat entirely
+- The uninstall flow becomes: `session.removeExtension(id)` → remove files from disk → confirm
+- Add `session.removeExtension()` to the task description
+- Add to verification: "Extension is immediately unloaded from session without restart"
 
 **In Phase 1 (ExtensionManager):**
 
-- De `uninstall()` methode moet zowel `session.removeExtension(id)` aanroepen als de bestanden verwijderen
-- De sessie-referentie moet beschikbaar zijn in ExtensionManager (wordt al doorgegeven via `init()`)
+- The `uninstall()` method must both call `session.removeExtension(id)` and remove the files
+- The session reference must be available in ExtensionManager (already passed via `init()`)
 
 ---
 
-## Punt 6: Session isolation — extensions werken niet in geïsoleerde sessies — BEVESTIGD
+## Point 6: Session isolation — extensions don't work in isolated sessions — CONFIRMED
 
 ### Kees' claim: Extensions only in persist:tandem, not isolated sessions
 
-Extensions laden in `persist:tandem`. Geïsoleerde sessies (`persist:session-{name}`) krijgen geen extensions.
+Extensions load in `persist:tandem`. Isolated sessions (`persist:session-{name}`) don't get extensions.
 
 ### Verification: Session isolation gap confirmed
 
-`sessions/manager.ts` maakt sessies aan met `session.fromPartition('persist:session-{name}')`. Er wordt geen `loadExtension()` op aangeroepen. De dispatcher wordt ook niet voor die sessies aangemaakt — geïsoleerde sessies hebben geen security stack EN geen extensions.
+`sessions/manager.ts` creates sessions with `session.fromPartition('persist:session-{name}')`. No `loadExtension()` is called on them. The dispatcher is also not created for those sessions — isolated sessions have neither a security stack NOR extensions.
 
-Dit is een dubbel probleem:
+This is a double problem:
 
-1. Extensions werken niet in geïsoleerde sessies → gebruikersverwachting geschonden
-2. Geïsoleerde sessies hebben geen security stack → los van extensions al een gat
+1. Extensions don't work in isolated sessions → user expectation violated
+2. Isolated sessions have no security stack → separate from extensions, already a gap
 
-### Benodigde planwijzigingen: session isolation
+### Required plan changes: session isolation
 
 **In CLAUDE.md:**
 
-- Documenteer: "Extensions run in `persist:tandem` only — they do NOT run in isolated sessions created by SessionManager"
+- Document: "Extensions run in `persist:tandem` only — they do NOT run in isolated sessions created by SessionManager"
 
 **In STATUS.md:**
 
-- Voeg toe als known limitation met duidelijke beschrijving
+- Add as a known limitation with a clear description
 
-**In Phase 4 (gallery) of Phase 5 (UI):**
+**In Phase 4 (gallery) or Phase 5 (UI):**
 
-- Als de UI geïsoleerde sessies toont, moet daar een indicator zijn dat extensions niet actief zijn in die sessie
+- If the UI shows isolated sessions, there should be an indicator that extensions are not active in that session
 
-**In de ROADMAP.md:**
+**In ROADMAP.md:**
 
-- Voeg een toekomstige phase toe: "Extension loading in isolated sessions" met als taak:
-  - `loadExtension()` aanroepen op elke nieuwe sessie die SessionManager creëert
-  - Of: optie in de UI om extensions per sessie aan/uit te zetten
+- Add a future phase: "Extension loading in isolated sessions" with the task:
+  - Call `loadExtension()` on every new session that SessionManager creates
+  - Or: option in the UI to enable/disable extensions per session
 
 ---
 
-## Punt 7: `prodversion` hardcoded — BEVESTIGD
+## Point 7: `prodversion` hardcoded — CONFIRMED
 
 ### Kees' claim: prodversion should be dynamic from Chrome version
 
-`prodversion=130.0.0.0` is hardcoded. Moet dynamisch zijn via `process.versions.chrome`.
+`prodversion=130.0.0.0` is hardcoded. Should be dynamic via `process.versions.chrome`.
 
 ### Verification: Hardcoded prodversion confirmed
 
-`process.versions.chrome` wordt nergens in de codebase gebruikt. De waarde is beschikbaar in Electron runtime en geeft de exacte Chromium versie terug (bijv. `130.0.6723.91`).
+`process.versions.chrome` is used nowhere in the codebase. The value is available in the Electron runtime and returns the exact Chromium version (e.g., `130.0.6723.91`).
 
-De `prodversion` parameter in de CWS download URL bepaalt welke versie van de CRX Google teruggeeft. Als Tandem updatet naar een nieuwere Electron (met hogere Chromium), maar nog steeds `130.0.0.0` stuurt, kan Google een oudere CRX-versie teruggeven die niet compatible is met de nieuwere Chromium.
+The `prodversion` parameter in the CWS download URL determines which version of the CRX Google returns. If Tandem updates to a newer Electron (with a higher Chromium version) but still sends `130.0.0.0`, Google may return an older CRX version that isn't compatible with the newer Chromium.
 
-### Benodigde planwijzigingen: prodversion
+### Required plan changes: prodversion
 
 **In Phase 1 (CRX Downloader):**
 
-- Vervang de hardcoded `prodversion=130.0.0.0` met:
+- Replace the hardcoded `prodversion=130.0.0.0` with:
 
   ```typescript
   const chromiumVersion = process.versions.chrome ?? '130.0.0.0';
   ```
 
-- Gebruik de volledige versiestring (niet alleen het major version nummer) — Google's CRX endpoint accepteert dit
-- Voeg een fallback toe voor het geval `process.versions.chrome` undefined is (zou niet moeten in Electron, maar defensief programmeren)
+- Use the full version string (not just the major version number) — Google's CRX endpoint accepts this
+- Add a fallback in case `process.versions.chrome` is undefined (shouldn't happen in Electron, but defensive programming)
 
 ---
 
-## Punt 8: Geen update mechanisme — BEVESTIGD, moet volledig uitgewerkt worden
+## Point 8: No update mechanism — CONFIRMED, needs full specification
 
 ### Kees' claim: Auto-updates are critical for security
 
-Geïnstalleerde extensions auto-updaten niet. Dit is een beveiligingsrisico — extensions krijgen regelmatig security fixes.
+Installed extensions don't auto-update. This is a security risk — extensions regularly receive security fixes.
 
 ### Why this requires a full phase
 
-Een extension zonder updates is een bevroren snapshot van de code op het moment van installatie. Dit betekent:
+An extension without updates is a frozen snapshot of the code at the time of installation. This means:
 
-- **Security vulnerabilities blijven open** — als uBlock Origin een XSS-fix uitbrengt, draait Tandem de oude kwetsbare versie
-- **Functionaliteit degradeert** — extensions die afhankelijk zijn van externe APIs (Grammarly, Honey, Wappalyzer) stoppen met werken als die APIs veranderen
-- **Compatibiliteit breekt** — als een website zijn structuur wijzigt, stoppen content scripts die daarop matchen
+- **Security vulnerabilities stay open** — if uBlock Origin releases an XSS fix, Tandem keeps running the old vulnerable version
+- **Functionality degrades** — extensions that depend on external APIs (Grammarly, Honey, Wappalyzer) stop working when those APIs change
+- **Compatibility breaks** — when a website changes its structure, content scripts that match on it stop working
 
-Chrome checkt elke paar uur op updates via hetzelfde CWS CRX endpoint dat wij gebruiken voor installatie. Tandem moet dit ook doen.
+Chrome checks for updates every few hours via the same CWS CRX endpoint that we use for installation. Tandem must do this too.
 
-### Benodigde planwijzigingen: auto-updates
+### Required plan changes: auto-updates
 
-**Voeg Phase 9 toe als volwaardige phase (niet als "future" notitie):**
+**Add Phase 9 as a full phase (not as a "future" note):**
 
 Phase 9: Extension Auto-Updates
 
-Taken:
+Tasks:
 
-1. **Versie-check mechanisme** — Voor elke geïnstalleerde extension: download de CRX metadata van CWS en vergelijk `manifest.version` met de lokaal geïnstalleerde versie
-2. **Update-interval** — Configureerbare check-frequentie, standaard dagelijks. Gebruik dezelfde CWS CRX endpoint als de installer. Vergelijk alleen de manifest versie (HEAD request of versie-check via de update XML endpoint)
-3. **Atomaire update** — Download nieuwe CRX → extraheer naar tijdelijke map → verifieer `manifest.json` + `key` field → verwijder oude versie → verplaats nieuwe versie → herlaad via `session.removeExtension()` + `session.loadExtension()`
-4. **Integriteitsverificatie** — Verifieer dat de gedownloade CRX valid is (magic bytes, succesvolle ZIP extractie, manifest.json leesbaar). CRX bestanden zijn gesigned door Google — de CRX header bevat een signature die geverifieerd kan worden tegen Google's public key
-5. **API endpoint** — `GET /extensions/updates/check` triggert een handmatige check. `GET /extensions/updates/status` toont wanneer de laatste check was en welke updates beschikbaar zijn
-6. **UI integratie** — Update-indicator in de Extensions settings tab. "Update beschikbaar" badge op extension cards. "Update All" knop
+1. **Version check mechanism** — For each installed extension: download the CRX metadata from CWS and compare `manifest.version` with the locally installed version
+2. **Update interval** — Configurable check frequency, default daily. Use the same CWS CRX endpoint as the installer. Only compare the manifest version (HEAD request or version check via the update XML endpoint)
+3. **Atomic update** — Download new CRX → extract to temp directory → verify `manifest.json` + `key` field → remove old version → move new version → reload via `session.removeExtension()` + `session.loadExtension()`
+4. **Integrity verification** — Verify that the downloaded CRX is valid (magic bytes, successful ZIP extraction, manifest.json readable). CRX files are signed by Google — the CRX header contains a signature that can be verified against Google's public key
+5. **API endpoint** — `GET /extensions/updates/check` triggers a manual check. `GET /extensions/updates/status` shows when the last check was and which updates are available
+6. **UI integration** — Update indicator in the Extensions settings tab. "Update available" badge on extension cards. "Update All" button
 
-**Verificatie-checklist voor Phase 9:**
+**Verification checklist for Phase 9:**
 
 ```markdown
-- [ ] Versie-check detecteert dat een nieuwere versie beschikbaar is op CWS
-- [ ] Update downloadt, extraheert, en vervangt de oude versie
-- [ ] Extension is direct actief na update (zonder app restart)
-- [ ] manifest.json key field behouden na update
-- [ ] Corrupte downloads worden gedetecteerd en niet geïnstalleerd
-- [ ] Update-interval is configureerbaar
-- [ ] GET /extensions/updates/check triggert handmatige check
-- [ ] GET /extensions/updates/status toont laatste check + beschikbare updates
+- [ ] Version check detects that a newer version is available on CWS
+- [ ] Update downloads, extracts, and replaces the old version
+- [ ] Extension is immediately active after update (without app restart)
+- [ ] manifest.json key field preserved after update
+- [ ] Corrupt downloads are detected and not installed
+- [ ] Update interval is configurable
+- [ ] GET /extensions/updates/check triggers manual check
+- [ ] GET /extensions/updates/status shows last check + available updates
 ```
 
-**In ROADMAP.md:** Voeg Phase 9 toe met volledige takenlijst (niet als losse notitie maar in hetzelfde format als Phase 1-8).
+**In ROADMAP.md:** Add Phase 9 with full task list (not as a loose note but in the same format as Phase 1-8).
 
-**In STATUS.md:** Voeg Phase 9 sectie toe met PENDING status.
+**In STATUS.md:** Add Phase 9 section with PENDING status.
 
 ---
 
-## Punt 9: Gallery hardcoded TypeScript — BEVESTIGD, moet anders ontworpen worden
+## Point 9: Gallery hardcoded TypeScript — CONFIRMED, needs different architecture
 
 ### Kees' claim: Hardcoded gallery blocks extensibility
 
-De gallery als hardcoded TypeScript array vereist een code change + rebuild voor elke nieuwe extension.
+The gallery as a hardcoded TypeScript array requires a code change + rebuild for every new extension.
 
 ### Why this is an architecture problem
 
-Een hardcoded `GALLERY_EXTENSIONS` array in TypeScript heeft deze consequenties:
+A hardcoded `GALLERY_EXTENSIONS` array in TypeScript has these consequences:
 
-- **Elke gallery-wijziging vereist een nieuwe build** — een nieuwe populaire extension toevoegen, een ID corrigeren, een compatibiliteitsstatus updaten, of een beschrijving aanpassen vereist een code change, TypeScript compile, en app rebuild
-- **Gebruikers kunnen geen eigen extensions aan de gallery toevoegen** — power users die een niche-extension willen delen met hun team kunnen dat niet
-- **De gallery veroudert met de app-versie** — als Tandem v0.9 uitkomt met 30 extensions en er komen 5 nieuwe populaire extensions, moeten alle gebruikers wachten op v0.10 om die te zien
+- **Every gallery change requires a new build** — adding a new popular extension, correcting an ID, updating a compatibility status, or adjusting a description requires a code change, TypeScript compile, and app rebuild
+- **Users cannot add their own extensions to the gallery** — power users who want to share a niche extension with their team cannot do so
+- **The gallery ages with the app version** — if Tandem v0.9 ships with 30 extensions and 5 new popular extensions emerge, all users must wait for v0.10 to see them
 
-### Benodigde planwijzigingen: gallery architectuur
+### Required plan changes: gallery architecture
 
-**Phase 4 moet het gallery-systeem anders ontwerpen:**
+**Phase 4 must design the gallery system differently:**
 
-1. **Twee lagen:** Ingebouwde defaults + gebruiker-uitbreidbaar bestand
-   - `src/extensions/gallery-defaults.ts` — De 30 extensions uit TOP30-EXTENSIONS.md als TypeScript constante (shipped met de app, altijd beschikbaar)
-   - `~/.tandem/extensions/gallery.json` — Optioneel lokaal bestand dat extra entries bevat of ingebouwde entries overschrijft (bijv. compatibiliteitsstatus bijwerken)
+1. **Two layers:** Built-in defaults + user-extensible file
+   - `src/extensions/gallery-defaults.ts` — The 30 extensions from TOP30-EXTENSIONS.md as a TypeScript constant (shipped with the app, always available)
+   - `~/.tandem/extensions/gallery.json` — Optional local file that contains extra entries or overrides built-in entries (e.g., updating compatibility status)
 
-2. **Gallery loading logica:**
+2. **Gallery loading logic:**
 
    ```text
-   gallery = loadDefaults()          // Ingebouwde 30 extensions
-   userGallery = loadUserGallery()   // ~/.tandem/extensions/gallery.json (als het bestaat)
-   merged = merge(gallery, userGallery)  // User entries overschrijven defaults op basis van ID
+   gallery = loadDefaults()          // Built-in 30 extensions
+   userGallery = loadUserGallery()   // ~/.tandem/extensions/gallery.json (if it exists)
+   merged = merge(gallery, userGallery)  // User entries override defaults by ID
    ```
 
-3. **Gallery JSON formaat:** Zelfde structuur als de TypeScript interface, maar als JSON:
+3. **Gallery JSON format:** Same structure as the TypeScript interface, but as JSON:
 
    ```json
    {
@@ -348,125 +348,125 @@ Een hardcoded `GALLERY_EXTENSIONS` array in TypeScript heeft deze consequenties:
    }
    ```
 
-4. **Optionele remote gallery (toekomstig):** Een statische JSON file op een CDN die de app periodiek kan ophalen. Geen tracking, geen analytics — puur een JSON file met extension metadata. Dit hoeft niet in Phase 4 maar de architectuur moet het toelaten (de `merge()` logica ondersteunt een derde bron).
+4. **Optional remote gallery (future):** A static JSON file on a CDN that the app can periodically fetch. No tracking, no analytics — purely a JSON file with extension metadata. This doesn't need to be in Phase 4 but the architecture must allow it (the `merge()` logic supports a third source).
 
-**In Phase 4 (verificatie-checklist):**
+**In Phase 4 (verification checklist):**
 
 ```markdown
-- [ ] Ingebouwde gallery bevat 30 extensions
-- [ ] ~/.tandem/extensions/gallery.json wordt geladen als het bestaat
-- [ ] User gallery entries overschrijven ingebouwde entries op basis van ID
-- [ ] User gallery kan extra extensions toevoegen die niet in de defaults staan
-- [ ] GET /extensions/gallery retourneert de gemergte lijst
-- [ ] gallery.json formaat is gedocumenteerd (zodat gebruikers het handmatig kunnen bewerken)
+- [ ] Built-in gallery contains 30 extensions
+- [ ] ~/.tandem/extensions/gallery.json is loaded if it exists
+- [ ] User gallery entries override built-in entries by ID
+- [ ] User gallery can add extra extensions not in the defaults
+- [ ] GET /extensions/gallery returns the merged list
+- [ ] gallery.json format is documented (so users can manually edit it)
 ```
 
-**In ROADMAP.md:** Update Phase 4 taken om het twee-lagen systeem te reflecteren.
+**In ROADMAP.md:** Update Phase 4 tasks to reflect the two-layer system.
 
 ---
 
-## Aanvullende bevinding: Initialisatievolgorde is veilig
+## Additional finding: Initialization order is safe
 
-Tijdens mijn verificatie heb ik de volledige initialisatievolgorde in `main.ts` getraceerd. Dit is relevant voor meerdere van Kees' punten:
+During my verification I traced the full initialization order in `main.ts`. This is relevant to several of Kees' points:
 
 ```text
-1. ses = session.fromPartition('persist:tandem')     ← sessie aangemaakt
-2. dispatcher = new RequestDispatcher(ses)             ← dispatcher gekoppeld aan sessie
+1. ses = session.fromPartition('persist:tandem')     ← session created
+2. dispatcher = new RequestDispatcher(ses)             ← dispatcher attached to session
 3. stealth.registerWith(dispatcher)                    ← StealthManager priority 10
 4. CookieFix registered                               ← priority 10
 5. WebSocketOriginFix registered                       ← priority 50
-6. dispatcher.attach()                                 ← webRequest hooks ACTIEF
+6. dispatcher.attach()                                 ← webRequest hooks ACTIVE
 7. securityManager = new SecurityManager()
-8. securityManager.registerWith(dispatcher)             ← Guardian priority 1 ACTIEF
+8. securityManager.registerWith(dispatcher)             ← Guardian priority 1 ACTIVE
 9. devToolsManager wired
 10. securityManager.setupPermissionHandler(ses)
-11. extensionLoader.loadAllExtensions(ses)              ← Extensions geladen NADAT security actief is
+11. extensionLoader.loadAllExtensions(ses)              ← Extensions loaded AFTER security is active
 ```
 
-Dit is goed: de security stack is volledig operationeel voordat extensions worden geladen. Extensions kunnen de registratievolgorde niet beïnvloeden.
+This is good: the security stack is fully operational before extensions are loaded. Extensions cannot influence the registration order.
 
-Maar: de vraag of extension `declarativeNetRequest` rules al actief zijn tegen de tijd dat de eerste pagina geladen wordt, hangt af van hoe snel Electron de extension initialiseert na `loadExtension()`. Dit moet getest worden (zie punt 1).
+However: the question of whether extension `declarativeNetRequest` rules are already active by the time the first page loads depends on how quickly Electron initializes the extension after `loadExtension()`. This must be tested (see point 1).
 
 ---
 
-## Aanvullende bevinding: Consumer priorities in detail
+## Additional finding: Consumer priorities in detail
 
-Voor de volledigheid, de effectieve executievolgorde per hook:
+For completeness, the effective execution order per hook:
 
-**onBeforeRequest (request binnenkomt):**
+**onBeforeRequest (request arrives):**
 
 1. Guardian (priority 1) — blocklist, risk scoring, download safety, credential exfiltration
 2. NetworkInspector (priority 100) — observational logging
 
-**onBeforeSendHeaders (headers worden verstuurd):**
+**onBeforeSendHeaders (headers are sent):**
 
 1. StealthManager (priority 10) — fingerprint protection
 2. Guardian (priority 20) — tracking header removal
 3. WebSocketOriginFix (priority 50) — Origin header fix
 
-**onHeadersReceived (response ontvangen):**
+**onHeadersReceived (response received):**
 
 1. Guardian:RedirectBlock (priority 5) — redirect destination blocking
 2. CookieFix (priority 10) — SameSite cookie fix
-3. Guardian (priority 20) — response header analyse, cookie counting
+3. Guardian (priority 20) — response header analysis, cookie counting
 
-Guardian draait als eerste bij request-binnenkomst (priority 1) en als eerste bij redirect-evaluatie (priority 5). Dit is de juiste architectuur voor security.
+Guardian runs first on request arrival (priority 1) and first on redirect evaluation (priority 5). This is the correct architecture for security.
 
 ---
 
-## Samenvatting: Alle benodigde wijzigingen aan het plan
+## Summary: All required changes to the plan
 
 ### CLAUDE.md
 
-- [ ] Voeg "Security Stack Rules" sectie toe (Kees' formulering)
-- [ ] Voeg toe: extensions draaien in `persist:tandem`, niet in isolated sessions
-- [ ] Voeg toe: na `session.loadExtension()` moet het ID geverifieerd worden
+- [ ] Add "Security Stack Rules" section (Kees' wording)
+- [ ] Add: extensions run in `persist:tandem`, not in isolated sessions
+- [ ] Add: after `session.loadExtension()` the ID must be verified
 
 ### Phase 1 (CRX Downloader + Extension Manager)
 
-- [ ] `prodversion` dynamisch via `process.versions.chrome`
-- [ ] Na extractie: verifieer `key` field in `manifest.json`
-- [ ] Na laden: verifieer dat Electron's ID matcht met CWS ID
-- [ ] `uninstall()` gebruikt `session.removeExtension()` + bestandsverwijdering
-- [ ] Verificatie: test of Guardian requests ziet van/voor geladen extensions
-- [ ] Verificatie: test interactie met DNR-gebaseerde extensions
+- [ ] `prodversion` dynamic via `process.versions.chrome`
+- [ ] After extraction: verify `key` field in `manifest.json`
+- [ ] After loading: verify that Electron's ID matches the CWS ID
+- [ ] `uninstall()` uses `session.removeExtension()` + file removal
+- [ ] Verification: test whether Guardian sees requests from/for loaded extensions
+- [ ] Verification: test interaction with DNR-based extensions
 
 ### Phase 2 (Extension API Routes)
 
-- [ ] Verwijder "restart needed" caveat — gebruik `session.removeExtension()`
-- [ ] Uninstall endpoint roept `session.removeExtension()` aan vóór bestandsverwijdering
+- [ ] Remove "restart needed" caveat — use `session.removeExtension()`
+- [ ] Uninstall endpoint calls `session.removeExtension()` before file removal
 
 ### Phase 4 (Curated Gallery)
 
-- [ ] Twee-lagen architectuur: ingebouwde defaults + `~/.tandem/extensions/gallery.json`
-- [ ] `securityConflict` veld op gallery entries (`'none' | 'dnr-overlap' | 'native-messaging'`)
-- [ ] Merge-logica: user gallery overschrijft/breidt defaults uit
-- [ ] Gallery JSON formaat documenteren
+- [ ] Two-layer architecture: built-in defaults + `~/.tandem/extensions/gallery.json`
+- [ ] `securityConflict` field on gallery entries (`'none' | 'dnr-overlap' | 'native-messaging'`)
+- [ ] Merge logic: user gallery overrides/extends defaults
+- [ ] Document gallery JSON format
 
 ### Phase 7 (chrome.identity Polyfill)
 
-- [ ] Volledig herschrijven: verwijder `session.setPreloads()` aanpak
-- [ ] Stap 1: test of MV3 extensions een fallback OAuth flow hebben die werkt in Electron
-- [ ] Stap 2: als fallback niet werkt → companion extension of protocol interception
-- [ ] OAuth BrowserWindow MOET `session: ses` (persist:tandem) gebruiken
-- [ ] Documenteer welke aanpak gekozen wordt en waarom
+- [ ] Complete rewrite: remove `session.setPreloads()` approach
+- [ ] Step 1: test whether MV3 extensions have a fallback OAuth flow that works in Electron
+- [ ] Step 2: if fallback doesn't work → companion extension or protocol interception
+- [ ] OAuth BrowserWindow MUST use `session: ses` (persist:tandem)
+- [ ] Document which approach was chosen and why
 
 ### ROADMAP.md + STATUS.md
 
-- [ ] Phase 9 toevoegen: Extension Auto-Updates (volledige specificatie, niet "future")
-- [ ] Phase 10 toevoegen: Extension Conflict Management (DNR overlap detectie, isolated session loading)
+- [ ] Add Phase 9: Extension Auto-Updates (full specification, not "future")
+- [ ] Add Phase 10: Extension Conflict Management (DNR overlap detection, isolated session loading)
 
 ### STATUS.md
 
-- [ ] Known limitation toevoegen: extensions werken niet in isolated sessions
-- [ ] Phase 9 en 10 secties toevoegen met PENDING status
+- [ ] Add known limitation: extensions don't work in isolated sessions
+- [ ] Add Phase 9 and 10 sections with PENDING status
 
 ---
 
-## Conclusie
+## Conclusion
 
-Kees' review is grondig en alle 9 punten zijn geverifieerd als correct. De drie kritieke punten (security stack interactie, MV3 preloads, OAuth popup security) vereisen echte wijzigingen aan het plan — niet alleen documentatie maar architecturale aanpassingen aan Phase 1, 4, en 7.
+Kees' review is thorough and all 9 points are verified as correct. The three critical points (security stack interaction, MV3 preloads, OAuth popup security) require real changes to the plan — not just documentation but architectural adjustments to Phase 1, 4, and 7.
 
-Punten 8 en 9 (auto-updates en gallery architectuur) zijn geen toekomstige verbeteringen maar fundamentele onderdelen van een correct werkend extensiesysteem. Beide moeten volledige phase-specificaties krijgen.
+Points 8 and 9 (auto-updates and gallery architecture) are not future improvements but fundamental parts of a correctly functioning extension system. Both must receive full phase specifications.
 
-De bestaande security architectuur (Guardian op priority 1, initialisatie vóór extensions) is een sterke basis. De interactie met extension `declarativeNetRequest` is het belangrijkste open punt dat empirisch getest moet worden in Phase 1.
+The existing security architecture (Guardian at priority 1, initialization before extensions) is a strong foundation. The interaction with extension `declarativeNetRequest` is the most important open question that must be tested empirically in Phase 1.
