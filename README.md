@@ -1,14 +1,26 @@
-# 🧠🤝👤 Tandem Browser
+# Tandem Browser
 
-> Half human, half AI. Browsing the web together.
+**Version 0.9.0** · Human-AI symbiotic browser with built-in security intelligence
 
-A browser built for **human-AI symbiosis**. You (the human) and your AI copilot browse the web as one entity. You handle detection gates, captchas, and human judgment calls. The copilot navigates, extracts data, and automates workflows.
+> The browser where you and your AI work as one — and where external content is hostile by default.
+
+Tandem is built around a simple premise: AI agents with real system access need a browser that treats every byte of external content as potentially adversarial. Not as a policy setting. As a first principle.
+
+It started as a collaboration layer — a browser where a human handles detection gates and judgment calls while an AI handles navigation, extraction, and automation. It grew into something more: a browser with a full security intelligence stack designed specifically for the AI agent threat model.
+
+When an AI agent browses the web with system-level access, a hidden instruction in a page's HTML is not a nuisance. It is remote code execution without an exploit. Tandem's security layer sits between every byte of external content and the AI — YARA-style threat rules, AST fingerprinting, cross-domain script correlation, entropy analysis, and a confidence-weighted pipeline that knows what to resolve locally and what to escalate.
 
 ## Why?
 
-Platforms are locking out AI crawlers. LinkedIn returns 403. Twitter blocks bots. Even basic websites hide behind Cloudflare.
+Platforms block AI crawlers. LinkedIn returns 403. Twitter walls off bots. Cloudflare challenges everything.
 
-A real browser with a real human behind it passes every detection gate. Tandem combines that with AI-powered automation — the best of both worlds.
+A browser with a real human behind it passes every gate. Tandem combines that with AI-powered automation. But beyond bypassing detection — as AI systems gain real capabilities and real access, the browser becomes the most dangerous attack surface they interact with. Tandem is built to make that surface defensible.
+
+## Core Principles
+
+- **External content is hostile by default** — nothing is trusted without verification
+- **Human + AI as equals** — the human handles gates and judgment; the AI handles scale and precision
+- **Local and sovereign** — 811K+ threat entries, 51 automated tests, zero telemetry, all data stays on your machine
 
 ## Platform Support
 
@@ -61,6 +73,24 @@ Tandem stores config in `~/.tandem/config.json`. Key settings:
 ```
 
 The `agentName` and `agentDisplayName` customize how the AI is referred to throughout the UI.
+
+## Security Intelligence
+
+Tandem's security system runs as a layered pipeline on every request, script, and page load:
+
+| Layer | Components | What it catches |
+|-------|-----------|----------------|
+| Network | Guardian + NetworkShield | 811K+ blocked domains/URLs, <5ms sync decision |
+| Outbound | OutboundGuard | Credential exfiltration, data leaks in POST bodies |
+| Runtime | ScriptGuard + ContentAnalyzer + BehaviorMonitor | Malicious scripts, hidden iframes, crypto miners |
+| AI Bridge | GatekeeperWebSocket | Routes ambiguous events to AI agent for decision |
+| Learning | EvolutionEngine + ThreatIntel | Per-domain trust scores, anomaly baselines |
+
+**Script analysis** (v0.9.0): 25 YARA-style threat rules, Shannon entropy detection, Acorn AST fingerprinting (obfuscation-resistant), cross-domain script correlation, confidence-weighted Gatekeeper routing.
+
+**Test coverage**: 51 automated tests via Vitest — entropy, normalization, AST hashing, cosine similarity, and every threat rule validated with true-positive and true-negative samples.
+
+Security API: `GET localhost:8765/security/status`
 
 ## Compatible AI Agents
 
