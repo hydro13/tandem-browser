@@ -254,7 +254,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** (pending)
+- **Commit:** 38daa00
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Step 1 empirical test completed — MV3 fallback OAuth tested for Grammarly + Notion Web Clipper
