@@ -14,7 +14,8 @@
     "mcp": "node dist/mcp/server.js",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "test:security": "vitest run src/security/tests/"
+    "test:security": "vitest run src/security/tests/",
+    "test:extensions": "vitest run src/extensions/tests/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",

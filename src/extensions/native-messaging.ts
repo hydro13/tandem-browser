@@ -26,7 +26,7 @@ export interface NativeMessagingStatus {
 const KNOWN_HOSTS: Record<string, { extensionName: string; extensionId: string }> = {
   'com.1password.1password': { extensionName: '1Password', extensionId: 'aeblfdkhhhdcdjpifhhbdiojplfjncoa' },
   'com.lastpass.nplastpass': { extensionName: 'LastPass', extensionId: 'hdokiejnpimakedhajhdlcegeplioahd' },
-  'com.postman.postmanagent': { extensionName: 'Postman Interceptor', extensionId: 'aicmkgpgakddgnaphhhpliifpcfnhce' },
+  'com.postman.postmanagent': { extensionName: 'Postman Interceptor', extensionId: 'aicmkgpgakddgnaphhhpliifpcfhicfo' },
 };
 
 /**

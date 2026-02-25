@@ -95,7 +95,7 @@ export type ExtensionCategory =
 | 3 | AdBlock | `gighmmpiobklfepjocnamgkkbiglidom` | works | privacy | No |
 | 4 | Privacy Badger | `pkehgijcmpdhfbdbbnkijodmdjhbjlgp` | works | privacy | No |
 | 5 | Ghostery | `mlomiejdfkolichcflejclcbmpeaniij` | works | privacy | No |
-| 6 | DuckDuckGo Privacy | `caoacbimdbbljakfhgikoodekdnkbicp` | works | privacy | No |
+| 6 | DuckDuckGo Privacy | `bkdgflcldnnnapblkhphbgpggdiikppg` | works | privacy | No |
 | 7 | Bitwarden | `nngceckbapebfimnlniiiahkandclblb` | works | password | Yes |
 | 8 | LastPass | `hdokiejnpimakedhajhdlcegeplioahd` | partial | password | No |
 | 9 | 1Password | `aeblfdkhhhdcdjpifhhbdiojplfjncoa` | needs-work | password | No |
@@ -110,12 +110,12 @@ export type ExtensionCategory =
 | 18 | React DevTools | `fmkadmapgofadopljbjfkapdkoienihi` | works | developer | Yes |
 | 19 | Vue DevTools | `nhdogjmejiglipccpnnnanhbledajbpd` | works | developer | No |
 | 20 | Wappalyzer | `gppongmhjkpfnbhagpmjfkannfbllamg` | works | developer | Yes |
-| 21 | JSON Formatter | `bcjindcccaagfpapjibcdnjnljaoajfd` | works | developer | No |
-| 22 | ColorZilla | `bhlhnicpbhignbdhedgjmaplebemodai` | works | developer | No |
+| 21 | JSON Formatter | `gpmodmeblccallcadopbcoeoejepgpnb` | works | developer | No |
+| 22 | ColorZilla | `bhlhnicpbhignbdhedgjhgdocnmhomnp` | works | developer | No |
 | 23 | EditThisCookie | `fngmhnnpilhplaeedifhccceomclgfbg` | works | developer | No |
-| 24 | Postman Interceptor | `aicmkgpgakddgnaphhhpliifpcfnhce` | needs-work | developer | No |
+| 24 | Postman Interceptor | `aicmkgpgakddgnaphhhpliifpcfhicfo` | needs-work | developer | No |
 | 25 | Video Speed Controller | `nffaoalbilbmmfgbnbgppjihopabppdk` | works | media | Yes |
-| 26 | Return YouTube Dislike | `gebbhagfogifgggkldgodflihielkjfl` | works | media | No |
+| 26 | Return YouTube Dislike | `gebbhagfogifgggkldgodflihgfeippi` | works | media | No |
 | 27 | Enhancer for YouTube | `ponfpcnoihfmfllpaingbgckeeldkhle` | works | media | No |
 | 28 | Honey | `bmnlcjabgnpnenekpadlanbbkooimhnj` | works | shopping | No |
 | 29 | Google Translate | `aapbdbdomjkkjkaonfhkkikfgjllcleb` | partial | language | No |

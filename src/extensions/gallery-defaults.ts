@@ -78,7 +78,7 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
     featured: false,
   },
   {
-    id: 'caoacbimdbbljakfhgikoodekdnkbicp',
+    id: 'bkdgflcldnnnapblkhphbgpggdiikppg',
     name: 'DuckDuckGo Privacy Essentials',
     description: 'Privacy protection with tracker blocking, encryption enforcement, and private search.',
     category: 'privacy',
@@ -148,9 +148,10 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
   {
     id: 'niloccemoadcdkdjlinkgdfekeahmflj',
     name: 'Pocket',
-    description: 'Save articles, videos, and stories from any page. Uses its own tab-based OAuth (not chrome.identity).',
+    description: 'Save articles, videos, and stories from any page. Delisted from Chrome Web Store (Pocket shut down).',
     category: 'productivity',
-    compatibility: 'works',
+    compatibility: 'blocked',
+    compatibilityNote: 'Extension delisted from Chrome Web Store as of early 2025 (Pocket service shut down).',
     securityConflict: 'none',
     mechanism: 'Background script + REST API calls',
     featured: true,
@@ -241,7 +242,7 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
     featured: true,
   },
   {
-    id: 'bcjindcccaagfpapjibcdnjnljaoajfd',
+    id: 'gpmodmeblccallcadopbcoeoejepgpnb',
     name: 'JSON Formatter',
     description: 'Makes JSON responses readable in the browser. Pure content script, zero dependencies.',
     category: 'developer',
@@ -251,7 +252,7 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
     featured: false,
   },
   {
-    id: 'bhlhnicpbhignbdhedgjmaplebemodai',
+    id: 'bhlhnicpbhignbdhedgjhgdocnmhomnp',
     name: 'ColorZilla',
     description: 'Eyedropper + color picker. Uses the EyeDropper API (Chromium 95+).',
     category: 'developer',
@@ -263,15 +264,16 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
   {
     id: 'fngmhnnpilhplaeedifhccceomclgfbg',
     name: 'EditThisCookie',
-    description: 'Cookie editor/manager using chrome.cookies API. Essential for web developers.',
+    description: 'Cookie editor/manager. Removed from Chrome Web Store (does not support Manifest V3).',
     category: 'developer',
-    compatibility: 'works',
+    compatibility: 'blocked',
+    compatibilityNote: 'Extension removed from Chrome Web Store as of 2024 (no MV3 support). Consider Cookie Editor as alternative.',
     securityConflict: 'none',
     mechanism: 'chrome.cookies API',
     featured: false,
   },
   {
-    id: 'aicmkgpgakddgnaphhhpliifpcfnhce',
+    id: 'aicmkgpgakddgnaphhhpliifpcfhicfo',
     name: 'Postman Interceptor',
     description: 'Intercepts requests to forward to Postman. Requires native messaging to Postman desktop app.',
     category: 'developer',
@@ -294,7 +296,7 @@ export const GALLERY_DEFAULTS: GalleryExtension[] = [
     featured: true,
   },
   {
-    id: 'gebbhagfogifgggkldgodflihielkjfl',
+    id: 'gebbhagfogifgggkldgodflihgfeippi',
     name: 'Return YouTube Dislike',
     description: 'Restores YouTube dislike counts via community API. Pure content script.',
     category: 'media',

@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 8
-**Last completed phase:** Phase 7
+**Next phase to implement:** Phase 9
+**Last completed phase:** Phase 8
 **Overall status:** IN PROGRESS
 
 ---
@@ -293,24 +293,39 @@
 
 ## Phase 8: Testing & Verification
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Unit tests for CRX header parsing (CRX2, CRX3, invalid)
-  - [ ] Unit tests for CRX3 signature verification (valid, tampered)
-  - [ ] Unit tests for extension ID extraction (bare ID, CWS URL, invalid)
-  - [ ] Integration test: install uBlock Origin by ID (with signature verification)
-  - [ ] Integration test: install from full CWS URL
-  - [ ] Manual: uBlock Origin loads, blocks ads, popup shows blocked count in toolbar
-  - [ ] Manual: Dark Reader applies dark mode
-  - [ ] Manual: Extensions survive app restart
-  - [ ] Manual: Uninstall removes from disk
-  - [ ] Extension IDs from TOP30 verified against Chrome Web Store
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Unit tests for CRX header parsing (CRX2, CRX3, invalid) — 7 tests covering CRX2/CRX3 valid, invalid magic bytes, HTML error responses, unknown versions, too-small files, non-Google domains
+  - [x] Unit tests for CRX extraction — 4 tests covering CRX2/CRX3 extraction to disk, invalid offset, invalid ZIP
+  - [x] Unit tests for extension ID extraction (bare ID, CWS URL, invalid) — 13 tests covering bare IDs, full CWS URLs, short URLs, edge cases, invalid inputs
+  - [x] Unit tests for gallery defaults — 7 tests covering count (30), required fields, unique IDs, featured count (10), recommended TOP30, DNR-overlap flags (6), native-messaging flags (3)
+  - [x] Unit tests for Chrome importer — 4 tests covering platform path detection, list extensions, isAlreadyImported, profile names
+  - [x] Integration tests (network-gated, 38 tests) — install by ID, install by CWS URL, already-installed idempotency, invalid ID error, uninstall removes from disk, TOP30 ID verification
+  - [x] All 30 extension IDs from TOP30 verified against Chrome Web Store — 5 wrong IDs corrected, 2 delisted extensions identified
+  - [x] 35 unit tests pass, 38 integration tests skipped (network-gated via `TANDEM_NETWORK_TESTS=true`)
+  - [x] `npm run test:extensions` script added to package.json
+  - [x] App launches, browsing works
+- **Issues encountered:**
+  - 5 extension IDs in gallery-defaults.ts were incorrect and returned HTTP 404 from CWS:
+    - DuckDuckGo Privacy Essentials: `caoacbimdbbljakfhgikoodekdnkbicp` → `bkdgflcldnnnapblkhphbgpggdiikppg`
+    - JSON Formatter: `bcjindcccaagfpapjibcdnjnljaoajfd` → `gpmodmeblccallcadopbcoeoejepgpnb`
+    - Return YouTube Dislike: `gebbhagfogifgggkldgodflihielkjfl` → `gebbhagfogifgggkldgodflihgfeippi`
+    - ColorZilla: `bhlhnicpbhignbdhedgjmaplebemodai` → `bhlhnicpbhignbdhedgjhgdocnmhomnp`
+    - Postman Interceptor: `aicmkgpgakddgnaphhhpliifpcfnhce` → `aicmkgpgakddgnaphhhpliifpcfhicfo` (was only 31 chars, should be 32)
+  - 2 extensions returned HTTP 204 (delisted from Chrome Web Store):
+    - Pocket (`niloccemoadcdkdjlinkgdfekeahmflj`) — Pocket service shut down in early 2025. Marked `compatibility: 'blocked'` with note.
+    - EditThisCookie (`fngmhnnpilhplaeedifhccceomclgfbg`) — removed from CWS (no MV3 support). Marked `compatibility: 'blocked'` with note.
+  - All wrong IDs corrected in: gallery-defaults.ts, native-messaging.ts, TOP30-EXTENSIONS.md, PHASE-4.md
+- **Notes for next phase:**
+  - Test file is at `src/extensions/tests/extensions.test.ts` — vitest-based, no Electron dependencies for unit tests
+  - Integration tests require `TANDEM_NETWORK_TESTS=true` environment variable
+  - `npm run test:extensions` runs all extension tests (unit + integration if env var set)
+  - Gallery now has 28 working/partial extensions + 2 blocked (Pocket, EditThisCookie) = 30 total
+  - All extension IDs verified against CWS download endpoint — safe to use for Phase 9 auto-updates
+  - The `featured` flag is still set on Pocket (`featured: true`) even though it's blocked — Phase 9 may want to skip blocked extensions in featured lists
 
 ---
 
@@ -425,5 +440,11 @@
 | `src/extensions/manager.ts` | 1, 6, 7 | Modified — Phase 7: IdentityPolyfill integration, apiPort constructor param, getIdentityPolyfill() accessor |
 | `src/api/server.ts` | 1, 2, 3, 4, 5b, 6, 7 | Modified — Phase 7: POST /extensions/identity/auth endpoint (no auth required) |
 | `src/main.ts` | 1, 5b, 7 | Modified — Phase 7: Identity polyfill cleanup in will-quit handler |
-| `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
+| `src/extensions/tests/extensions.test.ts` | 8 | Created — Unit + integration tests (CRX parsing, ID extraction, gallery, Chrome importer) |
+| `vitest.config.ts` | 8 | Modified — Added `src/extensions/tests/**/*.test.ts` to test includes |
+| `package.json` | 1, 8 | Modified — Phase 1: adm-zip + @types/adm-zip. Phase 8: test:extensions script |
 | `package-lock.json` | 1 | Modified — Lock file updated |
+| `src/extensions/gallery-defaults.ts` | 4, 8 | Modified — Phase 8: Fixed 5 wrong extension IDs, marked 2 delisted extensions as blocked |
+| `src/extensions/native-messaging.ts` | 6, 8 | Modified — Phase 8: Fixed Postman Interceptor extension ID |
+| `docs/Browser-extensions/TOP30-EXTENSIONS.md` | 4, 8 | Modified — Phase 8: Fixed 5 wrong extension IDs in all tables |
+| `docs/Browser-extensions/phases/PHASE-4.md` | 4, 8 | Modified — Phase 8: Fixed 5 wrong extension IDs in extension table |

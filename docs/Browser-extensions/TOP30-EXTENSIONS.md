@@ -72,8 +72,8 @@
 ### 6. DuckDuckGo Privacy Essentials
 | Field | Value |
 |-------|-------|
-| **Extension ID** | `caoacbimdbbljakfhgikoodekdnkbicp` |
-| **CWS URL** | https://chromewebstore.google.com/detail/duckduckgo-privacy-essent/caoacbimdbbljakfhgikoodekdnkbicp |
+| **Extension ID** | `bkdgflcldnnnapblkhphbgpggdiikppg` |
+| **CWS URL** | https://chromewebstore.google.com/detail/duckduckgo-privacy-essent/bkdgflcldnnnapblkhphbgpggdiikppg |
 | **Compatibility** | ✅ Works |
 | **Mechanism** | Content scripts + declarativeNetRequest |
 | **Notes** | ⚠️ **Verify this ID** — DuckDuckGo has had multiple extension versions. Check CWS URL resolves before shipping. Pure JS if correct version loads. |
@@ -245,8 +245,8 @@
 ### 21. JSON Formatter
 | Field | Value |
 |-------|-------|
-| **Extension ID** | `bcjindcccaagfpapjibcdnjnljaoajfd` |
-| **CWS URL** | https://chromewebstore.google.com/detail/json-formatter/bcjindcccaagfpapjibcdnjnljaoajfd |
+| **Extension ID** | `gpmodmeblccallcadopbcoeoejepgpnb` |
+| **CWS URL** | https://chromewebstore.google.com/detail/json-formatter/gpmodmeblccallcadopbcoeoejepgpnb |
 | **Compatibility** | ✅ Works |
 | **Mechanism** | Content scripts (reformats JSON responses in the browser) |
 | **Notes** | ⚠️ **Verify this ID** — multiple "JSON Formatter" extensions exist. The most popular one is ~4M users. Pure content script, zero deps. Any of them work in Electron. |
@@ -256,8 +256,8 @@
 ### 22. ColorZilla
 | Field | Value |
 |-------|-------|
-| **Extension ID** | `bhlhnicpbhignbdhedgjmaplebemodai` |
-| **CWS URL** | https://chromewebstore.google.com/detail/colorzilla/bhlhnicpbhignbdhedgjmaplebemodai |
+| **Extension ID** | `bhlhnicpbhignbdhedgjhgdocnmhomnp` |
+| **CWS URL** | https://chromewebstore.google.com/detail/colorzilla/bhlhnicpbhignbdhedgjhgdocnmhomnp |
 | **Compatibility** | ✅ Works |
 | **Mechanism** | Content scripts + eyedropper API |
 | **Notes** | Eyedropper + color picker. The EyeDropper API is available in Chromium 95+. Works in Electron 40. |
@@ -278,8 +278,8 @@
 ### 24. Postman Interceptor
 | Field | Value |
 |-------|-------|
-| **Extension ID** | `aicmkgpgakddgnaphhhpliifpcfnhce` |
-| **CWS URL** | https://chromewebstore.google.com/detail/postman-interceptor/aicmkgpgakddgnaphhhpliifpcfnhce |
+| **Extension ID** | `aicmkgpgakddgnaphhhpliifpcfhicfo` |
+| **CWS URL** | https://chromewebstore.google.com/detail/postman-interceptor/aicmkgpgakddgnaphhhpliifpcfhicfo |
 | **Compatibility** | 🔧 Needs work |
 | **Mechanism** | Native messaging to Postman desktop app |
 | **Notes** | Intercepts requests to forward them to Postman. Requires native messaging to Postman's local agent. Same fix as 1Password — `session.setNativeMessagingHostDirectory()`. |
@@ -302,8 +302,8 @@
 ### 26. Return YouTube Dislike
 | Field | Value |
 |-------|-------|
-| **Extension ID** | `gebbhagfogifgggkldgodflihielkjfl` |
-| **CWS URL** | https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihielkjfl |
+| **Extension ID** | `gebbhagfogifgggkldgodflihgfeippi` |
+| **CWS URL** | https://chromewebstore.google.com/detail/return-youtube-dislike/gebbhagfogifgggkldgodflihgfeippi |
 | **Compatibility** | ✅ Works |
 | **Mechanism** | Content scripts + external API calls |
 | **Notes** | ⚠️ **Verify this ID.** Restores YouTube dislike counts via community API. Pure content script. Works in Electron. |
@@ -369,7 +369,7 @@
 | 3 | AdBlock | `gighmmpiobklfepjocnamgkkbiglidom` | ✅ | Privacy |
 | 4 | Privacy Badger | `pkehgijcmpdhfbdbbnkijodmdjhbjlgp` | ✅ | Privacy |
 | 5 | Ghostery | `mlomiejdfkolichcflejclcbmpeaniij` | ✅ | Privacy |
-| 6 | DuckDuckGo Privacy | `caoacbimdbbljakfhgikoodekdnkbicp` | ✅ | Privacy |
+| 6 | DuckDuckGo Privacy | `bkdgflcldnnnapblkhphbgpggdiikppg` | ✅ | Privacy |
 | 7 | Bitwarden | `nngceckbapebfimnlniiiahkandclblb` | ✅ | Password |
 | 8 | LastPass | `hdokiejnpimakedhajhdlcegeplioahd` | ⚠️ | Password |
 | 9 | 1Password | `aeblfdkhhhdcdjpifhhbdiojplfjncoa` | 🔧 | Password |
@@ -384,12 +384,12 @@
 | 18 | React DevTools | `fmkadmapgofadopljbjfkapdkoienihi` | ✅ | Developer |
 | 19 | Vue DevTools | `nhdogjmejiglipccpnnnanhbledajbpd` | ✅ | Developer |
 | 20 | Wappalyzer | `gppongmhjkpfnbhagpmjfkannfbllamg` | ✅ | Developer |
-| 21 | JSON Formatter | `bcjindcccaagfpapjibcdnjnljaoajfd` | ✅ | Developer |
-| 22 | ColorZilla | `bhlhnicpbhignbdhedgjmaplebemodai` | ✅ | Developer |
+| 21 | JSON Formatter | `gpmodmeblccallcadopbcoeoejepgpnb` | ✅ | Developer |
+| 22 | ColorZilla | `bhlhnicpbhignbdhedgjhgdocnmhomnp` | ✅ | Developer |
 | 23 | EditThisCookie | `fngmhnnpilhplaeedifhccceomclgfbg` | ✅ | Developer |
-| 24 | Postman Interceptor | `aicmkgpgakddgnaphhhpliifpcfnhce` | 🔧 | Developer |
+| 24 | Postman Interceptor | `aicmkgpgakddgnaphhhpliifpcfhicfo` | 🔧 | Developer |
 | 25 | Video Speed Controller | `nffaoalbilbmmfgbnbgppjihopabppdk` | ✅ | Media |
-| 26 | Return YouTube Dislike | `gebbhagfogifgggkldgodflihielkjfl` | ✅ | Media |
+| 26 | Return YouTube Dislike | `gebbhagfogifgggkldgodflihgfeippi` | ✅ | Media |
 | 27 | Enhancer for YouTube | `ponfpcnoihfmfllpaingbgckeeldkhle` | ✅ | Media |
 | 28 | Honey | `bmnlcjabgnpnenekpadlanbbkooimhnj` | ✅ | Shopping |
 | 29 | Google Translate | `aapbdbdomjkkjkaonfhkkikfgjllcleb` | ⚠️ | Language |
@@ -414,9 +414,11 @@
 
 Before shipping the curated gallery, verify these IDs resolve correctly on the Chrome Web Store:
 
-- `#6` DuckDuckGo Privacy Essentials — ID `caoacbimdbbljakfhgikoodekdnkbicp` (two known versions exist)
-- `#21` JSON Formatter — ID `bcjindcccaagfpapjibcdnjnljaoajfd` (multiple extensions with same name)
-- `#26` Return YouTube Dislike — ID `gebbhagfogifgggkldgodflihielkjfl` (confirm still active)
+- `#6` DuckDuckGo Privacy Essentials — ID `bkdgflcldnnnapblkhphbgpggdiikppg` (verified Phase 8)
+- `#21` JSON Formatter — ID `gpmodmeblccallcadopbcoeoejepgpnb` (verified Phase 8)
+- `#22` ColorZilla — ID `bhlhnicpbhignbdhedgjhgdocnmhomnp` (verified Phase 8)
+- `#24` Postman Interceptor — ID `aicmkgpgakddgnaphhhpliifpcfhicfo` (verified Phase 8)
+- `#26` Return YouTube Dislike — ID `gebbhagfogifgggkldgodflihgfeippi` (verified Phase 8)
 
 **Verification method:** Open `https://chromewebstore.google.com/detail/{ID}` — if it redirects to the store homepage, the ID is wrong.
 
