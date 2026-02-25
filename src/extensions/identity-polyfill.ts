@@ -1,4 +1,4 @@
-import { session as electronSession, Session, BrowserWindow, net } from 'electron';
+import { session as electronSession, Session, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -170,33 +170,21 @@ export class IdentityPolyfill {
   }
 
   /**
-   * Register protocol handler to intercept *.chromiumapp.org URLs.
-   * Without this, OAuth redirects to chromiumapp.org fail (NXDOMAIN).
+   * Register handling for *.chromiumapp.org OAuth redirects.
    *
-   * Must be called after session is available but before extensions make
-   * auth requests.
+   * NOTE: Do NOT use ses.protocol.handle('https', ...) here.
+   * Intercepting the global 'https' scheme breaks Chromium's native network
+   * stack — cookies, HTTP/2, and session state are NOT forwarded correctly
+   * through net.fetch() passthrough, causing sites to lose their login sessions.
+   *
+   * The OAuth redirect is captured via will-navigate / will-redirect events
+   * on the popup BrowserWindow inside handleLaunchWebAuthFlow() — no global
+   * protocol handler is needed. chromiumapp.org subdomains do not need to
+   * resolve via DNS because we intercept the navigation before it completes.
    */
-  registerChromiumAppHandler(ses: Session): void {
-    ses.protocol.handle('https', async (request: Request) => {
-      const url = new URL(request.url);
-      if (url.hostname.endsWith('.chromiumapp.org')) {
-        return new Response(
-          `<!DOCTYPE html>
-<html><head><title>Authentication Complete</title></head>
-<body style="font-family:system-ui;text-align:center;padding:60px 20px">
-<h2>Authentication complete</h2>
-<p>This tab will close automatically.</p>
-<script>
-try { window.close(); } catch(e) {}
-</script>
-</body></html>`,
-          { headers: { 'content-type': 'text/html' } }
-        );
-      }
-      // Pass through all non-chromiumapp.org requests to default handler
-      return net.fetch(request);
-    });
-    console.log('🔑 Registered chromiumapp.org protocol handler for OAuth redirects');
+  registerChromiumAppHandler(_ses: Session): void {
+    // Intentionally a no-op. See comment above.
+    console.log('🔑 chromiumapp.org OAuth redirects handled via popup navigation events (no protocol intercept)');
   }
 
   /**
