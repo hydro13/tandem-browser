@@ -3,7 +3,7 @@ import { SecurityDB } from './security-db';
 import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
 import { ScriptGuard } from './script-guard';
-import { AnalysisConfidence } from './types';
+import { AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
 
 /** Permission request record */
 export interface PermissionRecord {
@@ -288,5 +288,51 @@ export class BehaviorMonitor {
       clearInterval(this.cpuCheckInterval);
       this.cpuCheckInterval = null;
     }
+  }
+}
+
+/**
+ * BehaviorMonitorPlugin — SecurityAnalyzer wrapper for BehaviorMonitor.
+ *
+ * Wraps the existing BehaviorMonitor in the SecurityAnalyzer plugin interface
+ * so it can be managed by AnalyzerManager alongside other analyzers.
+ *
+ * BehaviorMonitor is primarily timer-based (CPU polling) and handler-based
+ * (Electron permission handler). The plugin subscribes to 'page-loaded' events
+ * to restart resource monitoring when a new page loads. Permission handling and
+ * tab-lifecycle calls (reset, initial monitoring start) remain direct.
+ */
+export class BehaviorMonitorPlugin implements SecurityAnalyzer {
+  readonly name = 'behavior-monitor';
+  readonly version = '1.0.0';
+  readonly eventTypes = ['page-loaded'];
+  readonly priority = 500; // BEHAVIORAL confidence level — after ContentAnalyzer (400)
+  readonly description = 'Runtime behavior monitoring: permissions, CPU usage, crypto miner detection';
+
+  private monitor: BehaviorMonitor;
+
+  constructor(monitor: BehaviorMonitor) {
+    this.monitor = monitor;
+  }
+
+  async initialize(_context: AnalyzerContext): Promise<void> {
+    // BehaviorMonitor is already initialized via SecurityManager — no additional setup needed
+  }
+
+  canAnalyze(event: SecurityEvent): boolean {
+    return event.eventType === 'page-loaded' && !!event.domain;
+  }
+
+  async analyze(event: SecurityEvent): Promise<SecurityEvent[]> {
+    // Restart resource monitoring for the new page context.
+    // BehaviorMonitor handles its own event logging internally — we return empty.
+    if (event.eventType === 'page-loaded' && event.domain) {
+      this.monitor.startResourceMonitoring();
+    }
+    return [];
+  }
+
+  async destroy(): Promise<void> {
+    // BehaviorMonitor lifecycle is managed by SecurityManager
   }
 }

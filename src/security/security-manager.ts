@@ -9,7 +9,7 @@ import { Guardian } from './guardian';
 import { OutboundGuard } from './outbound-guard';
 import { ScriptGuard } from './script-guard';
 import { ContentAnalyzer, ContentAnalyzerPlugin } from './content-analyzer';
-import { BehaviorMonitor } from './behavior-monitor';
+import { BehaviorMonitor, BehaviorMonitorPlugin } from './behavior-monitor';
 import { GatekeeperWebSocket } from './gatekeeper-ws';
 import { EvolutionEngine } from './evolution';
 import { ThreatIntel } from './threat-intel';
@@ -139,6 +139,10 @@ export class SecurityManager {
     });
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
+    // Phase 7-C: Register BehaviorMonitor as plugin
+    this.analyzerManager.register(new BehaviorMonitorPlugin(this.behaviorMonitor)).catch(e => {
+      console.warn('[SecurityManager] Failed to register BehaviorMonitorPlugin:', e.message);
+    });
     console.log('[SecurityManager] Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');
   }
 

@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 7-C
-**Last completed phase:** Phase 7-B
-**Overall status:** IN PROGRESS
+**Next phase to implement:** None — all phases complete
+**Last completed phase:** Phase 7-C
+**Overall status:** COMPLETE
 
 ---
 
@@ -272,18 +272,19 @@
 
 ## Phase 7-C: BehaviorMonitor Migration to Plugin Interface
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 9b39cfa
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] BehaviorMonitorPlugin registered in AnalyzerManager
-  - [ ] Permission handling still works
-  - [ ] `GET /security/analyzers/status` shows all 3 analyzers
-  - [ ] No duplicate event processing
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] BehaviorMonitorPlugin registered in AnalyzerManager
+  - [x] Permission handling still works (unchanged — Electron handler stays direct)
+  - [x] `GET /security/analyzers/status` shows all 3 analyzers: content-analyzer (400), behavior-monitor (500), event-burst-detector (950)
+  - [x] No duplicate event processing (ContentAnalyzerPlugin and BehaviorMonitorPlugin both subscribe to 'page-loaded' but handle different concerns)
+  - [x] App launches, browsing works
+  - [x] All regression endpoints valid: /security/status, /security/outbound/stats, /security/gatekeeper/status, /security/page/analysis
+- **Issues encountered:** None
+- **Notes:** This is the final phase of the security upgrade project. `BehaviorMonitorPlugin` follows the same wrapper pattern as `ContentAnalyzerPlugin` — subscribes to `'page-loaded'` events and restarts resource monitoring for the new page context. Permission handling (`setupPermissionHandler`) and tab-lifecycle calls (`reset`, initial `startResourceMonitoring` on tab attach) remain as direct calls since they are Electron event handlers and lifecycle management, not SecurityAnalyzer event-driven analysis. The `analyze()` method calls `startResourceMonitoring()` which safely clears any existing interval before starting a new one. Developer documentation was added to `analyzer-manager.ts` covering how to create new analyzers, event types, priority conventions, and registration pattern.
 
 ---
 
@@ -379,4 +380,6 @@
 - `src/security/security-manager.ts` — Imported `ContentAnalyzerPlugin`; registered it with AnalyzerManager in `setDevToolsManager()`; replaced direct `contentAnalyzer.analyzePage()` call in `onPageLoaded()` with `analyzerManager.routeEvent()` + `getLastAnalysis()` pattern
 
 ### Phase 7-C
-*(to be filled after completion)*
+- `src/security/behavior-monitor.ts` — Added `SecurityAnalyzer`, `AnalyzerContext`, `SecurityEvent` imports from `types.ts`; added `BehaviorMonitorPlugin` wrapper class implementing `SecurityAnalyzer` (name='behavior-monitor', priority=500, subscribes to 'page-loaded', restarts resource monitoring on page load)
+- `src/security/security-manager.ts` — Imported `BehaviorMonitorPlugin`; registered it with AnalyzerManager in `setDevToolsManager()` after BehaviorMonitor creation
+- `src/security/analyzer-manager.ts` — Added developer documentation comment block: how to create analyzers, event types, priority conventions, registration pattern
