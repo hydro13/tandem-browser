@@ -149,7 +149,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** (pending)
+- **Commit:** 3592c10
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Extensions section visible in settings panel (🧩 Extensions nav entry in sidebar)
