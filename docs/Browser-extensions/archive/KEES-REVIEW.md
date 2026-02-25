@@ -1,71 +1,71 @@
 # Kees' Review — Extension Plan (Claude Code Rewrite)
 
-**Datum:** 25 februari 2026  
-**Reviewer:** Kees 🧀  
-**Beoordeeld:** README.md, CLAUDE.md, STATUS.md, ROADMAP.md, PHASE-1.md t/m PHASE-8.md
+**Date:** February 25, 2026
+**Reviewer:** Kees
+**Reviewed:** README.md, CLAUDE.md, STATUS.md, ROADMAP.md, PHASE-1.md through PHASE-8.md
 
 ---
 
-## Algemeen oordeel
+## General Assessment
 
-Structureel is dit goed werk. De fasering is logisch, CLAUDE.md is een uitstekende session-instructie, de checklists zijn grondig, en de STATUS.md + ROADMAP.md aanpak voor Claude Code sessies is precies hoe je dit soort werk moet orkestreren. Claude Code zal hiermee uit de voeten kunnen.
+Structurally this is good work. The phasing is logical, CLAUDE.md is an excellent session instruction, the checklists are thorough, and the STATUS.md + ROADMAP.md approach for Claude Code sessions is exactly how you should orchestrate this kind of work. Claude Code will be able to work with this effectively.
 
-**Maar er zijn 3 serieuze gaten die dit plan onveilig maken voor Tandem specifiek.** De rest is verbeterpunten. Lees vooral de rode punten zorgvuldig.
-
----
-
-## 🔴 KRITIEK — Moet opgelost vóór implementatie
-
-### 1. Security stack is volledig genegeerd — dit is het grootste probleem
-
-Het plan installeert extensions in dezelfde sessie als de hele browser (`persist:tandem`). Dat betekent dat ze rechtstreeks interacteren met je RequestDispatcher, NetworkShield, OutboundGuard, ScriptGuard, en BehaviorMonitor. Er staat nergens een woord over hoe dat uitpakt.
-
-**Het conflict met uBlock Origin (en andere ad blockers):**
-Extensions als uBlock Origin installeren `declarativeNetRequest` regels. Die vuren **vóór** je `webRequest` handlers. Dat betekent: uBlock blokkeert een request → NetworkShield ziet het nooit → SecurityDB logt het nooit → EvolutionEngine baseline raakt corrupt → threat scoring klopt niet meer.
-
-Je hebt 811.000 blocklist entries. Als uBlock Origin 300.000 van die domeinen ook blokkeert maar eerder in de pipeline, dan mist je beveiligingslaag al die events. Je hebt geen idee meer wat er geblokkeerd is en waarom.
-
-**Wat gedaan moet worden:**
-- Definieer een "extension trust policy" voor de security stack: gaan extension requests door alle beveiligingslagen of niet?
-- Overweeg: ad-blocker extensions actief weren uit de gallery (Tandem heeft NetworkShield al — uBlock is redundant en destructief voor je telemetrie), of ze op zijn minst sterk markeren als "⚠️ conflicteert met Tandem Security"
-- Extension service worker `fetch()` requests gaan WEL door je webRequest hooks (Electron's webRequest pakt alles in de sessie) — maar `declarativeNetRequest` blokkeert eerder. Dit moet gedocumenteerd en getest worden.
-
-**Wat ook moet:** Verifieer dat OutboundGuard's POST body scanning ook extension-initiated POSTs pakt. Een kwaadaardig script via een extension dat data exfiltreert zou door OutboundGuard moeten worden gepakt, niet eromheen.
+**But there are 3 serious gaps that make this plan unsafe for Tandem specifically.** The rest are improvement points. Read especially the red points carefully.
 
 ---
 
-### 2. Phase 7 (chrome.identity polyfill) werkt NIET voor MV3 extensions
+## RED — CRITICAL — Must be resolved before implementation
 
-Phase 7 stelt voor om `session.setPreloads()` te gebruiken om de polyfill te injecteren. Dit werkt alleen voor MV2 background pages (die zijn gewone renderers). **Grammarly is MV3.** MV3 extensions gebruiken service workers als background script, en preloads draaien NIET in service workers — alleen in renderer processen.
+### 1. Security stack is completely ignored — this is the biggest problem
 
-Concreet: als je dit implementeert zoals beschreven, werkt het voor geen enkele moderne extension. Grammarly, Notion Web Clipper — allemaal MV3 tegenwoordig.
+The plan installs extensions in the same session as the entire browser (`persist:tandem`). This means they directly interact with your RequestDispatcher, NetworkShield, OutboundGuard, ScriptGuard, and BehaviorMonitor. There is not a single word about how this plays out.
 
-**Correcte aanpak:**
-Optie A (eenvoudig): De polyfill als een aparte "companion extension" implementeren die `chrome.identity.launchWebAuthFlow` aanbiedt via `chrome.runtime.sendMessage` cross-extension messaging. Extensies kunnen die dan aanroepen.
+**The conflict with uBlock Origin (and other ad blockers):**
+Extensions like uBlock Origin install `declarativeNetRequest` rules. These fire **before** your `webRequest` handlers. This means: uBlock blocks a request → NetworkShield never sees it → SecurityDB never logs it → EvolutionEngine baseline becomes corrupt → threat scoring is no longer accurate.
 
-Optie B (correct maar complex): In Electron kun je via `ses.protocol.handle()` de `chrome-extension://` protocol requests intercepten. Voor MV3 service workers werkt dit beter. Maar dit vereist diepgaand Electron-begrip.
+You have 811,000 blocklist entries. If uBlock Origin also blocks 300,000 of those domains but earlier in the pipeline, your security layer misses all those events. You have no idea what was blocked and why.
 
-Optie C (pragmatisch voor nu): Mark extensions die `chrome.identity` gebruiken als `⚠️ Partial` in de gallery, met een note "Login werkt via tabblad" — veel extensions hebben een fallback waarbij ze een gewone browser tab openen voor OAuth. Grammarly doet dit ook. Test of de fallback werkt voordat je de hele polyfill bouwt.
+**What needs to be done:**
+- Define an "extension trust policy" for the security stack: do extension requests go through all security layers or not?
+- Consider: actively exclude ad-blocker extensions from the gallery (Tandem already has NetworkShield — uBlock is redundant and destructive to your telemetry), or at least strongly mark them as "conflicts with Tandem Security"
+- Extension service worker `fetch()` requests DO go through your webRequest hooks (Electron's webRequest catches everything in the session) — but `declarativeNetRequest` blocks earlier. This must be documented and tested.
 
-**Aanbeveling:** Optie C eerst. Verificeer of Grammarly's fallback werkt in Electron. Als het werkt, hoeft Phase 7 veel eenvoudiger te zijn dan gepland.
+**Also required:** Verify that OutboundGuard's POST body scanning also catches extension-initiated POSTs. A malicious script via an extension that exfiltrates data should be caught by OutboundGuard, not bypass it.
 
 ---
 
-### 3. OAuth popup in Phase 7 is een beveiligingsgat
+### 2. Phase 7 (chrome.identity polyfill) does NOT work for MV3 extensions
 
-Het plan maakt een `new BrowserWindow()` voor de OAuth flow. Dat window heeft:
-- Geen NetworkShield
-- Geen ScriptGuard  
-- Geen OutboundGuard
-- Geen ContentAnalyzer
+Phase 7 proposes using `session.setPreloads()` to inject the polyfill. This only works for MV2 background pages (which are regular renderers). **Grammarly is MV3.** MV3 extensions use service workers as their background script, and preloads do NOT run in service workers — only in renderer processes.
 
-Een aanvaller die een extension compileert met een kwaadaardige OAuth URL kan zo een volledig onbeschermde browser window openen in Tandem. Dat is een directe bypass van je gehele security stack.
+Concretely: if you implement this as described, it works for no modern extension. Grammarly, Notion Web Clipper — all MV3 nowadays.
 
-**Fix:** De BrowserWindow voor OAuth MOET dezelfde sessie gebruiken als de main browser, zodat de RequestDispatcher er ook over gaat. Voeg toe aan Phase 7:
+**Correct approach:**
+Option A (simple): Implement the polyfill as a separate "companion extension" that offers `chrome.identity.launchWebAuthFlow` via `chrome.runtime.sendMessage` cross-extension messaging. Extensions can then call it.
+
+Option B (correct but complex): In Electron you can intercept `chrome-extension://` protocol requests via `ses.protocol.handle()`. This works better for MV3 service workers. But this requires deep Electron understanding.
+
+Option C (pragmatic for now): Mark extensions that use `chrome.identity` as `Partial` in the gallery, with a note "Login works via tab" — many extensions have a fallback where they open a regular browser tab for OAuth. Grammarly does this too. Test whether the fallback works before building the entire polyfill.
+
+**Recommendation:** Option C first. Verify whether Grammarly's fallback works in Electron. If it works, Phase 7 can be much simpler than planned.
+
+---
+
+### 3. OAuth popup in Phase 7 is a security hole
+
+The plan creates a `new BrowserWindow()` for the OAuth flow. That window has:
+- No NetworkShield
+- No ScriptGuard
+- No OutboundGuard
+- No ContentAnalyzer
+
+An attacker who compiles an extension with a malicious OAuth URL can open a completely unprotected browser window in Tandem. That is a direct bypass of your entire security stack.
+
+**Fix:** The BrowserWindow for OAuth MUST use the same session as the main browser, so the RequestDispatcher also covers it. Add to Phase 7:
 ```typescript
 const popup = new BrowserWindow({
   webPreferences: {
-    session: ses, // ← ZELFDE sessie als de main browser
+    session: ses, // ← SAME session as the main browser
     ...
   }
 });
@@ -73,46 +73,46 @@ const popup = new BrowserWindow({
 
 ---
 
-## 🟡 BELANGRIJK — Moet geadresseerd worden
+## YELLOW — IMPORTANT — Must be addressed
 
-### 4. Extension ID preservatie — OAuth breekt als ID niet klopt
+### 4. Extension ID preservation — OAuth breaks if ID is wrong
 
-Wanneer je een CRX uitpakt en via `session.loadExtension()` laadt, gebruikt Electron de `key` field in `manifest.json` om de extension ID te berekenen (zelfde algoritme als Chrome). CWS extensions bevatten deze key altijd in hun manifest.json.
+When you extract a CRX and load it via `session.loadExtension()`, Electron uses the `key` field in `manifest.json` to calculate the extension ID (same algorithm as Chrome). CWS extensions always contain this key in their manifest.json.
 
-**Maar het plan verifieert dit nergens.** Als de `key` field ontbreekt na extractie (bug in de CRX extractor, truncated download, etc.), krijgt de extension een willekeurige Electron-gegenereerde ID. Dan werken OAuth redirects niet meer — want de OAuth app heeft het echte Chrome extension ID whitelisted (`{chrome-id}.chromiumapp.org`), niet de Electron-gegenereerde ID.
+**But the plan verifies this nowhere.** If the `key` field is missing after extraction (bug in the CRX extractor, truncated download, etc.), the extension gets a random Electron-generated ID. OAuth redirects then stop working — because the OAuth app has the real Chrome extension ID whitelisted (`{chrome-id}.chromiumapp.org`), not the Electron-generated ID.
 
-**Voeg toe aan Phase 1 verificatie:**
-- Na extractie: verifieer dat `manifest.json` een `key` field heeft
-- Log de extension ID die Electron toewijst na `session.loadExtension()`
-- Vergelijk die ID met de ID in de CWS URL — ze moeten gelijk zijn
-
----
-
-### 5. `session.removeExtension()` bestaat wel in Electron 40
-
-Phase 2 zegt dat uninstall "mogelijk een restart vereist (Electron limitation)". Dat is niet meer waar voor Electron 40 — `session.removeExtension(extensionId)` is beschikbaar. Gebruik het. Zo unloadt een extension direct zonder restart.
+**Add to Phase 1 verification:**
+- After extraction: verify that `manifest.json` has a `key` field
+- Log the extension ID that Electron assigns after `session.loadExtension()`
+- Compare that ID with the ID in the CWS URL — they must be equal
 
 ---
 
-### 6. Session isolation — extensions werken niet in geïsoleerde sessies
+### 5. `session.removeExtension()` does exist in Electron 40
 
-Tandem's SessionManager maakt geïsoleerde sessies (`session.fromPartition('persist:session-xxx')`). Extensions worden geladen in `persist:tandem` — de main sessie. Ze zijn NIET beschikbaar in geïsoleerde sessies.
-
-Dit is nu geen blocker, maar zodra gebruikers extensions gaan gebruiken en dan ook `POST /sessions/create` gebruiken voor geïsoleerd browsen, verwachten ze dat hun ad blocker ook daar werkt. Dat doet het niet.
-
-**Voeg toe aan Phase 1 of in een apart Phase 1.5:** Documenteer dit gedrag expliciet in STATUS.md als known limitation. Later kan er een "load extensions in all sessions" optie komen.
+Phase 2 says uninstall "may require a restart (Electron limitation)". That is no longer true for Electron 40 — `session.removeExtension(extensionId)` is available. Use it. This unloads an extension immediately without restart.
 
 ---
 
-### 7. `prodversion` is hardcoded — moet dynamisch zijn
+### 6. Session isolation — extensions don't work in isolated sessions
+
+Tandem's SessionManager creates isolated sessions (`session.fromPartition('persist:session-xxx')`). Extensions are loaded in `persist:tandem` — the main session. They are NOT available in isolated sessions.
+
+This is not a blocker now, but as soon as users start using extensions and then also use `POST /sessions/create` for isolated browsing, they expect their ad blocker to work there too. It doesn't.
+
+**Add to Phase 1 or a separate Phase 1.5:** Document this behavior explicitly in STATUS.md as a known limitation. Later a "load extensions in all sessions" option can be added.
+
+---
+
+### 7. `prodversion` is hardcoded — must be dynamic
 
 ```
 prodversion=130.0.0.0
 ```
 
-Dit staat hardcoded in het plan. Electron 40 draait Chromium 130, dus het klopt nu — maar als Electron update naar 41 (Chromium 132), downloadt Tandem misschien de verkeerde CRX versie (MV3 format-wise).
+This is hardcoded in the plan. Electron 40 runs Chromium 130, so it's correct now — but when Electron updates to 41 (Chromium 132), Tandem may download the wrong CRX version (MV3 format-wise).
 
-**Fix:** `process.versions.chrome` geeft de Chromium versie terug in Electron. Gebruik dat:
+**Fix:** `process.versions.chrome` returns the Chromium version in Electron. Use that:
 ```typescript
 const chromiumVersion = process.versions.chrome?.split('.')[0] + '.0.0.0' ?? '130.0.0.0';
 const crxUrl = `...&prodversion=${chromiumVersion}&...`;
@@ -120,64 +120,64 @@ const crxUrl = `...&prodversion=${chromiumVersion}&...`;
 
 ---
 
-### 8. Geen update mechanisme — beveiligingsrisico
+### 8. No update mechanism — security risk
 
-Geïnstalleerde extensions auto-updaten niet. Chrome doet dit zelf via de CRX server. Als een extension een security fix krijgt (en dat gebeurt regelmatig — uBlock Origin en Grammarly updaten constant), blijft Tandem's installatie achter.
+Installed extensions don't auto-update. Chrome does this itself via the CRX server. When an extension receives a security fix (and this happens regularly — uBlock Origin and Grammarly update constantly), Tandem's installation falls behind.
 
-Dit is geen Phase 1 probleem maar moet in de roadmap staan. Voeg toe aan ROADMAP.md:
+This is not a Phase 1 problem but must be in the roadmap. Add to ROADMAP.md:
 
-**Phase 9 (toekomst): Extension Auto-Updates**
-- Weekly check: voor elke geïnstalleerde extension, download de huidige CRX en vergelijk manifest versie
-- Als nieuwer: update automatisch (verwijder oude, installeer nieuwe)
-- CRX hash verificatie om supply chain attacks te voorkomen
-
----
-
-### 9. Toekomstige extensions — gallery is hardcoded TypeScript
-
-De gallery in `gallery.ts` is een hardcoded array in TypeScript code. Elke nieuwe populaire extension toevoegen vereist een code change + deploy.
-
-**Betere aanpak:** `~/.tandem/extensions/gallery.json` die bij startup geladen wordt, eventueel te updaten zonder rebuild. Of een optionele remote gallery endpoint (privacy-preserving — geen tracking, alleen een statische JSON file op een CDN).
+**Phase 9 (future): Extension Auto-Updates**
+- Weekly check: for each installed extension, download the current CRX and compare manifest version
+- If newer: update automatically (remove old, install new)
+- CRX hash verification to prevent supply chain attacks
 
 ---
 
-## ✅ WAT GOED IS
+### 9. Future extensions — gallery is hardcoded TypeScript
 
-- **CLAUDE.md is uitstekend** — de "one session per phase" regel, STATUS.md als entry point, de scope-beperkingen per fase, de "do NOT do" lijst — dit is precies hoe je Claude Code moet inzetten voor een groot project
-- **CRX header parsing** — CRX2 en CRX3 zijn allebei correct beschreven (version 2 vs 3, header byte layout)
-- **npm is correct** — Tandem heeft package-lock.json, dus `npm install adm-zip` is juist (niet pnpm)
-- **`npm start` rule** — de waarschuwing over `ELECTRON_RUN_AS_NODE` is goud, Claude Code doet dit fout als je het niet expliciet zegt
-- **Platform-aware Chrome paths** — macOS/Windows/Linux alle drie correct
-- **Version subfolder logic** in Chrome importer — sorted + reversed voor laatste versie is correct
-- **`fs.cpSync`** — correct, beschikbaar vanaf Node 16.7+, Tandem draait Node 25
-- **Graceful degradation** voor native messaging — juiste aanpak
-- **Pre-existing TypeScript errors** in tests vermeld — dit is een echte valkuil die Claude Code anders als blocker ziet
-- **Phase scope limitations** — elke fase heeft een expliciete "do NOT do" lijst, dit voorkomt scope creep tussen sessies
+The gallery in `gallery.ts` is a hardcoded array in TypeScript code. Adding every new popular extension requires a code change + deploy.
+
+**Better approach:** `~/.tandem/extensions/gallery.json` that is loaded at startup, optionally updatable without rebuild. Or an optional remote gallery endpoint (privacy-preserving — no tracking, just a static JSON file on a CDN).
 
 ---
 
-## Aanbevolen aanpassingen aan het plan
+## GREEN — WHAT'S GOOD
 
-### Aan CLAUDE.md toevoegen (Security Rules sectie):
+- **CLAUDE.md is excellent** — the "one session per phase" rule, STATUS.md as entry point, the scope limitations per phase, the "do NOT do" list — this is exactly how you should use Claude Code for a large project
+- **CRX header parsing** — CRX2 and CRX3 are both correctly described (version 2 vs 3, header byte layout)
+- **npm is correct** — Tandem has package-lock.json, so `npm install adm-zip` is right (not pnpm)
+- **`npm start` rule** — the warning about `ELECTRON_RUN_AS_NODE` is gold, Claude Code gets this wrong if you don't explicitly state it
+- **Platform-aware Chrome paths** — macOS/Windows/Linux all three correct
+- **Version subfolder logic** in Chrome importer — sorted + reversed for latest version is correct
+- **`fs.cpSync`** — correct, available from Node 16.7+, Tandem runs Node 25
+- **Graceful degradation** for native messaging — correct approach
+- **Pre-existing TypeScript errors** in tests mentioned — this is a real pitfall that Claude Code otherwise sees as a blocker
+- **Phase scope limitations** — each phase has an explicit "do NOT do" list, this prevents scope creep between sessions
+
+---
+
+## Recommended changes to the plan
+
+### Add to CLAUDE.md (Security Rules section):
 
 ```markdown
 ## Security Stack Rules
 
-Tandem has a 6-layer security stack (NetworkShield, OutboundGuard, ContentAnalyzer, 
-ScriptGuard, BehaviorMonitor, GatekeeperWebSocket) wired into the RequestDispatcher 
+Tandem has a 6-layer security stack (NetworkShield, OutboundGuard, ContentAnalyzer,
+ScriptGuard, BehaviorMonitor, GatekeeperWebSocket) wired into the RequestDispatcher
 in main.ts. Extensions MUST NOT break this.
 
 Rules:
 1. NEVER bypass the RequestDispatcher for extension network requests
-2. Extensions that install declarativeNetRequest rules (ad blockers) conflict with 
-   NetworkShield — mark them as ⚠️ in the gallery with a conflict warning
+2. Extensions that install declarativeNetRequest rules (ad blockers) conflict with
+   NetworkShield — mark them as warning in the gallery with a conflict warning
 3. OAuth popup windows (Phase 7) MUST use the same session as the main browser
 4. Extensions run in persist:tandem — they do NOT run in isolated sessions
-5. After session.loadExtension(), verify the assigned extension ID matches the 
+5. After session.loadExtension(), verify the assigned extension ID matches the
    expected Chrome Store ID (check manifest.json has a 'key' field)
 ```
 
-### Aan PHASE-1.md toevoegen (verification checklist):
+### Add to PHASE-1.md (verification checklist):
 
 ```
 - [ ] manifest.json in extracted extension contains 'key' field
@@ -186,14 +186,14 @@ Rules:
 - [ ] Security stack is not bypassed by extension requests
 ```
 
-### Aan PHASE-7.md — complete rewrite van het polyfill mechanisme:
+### PHASE-7.md — complete rewrite of the polyfill mechanism:
 
-Vervang de `session.setPreloads()` aanpak met:
-1. Test eerst of Grammarly's fallback OAuth (via normale browser tab) al werkt in Electron
-2. Als dat werkt — klaar, geen polyfill nodig voor Phase 7
-3. Als niet — MV2 background pages: preload werkt; MV3 service workers: companion extension nodig
+Replace the `session.setPreloads()` approach with:
+1. First test whether Grammarly's fallback OAuth (via regular browser tab) already works in Electron
+2. If it works — done, no polyfill needed for Phase 7
+3. If not — MV2 background pages: preload works; MV3 service workers: companion extension needed
 
-### Aan ROADMAP.md toevoegen:
+### Add to ROADMAP.md:
 
 ```markdown
 ## Phase 9 (Future): Extension Auto-Updates
@@ -201,7 +201,7 @@ Vervang de `session.setPreloads()` aanpak met:
 - Automatic update if newer version available
 - CRX hash verification
 
-## Phase 10 (Future): Extension Conflict Management  
+## Phase 10 (Future): Extension Conflict Management
 - Detect when ad-blocker extensions conflict with NetworkShield
 - Show warning in gallery for conflicting extensions
 - Option to run extension in isolated session (separate from main session)
@@ -209,16 +209,16 @@ Vervang de `session.setPreloads()` aanpak met:
 
 ---
 
-## Conclusie
+## Conclusion
 
-**Start Phase 1 — maar met de security rules in CLAUDE.md eerst toegevoegd.** De CRX downloader en ExtensionManager zijn correct ontworpen en zullen werken. Phase 2 ook. Phase 3 ook.
+**Start Phase 1 — but with the security rules added to CLAUDE.md first.** The CRX downloader and ExtensionManager are correctly designed and will work. Phase 2 too. Phase 3 too.
 
-**Phase 7 moet geherschreven worden** vóór implementatie — de preload aanpak werkt niet voor MV3 service workers.
+**Phase 7 must be rewritten** before implementation — the preload approach doesn't work for MV3 service workers.
 
-**De OAuth popup BrowserWindow fix** (zelfde sessie) moet in Phase 7 zitten voor veiligheid.
+**The OAuth popup BrowserWindow fix** (same session) must be in Phase 7 for security.
 
-**De extension/security-stack conflicten** zijn het grootste lange-termijn risico. Nu niet alles oplossen, maar documenteer het en zorg dat de gallery ad-blocker extensions markeert als conflicterend met NetworkShield.
+**The extension/security-stack conflicts** are the biggest long-term risk. Don't solve everything now, but document it and ensure the gallery marks ad-blocker extensions as conflicting with NetworkShield.
 
-Het plan is 85% klaar. De missing 15% zijn precies de dingen die Tandem anders maken dan een gewone browser — de security stack en de agent-browser architectuur. Dat is ook waarom Claude Code ze gemist heeft: het las de Tandem-specifieke context niet volledig.
+The plan is 85% ready. The missing 15% are exactly the things that make Tandem different from a regular browser — the security stack and the agent-browser architecture. That's also why Claude Code missed them: it didn't fully read the Tandem-specific context.
 
-— Kees 🧀
+— Kees
