@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 5a
-**Last completed phase:** Phase 4
+**Next phase to implement:** Phase 5b
+**Last completed phase:** Phase 5a
 **Overall status:** IN PROGRESS
 
 ---
@@ -147,22 +147,35 @@
 
 ## Phase 5a: Settings Panel UI — Extensions
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Extensions section visible in settings panel
-  - [ ] "Installed" tab shows loaded extensions with name, version, status
-  - [ ] "From Chrome" tab lists importable Chrome extensions
-  - [ ] "Gallery" tab shows curated extensions with one-click install
-  - [ ] Install button triggers download + signature verify + load
-  - [ ] Remove button uninstalls extension
-  - [ ] Status indicators: loaded, not loaded, error
-  - [ ] Conflict warnings shown on extensions with detected conflicts
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Extensions section visible in settings panel (🧩 Extensions nav entry in sidebar)
+  - [x] "Installed" tab shows loaded extensions with name, version, status (tested with 0 and with available extensions)
+  - [x] "From Chrome" tab lists importable Chrome extensions (10 Chrome extensions detected on test machine)
+  - [x] "Gallery" tab shows curated extensions with one-click install (30 extensions, category filters, featured sorting)
+  - [x] Install button triggers download + signature verify + load (calls POST /extensions/install with spinner)
+  - [x] Remove button uninstalls extension (calls DELETE /extensions/uninstall/:id with confirm dialog)
+  - [x] Status indicators: loaded (green), not loaded (amber), error (red) — shown as badges on Installed tab
+  - [x] Conflict warnings shown on extensions with detected conflicts (DNR Overlap amber, Native Messaging blue)
+  - [x] App launches, browsing works
+- **Issues encountered:**
+  - None
+- **Notes for next phase:**
+  - The Extensions UI is in `shell/settings.html` — all CSS, HTML, and JS are inline (follows the existing settings panel pattern)
+  - Tab switching is managed by `#ext-tabs` buttons with `data-tab` attributes; content panels are `.ext-tab-content` divs
+  - The Installed tab loads data on init and after remove/install; From Chrome and Gallery tabs load on first switch (lazy)
+  - Install button in Gallery replaces itself with an "Installed" badge on success, shows inline error on failure
+  - Import button in From Chrome replaces itself with an "Imported" badge on success
+  - Remove button shows a confirm modal (reuses existing `showModal()` pattern) before calling DELETE
+  - Gallery category filters are rendered dynamically from the API response's `categories` array
+  - Featured extensions are sorted to the top in the Gallery tab
+  - `esc()` helper function added for HTML escaping to prevent XSS from extension names/descriptions
+  - No new npm dependencies added
+  - No TypeScript files were modified — this phase is purely UI (HTML/CSS/JS in settings.html)
+  - Phase 5b should add the extension toolbar to the main browser chrome (not the settings panel)
 
 ---
 
@@ -353,5 +366,6 @@
 | `src/extensions/gallery-defaults.ts` | 4 | Created — 30 curated extensions with types (GalleryExtension, ExtensionCategory) |
 | `src/extensions/gallery-loader.ts` | 4 | Created — Two-layer gallery merge logic (defaults + user overrides) |
 | `src/api/server.ts` | 1, 2, 3, 4 | Modified — Phase 1: extensionManager to options, list route. Phase 2: install/uninstall/list API routes. Phase 3: Chrome list/import routes. Phase 4: gallery route |
+| `shell/settings.html` | 5a | Modified — Added Extensions section with 3 tabs (Installed, From Chrome, Gallery), CSS for cards/badges/tabs, JS for API calls |
 | `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
 | `package-lock.json` | 1 | Modified — Lock file updated |

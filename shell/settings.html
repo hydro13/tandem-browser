@@ -303,6 +303,133 @@
     .modal h3 { margin-bottom: 12px; }
     .modal p { font-size: 13px; color: var(--text-dim); margin-bottom: 20px; }
     .modal .btn-group { justify-content: center; }
+
+    /* ═══ Extensions UI ═══ */
+    .ext-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+    .ext-tabs button {
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      color: var(--text-dim);
+      font-size: 13px;
+      padding: 10px 16px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ext-tabs button:hover { color: var(--text); }
+    .ext-tabs button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .ext-tab-content { display: none; }
+    .ext-tab-content.active { display: block; }
+
+    .ext-card {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      padding: 12px 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 8px;
+      gap: 12px;
+    }
+    .ext-card-info { flex: 1; min-width: 0; }
+    .ext-card-name { font-size: 13px; font-weight: 500; }
+    .ext-card-desc { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+    .ext-card-meta { font-size: 10px; color: var(--text-dim); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .ext-card-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
+
+    .ext-badge {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 500;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+    }
+    .ext-badge-loaded { background: rgba(78,204,163,0.15); color: var(--success); }
+    .ext-badge-notloaded { background: rgba(240,165,0,0.15); color: var(--warning); }
+    .ext-badge-error { background: rgba(233,69,96,0.15); color: var(--danger); }
+    .ext-badge-installed { background: rgba(78,204,163,0.15); color: var(--success); }
+    .ext-badge-imported { background: rgba(78,204,163,0.15); color: var(--success); }
+    .ext-badge-works { background: rgba(78,204,163,0.15); color: var(--success); }
+    .ext-badge-partial { background: rgba(240,165,0,0.15); color: var(--warning); }
+    .ext-badge-needs-work { background: rgba(233,69,96,0.15); color: var(--danger); }
+    .ext-badge-dnr { background: rgba(240,165,0,0.15); color: var(--warning); }
+    .ext-badge-native { background: rgba(100,149,237,0.2); color: #6495ed; }
+    .ext-badge-featured { background: rgba(233,69,96,0.12); color: var(--accent); }
+
+    .ext-category-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .ext-category-pill {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 4px 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .ext-category-pill:hover { color: var(--text); border-color: var(--text-dim); }
+    .ext-category-pill.active { color: var(--accent); border-color: var(--accent); background: rgba(233,69,96,0.08); }
+
+    .ext-empty {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--text-dim);
+      font-size: 13px;
+    }
+
+    .ext-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .ext-header-row .field-desc { margin: 0; }
+
+    .btn-sm {
+      padding: 5px 12px;
+      font-size: 12px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-sm.btn-primary { background: var(--accent); color: #fff; }
+    .btn-sm.btn-primary:hover { opacity: 0.85; }
+    .btn-sm.btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-sm.btn-danger { background: rgba(233,69,96,0.2); color: var(--danger); }
+    .btn-sm.btn-danger:hover { background: rgba(233,69,96,0.35); }
+    .btn-sm.btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-sm.btn-secondary:hover { background: rgba(255,255,255,0.1); }
+
+    .ext-spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: ext-spin 0.6s linear infinite;
+    }
+    @keyframes ext-spin { to { transform: rotate(360deg); } }
+
+    .ext-error-msg {
+      font-size: 11px;
+      color: var(--danger);
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -323,6 +450,7 @@
     <a href="#behavior" data-section="behavior">🧬 Behavioral Learning</a>
     <a href="#autonomy" data-section="autonomy">🤖 AI Autonomie</a>
     <a href="#data" data-section="data">💾 Data</a>
+    <a href="#extensions" data-section="extensions">🧩 Extensions</a>
   </nav>
 
   <div class="settings-body">
@@ -804,6 +932,39 @@
         <button class="btn btn-danger" id="btn-wipe">🗑 Clear all</button>
       </div>
     </div>
+
+    <!-- ═══ Extensions ═══ -->
+    <div class="section" id="extensions">
+      <h2>🧩 Extensions</h2>
+      <p class="section-desc">Manage browser extensions, import from Chrome, or discover new ones</p>
+
+      <div class="ext-tabs" id="ext-tabs">
+        <button class="active" data-tab="ext-installed">Installed</button>
+        <button data-tab="ext-chrome">From Chrome</button>
+        <button data-tab="ext-gallery">Gallery</button>
+      </div>
+
+      <!-- Installed tab -->
+      <div class="ext-tab-content active" id="ext-installed">
+        <div id="ext-installed-list"></div>
+      </div>
+
+      <!-- From Chrome tab -->
+      <div class="ext-tab-content" id="ext-chrome">
+        <div class="ext-header-row">
+          <div class="field-desc">Import extensions from your Chrome browser</div>
+          <button class="btn-sm btn-secondary" id="ext-chrome-import-all">Import All</button>
+        </div>
+        <div id="ext-chrome-list"></div>
+      </div>
+
+      <!-- Gallery tab -->
+      <div class="ext-tab-content" id="ext-gallery">
+        <div class="ext-category-filters" id="ext-gallery-filters"></div>
+        <div id="ext-gallery-list"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Toast -->
@@ -1269,12 +1430,331 @@
       });
     }
 
+    // ═══ Extensions ═══
+
+    // Tab switching
+    document.querySelectorAll('#ext-tabs button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#ext-tabs button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.ext-tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        const target = document.getElementById(btn.dataset.tab);
+        if (target) target.classList.add('active');
+        // Load data on tab switch
+        if (btn.dataset.tab === 'ext-installed') loadExtInstalled();
+        else if (btn.dataset.tab === 'ext-chrome') loadExtChrome();
+        else if (btn.dataset.tab === 'ext-gallery') loadExtGallery();
+      });
+    });
+
+    // ── Installed tab ──
+    async function loadExtInstalled() {
+      const container = document.getElementById('ext-installed-list');
+      container.innerHTML = '<div class="ext-empty">Loading...</div>';
+      try {
+        const res = await fetch(`${API}/extensions/list`);
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        const { loaded, available } = data;
+        if (available.length === 0) {
+          container.innerHTML = '<div class="ext-empty">No extensions installed yet. Use the Gallery tab to discover extensions.</div>';
+          return;
+        }
+        // Build a map of loaded extensions by path for status lookup
+        const loadedByPath = {};
+        for (const ext of loaded) {
+          loadedByPath[ext.path] = ext;
+        }
+        container.innerHTML = '';
+        for (const ext of available) {
+          const loadedExt = loadedByPath[ext.path];
+          const isLoaded = !!loadedExt;
+          const hasManifest = ext.hasManifest;
+          const diskId = ext.path.split('/').pop();
+          const version = loadedExt ? loadedExt.version : '';
+          const name = ext.name || diskId;
+
+          let statusBadge = '';
+          if (!hasManifest) {
+            statusBadge = '<span class="ext-badge ext-badge-error">Error</span>';
+          } else if (isLoaded) {
+            statusBadge = '<span class="ext-badge ext-badge-loaded">Loaded</span>';
+          } else {
+            statusBadge = '<span class="ext-badge ext-badge-notloaded">Not loaded</span>';
+          }
+
+          const card = document.createElement('div');
+          card.className = 'ext-card';
+          card.innerHTML = `
+            <div class="ext-card-info">
+              <div class="ext-card-name">${esc(name)}</div>
+              <div class="ext-card-meta">
+                ${version ? '<span>v' + esc(version) + '</span>' : ''}
+                <span style="opacity:0.5">${esc(diskId)}</span>
+                ${statusBadge}
+              </div>
+            </div>
+            <div class="ext-card-actions">
+              <button class="btn-sm btn-danger ext-remove-btn" data-id="${esc(diskId)}">Remove</button>
+            </div>
+          `;
+          container.appendChild(card);
+        }
+        // Wire remove buttons
+        container.querySelectorAll('.ext-remove-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.id;
+            showModal('Remove extension?', `This will uninstall "${id}" and remove its files.`, async () => {
+              btn.disabled = true;
+              btn.textContent = 'Removing...';
+              try {
+                const res = await fetch(`${API}/extensions/uninstall/${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                  showToast('Extension removed');
+                  loadExtInstalled();
+                } else {
+                  const err = await res.json().catch(() => ({}));
+                  showToast(err.error || 'Remove failed');
+                  btn.disabled = false;
+                  btn.textContent = 'Remove';
+                }
+              } catch {
+                showToast('Remove failed');
+                btn.disabled = false;
+                btn.textContent = 'Remove';
+              }
+            });
+          });
+        });
+      } catch {
+        container.innerHTML = '<div class="ext-empty">Failed to load extensions.</div>';
+      }
+    }
+
+    // ── From Chrome tab ──
+    async function loadExtChrome() {
+      const container = document.getElementById('ext-chrome-list');
+      container.innerHTML = '<div class="ext-empty">Loading...</div>';
+      try {
+        const res = await fetch(`${API}/extensions/chrome/list`);
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        if (!data.chromeDir) {
+          container.innerHTML = '<div class="ext-empty">Chrome not found on this system.</div>';
+          return;
+        }
+        if (!data.extensions || data.extensions.length === 0) {
+          container.innerHTML = '<div class="ext-empty">No extensions found in Chrome.</div>';
+          return;
+        }
+        container.innerHTML = '';
+        for (const ext of data.extensions) {
+          const card = document.createElement('div');
+          card.className = 'ext-card';
+          card.innerHTML = `
+            <div class="ext-card-info">
+              <div class="ext-card-name">${esc(ext.name)}</div>
+              <div class="ext-card-meta">
+                ${ext.version ? '<span>v' + esc(ext.version) + '</span>' : ''}
+              </div>
+            </div>
+            <div class="ext-card-actions">
+              ${ext.alreadyImported
+                ? '<span class="ext-badge ext-badge-imported">Imported</span>'
+                : '<button class="btn-sm btn-primary ext-chrome-import-btn" data-id="' + esc(ext.id) + '">Import</button>'
+              }
+            </div>
+          `;
+          container.appendChild(card);
+        }
+        // Wire import buttons
+        container.querySelectorAll('.ext-chrome-import-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="ext-spinner"></span>';
+            try {
+              const res = await fetch(`${API}/extensions/chrome/import`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ extensionId: btn.dataset.id }),
+              });
+              if (res.ok) {
+                btn.outerHTML = '<span class="ext-badge ext-badge-imported">Imported</span>';
+                showToast('Extension imported');
+              } else {
+                const err = await res.json().catch(() => ({}));
+                btn.disabled = false;
+                btn.textContent = 'Import';
+                showToast(err.error || 'Import failed');
+              }
+            } catch {
+              btn.disabled = false;
+              btn.textContent = 'Import';
+              showToast('Import failed');
+            }
+          });
+        });
+      } catch {
+        container.innerHTML = '<div class="ext-empty">Failed to load Chrome extensions.</div>';
+      }
+    }
+
+    // Import All button
+    document.getElementById('ext-chrome-import-all').addEventListener('click', async () => {
+      const btn = document.getElementById('ext-chrome-import-all');
+      btn.disabled = true;
+      btn.textContent = 'Importing...';
+      try {
+        const res = await fetch(`${API}/extensions/chrome/import`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ all: true }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          showToast(`${data.imported || 0} imported, ${data.skipped || 0} skipped`);
+          loadExtChrome();
+        } else {
+          showToast('Import failed');
+        }
+      } catch {
+        showToast('Import failed');
+      }
+      btn.disabled = false;
+      btn.textContent = 'Import All';
+    });
+
+    // ── Gallery tab ──
+    let galleryActiveCategory = null;
+
+    async function loadExtGallery(category) {
+      galleryActiveCategory = category || null;
+      const container = document.getElementById('ext-gallery-list');
+      const filtersContainer = document.getElementById('ext-gallery-filters');
+      container.innerHTML = '<div class="ext-empty">Loading...</div>';
+      try {
+        const url = new URL(`${API}/extensions/gallery`);
+        if (category) url.searchParams.set('category', category);
+        const res = await fetch(url.toString());
+        if (!res.ok) throw new Error('Failed to load');
+        const data = await res.json();
+        // Render category filters
+        const allCategories = data.categories || [];
+        filtersContainer.innerHTML = '';
+        const allPill = document.createElement('button');
+        allPill.className = 'ext-category-pill' + (!category ? ' active' : '');
+        allPill.textContent = 'All';
+        allPill.addEventListener('click', () => loadExtGallery(null));
+        filtersContainer.appendChild(allPill);
+        for (const cat of allCategories) {
+          const pill = document.createElement('button');
+          pill.className = 'ext-category-pill' + (category === cat ? ' active' : '');
+          pill.textContent = cat.charAt(0).toUpperCase() + cat.slice(1);
+          pill.addEventListener('click', () => loadExtGallery(cat));
+          filtersContainer.appendChild(pill);
+        }
+        // Render extensions — featured first
+        const extensions = (data.extensions || []).sort((a, b) => {
+          if (a.featured && !b.featured) return -1;
+          if (!a.featured && b.featured) return 1;
+          return 0;
+        });
+        if (extensions.length === 0) {
+          container.innerHTML = '<div class="ext-empty">No extensions found.</div>';
+          return;
+        }
+        container.innerHTML = '';
+        for (const ext of extensions) {
+          let compatBadge = '';
+          if (ext.compatibility === 'works') compatBadge = '<span class="ext-badge ext-badge-works">Works</span>';
+          else if (ext.compatibility === 'partial') compatBadge = '<span class="ext-badge ext-badge-partial">Partial</span>';
+          else if (ext.compatibility === 'needs-work') compatBadge = '<span class="ext-badge ext-badge-needs-work">Needs Setup</span>';
+
+          let conflictBadge = '';
+          if (ext.securityConflict === 'dnr-overlap') conflictBadge = '<span class="ext-badge ext-badge-dnr">DNR Overlap</span>';
+          else if (ext.securityConflict === 'native-messaging') conflictBadge = '<span class="ext-badge ext-badge-native">Native Messaging</span>';
+
+          const featuredBadge = ext.featured ? '<span class="ext-badge ext-badge-featured">Featured</span>' : '';
+
+          const card = document.createElement('div');
+          card.className = 'ext-card';
+          card.innerHTML = `
+            <div class="ext-card-info">
+              <div class="ext-card-name">${esc(ext.name)}</div>
+              <div class="ext-card-desc">${esc(ext.description)}</div>
+              <div class="ext-card-meta">
+                ${featuredBadge}
+                ${compatBadge}
+                ${conflictBadge}
+              </div>
+            </div>
+            <div class="ext-card-actions">
+              ${ext.installed
+                ? '<span class="ext-badge ext-badge-installed">Installed</span>'
+                : '<button class="btn-sm btn-primary ext-gallery-install-btn" data-id="' + esc(ext.id) + '">Install</button>'
+              }
+            </div>
+          `;
+          container.appendChild(card);
+        }
+        // Wire install buttons
+        container.querySelectorAll('.ext-gallery-install-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            const originalText = btn.textContent;
+            btn.innerHTML = '<span class="ext-spinner"></span>';
+            // Add error container
+            const card = btn.closest('.ext-card');
+            let errEl = card.querySelector('.ext-error-msg');
+            if (errEl) errEl.remove();
+            try {
+              const res = await fetch(`${API}/extensions/install`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ input: btn.dataset.id }),
+              });
+              if (res.ok) {
+                btn.outerHTML = '<span class="ext-badge ext-badge-installed">Installed</span>';
+                showToast('Extension installed');
+              } else {
+                const err = await res.json().catch(() => ({}));
+                btn.disabled = false;
+                btn.textContent = originalText;
+                errEl = document.createElement('div');
+                errEl.className = 'ext-error-msg';
+                errEl.textContent = err.error || 'Install failed';
+                card.querySelector('.ext-card-info').appendChild(errEl);
+              }
+            } catch {
+              btn.disabled = false;
+              btn.textContent = originalText;
+              errEl = document.createElement('div');
+              errEl.className = 'ext-error-msg';
+              errEl.textContent = 'Install failed — check connection';
+              card.querySelector('.ext-card-info').appendChild(errEl);
+            }
+          });
+        });
+      } catch {
+        container.innerHTML = '<div class="ext-empty">Failed to load gallery.</div>';
+      }
+    }
+
+    // HTML escape helper
+    function esc(str) {
+      if (!str) return '';
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
     // ═══ Init ═══
     loadConfig();
     loadAutonomy();
     loadBehaviorStats();
     loadChromeProfiles();
     updateSyncStatus();
+    loadExtInstalled();
     // Refresh stats every 10s
     setInterval(loadBehaviorStats, 10000);
   </script>
