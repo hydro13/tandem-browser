@@ -220,6 +220,8 @@ export class TandemAPI {
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       // Allow /status without auth (health check)
       if (req.path === '/status') return next();
+      // Allow /extensions/identity/auth without auth (called by extension service workers)
+      if (req.path === '/extensions/identity/auth') return next();
       // Allow OPTIONS preflight
       if (req.method === 'OPTIONS') return next();
 
@@ -2407,6 +2409,33 @@ export class TandemAPI {
         res.json(status);
       } catch (e: any) {
         res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /extensions/identity/auth — Handle chrome.identity.launchWebAuthFlow() from extensions
+    // No auth token required — called by extension service workers via polyfill.
+    // Accepts only from localhost (Express binds to 127.0.0.1).
+    this.app.post('/extensions/identity/auth', async (req: Request, res: Response) => {
+      try {
+        const { url, interactive, extensionId } = req.body;
+        if (!url || typeof url !== 'string') {
+          res.status(400).json({ error: 'url is required' });
+          return;
+        }
+        if (!extensionId || typeof extensionId !== 'string') {
+          res.status(400).json({ error: 'extensionId is required' });
+          return;
+        }
+        const polyfill = this.extensionManager.getIdentityPolyfill();
+        const result = await polyfill.handleLaunchWebAuthFlow({
+          url,
+          interactive: interactive !== false,
+          extensionId,
+        });
+        res.json(result);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
       }
     });
 

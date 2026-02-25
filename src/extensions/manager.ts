@@ -5,6 +5,7 @@ import os from 'os';
 import { ExtensionLoader } from './loader';
 import { CrxDownloader, InstallResult } from './crx-downloader';
 import { NativeMessagingSetup, NativeMessagingStatus } from './native-messaging';
+import { IdentityPolyfill } from './identity-polyfill';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -30,11 +31,13 @@ export class ExtensionManager {
   private loader: ExtensionLoader;
   private downloader: CrxDownloader;
   private nativeMessaging: NativeMessagingSetup;
+  private identityPolyfill: IdentityPolyfill;
 
-  constructor() {
+  constructor(apiPort: number = 8765) {
     this.loader = new ExtensionLoader();
     this.downloader = new CrxDownloader();
     this.nativeMessaging = new NativeMessagingSetup();
+    this.identityPolyfill = new IdentityPolyfill(apiPort);
   }
 
   /**
@@ -42,6 +45,15 @@ export class ExtensionManager {
    * Called once at app startup.
    */
   async init(session: Session): Promise<void> {
+    // Inject chrome.identity polyfill into extensions that need it (before loading)
+    const patchedExtensions = this.identityPolyfill.injectPolyfills();
+    if (patchedExtensions.length > 0) {
+      console.log(`🔑 Identity polyfill injected into ${patchedExtensions.length} extension(s)`);
+    }
+
+    // Register chromiumapp.org protocol handler for OAuth redirects
+    this.identityPolyfill.registerChromiumAppHandler(session);
+
     const loaded = await this.loader.loadAllExtensions(session);
     if (loaded.length > 0) {
       console.log(`🧩 ExtensionManager initialized with ${loaded.length} extension(s)`);
@@ -199,5 +211,10 @@ export class ExtensionManager {
   /** Check if a native messaging host is available for an extension */
   isNativeHostAvailable(extensionId: string): boolean {
     return this.nativeMessaging.isHostAvailable(extensionId);
+  }
+
+  /** Get identity polyfill for API endpoint registration */
+  getIdentityPolyfill(): IdentityPolyfill {
+    return this.identityPolyfill;
   }
 }

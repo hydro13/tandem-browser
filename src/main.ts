@@ -962,6 +962,7 @@ app.on('will-quit', () => {
   if (networkMocker) networkMocker.destroy();
   if (sessionManager) sessionManager.cleanup();
   if (extensionToolbar) extensionToolbar.destroy();
+  if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
 });
 
 app.on('window-all-closed', () => {

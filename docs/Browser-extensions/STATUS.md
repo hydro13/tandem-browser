@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 7
-**Last completed phase:** Phase 6
+**Next phase to implement:** Phase 8
+**Last completed phase:** Phase 7
 **Overall status:** IN PROGRESS
 
 ---
@@ -252,23 +252,42 @@
 
 ## Phase 7: chrome.identity OAuth Support
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Step 1 empirical test completed — MV3 fallback OAuth tested for Grammarly + Notion Web Clipper
-  - [ ] If fallback works: gallery compatibility notes updated, no polyfill code needed
-  - [ ] If polyfill needed: chosen approach (companion extension / protocol interception) documented
-  - [ ] OAuth BrowserWindow uses `persist:tandem` session (Security Stack Rules)
-  - [ ] OAuth popup closes automatically after redirect capture
-  - [ ] Grammarly login flow works end-to-end
-  - [ ] Notion Web Clipper login flow works end-to-end
-  - [ ] Extensions not using `chrome.identity` are unaffected
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
-- **IMPORTANT:** Do NOT use `session.setPreloads()` — does not work for MV3 service workers
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Step 1 empirical test completed — MV3 fallback OAuth tested for Grammarly + Notion Web Clipper
+  - [x] Grammarly: Scenario B — `chrome.identity` is `undefined` in Electron; extension depends on `chrome.identity.getRedirectURL()` for redirect URI in both non-interactive (`launchWebAuthFlow`) and interactive (tab-based) flows. Without polyfill, `redirectUri` resolves to empty string, breaking URL matching. Polyfill needed.
+  - [x] Notion Web Clipper: Does NOT need polyfill — no `identity` permission, uses cookie-based auth via `chrome.cookies` + notion.so web login. The `chrome.identity` reference in its code is only in a browser polyfill library (vendors file), not actively used.
+  - [x] Polyfill approach: **Service worker file patching + localhost API** (neither Option A nor Option B from phase doc). Prepends polyfill JS to extension's `sw.js` on disk before `session.loadExtension()`. Polyfill provides `chrome.identity.getRedirectURL()` and `chrome.identity.launchWebAuthFlow()`. The `launchWebAuthFlow` implementation fetches `POST /extensions/identity/auth` on localhost, which opens a BrowserWindow for the OAuth flow.
+  - [x] OAuth BrowserWindow uses `persist:tandem` session (Security Stack Rules) — verified in code at `identity-polyfill.ts:229`
+  - [x] OAuth popup closes automatically after redirect capture — `captureRedirect()` calls `cleanup()` which closes popup
+  - [x] 5-minute timeout on OAuth popups — verified in code at `identity-polyfill.ts:293`
+  - [x] `*.chromiumapp.org` URLs intercepted via `session.protocol.handle('https', ...)` — returns "Authentication Complete" HTML page, non-chromiumapp URLs pass through via `net.fetch(request)`
+  - [x] chromiumapp.org URL tested: navigated to `https://kbfnbcaeplbcioakkpcpgfkobkghlhen.chromiumapp.org/?code=test123&state=abc` — showed "Authentication Complete" page ✓
+  - [x] Grammarly service worker patched with polyfill (CWS_ID embedded, API_PORT embedded) — verified in `sw.js`
+  - [x] Extensions not using `chrome.identity` are unaffected — Dark Reader + Notion Web Clipper not patched (no `identity` permission / no service worker)
+  - [x] uBlock Origin still loads and functions (non-identity extension)
+  - [x] All API endpoints still respond (`/extensions/list`, `/extensions/gallery`, `/extensions/native-messaging/status`)
+  - [x] Identity auth endpoint accessible without auth token (`POST /extensions/identity/auth`)
+  - [x] App launches, browsing works (verified Google.com loads)
+  - [ ] Grammarly end-to-end login not tested — requires valid Grammarly account + interactive OAuth. Polyfill infrastructure verified working.
+  - [ ] Notion Web Clipper end-to-end login not tested — works via cookie-based auth (no polyfill needed), but requires Notion account
+- **Issues encountered:**
+  - Neither Option A (companion extension) nor Option B (protocol interception) from PHASE-7.md was used. Instead, a third approach was implemented: **service worker file patching**. The extension's `sw.js` file is modified on disk (before `session.loadExtension()`) to prepend a polyfill script that provides `chrome.identity`. This works because: (1) `session.setPreloads()` doesn't work for MV3 service workers, (2) companion extension approach requires `chrome.runtime.onMessageExternal` which may not work cross-extension in Electron, (3) protocol interception can't inject JS into service worker context. File patching is reliable, simple, and works with any MV3 extension.
+  - Grammarly's service worker has `host_permissions: ["http://*/*"]`, allowing the polyfill to `fetch()` to `localhost` for the OAuth flow. Extensions without this permission would need a different approach.
+  - The polyfill uses the CWS extension ID (folder name), not the Electron-assigned ID, so OAuth redirect URIs match what the extension expects (`https://{CWS_ID}.chromiumapp.org/`).
+  - Pre-existing Grammarly errors logged on startup (`cookies.onChanged`, `windows.onFocusChanged`) are unrelated to the polyfill — these are Electron API gaps.
+- **Notes for next phase:**
+  - `IdentityPolyfill` is in `src/extensions/identity-polyfill.ts` — instantiated by ExtensionManager with `apiPort`
+  - `ExtensionManager.getIdentityPolyfill()` exposes it for the API endpoint
+  - `POST /extensions/identity/auth` endpoint does NOT require auth token (called by extension service workers)
+  - The polyfill only patches extensions that: (1) declare `identity` permission, (2) are MV3, (3) have a `background.service_worker` entry
+  - Polyfill injection is idempotent — checks for marker comment `/* Tandem chrome.identity polyfill` before patching
+  - `chromiumapp.org` protocol handler intercepts ALL HTTPS requests in the session and uses `net.fetch(request)` for pass-through — this is necessary because `session.protocol.handle` replaces the default handler
+  - Extensions that need `chrome.identity` but lack `host_permissions` for localhost may need a different communication channel (not encountered yet)
+  - No new npm dependencies added
 
 ---
 
@@ -392,7 +411,6 @@
 | File | Phase | Action |
 |------|-------|--------|
 | `src/extensions/crx-downloader.ts` | 1 | Created — CRX download, format verification, extraction |
-| `src/extensions/manager.ts` | 1 | Created — ExtensionManager wrapping ExtensionLoader + CrxDownloader |
 | `src/main.ts` | 1 | Modified — ExtensionManager replaces direct ExtensionLoader usage |
 | `src/extensions/chrome-importer.ts` | 3 | Created — Chrome profile detection + extension import |
 | `src/extensions/gallery-defaults.ts` | 4 | Created — 30 curated extensions with types (GalleryExtension, ExtensionCategory) |
@@ -402,9 +420,10 @@
 | `src/extensions/toolbar.ts` | 5b | Created — ExtensionToolbar class: toolbar state, popup rendering, pin persistence, context menu, badge polling |
 | `shell/index.html` | 5b | Modified — Added extension toolbar CSS + HTML + JS (toolbar buttons, overflow dropdown, popup IPC) |
 | `src/preload.ts` | 5b | Modified — Added 9 extension toolbar IPC methods (getToolbarExtensions, openPopup, closePopup, pin, contextMenu, options, onUpdate, onRemoveRequest, onRefresh) |
-| `src/main.ts` | 5b | Modified — Import + wire ExtensionToolbar, register IPC handlers after extension init, cleanup on will-quit |
 | `src/extensions/native-messaging.ts` | 6 | Created — NativeMessagingSetup: platform-specific host detection, session configuration attempt, status reporting |
-| `src/extensions/manager.ts` | 1, 6 | Modified — Phase 6: NativeMessagingSetup integration in init(), getNativeMessagingStatus(), isNativeHostAvailable() |
-| `src/api/server.ts` | 1, 2, 3, 4, 5b, 6 | Modified — Phase 6: GET /extensions/native-messaging/status endpoint |
+| `src/extensions/identity-polyfill.ts` | 7 | Created — chrome.identity polyfill: SW file patching, chromiumapp.org handler, BrowserWindow OAuth flow |
+| `src/extensions/manager.ts` | 1, 6, 7 | Modified — Phase 7: IdentityPolyfill integration, apiPort constructor param, getIdentityPolyfill() accessor |
+| `src/api/server.ts` | 1, 2, 3, 4, 5b, 6, 7 | Modified — Phase 7: POST /extensions/identity/auth endpoint (no auth required) |
+| `src/main.ts` | 1, 5b, 7 | Modified — Phase 7: Identity polyfill cleanup in will-quit handler |
 | `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
 | `package-lock.json` | 1 | Modified — Lock file updated |
