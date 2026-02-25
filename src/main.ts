@@ -31,6 +31,7 @@ import { HistoryManager } from './history/manager';
 import { DownloadManager } from './downloads/manager';
 import { AudioCaptureManager } from './audio/capture';
 import { ExtensionLoader } from './extensions/loader';
+import { ExtensionManager } from './extensions/manager';
 import { ClaroNoteManager } from './claronote/manager';
 import { EventStreamManager } from './events/stream';
 import { TaskManager } from './agents/task-manager';
@@ -73,6 +74,7 @@ let historyManager: HistoryManager | null = null;
 let downloadManager: DownloadManager | null = null;
 let audioCaptureManager: AudioCaptureManager | null = null;
 let extensionLoader: ExtensionLoader | null = null;
+let extensionManager: ExtensionManager | null = null;
 let claroNoteManager: ClaroNoteManager | null = null;
 let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
@@ -278,7 +280,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   historyManager = new HistoryManager();
   downloadManager = new DownloadManager();
   audioCaptureManager = new AudioCaptureManager();
-  extensionLoader = new ExtensionLoader();
+  extensionManager = new ExtensionManager();
+  extensionLoader = extensionManager.getLoader();
   claroNoteManager = new ClaroNoteManager();
   eventStream = new EventStreamManager();
   taskManager = new TaskManager();
@@ -341,7 +344,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   }
 
   // Load extensions from ~/.tandem/extensions/
-  extensionLoader.loadAllExtensions(ses).catch((err) => {
+  extensionManager.init(ses).catch((err) => {
     console.warn('⚠️ Failed to load some extensions:', err);
   });
 
@@ -373,6 +376,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     downloadManager: downloadManager!,
     audioCaptureManager: audioCaptureManager!,
     extensionLoader: extensionLoader!,
+    extensionManager: extensionManager!,
     claroNoteManager: claroNoteManager!,
     eventStream: eventStream!,
     taskManager: taskManager!,

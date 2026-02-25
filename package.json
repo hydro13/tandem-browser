@@ -1,7 +1,7 @@
 {
   "name": "tandem-browser",
   "version": "0.9.0",
-  "description": "AI-Human symbiotic browser \u2014 Kees & Robin browse as one",
+  "description": "AI-Human symbiotic browser — Kees & Robin browse as one",
   "main": "dist/main.js",
   "author": "Robin Waslander <keesbeest78@proton.me>",
   "license": "MIT",
@@ -18,14 +18,16 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
+    "@types/adm-zip": "^0.5.7",
     "acorn": "^8.16.0",
+    "adm-zip": "^0.5.16",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "express": "^4.21.0",
     "turndown": "^7.2.2",
     "ws": "^8.19.0"
   },
-  "//": "Liquid Glass Lite \u2014 uncomment when package is ready",
+  "//": "Liquid Glass Lite — uncomment when package is ready",
   "// dependencies-future": {
     "@mblock/liquid-glass": "file:../liquid-glass-lite/packages/core"
   },

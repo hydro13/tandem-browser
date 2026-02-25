@@ -28,6 +28,7 @@ import { HistoryManager } from '../history/manager';
 import { DownloadManager } from '../downloads/manager';
 import { AudioCaptureManager } from '../audio/capture';
 import { ExtensionLoader } from '../extensions/loader';
+import { ExtensionManager } from '../extensions/manager';
 import { ClaroNoteManager } from '../claronote/manager';
 import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
@@ -91,6 +92,7 @@ export interface TandemAPIOptions {
   downloadManager: DownloadManager;
   audioCaptureManager: AudioCaptureManager;
   extensionLoader: ExtensionLoader;
+  extensionManager: ExtensionManager;
   claroNoteManager: ClaroNoteManager;
   eventStream: EventStreamManager;
   taskManager: TaskManager;
@@ -133,6 +135,7 @@ export class TandemAPI {
   private downloadManager: DownloadManager;
   private audioCaptureManager: AudioCaptureManager;
   private extensionLoader: ExtensionLoader;
+  private extensionManager: ExtensionManager;
   private claroNoteManager: ClaroNoteManager;
   private eventStream: EventStreamManager;
   private taskManager: TaskManager;
@@ -174,6 +177,7 @@ export class TandemAPI {
     this.downloadManager = opts.downloadManager;
     this.audioCaptureManager = opts.audioCaptureManager;
     this.extensionLoader = opts.extensionLoader;
+    this.extensionManager = opts.extensionManager;
     this.claroNoteManager = opts.claroNoteManager;
     this.eventStream = opts.eventStream;
     this.taskManager = opts.taskManager;
@@ -2193,8 +2197,7 @@ export class TandemAPI {
 
     this.app.get('/extensions/list', (_req: Request, res: Response) => {
       try {
-        const loaded = this.extensionLoader.listLoaded();
-        const available = this.extensionLoader.listAvailable();
+        const { loaded, available } = this.extensionManager.list();
         res.json({ loaded, available });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
@@ -2205,7 +2208,6 @@ export class TandemAPI {
       try {
         const { path: extPath } = req.body;
         if (!extPath) { res.status(400).json({ error: 'path required' }); return; }
-        const partition = 'persist:tandem';
         const ses = this.win.webContents.session;
         const result = await this.extensionLoader.loadExtension(ses, extPath);
         res.json({ ok: true, extension: result });
