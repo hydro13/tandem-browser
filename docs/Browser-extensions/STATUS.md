@@ -20,14 +20,16 @@
   - [ ] `npx tsc --noEmit` — 0 errors
   - [ ] `adm-zip` added to package.json and installed
   - [ ] CRX downloader parses CRX2 and CRX3 headers correctly
-  - [ ] **CRX3 signature verification passes** for a known-good CWS download
-  - [ ] **Tampered CRX is rejected** (modify a byte, verify install fails)
+  - [ ] Download stayed on `*.google.com` / `*.googleapis.com` — verified in logs
+  - [ ] Magic bytes Cr24 verified before extraction
+  - [ ] ZIP validity verified by AdmZip
   - [ ] CWS download uses spoofed Chrome User-Agent header
   - [ ] Retry with backoff works (3 attempts on 5xx)
   - [ ] `prodversion` uses `process.versions.chrome` (not hardcoded)
   - [ ] Extension ID extraction works (bare ID + CWS URL formats)
   - [ ] Downloaded extension appears in `~/.tandem/extensions/{id}/`
-  - [ ] `manifest.json` is readable after extraction and contains `key` field (warning if missing)
+  - [ ] `manifest.json` contains `key` field (log warning if missing)
+  - [ ] InstallResult.signatureVerified is false (documented placeholder)
   - [ ] Content script patterns logged for security auditing
   - [ ] Extension ID from Electron matches CWS ID (both logged)
   - [ ] ExtensionManager wraps ExtensionLoader + CrxDownloader
@@ -264,9 +266,11 @@
   - [ ] `npx tsc --noEmit` — 0 errors
   - [ ] DNR rule reader parses uBlock Origin rule files
   - [ ] Handles large rulesets (300K+ rules) without excessive memory
+  - [ ] DNR rule files parsed for all installed DNR extensions
+  - [ ] Static blocklist stored in SecurityDB and `.dnr-analysis.json`
+  - [ ] Analysis re-runs on extension update
   - [ ] Reconciler registers as passive `completedConsumer` in RequestDispatcher
-  - [ ] Synthetic events logged with `confidence: 'inferred'`
-  - [ ] NetworkShield overlap analysis produces meaningful numbers
+  - [ ] NetworkShield overlap correctly calculated from static lists
   - [ ] `GET /extensions/dnr/status` returns reconciler state
   - [ ] Reconciler does NOT modify or slow down any network requests
   - [ ] App launches, browsing works, extension ad-blocking unaffected

@@ -78,8 +78,9 @@ Rules:
    expected Chrome Web Store ID (check that `manifest.json` has a `key` field)
 6. OutboundGuard scans all POST/PUT/PATCH requests in the session — including those
    from extension content scripts and service workers — for credential exfiltration
-7. **CRX3 signature verification is MANDATORY** — never install an extension with an
-   invalid or missing signature. This protects against MITM attacks on the CWS download.
+7. **CRX format validation is MANDATORY** (magic bytes + version + Google-only redirects +
+   valid ZIP + valid manifest.json). Full CRX3 RSA signature verification is deferred —
+   `signatureVerified` will be `false` until implemented.
 8. **Extension content scripts bypass ScriptGuard** — they are injected by Electron's
    extension system, not via CDP. After loading an extension, read its `content_scripts`
    manifest entry and log the URL patterns for auditing. Phase 10a registers broad patterns
@@ -152,6 +153,20 @@ Rules:
 - **Extension metadata:** `.tandem-meta.json` stores import source and CWS ID for imported extensions
 - **Toolbar state:** `~/.tandem/extensions/toolbar-state.json` stores pin order and visibility
 - **Update state:** `~/.tandem/extensions/update-state.json` stores check timestamps and version info
+
+## State Files in ~/.tandem/extensions/
+
+| File | Owner | Phase |
+| ---- | ----- | ----- |
+| `{id}/.tandem-meta.json` | Per-extension metadata (CWS source, import info) | Phase 3 |
+| `gallery.json` | User gallery overrides (optional) | Phase 4 |
+| `toolbar-state.json` | Extension toolbar pin order + visibility | Phase 5b |
+| `update-state.json` | Update check timestamps + version tracking | Phase 9 |
+| `{id}/.dnr-analysis.json` | Static DNR domain analysis per extension | Phase 10b |
+
+**Rule: Do NOT create new state files without adding them to this table.**
+If you need to persist new state, either add to an existing file (with a new key)
+or document the new file here before creating it.
 
 ## Electron 40 Extension API Notes
 

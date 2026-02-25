@@ -56,39 +56,41 @@ Chrome extensions are `.crx` files — ZIP archives with a header:
 
 Strip the header → find ZIP start offset → extract with AdmZip.
 
-### 1.2 CRX3 Signature Verification
+### 1.2 CRX3 Format Validation (NOT full signature verification)
 
-**Why this matters:** Without signature verification, a MITM attack (public WiFi, compromised DNS) could inject malicious code into a CRX download. Given Tandem's security-first positioning, this is critical.
+**Scope decision:** Full CRX3 RSA/ECDSA signature verification requires parsing protobuf
+binary format (CrxFileHeader) without a library — this is error-prone and a source of
+subtle bugs (off-by-one in varint decoding reads wrong bytes as public key). Full
+cryptographic verification is deferred to a future phase.
 
-**CRX3 signed data format:**
-The CRX3 header contains a protobuf-encoded `CrxFileHeader` with:
-- `sha256_with_rsa` — array of `{ public_key, signature }` pairs
-- `sha256_with_ecdsa` — array of `{ public_key, signature }` pairs
+**What this phase DOES verify:**
 
-The signed payload is: `"CRX3 SignedData\x00"` + `uint32_le(signed_header_size)` + `signed_header_data` + ZIP payload.
-
-**Implementation approach:**
-1. Parse the CRX3 header manually (the protobuf structure is simple enough to parse without a protobuf library — it's just a few varint + length-delimited fields)
-2. Extract the public key(s) and signature(s)
-3. Verify using Node.js `crypto.createVerify('SHA256')` with the RSA public key
-4. The signed data covers everything from the signed header through the ZIP, ensuring the ZIP payload hasn't been tampered with
+1. Magic bytes: first 4 bytes must be `Cr24` (0x43723234) — reject anything else
+2. Version: bytes 5-8 must be 2 or 3 — reject unknown CRX versions
+3. Download source: the HTTP request must have stayed on *.google.com or
+   *.googleapis.com throughout all redirects — reject if any redirect left Google's
+   domains (MITM indicator)
+4. ZIP validity: AdmZip must be able to open the extracted payload without errors
+5. manifest.json: must be valid JSON with `name`, `version`, and `key` fields
 
 **`CrxVerificationResult` interface:**
 ```typescript
 interface CrxVerificationResult {
-  verified: boolean;
+  valid: boolean;
   format: 'crx2' | 'crx3';
-  publicKeyHash?: string;  // SHA256 of the public key (for ID derivation)
+  downloadedFromGoogle: boolean; // all redirects stayed on *.google.com / *.googleapis.com
+  manifestValid: boolean;
+  hasKeyField: boolean;
   error?: string;
 }
 ```
 
-**CRX2 fallback:** CRX2 uses a simpler RSA signature. Verify if possible, but CRX2 is legacy — most current CWS extensions use CRX3. If CRX2 verification is too complex, log a warning and allow the install (with `signatureVerified: false`).
+Set `signatureVerified: false` on all InstallResults for now. Add a comment in code:
+`// TODO: Full CRX3 RSA signature verification via protobuf — future phase`
 
-**Failure behavior:** If signature verification fails:
-- **Hard fail** — do NOT install the extension
-- Log a security warning: `[CRX] Signature verification failed for {id} — possible tampering`
-- Return `InstallResult` with `success: false` and descriptive error
+**Failure behavior:** If any of the 5 checks fail → hard fail, do NOT install.
+If `hasKeyField` is false → install but set `warning: "manifest.json missing key field
+— extension ID may not match CWS ID, OAuth flows may break"`
 
 ### 1.3 CWS Download with Resilience
 
@@ -183,9 +185,11 @@ Replace the direct `ExtensionLoader` usage:
 - [ ] `adm-zip` and `@types/adm-zip` in package.json
 - [ ] CRX2 header parsing works (version field = 2)
 - [ ] CRX3 header parsing works (version field = 3)
-- [ ] **CRX3 signature verification passes** for a known-good CWS download (test with uBlock Origin)
-- [ ] **Tampered CRX is rejected** — modify a byte in the ZIP payload, verify install fails
+- [ ] Download stayed on `*.google.com` / `*.googleapis.com` — verified in logs
+- [ ] Magic bytes Cr24 verified before extraction
+- [ ] ZIP validity verified by AdmZip
 - [ ] Non-CRX files rejected (wrong magic bytes)
+- [ ] InstallResult.signatureVerified is false (documented placeholder)
 - [ ] Extension ID extracted from bare ID: `cjpalhdlnbpafiamejdnhcphjbkeiagm`
 - [ ] Extension ID extracted from CWS URL: `https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm`
 - [ ] `prodversion` in CWS download URL uses `process.versions.chrome` (not hardcoded)

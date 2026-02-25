@@ -91,26 +91,48 @@ interface DnrRuleSummary {
 
 **Note:** uBlock Origin alone can have 300,000+ rules. The rule reader should be efficient — build a domain-level summary, don't store every individual rule in memory.
 
-### 10b.2 Telemetry Gap Measurement
+### 10b.2 Static DNR Domain Analysis (replaces runtime delta approach)
 
-Build a monitoring layer that detects when DNR blocks traffic that Guardian would have seen:
+**Why not runtime delta analysis:** The original approach ("domain not seen by Guardian
+= blocked by DNR") has unacceptable false positive rates. A domain may not appear in
+Guardian's traffic because: (1) it was served from browser cache, (2) the page didn't
+request it this time due to A/B testing, (3) NetworkShield blocked it first. These are
+indistinguishable from DNR blocks at runtime.
 
-**Approach: Sampling via `chrome.declarativeNetRequest.getMatchedRules()`**
+**This phase uses static analysis instead:**
 
-Electron (Chromium 130) exposes `chrome.declarativeNetRequest.getMatchedRules()` which returns recently matched rules. However, this API is only available within extension contexts, not from the main process.
+When an extension with DNR rules is installed or updated:
 
-**Alternative approach: Network delta analysis**
+1. Read all DNR rule files listed in `manifest.json` → `declarative_net_request.rule_resources`
+2. Parse each rule file — rules with `action.type: "block"` extract target domains from
+   `condition.urlFilter` using the pattern `||domain.com^` → `domain.com`
+3. Store the complete blocked-domain set in SecurityDB as a new record type:
 
-1. **Register a `completedConsumer`** in RequestDispatcher (low priority, runs last)
-2. Track which domains Guardian _actually_ processed in a time window (e.g., per page load)
-3. After page load completes, compare against the loaded extension's DNR domain list
-4. Domains in the DNR block list that _never_ appeared in Guardian's traffic → likely blocked by DNR
-5. Log synthetic events: `{ type: 'dnr-blocked', domain, extensionId, confidence: 'inferred' }`
+```typescript
+interface DnrExtensionBlocklist {
+  extensionId: string;
+  extensionName: string;
+  domains: string[];       // domains with action.type: "block"
+  ruleCount: number;
+  analysedAt: number;      // timestamp
+  manifestVersion: string; // extension version this analysis is for
+}
+```
 
-**Important:** This is _inference_, not certainty. A domain might not appear because the page simply didn't request it. To improve confidence:
-- Only flag domains that are commonly seen on similar pages (use EvolutionEngine baselines)
-- Track domain patterns across multiple page loads before flagging
-- Mark all synthetic events with `confidence: 'inferred'` so they're distinguishable from direct observations
+1. Save to `~/.tandem/extensions/{id}/.dnr-analysis.json` for fast loading on restart
+2. Re-run analysis on every extension update
+
+**Runtime integration:**
+In RequestDispatcher's `completedConsumer` (low priority), when a request completes:
+
+- Check if the requesting domain is in any extension's DNR blocklist
+- If yes, AND Guardian processed the request (it was NOT blocked): log this as
+  `{ type: 'dnr-allowed-by-guardian', domain, reason: 'guardian-saw-it-first' }`
+- This gives you accurate data about when Guardian fires BEFORE DNR rules
+
+**Drop the "inferred block" synthetic events entirely.** Static analysis gives accurate
+data; inferred events add noise to SecurityDB. The overlap analysis (10b.4) now uses
+the static blocklist directly — no runtime inference needed.
 
 ### 10b.3 Synthetic Event Logging
 
@@ -188,12 +210,12 @@ In `main.ts`:
 - [ ] DNR rule reader parses uBlock Origin's rule files correctly
 - [ ] DNR rule reader handles large rulesets (300K+ rules) without excessive memory
 - [ ] Domain extraction from `urlFilter` patterns works (e.g., `||example.com^` → `example.com`)
+- [ ] DNR rule files parsed for all installed DNR extensions
+- [ ] Static blocklist stored in SecurityDB and `.dnr-analysis.json`
+- [ ] Analysis re-runs on extension update
 - [ ] Reconciler registers as a `completedConsumer` in RequestDispatcher
-- [ ] Synthetic events logged to SecurityDB with `type: 'dnr-extension-block'`
-- [ ] All synthetic events marked with `confidence: 'inferred'`
-- [ ] NetworkShield overlap analysis produces meaningful numbers
+- [ ] NetworkShield overlap correctly calculated from static lists
 - [ ] `GET /extensions/dnr/status` returns reconciler status and overlap analysis
-- [ ] `GET /extensions/dnr/events` returns inferred block events
 - [ ] Reconciler does NOT modify, block, or slow down any network requests
 - [ ] Reconciler gracefully handles extensions without DNR rules (skip them)
 - [ ] App launches, browsing works, extension ad-blocking still functions
