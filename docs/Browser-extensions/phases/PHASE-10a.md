@@ -1,10 +1,10 @@
-# Phase 10: Extension Conflict Management
+# Phase 10a: Extension Conflict Detection
 
 > **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1, 4
 
 ## Goal
 
-Detect and communicate when browser extensions conflict with Tandem's security stack. The primary conflict is between extensions that use `declarativeNetRequest` (DNR) rules and Tandem's NetworkShield/Guardian system — both operate on the same network requests but at different layers, leading to gaps in security telemetry.
+Detect and communicate when browser extensions conflict with Tandem's security stack or with each other. This phase creates the detection engine and API — Phase 10b builds the active reconciliation layer for DNR conflicts.
 
 ## Background
 
@@ -18,7 +18,7 @@ Tandem's security stack is wired into the `persist:tandem` session via the Reque
 - The user has less security visibility, not more, despite installing a "security" extension
 
 **The empirical question:**
-Whether DNR rules fire before or after Electron's `session.webRequest` depends on Chromium internals. Electron's `session.webRequest` is a **native** hook (via `ElectronNetworkDelegate`), not an extension `webRequest` API. The ordering may differ from Chrome's extension-vs-extension ordering. This was tested in Phase 1 — the results inform this phase.
+Whether DNR rules fire before or after Electron's `session.webRequest` depends on Chromium internals. This was tested in Phase 1 — the results inform this phase and Phase 10b.
 
 ### The Isolated Session Gap
 
@@ -44,18 +44,22 @@ Extensions load in `persist:tandem` only. Isolated sessions created by SessionMa
 
 ## Tasks
 
-### 10.1 Create Conflict Detector
+### 10a.1 Create Conflict Detector
 
 Create `src/extensions/conflict-detector.ts`:
 
 ```typescript
-export type ConflictType = 'dnr-overlap' | 'native-messaging' | 'content-script-injection';
+export type ConflictType =
+  | 'dnr-overlap'
+  | 'native-messaging'
+  | 'content-script-broad'
+  | 'keyboard-shortcut';
 
 export interface ExtensionConflict {
   extensionId: string;
   extensionName: string;
   conflictType: ConflictType;
-  severity: 'warning' | 'critical';
+  severity: 'info' | 'warning' | 'critical';
   description: string;
   recommendation: string;
 }
@@ -63,7 +67,6 @@ export interface ExtensionConflict {
 export class ConflictDetector {
   /**
    * Analyze an extension's manifest for potential conflicts with the security stack.
-   * Check permissions, declarativeNetRequest rules, content scripts, etc.
    */
   analyzeManifest(manifestPath: string): ExtensionConflict[]
 
@@ -76,7 +79,7 @@ export class ConflictDetector {
 
 **Detection rules:**
 
-1. **DNR overlap (warning):**
+1. **DNR overlap (warning or critical):**
    - Check `manifest.json` for `declarative_net_request` permission or `declarativeNetRequest` in `permissions` array
    - Check for `rule_resources` in `declarative_net_request` manifest key
    - If found → `conflictType: 'dnr-overlap'`, severity based on Phase 1 test results:
@@ -88,11 +91,19 @@ export class ConflictDetector {
    - If found → `conflictType: 'native-messaging'`, `severity: 'warning'` ("Extension requires a desktop companion app that may not be installed")
 
 3. **Broad content script injection (warning):**
-   - Check `content_scripts` for `matches: ["<all_urls>"]` or very broad patterns
+   - Check `content_scripts` for `matches: ["<all_urls>"]` or very broad patterns like `*://*/*`
    - Combined with `permissions` that include `webRequest` or `webRequestBlocking`
-   - If found → `conflictType: 'content-script-injection'`, `severity: 'warning'` ("Extension injects scripts into all pages — verify it's trusted")
+   - If found → `conflictType: 'content-script-broad'`, `severity: 'warning'` ("Extension injects scripts into all pages — verify it's trusted")
+   - **Security integration:** Log these broad content scripts as known-trusted in ScriptGuard context. This creates a whitelist so ScriptGuard doesn't flag extension-injected scripts as suspicious.
 
-### 10.2 Integrate with Extension Manager
+4. **Keyboard shortcut conflicts (info):**
+   - Check `commands` in manifest.json for keyboard shortcuts
+   - Compare against Tandem's own keyboard shortcuts (read from keybinding config)
+   - Known Tandem shortcuts to check: Cmd+K (chat), Cmd+L (URL bar), Cmd+T (new tab), Cmd+W (close tab), Cmd+Shift+T (reopen), Cmd+1-9 (tab focus)
+   - If overlap found → `conflictType: 'keyboard-shortcut'`, `severity: 'info'` ("Extension shortcut {key} conflicts with Tandem's {action}")
+   - Document which takes priority (Tandem's shortcuts should win since they're registered at the BrowserWindow level)
+
+### 10a.2 Integrate with Extension Manager
 
 Update `ExtensionManager` to run conflict detection:
 
@@ -100,11 +111,12 @@ Update `ExtensionManager` to run conflict detection:
 - Include conflicts in the install result (new field on `InstallResult`)
 - On `list()`: include conflicts per extension in the response
 
-### 10.3 Add Conflict Info to API
+### 10a.3 Add Conflict Info to API
 
 Update extension API endpoints:
 
 **`GET /extensions/list`** — add `conflicts` array per extension:
+
 ```typescript
 {
   loaded: [
@@ -117,7 +129,7 @@ Update extension API endpoints:
           conflictType: "dnr-overlap",
           severity: "warning",
           description: "Uses declarativeNetRequest rules that may overlap with NetworkShield",
-          recommendation: "Tandem's NetworkShield already blocks malicious domains. This extension is redundant for security but may be useful for ad blocking."
+          recommendation: "Tandem's NetworkShield already blocks malicious domains. This extension is redundant for security but useful for ad blocking."
         }
       ]
     }
@@ -128,15 +140,16 @@ Update extension API endpoints:
 **`GET /extensions/gallery`** — the `securityConflict` field already exists from Phase 4. Ensure consistency between the gallery's static conflict info and the dynamic detection.
 
 **`GET /extensions/conflicts`** — new endpoint:
+
 ```typescript
 // Returns all detected conflicts across installed extensions
 // Returns: {
 //   conflicts: ExtensionConflict[],
-//   summary: { warnings: number, critical: number }
+//   summary: { info: number, warnings: number, critical: number }
 // }
 ```
 
-### 10.4 Isolated Session Extension Loading (Foundation)
+### 10a.4 Isolated Session Extension Loading (Foundation)
 
 Lay the groundwork for loading extensions in isolated sessions:
 
@@ -156,6 +169,7 @@ Lay the groundwork for loading extensions in isolated sessions:
 - [ ] ConflictDetector correctly identifies extensions with `declarativeNetRequest` permissions
 - [ ] ConflictDetector correctly identifies extensions with `nativeMessaging` permissions
 - [ ] ConflictDetector correctly identifies broad content script injection patterns
+- [ ] ConflictDetector correctly identifies keyboard shortcut conflicts with Tandem
 - [ ] Conflict severity matches Phase 1 DNR test results
 - [ ] `GET /extensions/list` includes conflicts per extension
 - [ ] `GET /extensions/conflicts` returns all conflicts with summary counts
@@ -170,9 +184,11 @@ Lay the groundwork for loading extensions in isolated sessions:
 - Do NOT wire extension loading into SessionManager — that's a future task
 - Do NOT block extension installation based on conflicts — warn only
 - Do NOT modify the security stack (Guardian, NetworkShield) — detection only
-- Do NOT build UI for conflict management — that coordinates with Phase 5
+- Do NOT build UI for conflict management — that coordinates with Phase 5a
+- Do NOT build the DNR reconciliation layer — that's Phase 10b
 
 ## After Completion
 
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
+3. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section

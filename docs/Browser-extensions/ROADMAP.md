@@ -13,19 +13,34 @@
   - CRX2 and CRX3 header parsing
   - ZIP extraction to `~/.tandem/extensions/{id}/`
   - Extension ID extraction from CWS URL or bare ID
-  - Redirect-following HTTP client
-- [ ] **1.2** Add `adm-zip` dependency
+  - Redirect-following HTTP client with Chrome User-Agent spoofing
+  - Retry with exponential backoff (3 attempts)
+- [ ] **1.2** CRX3 signature verification
+  - Parse CRX3 protobuf header (public key + signature extraction)
+  - Verify RSA/ECDSA signature over signed data + ZIP payload
+  - Hard-fail on invalid signature (do NOT install)
+  - CRX2 fallback: verify if possible, warn if not
+- [ ] **1.3** CWS download resilience
+  - Chrome User-Agent header on CWS requests
+  - Response validation (Cr24 magic bytes check)
+  - 30-second timeout per attempt
+- [ ] **1.4** Post-extraction verification
+  - Verify `manifest.json` has `key` field (warn if missing)
+  - Compare Electron extension ID with CWS ID (log both)
+  - Log content script URL patterns for security auditing
+- [ ] **1.5** Add `adm-zip` dependency
   - `npm install adm-zip @types/adm-zip`
-- [ ] **1.3** Create `src/extensions/manager.ts`
+- [ ] **1.6** Create `src/extensions/manager.ts`
   - Wraps ExtensionLoader + CrxDownloader
   - `init(session)` — load all extensions on startup
-  - `install(input, session)` — download from CWS + load
+  - `install(input, session)` — download + verify signature + load
   - `list()` — list available extensions
-  - `uninstall(extensionId)` — remove from disk
-- [ ] **1.4** Wire ExtensionManager into `main.ts`
+  - `uninstall(extensionId, session)` — `session.removeExtension()` + file removal
+  - `getExtensionMetadata(id)` — parsed manifest info
+- [ ] **1.7** Wire ExtensionManager into `main.ts`
   - Replace direct ExtensionLoader usage with ExtensionManager
   - Pass session through init chain
-- [ ] **1.5** Wire ExtensionManager into `api/server.ts`
+- [ ] **1.8** Wire ExtensionManager into `api/server.ts`
   - Replace ExtensionLoader with ExtensionManager in server options
   - Update existing routes to use ExtensionManager
 
@@ -36,17 +51,17 @@
 
 - [ ] **2.1** Add `POST /extensions/install` endpoint
   - Body: `{ input: string }` — CWS URL or extension ID
-  - Downloads CRX, extracts, loads into session
-  - Returns: `InstallResult` (success, extensionId, name, version, installPath, error)
+  - Downloads CRX, verifies signature, extracts, loads into session
+  - Returns: `InstallResult` (success, extensionId, name, version, signatureVerified, error)
 - [ ] **2.2** Add `DELETE /extensions/uninstall/:id` endpoint
-  - Removes extension from disk
+  - Calls `session.removeExtension()` + removes from disk (no restart)
   - Returns: `{ success: boolean }`
 - [ ] **2.3** Update `GET /extensions/list` endpoint
   - Include install source, loaded status, version
   - Merge loaded + available info
 - [ ] **2.4** Add error handling for all extension endpoints
   - Invalid extension IDs
-  - Download failures (network, invalid CRX)
+  - Download failures (network, invalid CRX, signature verification failure)
   - Already installed / not found for uninstall
 
 ---
@@ -60,6 +75,8 @@
   - Filter out Chrome internal extensions (`__MSG_` names)
   - Import single extension (copy to `~/.tandem/extensions/`)
   - Import all extensions (batch copy)
+  - Write `.tandem-meta.json` with CWS ID for auto-update registration
+  - Verify `key` field in copied manifest
 - [ ] **3.2** Add `GET /extensions/chrome/list` endpoint
   - Returns list of Chrome extensions available for import
   - Includes name, ID, version, already-imported status
@@ -74,12 +91,9 @@
 
 - [ ] **4.1** Create `src/extensions/gallery.ts`
   - Curated list of verified-compatible extensions
-  - Include all 10 recommended from TOP30-EXTENSIONS.md analysis:
-    1. uBlock Origin, 2. Bitwarden, 3. Dark Reader, 4. React DevTools,
-    5. Video Speed Controller, 6. MetaMask, 7. Wappalyzer, 8. Momentum,
-    9. Pocket, 10. StayFocusd
-  - Include all 30 from TOP30-EXTENSIONS.md with compatibility status
-  - Each entry: id, name, description, category, compatibility, mechanism
+  - Include all 10 recommended from TOP30-EXTENSIONS.md analysis
+  - Include all 30 from TOP30-EXTENSIONS.md with compatibility + API status
+  - Each entry: id, name, description, category, compatibility, mechanism, securityConflict
 - [ ] **4.2** Implement `GET /extensions/gallery` endpoint
   - Returns gallery entries with installed status per entry
   - Merge with `ExtensionManager.list()` to show installed flag
@@ -88,28 +102,58 @@
 
 ---
 
-## Phase 5: Settings Panel UI — Extensions
+## Phase 5a: Settings Panel UI — Extensions
 **Priority:** MEDIUM | **Effort:** ~1 day | **Dependencies:** Phase 2, 3, 4
 
-- [ ] **5.1** Add "Extensions" section to settings panel
+- [ ] **5a.1** Add "Extensions" section to settings panel
   - Tab navigation: Installed | From Chrome | Gallery
-- [ ] **5.2** Implement "Installed" tab
-  - List of loaded extensions with name, version, ID
-  - Status indicator: loaded, not loaded (needs restart), error
+- [ ] **5a.2** Implement "Installed" tab
+  - List of loaded extensions with name, version, ID, status
+  - Status indicator: loaded, not loaded, error
+  - Conflict warnings if applicable
   - Remove button per extension
-- [ ] **5.3** Implement "From Chrome" tab
+- [ ] **5a.3** Implement "From Chrome" tab
   - Auto-detect Chrome extensions via `GET /extensions/chrome/list`
   - Import button per extension, "Import All" bulk button
   - Show already-imported status
-- [ ] **5.4** Implement "Gallery" tab
+- [ ] **5a.4** Implement "Gallery" tab
   - Grid/list of curated extensions with descriptions
   - Category filter badges
   - One-click install button (calls `POST /extensions/install`)
-  - Compatibility badge (Works / Partial / Needs work)
-- [ ] **5.5** Wire up install/uninstall actions
-  - Loading state during install (download → extract → load)
+  - Compatibility + security conflict badges
+- [ ] **5a.5** Wire up install/uninstall actions
+  - Loading state during install (download → verify → extract → load)
   - Success/error feedback
   - Refresh list after install/uninstall
+
+---
+
+## Phase 5b: Extension Toolbar + Action Popup UI
+**Priority:** HIGH | **Effort:** ~1 day | **Dependencies:** Phase 1, 2, 5a
+
+- [ ] **5b.1** Create `src/extensions/toolbar.ts`
+  - Read toolbar data from extension manifests (action/browser_action/page_action)
+  - Provide icon, popup URL, badge text, title per extension
+  - Icon reading as base64 data URI
+- [ ] **5b.2** Extension popup rendering
+  - Open popup as BrowserWindow at chrome-extension:// URL
+  - Popup sizing based on content
+  - Close on click-outside or Escape
+  - Full chrome.* API access in popup context
+- [ ] **5b.3** Toolbar UI in shell
+  - Extension icons right of URL bar area
+  - Badge overlay (text + color) per icon
+  - Tooltip on hover
+  - Overflow dropdown for >6 extensions
+- [ ] **5b.4** Badge update system
+  - Listen for extension badge changes
+  - Forward updates to shell via IPC
+- [ ] **5b.5** Extension context menu
+  - Right-click: name, Options page, Remove, Pin/Unpin
+  - Pin state persisted in `~/.tandem/extensions/toolbar-state.json`
+- [ ] **5b.6** Preload + IPC wiring
+  - `tandem.getToolbarExtensions()`, `tandem.openExtensionPopup(id)`
+  - Badge update, install/uninstall event listeners in shell
 
 ---
 
@@ -117,19 +161,14 @@
 **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1
 
 - [ ] **6.1** Create native messaging host detection
-  - Detect 1Password native host binary per platform
-  - Detect LastPass native host binary per platform
-  - Detect Postman Interceptor native host per platform
-  - Platform paths:
-    - macOS: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/`
-    - Windows: Registry + `%APPDATA%\Google\Chrome\NativeMessagingHosts\`
-    - Linux: `~/.config/google-chrome/NativeMessagingHosts/`
+  - Detect 1Password, LastPass, Postman native hosts per platform
+  - Platform paths: macOS, Windows, Linux
 - [ ] **6.2** Configure `session.setNativeMessagingHostDirectory()`
   - Call during session init for detected hosts
   - Log which native messaging hosts were found
 - [ ] **6.3** Graceful degradation
-  - Extensions that need native messaging but don't have the host installed
-  - Show clear message in UI about requiring the desktop app
+  - Extensions needing missing native hosts show clear message
+  - No crashes on missing hosts
 
 ---
 
@@ -139,7 +178,7 @@
 - [ ] **7.1** Empirical test — do MV3 extensions have a working OAuth fallback?
   - Install Grammarly + Notion Web Clipper, attempt login
   - Document: does the fallback (tab-based OAuth) work in Electron?
-  - If yes → Phase 7 = documentation-only (update gallery notes)
+  - If yes → Phase 7 = documentation-only
   - If no → proceed to 7.2
 - [ ] **7.2** MV3-compatible polyfill (only if fallback fails)
   - Option A: companion extension with cross-extension messaging
@@ -162,6 +201,7 @@
 - [ ] **8.1** Unit tests for CRX parsing
   - CRX2 header parsing
   - CRX3 header parsing
+  - CRX3 signature verification (valid + tampered)
   - Invalid magic bytes rejection
   - ZIP extraction to correct path
 - [ ] **8.2** Unit tests for extension ID extraction
@@ -170,15 +210,16 @@
   - Short CWS URL
   - Invalid input
 - [ ] **8.3** Integration tests
-  - Install uBlock Origin by ID end-to-end
+  - Install uBlock Origin by ID end-to-end (including signature verification)
   - Install from full CWS URL
   - Chrome importer finds extensions at correct path
-  - Chrome importer skips already-imported extensions
+  - Chrome importer writes `.tandem-meta.json` with cwsId
 - [ ] **8.4** Verify extension IDs from TOP30
   - Check all 30 IDs resolve on Chrome Web Store
   - Special attention to flagged IDs: DuckDuckGo, JSON Formatter, Return YouTube Dislike
 - [ ] **8.5** Manual verification checklist
   - uBlock Origin loads and blocks ads
+  - uBlock Origin popup opens from toolbar with blocked count
   - Dark Reader applies dark mode
   - Extensions survive app restart
   - Uninstall removes from disk and unloads from session
@@ -190,41 +231,84 @@
 ## Phase 9: Extension Auto-Updates
 **Priority:** MEDIUM | **Effort:** ~1 day | **Dependencies:** Phase 1, 2
 
-- [ ] **9.1** Version-check mechanism
-  - For each installed extension: download CRX metadata from CWS
-  - Compare `manifest.version` with locally installed version
-  - Use same CWS CRX endpoint as the installer
-- [ ] **9.2** Update interval
-  - Configurable check frequency, default daily
-  - Store last check timestamp in `~/.tandem/extensions/update-state.json`
-- [ ] **9.3** Atomic update
-  - Download new CRX → extract to temp dir → verify `manifest.json` + `key` field
-  - Remove old version → move new version in place
-  - Reload via `session.removeExtension()` + `session.loadExtension()`
-- [ ] **9.4** Integrity verification
-  - Verify downloaded CRX is valid (magic bytes, successful ZIP extraction, manifest.json readable)
-  - Log all update operations for audit trail
-- [ ] **9.5** API endpoints
-  - `GET /extensions/updates/check` — trigger manual update check
-  - `GET /extensions/updates/status` — last check time + available updates
-- [ ] **9.6** UI integration
-  - Update indicator in Extensions settings tab
-  - "Update available" badge on extension cards
-  - "Update All" button
+- [ ] **9.1** Version check via Google Update Protocol
+  - Batch check all extensions in single HTTP request
+  - Parse version metadata response
+  - Fallback to CRX download if protocol endpoint fails
+- [ ] **9.2** Include Chrome-imported extensions
+  - Read `.tandem-meta.json` for cwsId
+  - Register imported extensions for update checks
+- [ ] **9.3** Atomic update with CRX3 signature verification
+  - Download new CRX → verify signature → extract to temp
+  - Unload old → swap directories → load new → rollback on failure
+- [ ] **9.4** Update state persistence
+  - Store in `~/.tandem/extensions/update-state.json`
+  - Track per-extension version, last check, last result
+- [ ] **9.5** Disk space management
+  - Track per-extension disk usage
+  - Clean up stale `.old/` and `.tmp/` directories
+  - Warn on >500MB total usage
+  - `GET /extensions/disk-usage` endpoint
+- [ ] **9.6** Scheduled update checks
+  - Default interval: 24 hours
+  - First check: 5 minutes after launch
+  - Background, non-blocking
+- [ ] **9.7** API endpoints
+  - `GET /extensions/updates/check` — batch version check
+  - `GET /extensions/updates/status` — current state
+  - `POST /extensions/updates/apply` — apply updates
+- [ ] **9.8** UI integration (if Phase 5a completed)
+  - Update badges, per-extension update button, "Update All"
 
 ---
 
-## Phase 10: Extension Conflict Management
+## Phase 10a: Extension Conflict Detection
 **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1, 4
 
-- [ ] **10.1** DNR overlap detection
-  - Detect when installed extensions use `declarativeNetRequest`
-  - Warn that these extensions may interfere with NetworkShield telemetry
-  - Show conflict indicator in gallery and installed extensions list
-- [ ] **10.2** Isolated session extension loading (future)
-  - Load extensions in isolated sessions (`persist:session-{name}`) created by SessionManager
-  - Call `loadExtension()` on each new session SessionManager creates
-  - Option in UI to enable/disable extensions per session
+- [ ] **10a.1** Create `src/extensions/conflict-detector.ts`
+  - DNR overlap detection (declarativeNetRequest vs NetworkShield)
+  - Native messaging dependency detection
+  - Broad content script injection detection + ScriptGuard whitelist
+  - Keyboard shortcut conflict detection (extension commands vs Tandem shortcuts)
+- [ ] **10a.2** Integrate with Extension Manager
+  - Run conflict detection on install
+  - Include conflicts in list response
+- [ ] **10a.3** Add conflict info to API
+  - Conflicts array per extension in `GET /extensions/list`
+  - `GET /extensions/conflicts` — all conflicts + summary
+  - Consistency with gallery `securityConflict` field
+- [ ] **10a.4** Isolated session extension loading (foundation)
+  - `ExtensionManager.loadInSession(session)` method
+  - Do NOT wire into SessionManager yet — document for future
+
+---
+
+## Phase 10b: DNR Reconciliation Layer
+**Priority:** MEDIUM | **Effort:** ~1 day | **Dependencies:** Phase 1 (DNR test), Phase 10a
+
+> **Conditional:** Only implement if Phase 1's DNR test confirms Guardian misses requests blocked by DNR rules. If Guardian still sees all requests, skip this phase.
+
+- [ ] **10b.1** DNR rule reader
+  - Read extension DNR rule files from manifest
+  - Extract blocked domains from `urlFilter` patterns
+  - Build domain-level summary (efficient for 300K+ rules)
+- [ ] **10b.2** Telemetry gap measurement
+  - Register `completedConsumer` in RequestDispatcher (priority 100)
+  - Track domains Guardian processed vs DNR block list
+  - Infer DNR-blocked requests with confidence scoring
+- [ ] **10b.3** Synthetic event logging
+  - Log `dnr-extension-block` events to SecurityDB
+  - All events marked `confidence: 'inferred'`
+  - EvolutionEngine can include in baseline calculations
+- [ ] **10b.4** NetworkShield overlap analysis
+  - Quantify overlap between extension DNR rules and NetworkShield blocklist
+  - Expose via API for transparency
+- [ ] **10b.5** Wire into startup
+  - Initialize after extensions loaded
+  - Register as passive completedConsumer in RequestDispatcher
+- [ ] **10b.6** API endpoints
+  - `GET /extensions/dnr/status` — reconciler state + overlap analysis
+  - `GET /extensions/dnr/events` — inferred block events
 
 ---
 
@@ -232,15 +316,17 @@
 
 | Phase | Name | Status | Progress |
 |-------|------|--------|----------|
-| 1 | CRX Downloader + Extension Manager | PENDING | 0/5 |
+| 1 | CRX Downloader + Extension Manager | PENDING | 0/8 |
 | 2 | Extension API Routes | PENDING | 0/4 |
 | 3 | Chrome Profile Importer | PENDING | 0/3 |
 | 4 | Curated Extension Gallery | PENDING | 0/3 |
-| 5 | Settings Panel UI | PENDING | 0/5 |
+| 5a | Settings Panel UI | PENDING | 0/5 |
+| 5b | Extension Toolbar + Popup UI | PENDING | 0/6 |
 | 6 | Native Messaging Support | PENDING | 0/3 |
 | 7 | chrome.identity OAuth Support | PENDING | 0/4 |
 | 8 | Testing & Verification | PENDING | 0/5 |
-| 9 | Extension Auto-Updates | PENDING | 0/6 |
-| 10 | Extension Conflict Management | PENDING | 0/2 |
+| 9 | Extension Auto-Updates | PENDING | 0/8 |
+| 10a | Extension Conflict Detection | PENDING | 0/4 |
+| 10b | DNR Reconciliation Layer | PENDING (conditional) | 0/6 |
 
-**Total:** 0/40 tasks completed
+**Total:** 0/54 tasks completed

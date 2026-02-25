@@ -422,6 +422,98 @@ Before shipping the curated gallery, verify these IDs resolve correctly on the C
 
 ---
 
+## Electron 40 Chrome API Compatibility Matrix
+
+> Extensions load and their icons appear, but that doesn't mean all features work.
+> This matrix documents which Chrome APIs each TOP30 extension **depends on** and whether Electron 40 supports them.
+> Use this as a reference when testing — an extension that "loads" but has a broken core API is worse than one that fails to load.
+
+### API Support Status in Electron 40 (Chromium 130)
+
+| Chrome API | Electron 40 Support | Notes |
+|-----------|---------------------|-------|
+| `chrome.storage.local` | ✅ Full | Core extension storage, works perfectly |
+| `chrome.storage.sync` | ⚠️ Partial | Works as local storage (no sync without Google account) |
+| `chrome.storage.session` | ✅ Full | Session-scoped storage, available since Chromium 102 |
+| `chrome.runtime.*` | ✅ Full | Messaging, lifecycle events — fully supported |
+| `chrome.tabs.*` | ⚠️ Partial | `query`, `create`, `update` work. `group`, `ungroup` not supported (Tandem has own groups). `captureVisibleTab` works. |
+| `chrome.windows.*` | ⚠️ Partial | Basic operations work. `create` with type `popup` may not match Chrome behavior exactly. |
+| `chrome.webRequest.*` | ✅ Full | Both blocking and non-blocking. Extensions see the same events as RequestDispatcher. |
+| `chrome.declarativeNetRequest` | ✅ Full | Static and dynamic rules. **Conflicts with NetworkShield** — see Phase 10. |
+| `chrome.cookies.*` | ✅ Full | Get, set, remove, onChanged — all work |
+| `chrome.scripting.*` (MV3) | ✅ Full | `executeScript`, `insertCSS`, `removeCSS` — supported since Electron 28 |
+| `chrome.action.*` (MV3) | ⚠️ Partial | `setIcon`, `setBadgeText`, `setBadgeBackgroundColor` work. `openPopup()` requires custom implementation (Phase 5b). |
+| `chrome.browserAction.*` (MV2) | ⚠️ Partial | Same as `chrome.action` — supported but popup rendering needs Phase 5b |
+| `chrome.identity.*` | ❌ Not supported | OAuth flows — needs polyfill (Phase 7) |
+| `chrome.desktopCapture.*` | ⚠️ Partial | Electron has `desktopCapturer` but the extension API bridge may not connect |
+| `chrome.nativeMessaging` | ⚠️ Requires setup | Works after `session.setNativeMessagingHostDirectory()` (Phase 6) |
+| `chrome.devtools.*` | ✅ Full | DevTools panels and inspectedWindow — works in Electron DevTools |
+| `chrome.contextMenus.*` | ✅ Full | Extension context menus work |
+| `chrome.alarms.*` | ✅ Full | Timers for background tasks — works |
+| `chrome.notifications.*` | ⚠️ Partial | Basic notifications work, but appearance differs from Chrome |
+| `chrome.offscreen` | ❌ Not supported | MV3 offscreen documents — not available in Electron 40 |
+| `chrome.sidePanel` | ❌ Not supported | Chrome 114+ side panel API — not in Electron |
+| `chrome.tabGroups` | ❌ Not supported | Tandem has its own tab group implementation |
+| `chrome.omnibox` | ❌ Not supported | Tandem has custom URL bar, no omnibox extension API |
+| `chrome.commands` | ⚠️ Partial | Extension keyboard shortcuts registered but may conflict with Tandem shortcuts |
+| `chrome_url_overrides.newtab` | ✅ Full | New tab page replacement works |
+| `content_scripts` | ✅ Full | Static content script injection works perfectly |
+| Service Workers (MV3) | ✅ Full | MV3 background service workers supported since Electron 28 |
+| Background Pages (MV2) | ✅ Full | MV2 persistent background pages supported |
+
+### Per-Extension API Dependencies
+
+| # | Extension | Critical APIs Used | All APIs Available? |
+|---|-----------|-------------------|---------------------|
+| 1 | uBlock Origin | `declarativeNetRequest`, `storage`, `scripting`, `tabs` | ✅ Yes |
+| 2 | AdBlock Plus | `declarativeNetRequest`, `storage`, `tabs` | ✅ Yes |
+| 3 | AdBlock | `declarativeNetRequest`, `storage` | ✅ Yes |
+| 4 | Privacy Badger | `storage`, `runtime`, `tabs`, `webRequest` | ✅ Yes |
+| 5 | Ghostery | `declarativeNetRequest`, `storage`, `scripting` | ✅ Yes |
+| 6 | DuckDuckGo | `declarativeNetRequest`, `storage`, `scripting` | ✅ Yes |
+| 7 | Bitwarden | `storage`, `runtime`, `tabs`, WebCrypto | ✅ Yes |
+| 8 | LastPass | `storage`, `nativeMessaging`, `tabs` | ⚠️ Needs Phase 6 |
+| 9 | 1Password | `nativeMessaging`, `storage`, `runtime` | ⚠️ Needs Phase 6 |
+| 10 | Grammarly | `storage`, `identity`, `scripting` | ⚠️ Needs Phase 7 (`identity`) |
+| 11 | Notion Web Clipper | `storage`, `identity`, `tabs` | ⚠️ Needs Phase 7 (`identity`) |
+| 12 | Pocket | `storage`, `runtime`, `tabs` (own OAuth) | ✅ Yes |
+| 13 | Loom | `desktopCapture`, `storage`, `tabs` | ⚠️ `desktopCapture` uncertain |
+| 14 | Momentum | `chrome_url_overrides`, `storage` | ✅ Yes |
+| 15 | StayFocusd | `declarativeNetRequest`, `storage`, `alarms` | ✅ Yes |
+| 16 | Dark Reader | `storage`, content scripts only | ✅ Yes |
+| 17 | Stylus | `storage`, `tabs`, content scripts | ✅ Yes |
+| 18 | React DevTools | `devtools`, content scripts | ✅ Yes |
+| 19 | Vue DevTools | `devtools`, content scripts | ✅ Yes |
+| 20 | Wappalyzer | `storage`, `tabs`, content scripts | ✅ Yes |
+| 21 | JSON Formatter | Content scripts only | ✅ Yes |
+| 22 | ColorZilla | EyeDropper API, content scripts | ✅ Yes |
+| 23 | EditThisCookie | `cookies`, `tabs` | ✅ Yes |
+| 24 | Postman Interceptor | `nativeMessaging`, `webRequest` | ⚠️ Needs Phase 6 |
+| 25 | Video Speed Controller | Content scripts only | ✅ Yes |
+| 26 | Return YouTube Dislike | Content scripts + fetch API | ✅ Yes |
+| 27 | Enhancer for YouTube | Content scripts, `storage` | ✅ Yes |
+| 28 | Honey | Content scripts, `storage`, `tabs` | ✅ Yes |
+| 29 | Google Translate | Content scripts, `contextMenus` (no `omnibox`) | ⚠️ No omnibox button |
+| 30 | MetaMask | `storage`, `runtime`, content scripts | ✅ Yes |
+
+### Summary
+
+| API Readiness | Count | Extensions |
+|--------------|-------|------------|
+| ✅ All APIs available | **22/30** | uBlock, Bitwarden, Dark Reader, MetaMask, etc. |
+| ⚠️ Needs Phase 6 (native msg) | **3/30** | LastPass, 1Password, Postman |
+| ⚠️ Needs Phase 7 (identity) | **2/30** | Grammarly, Notion Web Clipper |
+| ⚠️ Partial/uncertain | **2/30** | Loom (desktopCapture), Google Translate (omnibox) |
+| ❌ Blocked | **0/30** | — |
+
+**Action items from this matrix:**
+- Phase 5b (toolbar) is required for `chrome.action.openPopup()` to work
+- Phase 6 (native messaging) unblocks 3 extensions
+- Phase 7 (identity OAuth) unblocks 2 extensions
+- Phase 10a should flag `chrome.tabGroups`, `chrome.omnibox`, `chrome.sidePanel` usage as incompatible
+
+---
+
 ## Curated Gallery Recommendation (Phase 3)
 
 Based on this analysis, the 10 best extensions to include in Tandem's curated gallery (fully compatible + highest user value):

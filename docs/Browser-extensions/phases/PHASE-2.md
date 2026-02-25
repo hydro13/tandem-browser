@@ -86,3 +86,4 @@ All extension endpoints should:
 ## After Completion
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
+3. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section
