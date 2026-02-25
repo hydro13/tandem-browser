@@ -295,7 +295,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** (pending)
+- **Commit:** 90574cd
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Unit tests for CRX header parsing (CRX2, CRX3, invalid) — 7 tests covering CRX2/CRX3 valid, invalid magic bytes, HTML error responses, unknown versions, too-small files, non-Google domains
