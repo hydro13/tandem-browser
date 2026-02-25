@@ -2400,6 +2400,16 @@ export class TandemAPI {
       }
     });
 
+    // GET /extensions/native-messaging/status — Native messaging host detection status
+    this.app.get('/extensions/native-messaging/status', (_req: Request, res: Response) => {
+      try {
+        const status = this.extensionManager.getNativeMessagingStatus();
+        res.json(status);
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // CLARONOTE — Voice-to-text integration
     // ═══════════════════════════════════════════════

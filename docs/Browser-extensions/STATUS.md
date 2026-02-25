@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 6
-**Last completed phase:** Phase 5b
+**Next phase to implement:** Phase 7
+**Last completed phase:** Phase 6
 **Overall status:** IN PROGRESS
 
 ---
@@ -218,19 +218,35 @@
 
 ## Phase 6: Native Messaging Support
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Native messaging host directories detected per platform
-  - [ ] `session.setNativeMessagingHostDirectory()` called for detected hosts
-  - [ ] 1Password extension connects to desktop app (if installed)
-  - [ ] LastPass extension connects to desktop app (if installed)
-  - [ ] Extensions without native host installed degrade gracefully (no crash)
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Native messaging host directories detected per platform (3 macOS directories checked: system Chrome, user Chrome, user Chromium)
+  - [x] `session.setNativeMessagingHostDirectory()` — API does NOT exist in Electron 40. Runtime check confirms it's not available. Chromium may still read from standard Chrome directories automatically.
+  - [x] 1Password extension — desktop app not installed on test machine, correctly reported as missing. No crash.
+  - [x] LastPass extension — desktop app not installed on test machine, correctly reported as missing. No crash.
+  - [x] Extensions without native host installed degrade gracefully (no crash, warnings logged)
+  - [x] 3 native messaging hosts detected on test machine (Apple Password Manager, Claude Browser Extension, Google Drive Native Proxy) — all with valid binaries
+  - [x] `GET /extensions/native-messaging/status` API endpoint returns full detection results
+  - [x] `GET /extensions/list` still responds (regression check)
+  - [x] `GET /extensions/gallery` still responds (regression check, 30 entries)
+  - [x] App launches, browsing works (2 extensions loaded: uBlock Origin, Dark Reader)
+- **Issues encountered:**
+  - `session.setNativeMessagingHostDirectory()` does NOT exist in Electron 40's public API (not in TypeScript definitions, not available at runtime). The Phase 6 doc assumed this API exists, but it was never added to Electron. The implementation does a runtime check and falls back gracefully.
+  - Chromium's internal native messaging infrastructure may still work automatically — when Electron loads extensions via `loadExtension()`, the underlying Chromium extension system may read host manifests from the standard Chrome directories. This cannot be confirmed without actually having 1Password/LastPass desktop apps installed to test `chrome.runtime.connectNative()`.
+  - Windows support is limited — native messaging hosts on Windows are registered via Windows Registry, which requires native modules to read. The implementation checks a common filesystem fallback path instead.
+- **Notes for next phase:**
+  - `NativeMessagingSetup` is in `src/extensions/native-messaging.ts` — instantiated by ExtensionManager, runs detection + configuration during `init()`
+  - `ExtensionManager.getNativeMessagingStatus()` returns full status for the API endpoint
+  - `ExtensionManager.isNativeHostAvailable(extensionId)` checks if a specific extension's native host is installed
+  - `GET /extensions/native-messaging/status` returns `{ supported, directories, hosts, configured, missing }`
+  - `supported` field is `false` since `setNativeMessagingHostDirectory()` is not available; however this does NOT mean native messaging won't work — Chromium may handle it internally
+  - The `hosts` array in the status response includes all detected native messaging hosts with binary existence check, allowed extensions, and manifest paths
+  - `KNOWN_HOSTS` constant in `native-messaging.ts` maps 3 known extension host names (1Password, LastPass, Postman) to their CWS extension IDs
+  - Platform-specific directories: macOS (3 dirs: system Chrome + user Chrome + user Chromium), Linux (3 dirs: system + user Chrome + user Chromium), Windows (1 dir: filesystem fallback)
+  - No new npm dependencies added
 
 ---
 
@@ -360,6 +376,7 @@
 | CWS download endpoint is undocumented (may change) | 1 | Chrome User-Agent spoofing + retry with backoff. Phase 9 uses separate update protocol endpoint | OPEN |
 | Extension popups invisible without toolbar UI | 5b | Phase 5b adds extension toolbar with popup rendering | RESOLVED |
 | Chrome-imported extensions frozen at import version | 3,9 | Phase 3 writes `.tandem-meta.json` with cwsId. Phase 9 includes these in update checks | OPEN |
+| `session.setNativeMessagingHostDirectory()` does not exist in Electron 40 | 6 | Runtime check + fallback. Chromium may read standard Chrome directories automatically. Detection + status reporting in place. | OPEN |
 
 ## Dependency Changes
 
@@ -386,6 +403,8 @@
 | `shell/index.html` | 5b | Modified — Added extension toolbar CSS + HTML + JS (toolbar buttons, overflow dropdown, popup IPC) |
 | `src/preload.ts` | 5b | Modified — Added 9 extension toolbar IPC methods (getToolbarExtensions, openPopup, closePopup, pin, contextMenu, options, onUpdate, onRemoveRequest, onRefresh) |
 | `src/main.ts` | 5b | Modified — Import + wire ExtensionToolbar, register IPC handlers after extension init, cleanup on will-quit |
-| `src/api/server.ts` | 1, 2, 3, 4, 5b | Modified — Phase 5b: install/uninstall routes send extension-toolbar-refresh IPC event |
+| `src/extensions/native-messaging.ts` | 6 | Created — NativeMessagingSetup: platform-specific host detection, session configuration attempt, status reporting |
+| `src/extensions/manager.ts` | 1, 6 | Modified — Phase 6: NativeMessagingSetup integration in init(), getNativeMessagingStatus(), isNativeHostAvailable() |
+| `src/api/server.ts` | 1, 2, 3, 4, 5b, 6 | Modified — Phase 6: GET /extensions/native-messaging/status endpoint |
 | `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
 | `package-lock.json` | 1 | Modified — Lock file updated |

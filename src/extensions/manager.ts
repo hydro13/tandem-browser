@@ -4,6 +4,7 @@ import fs from 'fs';
 import os from 'os';
 import { ExtensionLoader } from './loader';
 import { CrxDownloader, InstallResult } from './crx-downloader';
+import { NativeMessagingSetup, NativeMessagingStatus } from './native-messaging';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -28,10 +29,12 @@ export interface ExtensionMetadata {
 export class ExtensionManager {
   private loader: ExtensionLoader;
   private downloader: CrxDownloader;
+  private nativeMessaging: NativeMessagingSetup;
 
   constructor() {
     this.loader = new ExtensionLoader();
     this.downloader = new CrxDownloader();
+    this.nativeMessaging = new NativeMessagingSetup();
   }
 
   /**
@@ -43,6 +46,10 @@ export class ExtensionManager {
     if (loaded.length > 0) {
       console.log(`🧩 ExtensionManager initialized with ${loaded.length} extension(s)`);
     }
+
+    // Detect and configure native messaging hosts
+    this.nativeMessaging.detectHosts();
+    this.nativeMessaging.configure(session);
   }
 
   /**
@@ -182,5 +189,15 @@ export class ExtensionManager {
   /** Expose the underlying loader for backward compatibility */
   getLoader(): ExtensionLoader {
     return this.loader;
+  }
+
+  /** Get native messaging status for API endpoint */
+  getNativeMessagingStatus(): NativeMessagingStatus {
+    return this.nativeMessaging.getStatus();
+  }
+
+  /** Check if a native messaging host is available for an extension */
+  isNativeHostAvailable(extensionId: string): boolean {
+    return this.nativeMessaging.isHostAvailable(extensionId);
   }
 }
