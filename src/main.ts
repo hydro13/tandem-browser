@@ -201,12 +201,15 @@ async function createWindow(): Promise<BrowserWindow> {
       });
     }
 
-    // Catch-all: route unmanaged webContents navigations back through TabManager
-    // Skip popup BrowserWindows (type 'window') — they handle their own navigation
-    // for OAuth flows (Google, Apple, Microsoft) and must not be intercepted.
-    if (tabManager && !tabManager.hasWebContents(contents.id) && contents.getType() !== 'window') {
+    // Catch-all: route unmanaged webContents navigations back through TabManager.
+    // IMPORTANT: check hasWebContents at navigate time, NOT at registration time.
+    // Reason: TabManager registers webContents asynchronously (via executeJavaScript),
+    // so at web-contents-created time the webContents is not yet known to TabManager.
+    // Checking at registration time would cause ALL tab navigations to be intercepted.
+    // Skip popup BrowserWindows (type 'window') — they handle their own OAuth flows.
+    if (contents.getType() !== 'window') {
       contents.on('will-navigate', (_e, url) => {
-        if (mainWindow && url && url !== 'about:blank') {
+        if (tabManager && !tabManager.hasWebContents(contents.id) && mainWindow && url && url !== 'about:blank') {
           mainWindow.webContents.send('open-url-in-new-tab', url);
           contents.stop();
         }
