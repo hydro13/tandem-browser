@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 7-B
-**Last completed phase:** Phase 7-A
+**Next phase to implement:** Phase 7-C
+**Last completed phase:** Phase 7-B
 **Overall status:** IN PROGRESS
 
 ---
@@ -255,18 +255,18 @@
 
 ## Phase 7-B: ContentAnalyzer Migration to Plugin Interface
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 844f40b
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] ContentAnalyzerPlugin registered in AnalyzerManager
-  - [ ] Page analysis runs on navigation
-  - [ ] `GET /security/page/analysis` returns valid data
-  - [ ] Phishing + tracker detection still works
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] ContentAnalyzerPlugin registered in AnalyzerManager
+  - [x] Page analysis runs on navigation
+  - [x] `GET /security/page/analysis` returns valid data
+  - [x] Phishing + tracker detection still works
+  - [x] App launches, browsing works
+- **Issues encountered:** None
+- **Notes for next phase:** `ContentAnalyzerPlugin` is a wrapper class in `content-analyzer.ts` that implements `SecurityAnalyzer` and delegates to the existing `ContentAnalyzer.analyzePage()`. It subscribes to `'page-loaded'` events (priority 400). In `SecurityManager.onPageLoaded()`, the direct `contentAnalyzer.analyzePage()` call was replaced with `analyzerManager.routeEvent()` emitting a synthetic `page-loaded` event — the plugin picks it up and runs the analysis. `ContentAnalyzer` now caches its last result via `lastAnalysis` field + `getLastAnalysis()` method, so `onPageLoaded()` can read the metrics after the plugin runs. API routes 13, 15, 16 still call `analyzePage()` directly on the ContentAnalyzer instance (unchanged). The plugin is registered in `setDevToolsManager()` after ContentAnalyzer creation + blocklist wiring. Note: events logged by `analyzePage()` during plugin routing are blocked from re-routing by AnalyzerManager's re-entrancy guard (`routing` flag) — this is by design and prevents cascade complexity. Phase 7-C should follow the same wrapper pattern for BehaviorMonitor.
 
 ---
 
@@ -375,7 +375,8 @@
 - `src/security/security-manager.ts` — Imported AnalyzerManager + EventBurstAnalyzer, added `analyzerManager` field + `analyzerCascadeLogging` guard, created AnalyzerContext in constructor, registered EventBurstAnalyzer, updated `onEventLogged` callback to route events to analyzers with cascade guard, added route 34 (`GET /security/analyzers/status`), added `analyzerManager.destroy()` to cleanup
 
 ### Phase 7-B
-*(to be filled after completion)*
+- `src/security/content-analyzer.ts` — Added `SecurityAnalyzer`, `AnalyzerContext`, `SecurityEvent` imports from `types.ts`; added `lastAnalysis` cache field + `getLastAnalysis()` method to `ContentAnalyzer`; cached analysis result in `analyzePage()`; added `ContentAnalyzerPlugin` wrapper class implementing `SecurityAnalyzer` (name='content-analyzer', priority=400, subscribes to 'page-loaded')
+- `src/security/security-manager.ts` — Imported `ContentAnalyzerPlugin`; registered it with AnalyzerManager in `setDevToolsManager()`; replaced direct `contentAnalyzer.analyzePage()` call in `onPageLoaded()` with `analyzerManager.routeEvent()` + `getLastAnalysis()` pattern
 
 ### Phase 7-C
 *(to be filled after completion)*

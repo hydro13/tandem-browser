@@ -8,7 +8,7 @@ import { NetworkShield } from './network-shield';
 import { Guardian } from './guardian';
 import { OutboundGuard } from './outbound-guard';
 import { ScriptGuard } from './script-guard';
-import { ContentAnalyzer } from './content-analyzer';
+import { ContentAnalyzer, ContentAnalyzerPlugin } from './content-analyzer';
 import { BehaviorMonitor } from './behavior-monitor';
 import { GatekeeperWebSocket } from './gatekeeper-ws';
 import { EvolutionEngine } from './evolution';
@@ -133,6 +133,10 @@ export class SecurityManager {
     this.contentAnalyzer = new ContentAnalyzer(this.db, devToolsManager);
     // Phase 4: Wire blocklist check for deep page source scanning
     this.contentAnalyzer.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
+    // Phase 7-B: Register ContentAnalyzer as plugin
+    this.analyzerManager.register(new ContentAnalyzerPlugin(this.contentAnalyzer)).catch(e => {
+      console.warn('[SecurityManager] Failed to register ContentAnalyzerPlugin:', e.message);
+    });
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
     console.log('[SecurityManager] Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');
@@ -205,8 +209,19 @@ export class SecurityManager {
     if (!domain || !this.contentAnalyzer) return;
 
     try {
-      // 1. Run content analysis (Phase 3)
-      const analysis = await this.contentAnalyzer.analyzePage();
+      // 1. Run content analysis via plugin pipeline (Phase 7-B)
+      await this.analyzerManager.routeEvent({
+        timestamp: Date.now(),
+        domain,
+        tabId: null,
+        eventType: 'page-loaded',
+        severity: 'low',
+        category: 'network',
+        details: JSON.stringify({ domain }),
+        actionTaken: 'logged',
+      });
+      const analysis = this.contentAnalyzer.getLastAnalysis();
+      if (!analysis) return;
 
       // 2. Extract metrics for baseline
       const cookieCount = this.guardian.getCookieCount(domain);

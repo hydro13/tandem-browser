@@ -1,6 +1,6 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
-import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence } from './types';
+import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -90,9 +90,17 @@ export class ContentAnalyzer {
   /** Callback to check if a domain is on the blocklist (wired by SecurityManager) */
   isDomainBlocked: ((domain: string) => boolean) | null = null;
 
+  /** Last analysis result (cached for plugin-based access after event routing) */
+  private lastAnalysis: PageAnalysis | null = null;
+
   constructor(db: SecurityDB, devToolsManager: DevToolsManager) {
     this.db = db;
     this.devToolsManager = devToolsManager;
+  }
+
+  /** Get the most recent analysis result (available after analyzePage completes) */
+  getLastAnalysis(): PageAnalysis | null {
+    return this.lastAnalysis;
   }
 
   /** Full page analysis (called after page load — async is fine here) */
@@ -265,6 +273,9 @@ export class ContentAnalyzer {
 
     // Calculate risk score
     analysis.riskScore = this.calculateRiskScore(analysis);
+
+    // Cache result for plugin-based access
+    this.lastAnalysis = analysis;
 
     return analysis;
   }
@@ -485,5 +496,47 @@ export class ContentAnalyzer {
     } catch {
       return null;
     }
+  }
+}
+
+/**
+ * ContentAnalyzerPlugin — SecurityAnalyzer wrapper around ContentAnalyzer.
+ *
+ * This is a wrapper pattern (NOT a rewrite). All existing ContentAnalyzer logic stays
+ * as-is. The wrapper routes page-loaded events from the AnalyzerManager pipeline to
+ * ContentAnalyzer.analyzePage().
+ */
+export class ContentAnalyzerPlugin implements SecurityAnalyzer {
+  readonly name = 'content-analyzer';
+  readonly version = '1.0.0';
+  readonly eventTypes = ['page-loaded'];
+  readonly priority = 400; // After blocklist (100-300), before heuristics (700+)
+  readonly description = 'Page-level phishing, tracker, and content analysis';
+
+  private analyzer: ContentAnalyzer;
+
+  constructor(analyzer: ContentAnalyzer) {
+    this.analyzer = analyzer;
+  }
+
+  async initialize(_context: AnalyzerContext): Promise<void> {
+    // ContentAnalyzer is already initialized via SecurityManager — no additional setup needed
+  }
+
+  canAnalyze(event: SecurityEvent): boolean {
+    return event.eventType === 'page-loaded' && !!event.domain;
+  }
+
+  async analyze(event: SecurityEvent): Promise<SecurityEvent[]> {
+    // Delegate to existing analysis method.
+    // analyzePage() handles its own event logging internally — we return empty.
+    if (event.eventType === 'page-loaded' && event.domain) {
+      await this.analyzer.analyzePage();
+    }
+    return [];
+  }
+
+  async destroy(): Promise<void> {
+    // ContentAnalyzer lifecycle is managed by SecurityManager
   }
 }
