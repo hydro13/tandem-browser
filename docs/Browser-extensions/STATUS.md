@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 10b
-**Last completed phase:** Phase 10a
-**Overall status:** IN PROGRESS
+**Next phase to implement:** None — all phases complete
+**Last completed phase:** Phase 10a (Phase 10b skipped — conditional not met)
+**Overall status:** COMPLETE
 
 ---
 
@@ -415,23 +415,17 @@
 
 > **Conditional:** Only implement if Phase 1's DNR test confirmed Guardian misses requests blocked by DNR. If Guardian still sees all requests, mark as SKIPPED.
 
-- **Status:** PENDING (conditional)
-- **Date:** —
+- **Status:** SKIPPED (conditional not met)
+- **Date:** 2026-02-25
 - **Commit:** —
-- **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] DNR rule reader parses uBlock Origin rule files
-  - [ ] Handles large rulesets (300K+ rules) without excessive memory
-  - [ ] DNR rule files parsed for all installed DNR extensions
-  - [ ] Static blocklist stored in SecurityDB and `.dnr-analysis.json`
-  - [ ] Analysis re-runs on extension update
-  - [ ] Reconciler registers as passive `completedConsumer` in RequestDispatcher
-  - [ ] NetworkShield overlap correctly calculated from static lists
-  - [ ] `GET /extensions/dnr/status` returns reconciler state
-  - [ ] Reconciler does NOT modify or slow down any network requests
-  - [ ] App launches, browsing works, extension ad-blocking unaffected
-- **Issues encountered:** —
-- **Notes for next phase:** —
+- **Reason for skip:**
+  - Phase 1 DNR test found Guardian's dispatcher still fires with uBlock loaded (2 `onBeforeRequest` consumers registered). Guardian sees all requests that reach Electron's network layer.
+  - Phase 10a confirmed the installed uBlock Origin is **MV2** (v1.69.0), which uses `webRequestBlocking` — NOT `declarativeNetRequest`. MV2 ad blockers go through `webRequest` hooks (where Guardian lives), so there is no DNR overlap problem with the installed version.
+  - **No installed extensions use `declarativeNetRequest`** — the condition "Phase 1's empirical DNR test confirmed Guardian misses requests blocked by DNR" was never met.
+  - If a future MV3 DNR extension is installed and testing reveals Guardian misses requests, this phase can be un-skipped and implemented at that time.
+- **Verification:** N/A (skipped)
+- **Issues encountered:** None
+- **Notes for next phase:** If implementing in the future, the `ConflictDetector` from Phase 10a already detects extensions with `declarativeNetRequest` permissions — use that as the trigger for DNR reconciliation.
 
 ---
 
@@ -440,7 +434,7 @@
 | Issue | Phase | Workaround | Status |
 |-------|-------|------------|--------|
 | Extensions do NOT run in isolated sessions (`persist:session-{name}`) — only in `persist:tandem` | 1 | Known limitation. Phase 10a adds `loadInSession()` foundation for future | OPEN |
-| `declarativeNetRequest` extensions (ad blockers) may interfere with NetworkShield telemetry | 1 | Empirically tested in Phase 1. Phase 10a detects, Phase 10b reconciles | OPEN |
+| `declarativeNetRequest` extensions (ad blockers) may interfere with NetworkShield telemetry | 1 | Empirically tested in Phase 1: no DNR extensions installed (uBlock is MV2). Phase 10a detects DNR conflicts dynamically. Phase 10b skipped (no DNR conflict confirmed). Re-evaluate if MV3 DNR extensions are installed. | DEFERRED |
 | `session.setPreloads()` does not work for MV3 service workers | 7 | Phase 7 rewritten: test fallback OAuth first, then companion extension or protocol interception | OPEN |
 | Installed extensions do not auto-update | 9 | Phase 9 adds auto-update via CRX update check endpoint (batch check + atomic update) | RESOLVED |
 | CWS download endpoint is undocumented (may change) | 1 | Chrome User-Agent spoofing + retry with backoff. Phase 9 uses separate update protocol endpoint | OPEN |
