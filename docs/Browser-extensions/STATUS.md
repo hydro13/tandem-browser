@@ -333,7 +333,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** —
+- **Commit:** e2fbb72
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Version check uses Google CRX update check endpoint (batch, single request for all 4 extensions)
