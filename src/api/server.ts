@@ -2439,6 +2439,91 @@ export class TandemAPI {
       }
     });
 
+    // GET /extensions/updates/check — Trigger manual update check for all installed extensions
+    this.app.get('/extensions/updates/check', async (_req: Request, res: Response) => {
+      try {
+        const results = await this.extensionManager.checkForUpdates();
+        const updatesAvailable = results.filter(r => r.updateAvailable);
+        const state = this.extensionManager.getUpdateState();
+        res.json({
+          checked: results.length,
+          updatesAvailable,
+          results,
+          lastCheck: state.lastCheckTimestamp,
+        });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
+      }
+    });
+
+    // GET /extensions/updates/status — Current update status without triggering a check
+    this.app.get('/extensions/updates/status', (_req: Request, res: Response) => {
+      try {
+        const state = this.extensionManager.getUpdateState();
+        const nextCheck = this.extensionManager.getNextScheduledCheck();
+
+        // Build per-extension status from state
+        const extensions: Record<string, { installedVersion: string; latestKnownVersion: string | null; updateAvailable: boolean }> = {};
+        for (const [id, ext] of Object.entries(state.extensions)) {
+          extensions[id] = {
+            installedVersion: ext.installedVersion,
+            latestKnownVersion: ext.latestKnownVersion,
+            updateAvailable: ext.latestKnownVersion !== null && ext.latestKnownVersion !== ext.installedVersion,
+          };
+        }
+
+        res.json({
+          lastCheck: state.lastCheckTimestamp,
+          nextScheduledCheck: nextCheck,
+          checkIntervalMs: state.checkIntervalMs,
+          extensions,
+        });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
+      }
+    });
+
+    // POST /extensions/updates/apply — Apply available updates
+    this.app.post('/extensions/updates/apply', async (req: Request, res: Response) => {
+      try {
+        const ses = this.win.webContents.session;
+        const { extensionId } = req.body;
+
+        let results;
+        if (extensionId && typeof extensionId === 'string') {
+          // Update specific extension
+          const result = await this.extensionManager.applyUpdate(extensionId.trim(), ses);
+          results = [result];
+        } else {
+          // Update all
+          results = await this.extensionManager.applyAllUpdates(ses);
+        }
+
+        // Notify renderer to refresh extension toolbar after updates
+        if (results.some(r => r.success)) {
+          this.win.webContents.send('extension-toolbar-refresh');
+        }
+
+        res.json({ results });
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
+      }
+    });
+
+    // GET /extensions/disk-usage — Per-extension disk usage
+    this.app.get('/extensions/disk-usage', (_req: Request, res: Response) => {
+      try {
+        const usage = this.extensionManager.getDiskUsage();
+        res.json(usage);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
+      }
+    });
+
     // ═══════════════════════════════════════════════
     // CLARONOTE — Voice-to-text integration
     // ═══════════════════════════════════════════════

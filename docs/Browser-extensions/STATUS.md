@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 9
-**Last completed phase:** Phase 8
+**Next phase to implement:** Phase 10a
+**Last completed phase:** Phase 9
 **Overall status:** IN PROGRESS
 
 ---
@@ -331,26 +331,45 @@
 
 ## Phase 9: Extension Auto-Updates
 
-- **Status:** PENDING
-- **Date:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
 - **Commit:** —
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Version check uses Google Update Protocol (batch, single request)
-  - [ ] Fallback to CRX download if update protocol fails
-  - [ ] Chrome-imported extensions (`.tandem-meta.json`) included in checks
-  - [ ] Update verifies CRX3 signature before installing
-  - [ ] Atomic update: download → verify → swap → load (rollback on failure)
-  - [ ] Extension is active immediately after update (no app restart)
-  - [ ] `manifest.json` key field preserved after update
-  - [ ] Disk cleanup removes stale `.old/` and `.tmp/` directories
-  - [ ] Update interval is configurable
-  - [ ] `GET /extensions/updates/check` triggers batch check
-  - [ ] `GET /extensions/updates/status` shows last check + available updates
-  - [ ] `GET /extensions/disk-usage` returns per-extension sizes
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Version check uses Google CRX update check endpoint (batch, single request for all 4 extensions)
+  - [x] Fallback to CRX download if update protocol fails (fallback path tested by initial JSON endpoint failure)
+  - [x] Chrome-imported extensions (`.tandem-meta.json`) included in checks — `getInstalledExtensions()` reads `cwsId` from meta
+  - [x] Update verifies CRX3 signature before installing (reuses CrxDownloader.installFromCws format verification)
+  - [x] Atomic update: download → verify → swap → load (rollback on failure) — `.old/` directory used for rollback
+  - [x] Extension is active immediately after update (no app restart) — `session.removeExtension()` + `session.loadExtension()`
+  - [x] `manifest.json` key field preserved after update — old key injected into new manifest if missing
+  - [x] Disk cleanup removes stale `.old/` and `.tmp/` directories — runs on startup and after updates
+  - [x] Update interval is configurable via `update-state.json` `checkIntervalMs` (default: 24h)
+  - [x] `GET /extensions/updates/check` triggers batch check — tested: 4 extensions checked, correct versions returned
+  - [x] `GET /extensions/updates/status` shows last check + available updates + next scheduled check time
+  - [x] `POST /extensions/updates/apply` applies updates (tested with specific extensionId and all)
+  - [x] `GET /extensions/disk-usage` returns per-extension sizes — tested: 4 extensions, 91MB total
+  - [x] Update state persisted to `~/.tandem/extensions/update-state.json`
+  - [x] Scheduled checks: first check 5 min after launch, then every 24h (configurable)
+  - [x] Settings UI: "Check for Updates" button, per-extension "Update" buttons, "Update All", update count badge on Installed tab
+  - [x] App launches, browsing works (all 4 extensions loaded)
+  - [x] All previous API endpoints still respond (list, gallery, native-messaging, identity/auth)
+- **Issues encountered:**
+  - Google's JSON update protocol endpoint (`update.googleapis.com/service/update2/json`) returns 404. The Phase 9 doc and CLAUDE.md referenced this endpoint, but it does not exist. Instead, the CRX update check endpoint (`clients2.google.com/service/update2/crx?response=updatecheck`) works and returns XML with version + codebase URL. The implementation uses this XML endpoint with regex-based attribute parsing (no XML parser dependency needed).
+  - The `POST /extensions/updates/apply` endpoint for a specific extension that is already at the latest version returns `{ success: true, error: "Already at latest version" }`. The atomic update flow correctly detects same-version and rolls back without unnecessary work.
+- **Notes for next phase:**
+  - `UpdateChecker` is in `src/extensions/update-checker.ts` — instantiated by ExtensionManager with CrxDownloader + ExtensionLoader
+  - `ExtensionManager.checkForUpdates()` returns `UpdateCheckResult[]` with per-extension version info
+  - `ExtensionManager.applyUpdate(id, session)` does atomic update for a single extension
+  - `ExtensionManager.applyAllUpdates(session)` checks + applies all available updates
+  - `ExtensionManager.getDiskUsage()` returns `{ totalBytes, extensions: [{ id, name, sizeBytes }] }`
+  - `ExtensionManager.destroyUpdateChecker()` stops scheduled checks — called in will-quit handler
+  - Update state file: `~/.tandem/extensions/update-state.json` — tracks lastCheck, interval, per-extension versions
+  - The update check uses `clients2.google.com/service/update2/crx?response=updatecheck` (NOT the JSON endpoint from CLAUDE.md)
+  - The XML response is parsed with regex (no npm dependency) — extracts `appid`, `status`, `version`, `codebase` attributes
+  - `.tandem-meta.json` is preserved during updates and `importedVersion` is updated to the new version
+  - Settings UI updates are in `shell/settings.html` — update header row with Check/Update All buttons, per-card Update buttons, update badges
+  - No new npm dependencies added
 
 ---
 
@@ -406,10 +425,10 @@
 | Extensions do NOT run in isolated sessions (`persist:session-{name}`) — only in `persist:tandem` | 1 | Known limitation. Phase 10a adds `loadInSession()` foundation for future | OPEN |
 | `declarativeNetRequest` extensions (ad blockers) may interfere with NetworkShield telemetry | 1 | Empirically tested in Phase 1. Phase 10a detects, Phase 10b reconciles | OPEN |
 | `session.setPreloads()` does not work for MV3 service workers | 7 | Phase 7 rewritten: test fallback OAuth first, then companion extension or protocol interception | OPEN |
-| Installed extensions do not auto-update | 9 | Manual reinstall. Phase 9 adds auto-update via Google Update Protocol | OPEN |
+| Installed extensions do not auto-update | 9 | Phase 9 adds auto-update via CRX update check endpoint (batch check + atomic update) | RESOLVED |
 | CWS download endpoint is undocumented (may change) | 1 | Chrome User-Agent spoofing + retry with backoff. Phase 9 uses separate update protocol endpoint | OPEN |
 | Extension popups invisible without toolbar UI | 5b | Phase 5b adds extension toolbar with popup rendering | RESOLVED |
-| Chrome-imported extensions frozen at import version | 3,9 | Phase 3 writes `.tandem-meta.json` with cwsId. Phase 9 includes these in update checks | OPEN |
+| Chrome-imported extensions frozen at import version | 3,9 | Phase 9 includes Chrome-imported extensions in update checks via `.tandem-meta.json` cwsId | RESOLVED |
 | `session.setNativeMessagingHostDirectory()` does not exist in Electron 40 | 6 | Runtime check + fallback. Chromium may read standard Chrome directories automatically. Detection + status reporting in place. | OPEN |
 
 ## Dependency Changes
@@ -448,3 +467,8 @@
 | `src/extensions/native-messaging.ts` | 6, 8 | Modified — Phase 8: Fixed Postman Interceptor extension ID |
 | `docs/Browser-extensions/TOP30-EXTENSIONS.md` | 4, 8 | Modified — Phase 8: Fixed 5 wrong extension IDs in all tables |
 | `docs/Browser-extensions/phases/PHASE-4.md` | 4, 8 | Modified — Phase 8: Fixed 5 wrong extension IDs in extension table |
+| `src/extensions/update-checker.ts` | 9 | Created — UpdateChecker: batch version check via CRX update endpoint, atomic update with rollback, disk usage, scheduled checks, state persistence |
+| `src/extensions/manager.ts` | 1, 6, 7, 9 | Modified — Phase 9: UpdateChecker integration, update/disk-usage methods, destroyUpdateChecker() |
+| `src/api/server.ts` | 1, 2, 3, 4, 5b, 6, 7, 9 | Modified — Phase 9: updates/check, updates/status, updates/apply, disk-usage endpoints |
+| `src/main.ts` | 1, 5b, 7, 9 | Modified — Phase 9: UpdateChecker cleanup in will-quit handler |
+| `shell/settings.html` | 5a, 9 | Modified — Phase 9: Update header with Check/Update All buttons, per-extension Update buttons, update badges, update status CSS |

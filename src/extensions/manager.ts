@@ -6,6 +6,7 @@ import { ExtensionLoader } from './loader';
 import { CrxDownloader, InstallResult } from './crx-downloader';
 import { NativeMessagingSetup, NativeMessagingStatus } from './native-messaging';
 import { IdentityPolyfill } from './identity-polyfill';
+import { UpdateChecker, UpdateCheckResult, UpdateResult, UpdateState, InstalledExtension } from './update-checker';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -32,12 +33,14 @@ export class ExtensionManager {
   private downloader: CrxDownloader;
   private nativeMessaging: NativeMessagingSetup;
   private identityPolyfill: IdentityPolyfill;
+  private updateChecker: UpdateChecker;
 
   constructor(apiPort: number = 8765) {
     this.loader = new ExtensionLoader();
     this.downloader = new CrxDownloader();
     this.nativeMessaging = new NativeMessagingSetup();
     this.identityPolyfill = new IdentityPolyfill(apiPort);
+    this.updateChecker = new UpdateChecker(this.downloader, this.loader);
   }
 
   /**
@@ -62,6 +65,12 @@ export class ExtensionManager {
     // Detect and configure native messaging hosts
     this.nativeMessaging.detectHosts();
     this.nativeMessaging.configure(session);
+
+    // Clean up stale temp/old directories from previous update cycles
+    this.updateChecker.cleanupTempDirs();
+
+    // Start scheduled update checks (first check after 5 min, then every 24h)
+    this.updateChecker.startScheduledChecks(session);
   }
 
   /**
@@ -216,5 +225,53 @@ export class ExtensionManager {
   /** Get identity polyfill for API endpoint registration */
   getIdentityPolyfill(): IdentityPolyfill {
     return this.identityPolyfill;
+  }
+
+  // ─── Update Methods (Phase 9) ──────────────────────────────────────────
+
+  /** Get the update checker instance */
+  getUpdateChecker(): UpdateChecker {
+    return this.updateChecker;
+  }
+
+  /** Check all installed extensions for updates (batch protocol) */
+  async checkForUpdates(): Promise<UpdateCheckResult[]> {
+    const installed = this.updateChecker.getInstalledExtensions();
+    return this.updateChecker.checkAll(installed);
+  }
+
+  /** Apply update for a single extension */
+  async applyUpdate(extensionId: string, session: Session): Promise<UpdateResult> {
+    return this.updateChecker.updateOne(extensionId, session);
+  }
+
+  /** Apply all available updates */
+  async applyAllUpdates(session: Session): Promise<UpdateResult[]> {
+    return this.updateChecker.updateAll(session);
+  }
+
+  /** Get current update state */
+  getUpdateState(): UpdateState {
+    return this.updateChecker.getState();
+  }
+
+  /** Get next scheduled check time */
+  getNextScheduledCheck(): string | null {
+    return this.updateChecker.getNextScheduledCheck();
+  }
+
+  /** Get installed extensions list (for update checking) */
+  getInstalledExtensions(): InstalledExtension[] {
+    return this.updateChecker.getInstalledExtensions();
+  }
+
+  /** Get disk usage for all extensions */
+  getDiskUsage(): { totalBytes: number; extensions: Array<{ id: string; name: string; sizeBytes: number }> } {
+    return this.updateChecker.getDiskUsage();
+  }
+
+  /** Stop update checker and clean up */
+  destroyUpdateChecker(): void {
+    this.updateChecker.destroy();
   }
 }

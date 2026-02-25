@@ -355,6 +355,7 @@
     .ext-badge-loaded { background: rgba(78,204,163,0.15); color: var(--success); }
     .ext-badge-notloaded { background: rgba(240,165,0,0.15); color: var(--warning); }
     .ext-badge-error { background: rgba(233,69,96,0.15); color: var(--danger); }
+    .ext-badge-update { background: rgba(100,149,237,0.2); color: #6495ed; }
     .ext-badge-installed { background: rgba(78,204,163,0.15); color: var(--success); }
     .ext-badge-imported { background: rgba(78,204,163,0.15); color: var(--success); }
     .ext-badge-works { background: rgba(78,204,163,0.15); color: var(--success); }
@@ -946,6 +947,13 @@
 
       <!-- Installed tab -->
       <div class="ext-tab-content active" id="ext-installed">
+        <div class="ext-header-row" id="ext-update-header" style="display:none">
+          <div class="field-desc" id="ext-update-status-text">Checking for updates...</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-sm btn-secondary" id="ext-check-updates-btn">Check for Updates</button>
+            <button class="btn-sm btn-primary" id="ext-update-all-btn" style="display:none">Update All</button>
+          </div>
+        </div>
         <div id="ext-installed-list"></div>
       </div>
 
@@ -1448,8 +1456,12 @@
     });
 
     // ── Installed tab ──
+    let updateStatusCache = {}; // extensionId → { latestKnownVersion, updateAvailable }
+    let updateStatusLoading = false; // prevent infinite loop between loadExtInstalled ↔ loadUpdateStatus
+
     async function loadExtInstalled() {
       const container = document.getElementById('ext-installed-list');
+      const updateHeader = document.getElementById('ext-update-header');
       container.innerHTML = '<div class="ext-empty">Loading...</div>';
       try {
         const res = await fetch(`${API}/extensions/list`);
@@ -1457,9 +1469,19 @@
         const data = await res.json();
         const { loaded, available } = data;
         if (available.length === 0) {
+          updateHeader.style.display = 'none';
           container.innerHTML = '<div class="ext-empty">No extensions installed yet. Use the Gallery tab to discover extensions.</div>';
           return;
         }
+
+        // Show update header for installed extensions
+        updateHeader.style.display = 'flex';
+
+        // Fetch update status (non-blocking — use cached data if available)
+        if (!updateStatusLoading) {
+          loadUpdateStatus();
+        }
+
         // Build a map of loaded extensions by path for status lookup
         const loadedByPath = {};
         for (const ext of loaded) {
@@ -1483,6 +1505,13 @@
             statusBadge = '<span class="ext-badge ext-badge-notloaded">Not loaded</span>';
           }
 
+          // Update badge from cache
+          let updateBadge = '';
+          const updateInfo = updateStatusCache[diskId];
+          if (updateInfo && updateInfo.updateAvailable) {
+            updateBadge = `<span class="ext-badge ext-badge-update">Update: v${esc(version)} → v${esc(updateInfo.latestKnownVersion)}</span>`;
+          }
+
           const card = document.createElement('div');
           card.className = 'ext-card';
           card.innerHTML = `
@@ -1492,14 +1521,48 @@
                 ${version ? '<span>v' + esc(version) + '</span>' : ''}
                 <span style="opacity:0.5">${esc(diskId)}</span>
                 ${statusBadge}
+                ${updateBadge}
               </div>
             </div>
             <div class="ext-card-actions">
+              ${updateInfo && updateInfo.updateAvailable ? `<button class="btn-sm btn-primary ext-update-btn" data-id="${esc(diskId)}">Update</button>` : ''}
               <button class="btn-sm btn-danger ext-remove-btn" data-id="${esc(diskId)}">Remove</button>
             </div>
           `;
           container.appendChild(card);
         }
+
+        // Wire update buttons
+        container.querySelectorAll('.ext-update-btn').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.dataset.id;
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+            try {
+              const res = await fetch(`${API}/extensions/updates/apply`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ extensionId: id }),
+              });
+              const data = await res.json();
+              if (data.results && data.results[0] && data.results[0].success) {
+                showToast(`Updated ${data.results[0].name}: v${data.results[0].previousVersion} → v${data.results[0].newVersion}`);
+                delete updateStatusCache[id];
+                loadExtInstalled();
+              } else {
+                const err = data.results?.[0]?.error || 'Update failed';
+                showToast(err);
+                btn.disabled = false;
+                btn.textContent = 'Update';
+              }
+            } catch {
+              showToast('Update failed');
+              btn.disabled = false;
+              btn.textContent = 'Update';
+            }
+          });
+        });
+
         // Wire remove buttons
         container.querySelectorAll('.ext-remove-btn').forEach(btn => {
           btn.addEventListener('click', () => {
@@ -1530,6 +1593,120 @@
         container.innerHTML = '<div class="ext-empty">Failed to load extensions.</div>';
       }
     }
+
+    // Load update status from API (background, non-blocking)
+    async function loadUpdateStatus() {
+      if (updateStatusLoading) return;
+      updateStatusLoading = true;
+      const statusText = document.getElementById('ext-update-status-text');
+      const updateAllBtn = document.getElementById('ext-update-all-btn');
+      try {
+        const res = await fetch(`${API}/extensions/updates/status`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const prevCache = JSON.stringify(updateStatusCache);
+        updateStatusCache = data.extensions || {};
+        const updatesAvailable = Object.values(updateStatusCache).filter(e => e.updateAvailable).length;
+        // Update tab badge
+        const installedTab = document.querySelector('#ext-tabs button[data-tab="ext-installed"]');
+        if (installedTab) {
+          installedTab.textContent = updatesAvailable > 0 ? `Installed (${updatesAvailable})` : 'Installed';
+        }
+
+        if (updatesAvailable > 0) {
+          statusText.textContent = `${updatesAvailable} update${updatesAvailable > 1 ? 's' : ''} available`;
+          updateAllBtn.style.display = '';
+        } else if (data.lastCheck) {
+          const ago = timeSince(new Date(data.lastCheck));
+          statusText.textContent = `All up to date (checked ${ago})`;
+          updateAllBtn.style.display = 'none';
+        } else {
+          statusText.textContent = 'Updates not checked yet';
+          updateAllBtn.style.display = 'none';
+        }
+        // Re-render installed list to show update badges only if cache changed
+        if (JSON.stringify(updateStatusCache) !== prevCache) {
+          updateStatusLoading = true; // keep flag true during re-render
+          loadExtInstalled();
+        }
+      } catch { /* ignore */ }
+      updateStatusLoading = false;
+    }
+
+    function timeSince(date) {
+      const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    // Wire Check for Updates button
+    document.getElementById('ext-check-updates-btn').addEventListener('click', async function() {
+      this.disabled = true;
+      this.textContent = 'Checking...';
+      const statusText = document.getElementById('ext-update-status-text');
+      statusText.textContent = 'Checking for updates...';
+      try {
+        const res = await fetch(`${API}/extensions/updates/check`);
+        if (!res.ok) throw new Error('Check failed');
+        const data = await res.json();
+        const updatesAvailable = data.updatesAvailable ? data.updatesAvailable.length : 0;
+        // Update cache from check results
+        if (data.results) {
+          for (const r of data.results) {
+            updateStatusCache[r.extensionId] = {
+              installedVersion: r.installedVersion,
+              latestKnownVersion: r.latestVersion,
+              updateAvailable: r.updateAvailable,
+            };
+          }
+        }
+        if (updatesAvailable > 0) {
+          showToast(`${updatesAvailable} update${updatesAvailable > 1 ? 's' : ''} available`);
+        } else {
+          showToast(`All ${data.checked} extensions are up to date`);
+        }
+        loadExtInstalled();
+      } catch {
+        showToast('Update check failed');
+      }
+      this.disabled = false;
+      this.textContent = 'Check for Updates';
+    });
+
+    // Wire Update All button
+    document.getElementById('ext-update-all-btn').addEventListener('click', async function() {
+      this.disabled = true;
+      this.textContent = 'Updating...';
+      try {
+        const res = await fetch(`${API}/extensions/updates/apply`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+        const data = await res.json();
+        const results = data.results || [];
+        const success = results.filter(r => r.success).length;
+        const failed = results.filter(r => !r.success).length;
+        if (success > 0) {
+          showToast(`${success} extension${success > 1 ? 's' : ''} updated${failed > 0 ? `, ${failed} failed` : ''}`);
+        } else if (failed > 0) {
+          showToast(`${failed} update${failed > 1 ? 's' : ''} failed`);
+        } else {
+          showToast('No updates to apply');
+        }
+        updateStatusCache = {};
+        loadExtInstalled();
+      } catch {
+        showToast('Update failed');
+      }
+      this.disabled = false;
+      this.textContent = 'Update All';
+    });
 
     // ── From Chrome tab ──
     async function loadExtChrome() {

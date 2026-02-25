@@ -963,6 +963,7 @@ app.on('will-quit', () => {
   if (sessionManager) sessionManager.cleanup();
   if (extensionToolbar) extensionToolbar.destroy();
   if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
+  if (extensionManager) extensionManager.destroyUpdateChecker();
 });
 
 app.on('window-all-closed', () => {
