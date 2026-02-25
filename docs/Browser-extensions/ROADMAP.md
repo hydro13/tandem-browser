@@ -262,19 +262,19 @@
 ## Phase 10a: Extension Conflict Detection
 **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1, 4
 
-- [ ] **10a.1** Create `src/extensions/conflict-detector.ts`
+- [x] **10a.1** Create `src/extensions/conflict-detector.ts`
   - DNR overlap detection (declarativeNetRequest vs NetworkShield)
   - Native messaging dependency detection
-  - Broad content script injection detection + ScriptGuard whitelist
+  - Broad content script injection detection (audit logging, no ScriptGuard whitelist needed — extensions bypass CDP)
   - Keyboard shortcut conflict detection (extension commands vs Tandem shortcuts)
-- [ ] **10a.2** Integrate with Extension Manager
+- [x] **10a.2** Integrate with Extension Manager
   - Run conflict detection on install
   - Include conflicts in list response
-- [ ] **10a.3** Add conflict info to API
+- [x] **10a.3** Add conflict info to API
   - Conflicts array per extension in `GET /extensions/list`
   - `GET /extensions/conflicts` — all conflicts + summary
   - Consistency with gallery `securityConflict` field
-- [ ] **10a.4** Isolated session extension loading (foundation)
+- [x] **10a.4** Isolated session extension loading (foundation)
   - `ExtensionManager.loadInSession(session)` method
   - Do NOT wire into SessionManager yet — document for future
 
@@ -323,7 +323,7 @@
 | 7 | chrome.identity OAuth Support | DONE | 4/4 |
 | 8 | Testing & Verification | DONE | 5/5 |
 | 9 | Extension Auto-Updates | PENDING | 0/8 |
-| 10a | Extension Conflict Detection | PENDING | 0/4 |
+| 10a | Extension Conflict Detection | DONE | 4/4 |
 | 10b | DNR Reconciliation Layer | PENDING (conditional) | 0/6 |
 
-**Total:** 17/54 tasks completed
+**Total:** 21/54 tasks completed

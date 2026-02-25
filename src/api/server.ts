@@ -2202,8 +2202,17 @@ export class TandemAPI {
     this.app.get('/extensions/list', (_req: Request, res: Response) => {
       try {
         const { loaded, available } = this.extensionManager.list();
+
+        // Enrich loaded extensions with conflict info (Phase 10a)
+        const loadedWithConflicts = loaded.map(ext => {
+          const conflicts = this.extensionManager.getConflictsForExtension(
+            path.basename(ext.path)
+          );
+          return { ...ext, conflicts };
+        });
+
         res.json({
-          loaded,
+          loaded: loadedWithConflicts,
           available,
           count: { loaded: loaded.length, available: available.length },
         });
@@ -2518,6 +2527,17 @@ export class TandemAPI {
       try {
         const usage = this.extensionManager.getDiskUsage();
         res.json(usage);
+      } catch (e: unknown) {
+        const message = e instanceof Error ? e.message : String(e);
+        res.status(500).json({ error: message });
+      }
+    });
+
+    // GET /extensions/conflicts — All detected conflicts across installed extensions (Phase 10a)
+    this.app.get('/extensions/conflicts', (_req: Request, res: Response) => {
+      try {
+        const { conflicts, summary } = this.extensionManager.getAllConflicts();
+        res.json({ conflicts, summary });
       } catch (e: unknown) {
         const message = e instanceof Error ? e.message : String(e);
         res.status(500).json({ error: message });

@@ -7,6 +7,7 @@ import { CrxDownloader, InstallResult } from './crx-downloader';
 import { NativeMessagingSetup, NativeMessagingStatus } from './native-messaging';
 import { IdentityPolyfill } from './identity-polyfill';
 import { UpdateChecker, UpdateCheckResult, UpdateResult, UpdateState, InstalledExtension } from './update-checker';
+import { ConflictDetector, ExtensionConflict } from './conflict-detector';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -34,6 +35,7 @@ export class ExtensionManager {
   private nativeMessaging: NativeMessagingSetup;
   private identityPolyfill: IdentityPolyfill;
   private updateChecker: UpdateChecker;
+  private conflictDetector: ConflictDetector;
 
   constructor(apiPort: number = 8765) {
     this.loader = new ExtensionLoader();
@@ -41,6 +43,7 @@ export class ExtensionManager {
     this.nativeMessaging = new NativeMessagingSetup();
     this.identityPolyfill = new IdentityPolyfill(apiPort);
     this.updateChecker = new UpdateChecker(this.downloader, this.loader);
+    this.conflictDetector = new ConflictDetector();
   }
 
   /**
@@ -107,6 +110,14 @@ export class ExtensionManager {
         success: false,
         error: `Extension extracted but failed to load: ${message}`,
       };
+    }
+
+    // Run conflict detection on the newly installed extension (Phase 10a)
+    const manifestPath = path.join(result.installPath, 'manifest.json');
+    const conflicts = this.conflictDetector.analyzeManifest(manifestPath);
+    if (conflicts.length > 0) {
+      (result as InstallResult & { conflicts: ExtensionConflict[] }).conflicts = conflicts;
+      console.log(`⚠️ ${conflicts.length} conflict(s) detected for ${result.name}: ${conflicts.map(c => c.conflictType).join(', ')}`);
     }
 
     return result;
@@ -273,5 +284,78 @@ export class ExtensionManager {
   /** Stop update checker and clean up */
   destroyUpdateChecker(): void {
     this.updateChecker.destroy();
+  }
+
+  // ─── Conflict Detection Methods (Phase 10a) ──────────────────────────
+
+  /** Get the conflict detector instance */
+  getConflictDetector(): ConflictDetector {
+    return this.conflictDetector;
+  }
+
+  /** Analyze a single extension's manifest for conflicts */
+  getConflictsForExtension(extensionId: string): ExtensionConflict[] {
+    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const manifestPath = path.join(extensionsDir, extensionId, 'manifest.json');
+    return this.conflictDetector.analyzeManifest(manifestPath);
+  }
+
+  /** Get all conflicts across all installed extensions */
+  getAllConflicts(): { conflicts: ExtensionConflict[]; summary: { info: number; warnings: number; critical: number } } {
+    const conflicts = this.conflictDetector.getAllConflicts();
+    const summary = this.conflictDetector.getSummary(conflicts);
+    return { conflicts, summary };
+  }
+
+  // ─── Isolated Session Loading (Phase 10a Foundation) ──────────────────
+
+  /**
+   * Load all installed extensions into a given Electron session.
+   *
+   * This is the foundation for loading extensions in isolated sessions
+   * (persist:session-{name}). Currently NOT wired into SessionManager —
+   * that requires careful consideration of:
+   * - Security stack: isolated sessions also need a RequestDispatcher + Guardian
+   * - Performance: loading 10+ extensions per session has startup cost
+   * - User preference: not all users want extensions in isolated sessions
+   *
+   * Future integration point: SessionManager.create() could call this method
+   * after setting up the security stack for the new session.
+   *
+   * @param session - The Electron session to load extensions into
+   * @returns Array of loaded extension names
+   */
+  async loadInSession(session: Session): Promise<string[]> {
+    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const loaded: string[] = [];
+
+    try {
+      const dirs = fs.readdirSync(extensionsDir, { withFileTypes: true })
+        .filter(d => d.isDirectory());
+
+      for (const dir of dirs) {
+        const extPath = path.join(extensionsDir, dir.name);
+        const manifestPath = path.join(extPath, 'manifest.json');
+
+        if (!fs.existsSync(manifestPath)) continue;
+
+        try {
+          const ext = await session.loadExtension(extPath, { allowFileAccess: true });
+          loaded.push(ext.name || dir.name);
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.warn(`⚠️ Failed to load extension ${dir.name} into session: ${message}`);
+        }
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`⚠️ Could not read extensions directory for session loading: ${message}`);
+    }
+
+    if (loaded.length > 0) {
+      console.log(`🧩 Loaded ${loaded.length} extension(s) into session: ${loaded.join(', ')}`);
+    }
+
+    return loaded;
   }
 }

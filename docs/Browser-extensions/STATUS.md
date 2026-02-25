@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 10a
-**Last completed phase:** Phase 9
+**Next phase to implement:** Phase 10b
+**Last completed phase:** Phase 10a
 **Overall status:** IN PROGRESS
 
 ---
@@ -375,22 +375,39 @@
 
 ## Phase 10a: Extension Conflict Detection
 
-- **Status:** PENDING
-- **Date:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
 - **Commit:** —
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Extensions with `declarativeNetRequest` detected and flagged
-  - [ ] Extensions with `nativeMessaging` detected and flagged
-  - [ ] Broad content script injection patterns detected
-  - [ ] Keyboard shortcut conflicts with Tandem shortcuts detected
-  - [ ] Conflict severity matches Phase 1 DNR test results
-  - [ ] `GET /extensions/list` includes conflicts per extension
-  - [ ] `GET /extensions/conflicts` returns all conflicts + summary
-  - [ ] `ExtensionManager.loadInSession()` method exists (not wired into SessionManager)
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Extensions with `declarativeNetRequest` detected and flagged — detection rule checks both `declarativeNetRequest`/`declarativeNetRequestWithHostAccess` permissions and `declarative_net_request` manifest key. uBlock Origin MV2 does NOT have DNR (uses `webRequestBlocking` instead) so no dnr-overlap is flagged for the installed version — this is correct behavior.
+  - [x] Extensions with `nativeMessaging` detected and flagged — Grammarly detected with `nativeMessaging` permission
+  - [x] Broad content script injection patterns detected — uBlock Origin (`http://*/*`, `https://*/*`), Dark Reader (`<all_urls>`), Grammarly (`<all_urls>`) all flagged. Patterns logged to console for security auditing.
+  - [x] Keyboard shortcut conflicts with Tandem shortcuts detected — detection compares extension `commands` manifest entries against 29 Tandem shortcuts. Normalizes Chrome shortcut syntax (Command/MacCtrl/Cmd → Ctrl).
+  - [x] Conflict severity matches Phase 1 DNR test results — DNR severity set to `warning` (Phase 1 showed Guardian still fires with 2 onBeforeRequest consumers). No `critical` conflicts.
+  - [x] `GET /extensions/list` includes conflicts per extension — each loaded extension has a `conflicts` array
+  - [x] `GET /extensions/conflicts` returns all conflicts + summary — tested: 4 conflicts (0 info, 4 warnings, 0 critical)
+  - [x] `ExtensionManager.loadInSession()` method exists (not wired into SessionManager) — loads all extensions from `~/.tandem/extensions/` into a given session
+  - [x] App launches, browsing works (4 extensions loaded)
+  - [x] All previous API endpoints still respond (list, gallery, native-messaging, updates/status)
+  - [x] Install result includes detected conflicts for newly installed extensions
+  - [x] ScriptGuard empirical finding: Extension content scripts bypass ScriptGuard — they are injected by Electron's extension system, not via CDP (`scriptParsed` events). No whitelist needed. Broad content script patterns are logged for security auditing only.
+- **Issues encountered:**
+  - uBlock Origin MV2 (installed version 1.69.0) does NOT use `declarativeNetRequest` — it uses `webRequestBlocking` instead. The gallery's static `securityConflict: 'dnr-overlap'` describes the MV3 version behavior. Dynamic detection is more precise than the gallery's static data since it checks the actual installed manifest. This is correct: MV2 ad blockers go through webRequest hooks (where Guardian lives), so they don't have the DNR overlap problem.
+  - Extension content scripts bypass ScriptGuard (confirmed by CLAUDE.md Security Rule #8: "Extension content scripts bypass ScriptGuard — they are injected by Electron's extension system, not via CDP"). No whitelist implementation needed — replaced with audit logging of broad content script patterns.
+- **Notes for next phase:**
+  - `ConflictDetector` is in `src/extensions/conflict-detector.ts` — instantiated by ExtensionManager
+  - `ExtensionManager.getConflictsForExtension(id)` returns conflicts for a single extension
+  - `ExtensionManager.getAllConflicts()` returns `{ conflicts, summary }` for all installed extensions
+  - `GET /extensions/conflicts` returns `{ conflicts: ExtensionConflict[], summary: { info, warnings, critical } }`
+  - `GET /extensions/list` now includes `conflicts` array per loaded extension
+  - Install result (`POST /extensions/install`) includes `conflicts` field when conflicts detected
+  - `ExtensionManager.loadInSession(session)` loads all extensions into a given Electron session — NOT wired into SessionManager. Future integration point: call after setting up security stack for isolated sessions.
+  - DNR severity is `'warning'` based on Phase 1 test (Guardian still fires). Phase 10b should re-evaluate if deeper testing reveals Guardian misses specific blocked requests.
+  - The `TANDEM_SHORTCUTS` constant in `conflict-detector.ts` contains 29 shortcuts — update if new Tandem shortcuts are added
+  - Gallery `securityConflict` field (static) and ConflictDetector (dynamic) may differ for MV2 vs MV3 versions — the dynamic detector is more precise
+  - No new npm dependencies added
+  - No new state files created
 
 ---
 
@@ -472,3 +489,6 @@
 | `src/api/server.ts` | 1, 2, 3, 4, 5b, 6, 7, 9 | Modified — Phase 9: updates/check, updates/status, updates/apply, disk-usage endpoints |
 | `src/main.ts` | 1, 5b, 7, 9 | Modified — Phase 9: UpdateChecker cleanup in will-quit handler |
 | `shell/settings.html` | 5a, 9 | Modified — Phase 9: Update header with Check/Update All buttons, per-extension Update buttons, update badges, update status CSS |
+| `src/extensions/conflict-detector.ts` | 10a | Created — ConflictDetector: DNR overlap, native messaging, broad content scripts, keyboard shortcut conflict detection |
+| `src/extensions/manager.ts` | 1, 6, 7, 9, 10a | Modified — Phase 10a: ConflictDetector integration, conflict methods, loadInSession() foundation |
+| `src/api/server.ts` | 1, 2, 3, 4, 5b, 6, 7, 9, 10a | Modified — Phase 10a: GET /extensions/conflicts endpoint, conflicts in /extensions/list response |
