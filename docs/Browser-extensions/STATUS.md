@@ -377,7 +377,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** —
+- **Commit:** 374620c
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Extensions with `declarativeNetRequest` detected and flagged — detection rule checks both `declarativeNetRequest`/`declarativeNetRequestWithHostAccess` permissions and `declarative_net_request` manifest key. uBlock Origin MV2 does NOT have DNR (uses `webRequestBlocking` instead) so no dnr-overlap is flagged for the installed version — this is correct behavior.
