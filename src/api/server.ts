@@ -2236,6 +2236,8 @@ export class TandemAPI {
           res.status(400).json(result);
           return;
         }
+        // Notify renderer to refresh extension toolbar
+        this.win.webContents.send('extension-toolbar-refresh');
         res.json(result);
       } catch (e: any) {
         console.error('Extension install error:', e);
@@ -2310,6 +2312,8 @@ export class TandemAPI {
           }
         }
 
+        // Notify renderer to refresh extension toolbar
+        this.win.webContents.send('extension-toolbar-refresh');
         res.json({ success: true });
       } catch (e: any) {
         console.error('Extension uninstall error:', e);

@@ -429,6 +429,116 @@
       cursor: default;
     }
 
+    /* ═══ Extension toolbar ═══ */
+    .ext-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin: 0 4px;
+      position: relative;
+    }
+    .ext-toolbar-btn {
+      position: relative;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+    .ext-toolbar-btn:hover { background: rgba(255,255,255,0.1); }
+    .ext-toolbar-btn img {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+    .ext-toolbar-btn .ext-badge {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: #fff;
+      background: #4688F1;
+      pointer-events: none;
+      min-width: 10px;
+      text-align: center;
+    }
+    .ext-overflow-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      color: var(--text-dim);
+      font-size: 16px;
+    }
+    .ext-overflow-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+    .ext-overflow-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 4px;
+      z-index: 1000;
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .ext-overflow-dropdown.visible { display: block; }
+    .ext-overflow-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+    .ext-overflow-item:hover { background: rgba(255,255,255,0.08); }
+    .ext-overflow-item img {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+    .ext-overflow-item .ext-badge {
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: #fff;
+      background: #4688F1;
+      margin-left: auto;
+      min-width: 10px;
+      text-align: center;
+    }
+
     /* ═══ Bookmark star ═══ */
     .bookmark-star {
       background: none;
@@ -1443,6 +1553,12 @@
     <input class="url-bar" id="url-bar" type="text" placeholder="Search or enter URL..." value="">
     <button class="bookmark-star" id="btn-bookmark" title="Bookmark (⌘D)">☆</button>
     <button id="btn-screenshot" title="Screenshot (⌘⇧S)">📸</button>
+    <!-- Extension toolbar (Phase 5b) -->
+    <div class="ext-toolbar" id="ext-toolbar">
+      <!-- Extension buttons rendered dynamically by JS -->
+      <button class="ext-overflow-btn" id="ext-overflow-btn" title="Extensions" style="display:none;">🧩</button>
+      <div class="ext-overflow-dropdown" id="ext-overflow-dropdown"></div>
+    </div>
     <div class="status-dot" id="status-dot" title="Connected to Copilot API"></div>
     <span class="copilot-badge">🤖 Copilot</span>
   </div>
@@ -4699,6 +4815,203 @@
         console.error('Polling error:', error);
         document.getElementById('claronote-status-text').textContent = 'Klaar om op te nemen';
       }
+    }
+
+    // ═══════════════════════════════════════════════
+    // Extension Toolbar (Phase 5b)
+    // ═══════════════════════════════════════════════
+
+    const MAX_VISIBLE_EXTENSIONS = 6;
+    let extToolbarData = [];
+
+    function escHtml(str) {
+      const d = document.createElement('div');
+      d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function renderExtToolbar(extensions) {
+      extToolbarData = extensions || [];
+      const container = document.getElementById('ext-toolbar');
+      const overflowBtn = document.getElementById('ext-overflow-btn');
+      const overflowDropdown = document.getElementById('ext-overflow-dropdown');
+      if (!container) return;
+
+      // Remove existing extension buttons (keep overflow btn + dropdown)
+      container.querySelectorAll('.ext-toolbar-btn').forEach(el => el.remove());
+
+      if (extToolbarData.length === 0) {
+        overflowBtn.style.display = 'none';
+        overflowDropdown.classList.remove('visible');
+        return;
+      }
+
+      // Split into visible (pinned first, then by order, up to MAX) and overflow
+      const visible = extToolbarData.slice(0, MAX_VISIBLE_EXTENSIONS);
+      const overflow = extToolbarData.slice(MAX_VISIBLE_EXTENSIONS);
+
+      // Render visible buttons (insert before overflow button)
+      for (const ext of visible) {
+        const btn = document.createElement('button');
+        btn.className = 'ext-toolbar-btn';
+        btn.title = escHtml(ext.title || ext.name);
+        btn.dataset.extId = ext.id;
+
+        const img = document.createElement('img');
+        img.src = ext.icon;
+        img.alt = ext.name;
+        img.draggable = false;
+        btn.appendChild(img);
+
+        // Badge
+        if (ext.badgeText) {
+          const badge = document.createElement('span');
+          badge.className = 'ext-badge';
+          badge.textContent = ext.badgeText;
+          if (ext.badgeColor) badge.style.background = ext.badgeColor;
+          btn.appendChild(badge);
+        }
+
+        // Left click: open popup
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (ext.popupUrl && window.tandem) {
+            const rect = btn.getBoundingClientRect();
+            window.tandem.openExtensionPopup(ext.id, {
+              x: Math.round(rect.left),
+              y: Math.round(rect.bottom + 4)
+            });
+          }
+        });
+
+        // Right click: context menu
+        btn.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (window.tandem) {
+            window.tandem.showExtensionContextMenu(ext.id);
+          }
+        });
+
+        container.insertBefore(btn, overflowBtn);
+      }
+
+      // Overflow button
+      if (overflow.length > 0) {
+        overflowBtn.style.display = 'flex';
+        renderExtOverflow(overflow, overflowDropdown);
+      } else {
+        overflowBtn.style.display = 'none';
+        overflowDropdown.classList.remove('visible');
+      }
+    }
+
+    function renderExtOverflow(extensions, dropdown) {
+      dropdown.innerHTML = '';
+      for (const ext of extensions) {
+        const item = document.createElement('button');
+        item.className = 'ext-overflow-item';
+
+        const img = document.createElement('img');
+        img.src = ext.icon;
+        img.alt = ext.name;
+        img.draggable = false;
+        item.appendChild(img);
+
+        const name = document.createElement('span');
+        name.textContent = ext.name;
+        item.appendChild(name);
+
+        if (ext.badgeText) {
+          const badge = document.createElement('span');
+          badge.className = 'ext-badge';
+          badge.textContent = ext.badgeText;
+          if (ext.badgeColor) badge.style.background = ext.badgeColor;
+          item.appendChild(badge);
+        }
+
+        // Left click: open popup
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdown.classList.remove('visible');
+          if (ext.popupUrl && window.tandem) {
+            const rect = item.getBoundingClientRect();
+            window.tandem.openExtensionPopup(ext.id, {
+              x: Math.round(rect.left),
+              y: Math.round(rect.bottom + 4)
+            });
+          }
+        });
+
+        // Right click: context menu
+        item.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropdown.classList.remove('visible');
+          if (window.tandem) {
+            window.tandem.showExtensionContextMenu(ext.id);
+          }
+        });
+
+        dropdown.appendChild(item);
+      }
+    }
+
+    // Toggle overflow dropdown
+    (function() {
+      const overflowBtn = document.getElementById('ext-overflow-btn');
+      const overflowDropdown = document.getElementById('ext-overflow-dropdown');
+      if (overflowBtn && overflowDropdown) {
+        overflowBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          overflowDropdown.classList.toggle('visible');
+        });
+        // Close dropdown on click outside
+        document.addEventListener('click', () => {
+          overflowDropdown.classList.remove('visible');
+        });
+      }
+    })();
+
+    // Listen for toolbar updates from main process
+    if (window.tandem) {
+      window.tandem.onExtensionToolbarUpdate((extensions) => {
+        renderExtToolbar(extensions);
+      });
+
+      // Listen for extension remove requests (from context menu)
+      window.tandem.onExtensionRemoveRequest(async (data) => {
+        const confirmed = confirm(`Remove "${data.name}" from Tandem?`);
+        if (!confirmed) return;
+        try {
+          const resp = await fetch(`http://localhost:8765/extensions/uninstall/${data.diskId || data.id}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+          });
+          if (resp.ok) {
+            // Refresh toolbar
+            const exts = await window.tandem.getToolbarExtensions();
+            renderExtToolbar(exts);
+          }
+        } catch (err) {
+          console.warn('Extension remove failed:', err);
+        }
+      });
+
+      // Listen for toolbar refresh (triggered by API install/uninstall)
+      window.tandem.onExtensionToolbarRefresh(async () => {
+        try {
+          const exts = await window.tandem.getToolbarExtensions();
+          renderExtToolbar(exts);
+        } catch (e) {
+          console.warn('Extension toolbar refresh failed:', e);
+        }
+      });
+
+      // Load initial toolbar state
+      window.tandem.getToolbarExtensions().then(exts => {
+        renderExtToolbar(exts);
+      }).catch(() => {});
     }
   </script>
 

@@ -32,6 +32,7 @@ import { DownloadManager } from './downloads/manager';
 import { AudioCaptureManager } from './audio/capture';
 import { ExtensionLoader } from './extensions/loader';
 import { ExtensionManager } from './extensions/manager';
+import { ExtensionToolbar } from './extensions/toolbar';
 import { ClaroNoteManager } from './claronote/manager';
 import { EventStreamManager } from './events/stream';
 import { TaskManager } from './agents/task-manager';
@@ -75,6 +76,7 @@ let downloadManager: DownloadManager | null = null;
 let audioCaptureManager: AudioCaptureManager | null = null;
 let extensionLoader: ExtensionLoader | null = null;
 let extensionManager: ExtensionManager | null = null;
+let extensionToolbar: ExtensionToolbar | null = null;
 let claroNoteManager: ClaroNoteManager | null = null;
 let eventStream: EventStreamManager | null = null;
 let taskManager: TaskManager | null = null;
@@ -344,8 +346,18 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   }
 
   // Load extensions from ~/.tandem/extensions/
-  extensionManager.init(ses).catch((err) => {
+  extensionToolbar = new ExtensionToolbar(extensionManager);
+  extensionToolbar.setMainWindow(win);
+
+  extensionManager.init(ses).then(() => {
+    // Register toolbar IPC handlers after extensions are loaded
+    extensionToolbar!.registerIpcHandlers(ses);
+    // Send initial toolbar state to renderer
+    extensionToolbar!.notifyToolbarUpdate(ses);
+  }).catch((err) => {
     console.warn('⚠️ Failed to load some extensions:', err);
+    // Still register IPC handlers so toolbar works (just empty)
+    extensionToolbar!.registerIpcHandlers(ses);
   });
 
   // Auto-start Chrome bookmark sync if enabled in config
@@ -949,6 +961,7 @@ app.on('will-quit', () => {
   if (snapshotManager) snapshotManager.destroy();
   if (networkMocker) networkMocker.destroy();
   if (sessionManager) sessionManager.cleanup();
+  if (extensionToolbar) extensionToolbar.destroy();
 });
 
 app.on('window-all-closed', () => {

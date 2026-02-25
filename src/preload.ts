@@ -196,6 +196,29 @@ contextBridge.exposeInMainWorld('tandem', {
   unbookmarkPage: (url: string) => ipcRenderer.invoke('unbookmark-page', url),
   isBookmarked: (url: string) => ipcRenderer.invoke('is-bookmarked', url),
 
+  // Extension toolbar
+  getToolbarExtensions: () => ipcRenderer.invoke('extension-toolbar-list'),
+  openExtensionPopup: (extensionId: string, anchorBounds?: { x: number; y: number }) => ipcRenderer.invoke('extension-popup-open', extensionId, anchorBounds),
+  closeExtensionPopup: () => ipcRenderer.invoke('extension-popup-close'),
+  pinExtension: (extensionId: string, pinned: boolean) => ipcRenderer.invoke('extension-pin', extensionId, pinned),
+  showExtensionContextMenu: (extensionId: string) => ipcRenderer.invoke('extension-context-menu', extensionId),
+  showExtensionOptions: (extensionId: string) => ipcRenderer.invoke('extension-options', extensionId),
+  onExtensionToolbarUpdate: (callback: (extensions: any[]) => void) => {
+    const handler = (_event: any, extensions: any[]) => callback(extensions);
+    ipcRenderer.on('extension-toolbar-update', handler);
+    return () => ipcRenderer.removeListener('extension-toolbar-update', handler);
+  },
+  onExtensionRemoveRequest: (callback: (data: { id: string; diskId: string; name: string }) => void) => {
+    const handler = (_event: any, data: { id: string; diskId: string; name: string }) => callback(data);
+    ipcRenderer.on('extension-remove-request', handler);
+    return () => ipcRenderer.removeListener('extension-remove-request', handler);
+  },
+  onExtensionToolbarRefresh: (callback: () => void) => {
+    const handler = () => callback();
+    ipcRenderer.on('extension-toolbar-refresh', handler);
+    return () => ipcRenderer.removeListener('extension-toolbar-refresh', handler);
+  },
+
   // Chrome-style compact title bar: platform detection and window controls
   getPlatform: () => process.platform,
   showAppMenu: () => ipcRenderer.send('show-app-menu'),
