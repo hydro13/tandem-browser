@@ -133,18 +133,23 @@
 
 ---
 
-## Phase 7: chrome.identity OAuth Polyfill
+## Phase 7: chrome.identity OAuth Support
 **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1
 
-- [ ] **7.1** Implement `chrome.identity.launchWebAuthFlow()` polyfill
-  - Preload script that intercepts `chrome.identity` calls
-  - Open OAuth URL in a new BrowserWindow (popup)
-  - Monitor navigation for redirect URL match
-  - Return redirect URL to the extension callback
-- [ ] **7.2** Wire polyfill into extension session
-  - Inject via `session.setPreloads()` or content script mechanism
-  - Only active for extension contexts (not page content)
-- [ ] **7.3** Test with known extensions
+- [ ] **7.1** Empirical test — do MV3 extensions have a working OAuth fallback?
+  - Install Grammarly + Notion Web Clipper, attempt login
+  - Document: does the fallback (tab-based OAuth) work in Electron?
+  - If yes → Phase 7 = documentation-only (update gallery notes)
+  - If no → proceed to 7.2
+- [ ] **7.2** MV3-compatible polyfill (only if fallback fails)
+  - Option A: companion extension with cross-extension messaging
+  - Option B: `ses.protocol.handle()` protocol interception
+  - Do NOT use `session.setPreloads()` — does not work for MV3 service workers
+- [ ] **7.3** OAuth BrowserWindow MUST use `persist:tandem` session
+  - `webPreferences: { session: ses }` — see Security Stack Rules
+  - Monitor `will-navigate`/`will-redirect` for `*.chromiumapp.org` redirect
+  - 5-minute timeout for abandoned flows
+- [ ] **7.4** Test with known extensions
   - Grammarly login flow
   - Notion Web Clipper login flow
   - Verify other extensions are unaffected
@@ -182,6 +187,47 @@
 
 ---
 
+## Phase 9: Extension Auto-Updates
+**Priority:** MEDIUM | **Effort:** ~1 day | **Dependencies:** Phase 1, 2
+
+- [ ] **9.1** Version-check mechanism
+  - For each installed extension: download CRX metadata from CWS
+  - Compare `manifest.version` with locally installed version
+  - Use same CWS CRX endpoint as the installer
+- [ ] **9.2** Update interval
+  - Configurable check frequency, default daily
+  - Store last check timestamp in `~/.tandem/extensions/update-state.json`
+- [ ] **9.3** Atomic update
+  - Download new CRX → extract to temp dir → verify `manifest.json` + `key` field
+  - Remove old version → move new version in place
+  - Reload via `session.removeExtension()` + `session.loadExtension()`
+- [ ] **9.4** Integrity verification
+  - Verify downloaded CRX is valid (magic bytes, successful ZIP extraction, manifest.json readable)
+  - Log all update operations for audit trail
+- [ ] **9.5** API endpoints
+  - `GET /extensions/updates/check` — trigger manual update check
+  - `GET /extensions/updates/status` — last check time + available updates
+- [ ] **9.6** UI integration
+  - Update indicator in Extensions settings tab
+  - "Update available" badge on extension cards
+  - "Update All" button
+
+---
+
+## Phase 10: Extension Conflict Management
+**Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1, 4
+
+- [ ] **10.1** DNR overlap detection
+  - Detect when installed extensions use `declarativeNetRequest`
+  - Warn that these extensions may interfere with NetworkShield telemetry
+  - Show conflict indicator in gallery and installed extensions list
+- [ ] **10.2** Isolated session extension loading (future)
+  - Load extensions in isolated sessions (`persist:session-{name}`) created by SessionManager
+  - Call `loadExtension()` on each new session SessionManager creates
+  - Option in UI to enable/disable extensions per session
+
+---
+
 ## Progress Summary
 
 | Phase | Name | Status | Progress |
@@ -192,7 +238,9 @@
 | 4 | Curated Extension Gallery | PENDING | 0/3 |
 | 5 | Settings Panel UI | PENDING | 0/5 |
 | 6 | Native Messaging Support | PENDING | 0/3 |
-| 7 | chrome.identity Polyfill | PENDING | 0/3 |
+| 7 | chrome.identity OAuth Support | PENDING | 0/4 |
 | 8 | Testing & Verification | PENDING | 0/5 |
+| 9 | Extension Auto-Updates | PENDING | 0/6 |
+| 10 | Extension Conflict Management | PENDING | 0/2 |
 
-**Total:** 0/31 tasks completed
+**Total:** 0/40 tasks completed

@@ -60,6 +60,25 @@
    git push origin main
    ```
 
+## Security Stack Rules
+
+Tandem has a 6-layer security stack (NetworkShield, OutboundGuard, ContentAnalyzer,
+ScriptGuard, BehaviorMonitor, GatekeeperWebSocket) wired into the RequestDispatcher
+in main.ts. Extensions MUST NOT break this.
+
+Rules:
+
+1. NEVER bypass the RequestDispatcher for extension network requests
+2. Extensions that install declarativeNetRequest rules (ad blockers) conflict with
+   NetworkShield — mark them as `⚠️ securityConflict: 'dnr-overlap'` in the gallery
+3. OAuth popup windows (Phase 7) MUST use the `persist:tandem` session (`webPreferences: { session: ses }`)
+4. Extensions run in `persist:tandem` only — they do NOT run in isolated sessions
+   created by SessionManager (`persist:session-{name}`)
+5. After `session.loadExtension()`, verify the assigned extension ID matches the
+   expected Chrome Web Store ID (check that `manifest.json` has a `key` field)
+6. OutboundGuard scans all POST/PUT/PATCH requests in the session — including those
+   from extension content scripts and service workers — for credential exfiltration
+
 ## Coding Rules
 
 1. **Extension code goes in `src/extensions/`** — don't scatter across the codebase
@@ -98,7 +117,7 @@
 - **API server** in `src/api/server.ts` — Express-based, routes at `/extensions/*`
 - **Electron session** passed through init chain in `main.ts`
 - **CRX format:** ZIP archive with a Cr24 header (CRX2 or CRX3) — strip header, extract ZIP
-- **CWS download URL:** `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0.0.0&x=id%3D{ID}%26uc`
+- **CWS download URL:** `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${process.versions.chrome}&x=id%3D{ID}%26uc` — use `process.versions.chrome` for `prodversion` (fallback: `'130.0.0.0'`)
 - **Extension IDs:** 32 lowercase a-p characters (base16 in custom alphabet)
 
 ## Related Projects (DO NOT MODIFY)

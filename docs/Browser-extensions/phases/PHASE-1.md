@@ -42,6 +42,7 @@ export interface InstallResult {
   version: string;
   installPath: string;
   error?: string;
+  warning?: string;  // e.g. "manifest.json missing 'key' field — extension ID may not match CWS ID"
 }
 ```
 
@@ -55,13 +56,23 @@ Strip the header → find ZIP start offset → extract with AdmZip.
 
 **CWS download URL:**
 ```
-https://clients2.google.com/service/update2/crx?response=redirect&prodversion=130.0.0.0&x=id%3D{EXTENSION_ID}%26uc
+https://clients2.google.com/service/update2/crx?response=redirect&prodversion={CHROMIUM_VERSION}&x=id%3D{EXTENSION_ID}%26uc
 ```
-No auth required. Follows redirects. Use `prodversion=130.0.0.0` to match Tandem's Chromium version.
+No auth required. Follows redirects. Use `process.versions.chrome` for `prodversion` (dynamic Chromium version):
+
+```typescript
+const chromiumVersion = process.versions.chrome ?? '130.0.0.0';
+```
+Use the full version string (e.g. `130.0.6723.91`) — Google's CRX endpoint accepts this.
 
 **Extension ID format:** 32 lowercase a-p characters. Extract from CWS URLs via regex: `/\/([a-p]{32})(?:[/?]|$)/`
 
 **Already-installed check:** If `~/.tandem/extensions/{id}/` already exists, return success immediately with manifest info.
+
+**Post-extraction verification:**
+
+- After extracting the CRX, verify that `manifest.json` contains a `key` field. If `key` is missing, set a `warning` field on the `InstallResult` — the extension may work but OAuth and some APIs will fail because Electron will assign a random ID instead of the deterministic CWS ID.
+- After `session.loadExtension()`, compare the assigned Electron extension ID with the expected CWS extension ID. Log both IDs. If they don't match, log a warning.
 
 ### 1.2 Add adm-zip dependency
 
@@ -85,12 +96,12 @@ export class ExtensionManager {
   async init(session: Session): Promise<void>  // calls loader.loadAllExtensions()
   async install(input: string, session: Session): Promise<InstallResult>  // download + load
   list(): { loaded: LoadedExtension[], available: AvailableExtension[] }
-  uninstall(extensionId: string): boolean  // rm -rf from disk
+  uninstall(extensionId: string, session: Session): boolean  // session.removeExtension() + rm -rf from disk
 }
 ```
 
 - `install()`: calls `downloader.installFromCws()`, then `loader.loadExtension()` on success
-- `uninstall()`: removes `~/.tandem/extensions/{id}/` directory recursively
+- `uninstall()`: calls `session.removeExtension(id)` to unload immediately (no restart needed), then removes `~/.tandem/extensions/{id}/` directory recursively
 - `list()`: returns both `loader.listLoaded()` and `loader.listAvailable()`
 
 ### 1.4 Wire ExtensionManager into main.ts
@@ -108,6 +119,7 @@ Replace the direct `ExtensionLoader` usage:
 - Keep backward compatibility — the routes should return the same format
 
 ## Verification
+
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] `adm-zip` and `@types/adm-zip` in package.json
 - [ ] CRX2 header parsing works (version field = 2)
@@ -115,9 +127,15 @@ Replace the direct `ExtensionLoader` usage:
 - [ ] Non-CRX files rejected (wrong magic bytes)
 - [ ] Extension ID extracted from bare ID: `cjpalhdlnbpafiamejdnhcphjbkeiagm`
 - [ ] Extension ID extracted from CWS URL: `https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm`
+- [ ] `prodversion` in CWS download URL uses `process.versions.chrome` (not hardcoded)
 - [ ] Downloaded extension appears in `~/.tandem/extensions/{id}/` with `manifest.json`
+- [ ] Extracted `manifest.json` contains `key` field (log warning if missing)
+- [ ] Extension ID assigned by Electron matches the CWS extension ID (log both)
 - [ ] ExtensionManager.init() loads existing extensions on startup
 - [ ] ExtensionManager.install() downloads + extracts + loads a new extension
+- [ ] ExtensionManager.uninstall() calls `session.removeExtension()` + removes files (no restart needed)
+- [ ] Extension network requests are visible in RequestDispatcher logs (Guardian sees them)
+- [ ] Test interaction with DNR-based extensions: install uBlock Origin, load a page with known trackers, verify Guardian's `onBeforeRequest` still fires. Document result in STATUS.md.
 - [ ] App launches with `npm start`, existing extensions still load
 - [ ] `GET /extensions/list` still works
 

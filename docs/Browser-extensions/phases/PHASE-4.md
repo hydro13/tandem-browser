@@ -3,7 +3,7 @@
 > **Priority:** MEDIUM | **Effort:** ~half day | **Dependencies:** Phase 1
 
 ## Goal
-Provide a curated gallery of verified-compatible popular extensions that users can browse and install with one click. The gallery data comes from the compatibility analysis in `TOP30-EXTENSIONS.md`.
+Provide a curated gallery of verified-compatible popular extensions that users can browse and install with one click. The gallery uses a two-layer architecture: built-in defaults (shipped with the app) + an optional user-editable JSON file for overrides and additions.
 
 ## Files to Read
 - `docs/Browser-extensions/TOP30-EXTENSIONS.md` — full compatibility assessment with IDs, categories, mechanisms
@@ -11,18 +11,56 @@ Provide a curated gallery of verified-compatible popular extensions that users c
 - `src/api/server.ts` — existing route pattern
 
 ## Files to Create
-- `src/extensions/gallery.ts` — curated extension data
+- `src/extensions/gallery-defaults.ts` — built-in curated extension data (shipped with app)
+- `src/extensions/gallery-loader.ts` — gallery loading + merge logic
 
 ## Files to Modify
 - `src/api/server.ts` — add gallery API endpoint
 
 ## Tasks
 
-### 4.1 Create Gallery Data
+### 4.1 Create Gallery Data (Two-Layer Architecture)
 
-Create `src/extensions/gallery.ts` with the complete curated extension list.
+**Layer 1 — Built-in defaults:** Create `src/extensions/gallery-defaults.ts` with the complete curated extension list as a TypeScript constant. This ships with the app and is always available.
+
+**Layer 2 — User overrides:** Create `src/extensions/gallery-loader.ts` that:
+
+1. Loads the built-in defaults from `gallery-defaults.ts`
+2. Checks for `~/.tandem/extensions/gallery.json` (optional user file)
+3. Merges: user entries override defaults by `id`, user entries with new IDs are added
+4. Returns the merged gallery list
+
+**User gallery JSON format** (`~/.tandem/extensions/gallery.json`):
+
+```json
+{
+  "version": 1,
+  "extensions": [
+    {
+      "id": "cjpalhdlnbpafiamejdnhcphjbkeiagm",
+      "name": "uBlock Origin",
+      "description": "...",
+      "category": "privacy",
+      "compatibility": "works",
+      "securityConflict": "dnr-overlap",
+      "featured": true
+    }
+  ]
+}
+```
+
+**Merge logic:**
+
+```typescript
+gallery = loadDefaults()            // Built-in 30 extensions
+userGallery = loadUserGallery()     // ~/.tandem/extensions/gallery.json (if exists)
+merged = merge(gallery, userGallery)  // User entries override defaults by ID
+```
+
+The architecture should allow a third source (remote gallery) in the future without code changes to the merge logic.
 
 **`GalleryExtension` interface:**
+
 ```typescript
 export interface GalleryExtension {
   id: string;
@@ -31,6 +69,7 @@ export interface GalleryExtension {
   category: ExtensionCategory;
   compatibility: 'works' | 'partial' | 'needs-work' | 'blocked';
   compatibilityNote?: string;  // e.g. "Needs chrome.identity polyfill for OAuth login"
+  securityConflict: 'none' | 'dnr-overlap' | 'native-messaging';  // see Security Stack Rules in CLAUDE.md
   mechanism: string;  // e.g. "Content scripts + declarativeNetRequest"
   featured: boolean;  // true for the top 10 recommended extensions
 }
@@ -97,7 +136,7 @@ Copy the `description`, `compatibilityNote`, and `mechanism` from TOP30-EXTENSIO
 // }
 ```
 
-- Import `GALLERY_EXTENSIONS` from `gallery.ts`
+- Import gallery via `GalleryLoader` (which merges defaults + user overrides)
 - Merge with `extensionManager.list()` to determine `installed` status per entry
 - Support optional `category` and `featured` query params for filtering
 
@@ -106,18 +145,24 @@ Copy the `description`, `compatibilityNote`, and `mechanism` from TOP30-EXTENSIO
 The endpoint should support filtering by category and featured status. Return the available categories list so the UI can build filter buttons.
 
 ## Verification
+
 - [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `gallery.ts` exports `GALLERY_EXTENSIONS` array with 30 entries
+- [ ] `gallery-defaults.ts` exports built-in gallery with 30 entries
 - [ ] All 10 featured extensions match the TOP30-EXTENSIONS.md recommendations
-- [ ] Each entry has: id, name, description, category, compatibility, mechanism
-- [ ] `GET /extensions/gallery` returns all 30 extensions
+- [ ] Each entry has: id, name, description, category, compatibility, securityConflict, mechanism
+- [ ] Extensions with `declarativeNetRequest` have `securityConflict: 'dnr-overlap'`
+- [ ] `~/.tandem/extensions/gallery.json` is loaded if it exists
+- [ ] User gallery entries override built-in entries by ID
+- [ ] User gallery can add extra extensions not in defaults
+- [ ] `GET /extensions/gallery` returns the merged list (all 30+ extensions)
 - [ ] `GET /extensions/gallery?category=privacy` returns only privacy extensions
 - [ ] `GET /extensions/gallery?featured=true` returns only the 10 featured
 - [ ] `installed` field is `true` for extensions that exist in `~/.tandem/extensions/`
+- [ ] `gallery.json` format is documented (so users can manually edit it)
 - [ ] App launches, browsing works
 
 ## Scope
-- ONLY create `gallery.ts` and add the gallery route to `api/server.ts`
+- ONLY create `gallery-defaults.ts`, `gallery-loader.ts`, and add the gallery route to `api/server.ts`
 - Do NOT build any UI — that's Phase 5
 - Do NOT verify extension IDs against Chrome Web Store — that's Phase 8
 - The gallery is a static list — no dynamic fetching from CWS

@@ -38,10 +38,10 @@ Expose the extension install/uninstall/list functionality via REST API endpoints
 
 - Extract `:id` from URL params
 - Validate: must be a valid extension ID format (32 chars a-p)
-- Call `extensionManager.uninstall(id)`
+- Call `extensionManager.uninstall(id, session)` — this calls `session.removeExtension(id)` to unload immediately, then removes files from disk
 - Return success/failure
 
-**Note:** Uninstalling removes from disk but does NOT unload from the current session (Electron limitation — `session.removeExtension()` doesn't exist in all versions). Document that a restart may be needed.
+**Note:** `session.removeExtension(extensionId)` is available in Electron 40. The extension is unloaded immediately — no app restart needed.
 
 ### 2.3 Update `GET /extensions/list` endpoint
 
@@ -72,7 +72,7 @@ All extension endpoints should:
 - [ ] `POST /extensions/install` with CWS URL returns success + extension info
 - [ ] `POST /extensions/install` with invalid input returns 400 error
 - [ ] `POST /extensions/install` with already-installed ID returns success (idempotent)
-- [ ] `DELETE /extensions/uninstall/:id` removes extension directory
+- [ ] `DELETE /extensions/uninstall/:id` unloads extension from session via `session.removeExtension()` and removes directory
 - [ ] `DELETE /extensions/uninstall/:id` with non-existent ID returns error
 - [ ] `GET /extensions/list` returns loaded and available arrays
 - [ ] App launches, browsing works

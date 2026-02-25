@@ -1,114 +1,124 @@
-# Phase 7: chrome.identity OAuth Polyfill
+# Phase 7: chrome.identity OAuth Support
 
 > **Priority:** LOW | **Effort:** ~half day | **Dependencies:** Phase 1
 
 ## Goal
-Polyfill `chrome.identity.launchWebAuthFlow()` so extensions that use Chrome's OAuth API (Grammarly, Notion Web Clipper, etc.) can authenticate users. Electron doesn't implement this API natively.
+
+Enable extensions that use `chrome.identity.launchWebAuthFlow()` (Grammarly, Notion Web Clipper, etc.) to authenticate users. Electron doesn't implement this API natively.
+
+**Critical change from original plan:** The `session.setPreloads()` approach does NOT work for MV3 extensions. Preload scripts only run in renderer processes, but MV3 extensions use service workers (not renderers). Grammarly, Notion Web Clipper, and most modern extensions are MV3. This phase uses a different approach.
 
 ## Background
 
 **The problem:**
-Some extensions call `chrome.identity.launchWebAuthFlow({ url, interactive })` to trigger OAuth login. This API opens a special Chrome popup that handles the OAuth redirect flow. Electron doesn't provide this API, so extensions that depend on it show an error at login.
+Some extensions call `chrome.identity.launchWebAuthFlow({ url, interactive })` to trigger OAuth login. Electron doesn't provide this API, so extensions that depend on it show an error at login.
 
 **Affected extensions from TOP30:**
-- Grammarly (uses `chrome.identity` for login)
-- Notion Web Clipper (uses `chrome.identity` for login)
+
+- Grammarly (MV3 — uses `chrome.identity` for login)
+- Notion Web Clipper (MV3 — uses `chrome.identity` for login)
 - Other future extensions using this pattern
 
-**The solution:**
-Intercept `chrome.identity.launchWebAuthFlow()` calls and implement the flow using a standard Electron `BrowserWindow` as the OAuth popup.
+**Why `session.setPreloads()` doesn't work:**
+Electron's preload scripts are injected into `BrowserWindow` and `webContents` renderer processes. MV3 service workers are NOT renderers — they run in a separate process type. A preload script will never reach them. This rules out the preload-based polyfill approach entirely.
 
 ## Files to Read
-- Electron docs: `BrowserWindow`, `session.setPreloads()`, `webContents.on('will-navigate')`
+
 - `src/extensions/manager.ts` — understand session setup
 - Chrome Extension API docs: `chrome.identity.launchWebAuthFlow()`
+- Electron docs: `BrowserWindow`, `ses.protocol.handle()`
 
 ## Files to Create
-- `src/extensions/identity-polyfill.ts` — chrome.identity polyfill implementation
+
+- `src/extensions/identity-polyfill.ts` — chrome.identity support implementation (approach determined by Step 1)
 
 ## Files to Modify
+
 - `src/extensions/manager.ts` — wire polyfill into extension session
 
 ## Tasks
 
-### 7.1 Implement `chrome.identity.launchWebAuthFlow()` polyfill
+### 7.1 Empirical Test — Do MV3 Extensions Have a Working Fallback?
 
-Create `src/extensions/identity-polyfill.ts`:
+**This step must be done FIRST, before writing any code.**
 
-**How `launchWebAuthFlow` works in Chrome:**
-1. Extension calls `chrome.identity.launchWebAuthFlow({ url: authUrl, interactive: true }, callback)`
-2. Chrome opens a popup window navigating to `authUrl`
-3. User completes the OAuth flow (login, approve permissions)
-4. OAuth provider redirects to a URL matching `https://{extension-id}.chromiumapp.org/*`
-5. Chrome captures the redirect URL and passes it to the callback
-6. Extension extracts the token from the redirect URL
+Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead of using `chrome.identity`. If this fallback works in Electron, the entire polyfill may be unnecessary.
 
-**Polyfill implementation:**
+**Test procedure:**
+
+1. Install Grammarly extension via `POST /extensions/install`
+2. Click the Grammarly icon → attempt to log in
+3. Document what happens:
+   - **Scenario A:** Extension opens a regular tab for login → login works → **Phase 7 becomes documentation-only** (update gallery compatibility notes, no code needed)
+   - **Scenario B:** Extension shows an error about `chrome.identity` → login completely fails → proceed to Step 2
+   - **Scenario C:** Partial failure — some flow works, some doesn't → document exactly what fails
+4. Repeat for Notion Web Clipper
+5. Document results in STATUS.md
+
+**If Scenario A for both:** Mark Phase 7 as COMPLETE with only documentation changes. Update `compatibilityNote` for these extensions in the gallery.
+
+### 7.2 MV3-Compatible Polyfill (only if Step 1 shows failures)
+
+If the fallback OAuth doesn't work, implement ONE of these approaches:
+
+**Option A — Companion Extension (recommended):**
+
+Create a small helper extension that provides `chrome.identity.launchWebAuthFlow` via cross-extension messaging:
+
+1. Create a companion extension in `~/.tandem/extensions/_tandem-identity-helper/`
+2. The companion listens for `chrome.runtime.onMessageExternal` with OAuth requests
+3. Target extensions call `chrome.runtime.sendMessage(HELPER_ID, { type: 'launchWebAuthFlow', url, interactive })`
+4. The helper opens a BrowserWindow (with `persist:tandem` session!) and monitors the OAuth redirect
+5. Returns the redirect URL to the calling extension
+
+**Option B — Protocol Interception (alternative):**
+
+Use `ses.protocol.handle()` to intercept extension protocol requests. This works at a lower level than preloads and may intercept service worker requests. Research whether this can provide `chrome.identity` to MV3 service workers.
+
+**Choose based on testing.** Document which approach was chosen and why in STATUS.md.
+
+### 7.3 OAuth BrowserWindow — MUST Use persist:tandem Session
+
+**SECURITY REQUIREMENT:** Any BrowserWindow created for OAuth flows MUST use the `persist:tandem` session. Without this, the window has no security stack (no Guardian, no OutboundGuard, no NetworkShield).
+
 ```typescript
-export class IdentityPolyfill {
-  /**
-   * Handle launchWebAuthFlow by opening a BrowserWindow.
-   * Monitor navigation for the redirect URL pattern.
-   * Return the redirect URL to the caller.
-   */
-  async launchWebAuthFlow(options: {
-    url: string;
-    interactive?: boolean;
-  }): Promise<string>
-}
+const popup = new BrowserWindow({
+  width: 500,
+  height: 700,
+  webPreferences: {
+    session: ses,  // MUST be persist:tandem — see Security Stack Rules in CLAUDE.md
+  }
+});
 ```
 
-**Steps:**
-1. Create a new `BrowserWindow` (popup style: ~500x700, no menu bar)
-2. Navigate to `options.url`
-3. Listen for `will-navigate` and `will-redirect` events on the webContents
-4. When the URL matches `https://*.chromiumapp.org/*`, capture it
-5. Close the popup and return the captured URL
-6. If `interactive: false` and the flow requires user interaction, reject immediately
-7. Set a timeout (e.g. 5 minutes) to auto-close the popup if abandoned
+The session reference (`ses`) must be passed to the identity polyfill from ExtensionManager or obtained via `session.fromPartition('persist:tandem')`.
 
-**Redirect URL pattern:**
-The redirect URL for extension OAuth is typically:
-```
-https://{extension-id}.chromiumapp.org/{path}?{query-with-token}
-```
+**OAuth flow in the BrowserWindow:**
 
-Match against: `/\.chromiumapp\.org/`
+1. Navigate to `options.url`
+2. Listen for `will-navigate` and `will-redirect` events on the webContents
+3. When the URL matches `https://*.chromiumapp.org/*`, capture it
+4. Close the popup and return the captured URL
+5. If `interactive: false` and the flow requires user interaction, reject immediately
+6. Set a timeout (e.g. 5 minutes) to auto-close the popup if abandoned
 
-### 7.2 Wire polyfill into extension session
+### 7.4 Test with Known Extensions
 
-In `ExtensionManager.init()` or during session setup:
+After implementation (or after confirming fallback works), verify:
 
-**Option A: Preload script (preferred)**
-- Create a preload script that adds `chrome.identity.launchWebAuthFlow` to the extension's context
-- Register via `session.setPreloads([polyfillPath])` for the extension session
-- The preload script communicates with the main process via IPC
-
-**Option B: Extension API hook**
-- Use `session.on('extension-api-call')` or similar Electron API to intercept the call
-- Route the call to the polyfill
-
-**IPC flow:**
-1. Extension background script calls `chrome.identity.launchWebAuthFlow()`
-2. Preload script intercepts and sends IPC message to main process
-3. Main process opens BrowserWindow, monitors redirect
-4. Main process sends redirect URL back via IPC
-5. Preload script resolves the callback/promise
-
-### 7.3 Test with known extensions
-
-After implementation, verify:
-- **Grammarly:** Click the extension icon → "Log in" → OAuth popup opens → complete login → extension shows logged-in state
-- **Notion Web Clipper:** Click extension icon → "Log in to Notion" → OAuth popup → approve → clipper works
+- **Grammarly:** Click extension icon → "Log in" → OAuth flow completes → extension shows logged-in state
+- **Notion Web Clipper:** Click extension icon → "Log in to Notion" → OAuth flow → approve → clipper works
 - **Extensions without `chrome.identity`:** Completely unaffected (uBlock, Dark Reader, etc.)
 
 ## Verification
+
 - [ ] `npx tsc --noEmit` — 0 errors
-- [ ] `launchWebAuthFlow()` opens a popup window at the OAuth URL
-- [ ] Redirect URL captured when OAuth flow completes
-- [ ] Popup closes automatically after redirect capture
+- [ ] Step 1 empirical test completed and results documented in STATUS.md
+- [ ] If fallback works: gallery compatibility notes updated, no polyfill code needed
+- [ ] If polyfill needed: chosen approach documented with rationale
+- [ ] OAuth BrowserWindow uses `persist:tandem` session (verify in code)
+- [ ] OAuth popup closes automatically after redirect capture
 - [ ] Timeout closes popup after 5 minutes of inactivity
-- [ ] `interactive: false` rejects immediately if interaction needed
 - [ ] Grammarly login flow works (if Grammarly extension installed)
 - [ ] Notion Web Clipper login flow works (if installed)
 - [ ] Extensions not using `chrome.identity` work normally
@@ -116,11 +126,13 @@ After implementation, verify:
 - [ ] App launches, browsing works
 
 ## Scope
-- ONLY implement the `chrome.identity.launchWebAuthFlow()` polyfill
+
+- ONLY implement `chrome.identity.launchWebAuthFlow()` support
 - Do NOT polyfill other `chrome.identity` methods (`getProfileUserInfo`, `getAuthToken`, etc.) unless needed
-- Do NOT modify extension code — the polyfill must work transparently
-- Do NOT implement `chrome.identity.getRedirectURL()` — extensions that call this usually have a fallback
+- Do NOT modify extension code — the solution must work transparently
+- Do NOT use `session.setPreloads()` — this does not work for MV3 service workers
 
 ## After Completion
+
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
