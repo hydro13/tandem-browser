@@ -202,7 +202,9 @@ async function createWindow(): Promise<BrowserWindow> {
     }
 
     // Catch-all: route unmanaged webContents navigations back through TabManager
-    if (tabManager && !tabManager.hasWebContents(contents.id)) {
+    // Skip popup BrowserWindows (type 'window') — they handle their own navigation
+    // for OAuth flows (Google, Apple, Microsoft) and must not be intercepted.
+    if (tabManager && !tabManager.hasWebContents(contents.id) && contents.getType() !== 'window') {
       contents.on('will-navigate', (_e, url) => {
         if (mainWindow && url && url !== 'about:blank') {
           mainWindow.webContents.send('open-url-in-new-tab', url);
