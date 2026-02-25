@@ -91,6 +91,23 @@ export class ConflictDetector {
    - If found → `conflictType: 'native-messaging'`, `severity: 'warning'` ("Extension requires a desktop companion app that may not be installed")
 
 3. **Broad content script injection (warning):**
+
+   **First: empirical test (before implementing any whitelist):**
+
+   Install Dark Reader extension (content scripts only). Open Tandem's DevTools console.
+   Check whether ScriptGuard logs any events for Dark Reader's content scripts:
+
+   - If ScriptGuard logs the content script injections → whitelist implementation IS needed,
+     proceed with 10a.3 as written
+   - If ScriptGuard logs nothing for extension content scripts → extension scripts run
+     outside CDP's `scriptParsed` event scope. In this case:
+     - No whitelist implementation needed (there is nothing to whitelist)
+     - Replace the whitelist task with: log content_scripts patterns to the security
+       audit log only (human-readable record, not a code whitelist)
+     - Update STATUS.md with finding and skip the whitelist code
+
+   Document result in STATUS.md before writing any whitelist code.
+
    - Check `content_scripts` for `matches: ["<all_urls>"]` or very broad patterns like `*://*/*`
    - Combined with `permissions` that include `webRequest` or `webRequestBlocking`
    - If found → `conflictType: 'content-script-broad'`, `severity: 'warning'` ("Extension injects scripts into all pages — verify it's trusted")

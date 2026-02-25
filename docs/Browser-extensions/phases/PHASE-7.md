@@ -50,7 +50,14 @@ Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab 
 2. Click the Grammarly icon → attempt to log in
 3. Document what happens:
    - **Scenario A:** Extension opens a regular tab for login → login works → **Phase 7 becomes documentation-only** (update gallery compatibility notes, no code needed)
-   - **Scenario B:** Extension shows an error about `chrome.identity` → login completely fails → proceed to Step 2
+   - **Scenario B:** Extension shows an error about `chrome.identity` → login completely
+     fails → proceed to Step 2 (implement Option A — companion extension).
+     If after 2 hours of work you cannot get `chrome.runtime.onMessageExternal`
+     cross-extension messaging working between the companion and the target extension:
+     STOP. Mark Phase 7 as BLOCKED in STATUS.md with exact error details.
+     Report to Robin — do not proceed to Option B independently. Phase 7 is LOW priority
+     and can be revisited later; the 22/30 extensions that don't use chrome.identity
+     work fine without it.
    - **Scenario C:** Partial failure — some flow works, some doesn't → document exactly what fails
 4. Repeat for Notion Web Clipper
 5. Document results in STATUS.md
@@ -75,7 +82,9 @@ Create a small helper extension that provides `chrome.identity.launchWebAuthFlow
 
 Use `ses.protocol.handle()` to intercept extension protocol requests. This works at a lower level than preloads and may intercept service worker requests. Research whether this can provide `chrome.identity` to MV3 service workers.
 
-**Choose based on testing.** Document which approach was chosen and why in STATUS.md.
+**Default to Option A (companion extension).** Only consider Option B if Option A
+fails and Robin explicitly approves the switch. Document which approach was chosen
+and why in STATUS.md.
 
 ### 7.3 OAuth BrowserWindow — MUST Use persist:tandem Session
 
