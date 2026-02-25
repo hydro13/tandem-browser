@@ -10,6 +10,36 @@ import { SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
  * - Events are routed in priority order (lower number = runs first)
  * - Analyzers can produce new events (cascade analysis)
  * - Context object provides controlled access to system capabilities
+ *
+ * ## Creating a new SecurityAnalyzer
+ *
+ * 1. Implement the `SecurityAnalyzer` interface from `types.ts`
+ * 2. Set `eventTypes` to the event types your analyzer processes (or '*' for all)
+ * 3. Set `priority` following the conventions below
+ * 4. `canAnalyze()` should filter events beyond the type check (e.g. require a domain)
+ * 5. `analyze()` returns new SecurityEvent[] to log, or [] if events are logged internally
+ * 6. Wrap existing modules (don't reimplement) — see ContentAnalyzerPlugin, BehaviorMonitorPlugin
+ *
+ * ## Event types currently routed
+ *
+ * - 'page-loaded'  — emitted by SecurityManager.onPageLoaded() after navigation
+ * - '*'            — wildcard, receives all events (used by EventBurstAnalyzer)
+ * - Custom types can be added as synthetic events via routeEvent()
+ *
+ * ## Priority conventions (lower = runs first)
+ *
+ * - 100-300: Blocklist / high-certainty analyzers (AnalysisConfidence.BLOCKLIST-level)
+ * - 400:     Content analysis (ContentAnalyzerPlugin)
+ * - 500:     Behavioral analysis (BehaviorMonitorPlugin)
+ * - 700+:    Heuristic / meta-analyzers (EventBurstAnalyzer at 950)
+ *
+ * ## Registration
+ *
+ * Register analyzers in SecurityManager.setDevToolsManager() via:
+ *   this.analyzerManager.register(new MyPlugin(existingModule)).catch(...)
+ *
+ * Events are routed automatically via the db.onEventLogged callback in SecurityManager.
+ * Cascade events (produced by analyze()) are logged but NOT re-routed (re-entrancy guard).
  */
 export class AnalyzerManager {
   private analyzers: SecurityAnalyzer[] = [];
