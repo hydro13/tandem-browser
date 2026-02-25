@@ -207,7 +207,7 @@ export class ContentAnalyzer {
             tabId: null,
             eventType: 'hidden-iframe',
             severity: 'medium',
-            category: 'network',
+            category: 'content',
             details: JSON.stringify({
               count: analysis.security.hiddenIframesWithForms,
             }),
@@ -235,7 +235,7 @@ export class ContentAnalyzer {
             tabId: null,
             eventType: 'mixed-content',
             severity: 'medium',
-            category: 'network',
+            category: 'content',
             details: JSON.stringify({ mixedContent: true }),
             actionTaken: 'logged',
             confidence: AnalysisConfidence.HEURISTIC,
@@ -277,7 +277,7 @@ export class ContentAnalyzer {
           tabId: null,
           eventType: 'trackers-detected',
           severity: 'low',
-          category: 'network',
+          category: 'content',
           details: JSON.stringify({
             count: analysis.trackers.length,
             trackers: analysis.trackers.slice(0, 10),
@@ -301,7 +301,7 @@ export class ContentAnalyzer {
           tabId: null,
           eventType: 'warned',
           severity: 'high',
-          category: 'network',
+          category: 'content',
           details: JSON.stringify({
             reason: 'typosquatting',
             ...analysis.security.typosquat,
@@ -313,7 +313,12 @@ export class ContentAnalyzer {
     }
 
     // 8. Deep page source scan (CyberChef-inspired regex extraction)
+    const scanStart = performance.now();
     await this.deepScanPageSource(domain);
+    const scanMs = performance.now() - scanStart;
+    if (scanMs > 100) {
+      console.warn(`[ContentAnalyzer] Slow deep scan: ${domain} took ${scanMs.toFixed(1)}ms`);
+    }
 
     // Calculate risk score
     analysis.riskScore = this.calculateRiskScore(analysis);
@@ -400,7 +405,7 @@ export class ContentAnalyzer {
         tabId: null,
         eventType: 'octal-ip-evasion',
         severity: 'medium',
-        category: 'network',
+        category: 'content',
         details: JSON.stringify({
           octalIp,
           decimalIp,
@@ -429,7 +434,7 @@ export class ContentAnalyzer {
           tabId: null,
           eventType: 'hidden-blocked-ip',
           severity: 'high',
-          category: 'network',
+          category: 'content',
           details: JSON.stringify({ ip, sourceType, context }),
           actionTaken: 'logged',
           confidence: AnalysisConfidence.BLOCKLIST,
@@ -456,7 +461,7 @@ export class ContentAnalyzer {
       tabId: null,
       eventType: 'hidden-blocked-url',
       severity: 'high',
-      category: 'network',
+      category: 'content',
       details: JSON.stringify({
         blockedDomain: domain,
         url: url || undefined,

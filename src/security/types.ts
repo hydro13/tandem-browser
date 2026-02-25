@@ -2,7 +2,7 @@
 
 export type GuardianMode = 'strict' | 'balanced' | 'permissive';
 export type EventSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
-export type EventCategory = 'network' | 'script' | 'form' | 'outbound' | 'behavior';
+export type EventCategory = 'network' | 'script' | 'form' | 'outbound' | 'behavior' | 'content';
 export type EventAction = 'auto_block' | 'agent_block' | 'user_allowed' | 'logged' | 'flagged';
 
 export interface SecurityEvent {

@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 9
-**Last completed phase:** Phase 8
-**Overall status:** IN PROGRESS
+**Next phase to implement:** — (all phases complete)
+**Last completed phase:** Phase 9
+**Overall status:** COMPLETE
 
 ---
 
@@ -315,12 +315,27 @@
 
 ## Phase 9: Test Coverage, Type Cleanup + CDP Timing Fix
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
-- **Verification:** (to be filled after completion)
-- **Issues encountered:** —
-- **Notes for this phase:** See `phases/PHASE-9.md` for full spec. Key tasks: (1) ROADMAP.md checkbox update, (2) unit tests via vitest for pure functions, (3) EventCategory 'content' type, (4) CDP attachment timing fix, (5) performance logging.
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** (pending)
+- **Verification:**
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] All ROADMAP.md checkboxes are `[x]` (66 tasks + 9 Phase 8 tasks)
+  - [x] `EventCategory` union includes `'content'`
+  - [x] `hidden-iframe`, `mixed-content`, `trackers-detected`, `hidden-blocked-url`, `octal-ip-evasion`, `hidden-blocked-ip` events use `category: 'content'`
+  - [x] `password-on-http` events still use `category: 'form'` (was already `'form'`, not `'network'`)
+  - [x] CDP attaches earlier — `Debugger.enable` + `Performance.enable` moved into `attach()` method, initial timeout reduced from 2000ms to 500ms
+  - [x] `npm run test:security` passes — all 51 tests green
+  - [x] 25 JS_THREAT_RULES tests pass (all rules validated with true positive + true negative samples)
+  - [x] `calculateEntropy` tests pass (5 tests)
+  - [x] `normalizeScriptSource` tests pass (5 tests)
+  - [x] `computeASTHash` tests pass (5 tests — same hash for different variable names, different hash for different structure)
+  - [x] `computeSimilarity` tests pass (5 tests — identity, orthogonal, empty, partial overlap, symmetry)
+  - [x] Performance logging present in `script-guard.ts` (>50ms per script) and `content-analyzer.ts` (>100ms per deep scan)
+  - [x] App launches with `npm start`, browsing works
+  - [x] All regression endpoints valid: /security/status, /security/outbound/stats, /security/gatekeeper/status, /security/page/analysis, /security/scripts/correlations, /security/analyzers/status
+- **Issues encountered:** None
+- **Notes:** `password-on-http` was already `category: 'form'` (not `'network'`), so no change needed there. The typosquatting `warned` event was also changed from `'network'` to `'content'` since it's a content-level page analysis result. CDP timing fix was minimal (4 lines in manager.ts + 1 line change in main.ts): `Debugger.enable` and `Performance.enable` are now sent in the `attach()` method alongside other domain enables, and the initial tab attachment timeout was reduced from 2000ms to 500ms. `enableSecurityDomains()` is still called in `onTabAttached()` but becomes a no-op since domains are already enabled (CDP domain enables are idempotent). Four pure functions in `script-guard.ts` were exported with `@internal` JSDoc markers for testing: `calculateEntropy`, `normalizeScriptSource`, `computeASTHash`, `computeSimilarity`. Vitest added as devDependency (v4.0.18). Test mocks for Electron/SecurityDB/Guardian/DevToolsManager prevent Electron-dependent module loading in the test environment.
 
 ---
 
@@ -336,6 +351,7 @@
 |-------|-----------|---------|--------|
 | 6-A | acorn | ^8.16.0 | Lightweight JS parser for AST fingerprinting |
 | ~~6-A~~ | ~~@types/acorn~~ | ~~^4.0.6~~ | ~~Removed in Phase 8 — acorn v8 bundles its own types~~ |
+| 9 | vitest (dev) | ^4.0.18 | Unit test runner for security pure functions |
 
 ## File Inventory
 
@@ -429,3 +445,15 @@
 - `src/security/guardian.ts` — Changed WebSocket flag confidence from `BEHAVIORAL` (500) to `HEURISTIC` (700)
 - `src/security/outbound-guard.ts` — Added doc comment documenting Electron API limitation for MIME Content-Type whitelist
 - `package.json` / `package-lock.json` — Removed `@types/acorn` from devDependencies
+
+### Phase 9
+
+- `docs/security-upgrade/ROADMAP.md` — Marked all 66 task checkboxes as `[x]`, added Phase 9 row to progress summary
+- `src/security/types.ts` — Extended `EventCategory` union with `'content'`
+- `src/security/content-analyzer.ts` — Changed 7 `logEvent()` calls from `category: 'network'` to `category: 'content'` (hidden-iframe, mixed-content, trackers-detected, typosquatting warned, octal-ip-evasion, hidden-blocked-ip, hidden-blocked-url); added performance timing around `deepScanPageSource()`
+- `src/devtools/manager.ts` — Added `Debugger.enable` + `Performance.enable` to `attach()` method (4 lines, reduces ScriptGuard race window)
+- `src/main.ts` — Reduced initial CDP attachment timeout from 2000ms to 500ms
+- `src/security/script-guard.ts` — Exported 4 pure functions (`calculateEntropy`, `normalizeScriptSource`, `computeASTHash`, `computeSimilarity`) with `@internal` marker; added performance timing in `analyzeExternalScript()`
+- New file: `src/security/tests/security.test.ts` — 51 vitest tests covering all pure functions + all 25 JS_THREAT_RULES
+- New file: `vitest.config.ts` — Vitest configuration for security tests
+- `package.json` — Added `vitest` devDependency (^4.0.18), added `test:security` script

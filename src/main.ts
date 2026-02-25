@@ -432,10 +432,11 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext();
       // Auto-attach CDP for Copilot Vision + Security on startup
+      // Reduced from 2000ms to 500ms to minimize ScriptGuard race window
       setTimeout(async () => {
         await devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
         securityManager?.onTabAttached().catch(() => {});
-      }, 2000);
+      }, 500);
     }
   });
 

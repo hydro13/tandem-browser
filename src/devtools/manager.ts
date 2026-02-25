@@ -183,6 +183,10 @@ export class DevToolsManager {
       });
       await wc.debugger.sendCommand('DOM.enable');
       await wc.debugger.sendCommand('Page.enable');
+      // Enable Debugger + Performance early so ScriptGuard sees scriptParsed events
+      // from the very first moments of page load (reduces monitor injection race window)
+      await wc.debugger.sendCommand('Debugger.enable');
+      await wc.debugger.sendCommand('Performance.enable');
     } catch (e: any) {
       console.warn('⚠️ CDP domain enable partially failed:', e.message);
       // Continue — some domains may have succeeded

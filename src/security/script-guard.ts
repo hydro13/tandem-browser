@@ -5,8 +5,8 @@ import { Guardian } from './guardian';
 import { DevToolsManager } from '../devtools/manager';
 import { JS_THREAT_RULES, ThreatRuleMatch, ScriptAnalysisResult, AnalysisConfidence } from './types';
 
-/** Shannon entropy (bits per character) — detects obfuscated/encrypted content */
-function calculateEntropy(input: string): number {
+/** Shannon entropy (bits per character) — detects obfuscated/encrypted content @internal */
+export function calculateEntropy(input: string): number {
   if (input.length === 0) return 0;
   const freq = new Map<number, number>();
   for (let i = 0; i < input.length; i++) {
@@ -21,8 +21,8 @@ function calculateEntropy(input: string): number {
   return entropy;
 }
 
-/** Strip comments and normalize whitespace for obfuscation-resistant hashing */
-function normalizeScriptSource(source: string): string {
+/** Strip comments and normalize whitespace for obfuscation-resistant hashing @internal */
+export function normalizeScriptSource(source: string): string {
   return source
     .replace(/\/\/[^\n]*/g, '')           // strip single-line comments
     .replace(/\/\*[\s\S]*?\*\//g, '')     // strip multi-line comments
@@ -92,8 +92,8 @@ function walkAST(node: any, features: string[]): void {
   }
 }
 
-/** Compute obfuscation-resistant AST hash (Ghidra BSim-inspired iterative graph hashing) */
-function computeASTHash(node: acorn.Node): string {
+/** Compute obfuscation-resistant AST hash (Ghidra BSim-inspired iterative graph hashing) @internal */
+export function computeASTHash(node: acorn.Node): string {
   const features: string[] = [];
   walkAST(node, features);
   return createHash('sha256').update(features.join('|')).digest('hex').substring(0, 32);
@@ -131,8 +131,8 @@ function walkForFeatures(node: any, features: Map<string, number>): void {
   }
 }
 
-/** Cosine similarity between two feature vectors (0 = completely different, 1 = identical) */
-function computeSimilarity(vec1: Map<string, number>, vec2: Map<string, number>): number {
+/** Cosine similarity between two feature vectors (0 = completely different, 1 = identical) @internal */
+export function computeSimilarity(vec1: Map<string, number>, vec2: Map<string, number>): number {
   const allKeys = new Set([...vec1.keys(), ...vec2.keys()]);
   let dotProduct = 0;
   let norm1 = 0;
@@ -531,6 +531,8 @@ export class ScriptGuard {
       if (!source || typeof source !== 'string') return;
       if (source.length > MAX_SCRIPT_SIZE) return;
 
+      const perfStart = performance.now();
+
       // 0. Compute reliable script_hash from source (Phase 8 — CDP hash param is unreliable)
       const sourceHash = createHash('sha256').update(source).digest('hex');
       this.db.updateScriptHash(domain, url, sourceHash);
@@ -643,6 +645,11 @@ export class ScriptGuard {
       const isFlagged = analysis.severity !== 'none' || (entropy !== undefined && entropy >= ENTROPY_THRESHOLD);
       if (isFlagged && astNode) {
         this.runSimilarityCheck(astNode, domain, url);
+      }
+
+      const perfMs = performance.now() - perfStart;
+      if (perfMs > 50) {
+        console.warn(`[ScriptGuard] Slow analysis: ${url} took ${perfMs.toFixed(1)}ms`);
       }
     } catch {
       // CDP command failed (tab closed, debugger detached) — silently ignore
