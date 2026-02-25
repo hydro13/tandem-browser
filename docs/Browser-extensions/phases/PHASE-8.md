@@ -119,3 +119,4 @@ Run through these checks manually with the app running:
 1. Update `docs/Browser-extensions/STATUS.md` — mark Phase 8 as DONE
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off all Phase 8 tasks
 3. Update overall project status in STATUS.md to COMPLETE (if all phases done)
+4. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section

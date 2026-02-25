@@ -11,7 +11,7 @@
    - Read notes from the previous phase — they contain critical context and wiring details
    - If the previous phase has status `FAILED` or `ISSUES`, stop and report to the user
 2. **Read the phase doc:** `docs/Browser-extensions/phases/PHASE-{N}.md`
-3. **Read the compatibility reference:** `docs/Browser-extensions/TOP30-EXTENSIONS.md` — contains extension IDs, compatibility status, and mechanism details
+3. **Read the compatibility reference:** `docs/Browser-extensions/TOP30-EXTENSIONS.md` — contains extension IDs, compatibility status, mechanism details, and **Electron API compatibility matrix**
 4. **Understand the codebase:**
    - `src/extensions/loader.ts` — ExtensionLoader (loads unpacked extensions via `session.loadExtension()`)
    - `src/api/server.ts` — Express API server (existing routes at `/extensions/list` and `/extensions/load`)
@@ -78,6 +78,31 @@ Rules:
    expected Chrome Web Store ID (check that `manifest.json` has a `key` field)
 6. OutboundGuard scans all POST/PUT/PATCH requests in the session — including those
    from extension content scripts and service workers — for credential exfiltration
+7. **CRX3 signature verification is MANDATORY** — never install an extension with an
+   invalid or missing signature. This protects against MITM attacks on the CWS download.
+8. **Extension content scripts bypass ScriptGuard** — they are injected by Electron's
+   extension system, not via CDP. After loading an extension, read its `content_scripts`
+   manifest entry and log the URL patterns for auditing. Phase 10a registers broad patterns
+   as known-trusted in ScriptGuard context.
+
+## Extension Toolbar Rules (Phase 5b+)
+
+1. Extension popups load `chrome-extension://{id}/{popup}` URLs — these MUST run in
+   the `persist:tandem` session for full chrome.* API access
+2. Popup windows should be constrained to reasonable sizes (max 800x600)
+3. Badge updates may not have direct Electron events — check Electron 40 docs, fall back
+   to polling if needed
+4. Pin state persists in `~/.tandem/extensions/toolbar-state.json`
+
+## Auto-Update Rules (Phase 9+)
+
+1. Use Google's **Update Protocol** for version checks — do NOT download full CRX to check versions:
+   `https://update.googleapis.com/service/update2/json?acceptformat=crx3&prodversion={VER}&x=id%3D{ID}%26uc`
+2. Batch-check multiple extensions in a single request (multiple `x=` params)
+3. Only download CRX when an update is confirmed available
+4. Chrome-imported extensions store `.tandem-meta.json` with `cwsId` — include these in update checks
+5. All updates MUST verify CRX3 signatures before installation
+6. Updates are atomic: download → verify → temp extract → swap → load → rollback on failure
 
 ## Coding Rules
 
@@ -100,13 +125,16 @@ Rules:
 - Do NOT skip the TypeScript check or verification checklist
 - Do NOT push without updating STATUS.md
 - Do NOT add npm dependencies without documenting them in STATUS.md
+- Do NOT install extensions without verifying CRX3 signatures (Phase 1+)
 
 ## Debugging Tips
 
 - **App won't start:** Check if `ELECTRON_RUN_AS_NODE` is set. Use `npm start` which cleans it.
 - **Port 8765 in use:** Previous instance didn't shut down. `lsof -i :8765` and kill it.
 - **Extension won't load:** Check `manifest.json` exists in the extension folder. Check Electron console for errors.
-- **CRX download fails:** Test the URL with `curl -v` first. The CWS endpoint follows redirects.
+- **CRX download fails:** Test the URL with `curl -v` first. The CWS endpoint follows redirects. Check User-Agent header.
+- **CRX signature verification fails:** Ensure you're reading the correct offset for the ZIP payload. CRX3 header size is variable.
+- **Extension popup doesn't open:** Verify the popup URL is `chrome-extension://{id}/{popup_path}`. Check that the extension is loaded in the same session.
 - **Chrome profile not found:** Path varies by OS and profile name. Default profile is usually "Default".
 - **TS errors:** Run `npx tsc --noEmit` frequently — don't wait until the end.
 
@@ -116,9 +144,29 @@ Rules:
 - **Extensions dir:** `~/.tandem/extensions/{extension-id}/` — each subfolder is an unpacked extension
 - **API server** in `src/api/server.ts` — Express-based, routes at `/extensions/*`
 - **Electron session** passed through init chain in `main.ts`
-- **CRX format:** ZIP archive with a Cr24 header (CRX2 or CRX3) — strip header, extract ZIP
+- **CRX format:** ZIP archive with a Cr24 header (CRX2 or CRX3) — strip header, verify signature, extract ZIP
+- **CRX3 signed data:** `"CRX3 SignedData\x00"` + `uint32_le(signed_header_size)` + signed_header_data + ZIP payload
 - **CWS download URL:** `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${process.versions.chrome}&x=id%3D{ID}%26uc` — use `process.versions.chrome` for `prodversion` (fallback: `'130.0.0.0'`)
+- **CWS update check URL:** `https://update.googleapis.com/service/update2/json?acceptformat=crx3&prodversion={VER}&x=id%3D{ID}%26uc` — returns version metadata without downloading CRX
 - **Extension IDs:** 32 lowercase a-p characters (base16 in custom alphabet)
+- **Extension metadata:** `.tandem-meta.json` stores import source and CWS ID for imported extensions
+- **Toolbar state:** `~/.tandem/extensions/toolbar-state.json` stores pin order and visibility
+- **Update state:** `~/.tandem/extensions/update-state.json` stores check timestamps and version info
+
+## Electron 40 Extension API Notes
+
+Key limitations to be aware of (see TOP30-EXTENSIONS.md for full matrix):
+
+- `chrome.identity.*` — NOT supported natively, needs Phase 7 polyfill
+- `chrome.offscreen` — NOT supported in Electron 40
+- `chrome.sidePanel` — NOT supported in Electron 40
+- `chrome.tabGroups` — NOT supported (Tandem has own tab groups)
+- `chrome.omnibox` — NOT supported (Tandem has custom URL bar)
+- `chrome.action.openPopup()` — needs Phase 5b custom implementation
+- `chrome.commands` — shortcuts may conflict with Tandem's own keybindings (Phase 10a detects)
+- `chrome.storage.sync` — works as local storage (no Google account sync)
+- Service Workers (MV3) — fully supported since Electron 28
+- `session.setPreloads()` — does NOT work for MV3 service workers
 
 ## Related Projects (DO NOT MODIFY)
 

@@ -3,7 +3,7 @@
 > **Priority:** HIGH | **Effort:** ~1 day | **Dependencies:** None
 
 ## Goal
-Build the core extension installation pipeline: download CRX files from Chrome Web Store, extract them, and provide a central ExtensionManager that wraps the existing ExtensionLoader.
+Build the core extension installation pipeline: download CRX files from Chrome Web Store, verify their integrity and signatures, extract them, and provide a central ExtensionManager that wraps the existing ExtensionLoader.
 
 ## Files to Read
 - `src/extensions/loader.ts` — existing ExtensionLoader (understand `session.loadExtension()` and `listAvailable()`)
@@ -11,7 +11,7 @@ Build the core extension installation pipeline: download CRX files from Chrome W
 - `src/api/server.ts` — how ExtensionLoader is passed to the API server and used in routes
 
 ## Files to Create
-- `src/extensions/crx-downloader.ts` — CRX download + extraction
+- `src/extensions/crx-downloader.ts` — CRX download + verification + extraction
 - `src/extensions/manager.ts` — central extension management
 
 ## Files to Modify
@@ -28,10 +28,11 @@ Create `src/extensions/crx-downloader.ts` with the following:
 **`CrxDownloader` class:**
 - Constructor: ensures `~/.tandem/extensions/` directory exists
 - `installFromCws(input: string): Promise<InstallResult>` — main entry point
-- Private `extractCrx(crxPath: string, extensionId: string): Promise<string>` — parse header, extract ZIP
-- Private `downloadFile(url: string, dest: string): Promise<void>` — HTTP GET with redirect following
+- Private `extractCrx(crxBuffer: Buffer, extensionId: string): Promise<string>` — parse header, verify signature, extract ZIP
+- Private `downloadFile(url: string): Promise<Buffer>` — HTTP GET with redirect following, returns Buffer
 - Private `extractExtensionId(input: string): string | null` — parse CWS URL or bare ID
 - Private `readManifest(extPath: string)` — read manifest.json
+- Private `verifyCrx3Signature(crxBuffer: Buffer): CrxVerificationResult` — verify CRX3 digital signature
 
 **`InstallResult` interface:**
 ```typescript
@@ -41,6 +42,7 @@ export interface InstallResult {
   name: string;
   version: string;
   installPath: string;
+  signatureVerified: boolean;  // true if CRX3 signature verified OK
   error?: string;
   warning?: string;  // e.g. "manifest.json missing 'key' field — extension ID may not match CWS ID"
 }
@@ -54,6 +56,42 @@ Chrome extensions are `.crx` files — ZIP archives with a header:
 
 Strip the header → find ZIP start offset → extract with AdmZip.
 
+### 1.2 CRX3 Signature Verification
+
+**Why this matters:** Without signature verification, a MITM attack (public WiFi, compromised DNS) could inject malicious code into a CRX download. Given Tandem's security-first positioning, this is critical.
+
+**CRX3 signed data format:**
+The CRX3 header contains a protobuf-encoded `CrxFileHeader` with:
+- `sha256_with_rsa` — array of `{ public_key, signature }` pairs
+- `sha256_with_ecdsa` — array of `{ public_key, signature }` pairs
+
+The signed payload is: `"CRX3 SignedData\x00"` + `uint32_le(signed_header_size)` + `signed_header_data` + ZIP payload.
+
+**Implementation approach:**
+1. Parse the CRX3 header manually (the protobuf structure is simple enough to parse without a protobuf library — it's just a few varint + length-delimited fields)
+2. Extract the public key(s) and signature(s)
+3. Verify using Node.js `crypto.createVerify('SHA256')` with the RSA public key
+4. The signed data covers everything from the signed header through the ZIP, ensuring the ZIP payload hasn't been tampered with
+
+**`CrxVerificationResult` interface:**
+```typescript
+interface CrxVerificationResult {
+  verified: boolean;
+  format: 'crx2' | 'crx3';
+  publicKeyHash?: string;  // SHA256 of the public key (for ID derivation)
+  error?: string;
+}
+```
+
+**CRX2 fallback:** CRX2 uses a simpler RSA signature. Verify if possible, but CRX2 is legacy — most current CWS extensions use CRX3. If CRX2 verification is too complex, log a warning and allow the install (with `signatureVerified: false`).
+
+**Failure behavior:** If signature verification fails:
+- **Hard fail** — do NOT install the extension
+- Log a security warning: `[CRX] Signature verification failed for {id} — possible tampering`
+- Return `InstallResult` with `success: false` and descriptive error
+
+### 1.3 CWS Download with Resilience
+
 **CWS download URL:**
 ```
 https://clients2.google.com/service/update2/crx?response=redirect&prodversion={CHROMIUM_VERSION}&x=id%3D{EXTENSION_ID}%26uc
@@ -65,16 +103,35 @@ const chromiumVersion = process.versions.chrome ?? '130.0.0.0';
 ```
 Use the full version string (e.g. `130.0.6723.91`) — Google's CRX endpoint accepts this.
 
+**Resilience measures (the CWS endpoint is undocumented and can change):**
+
+1. **User-Agent spoofing:** Set the download request's `User-Agent` to match a real Chrome browser:
+   ```typescript
+   const headers = {
+     'User-Agent': `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromiumVersion} Safari/537.36`,
+     'Accept': 'application/x-chrome-extension',
+   };
+   ```
+2. **Retry with backoff:** On failure (HTTP 5xx or network error), retry up to 3 times with exponential backoff (1s, 3s, 9s). Do NOT retry on 4xx (client error = wrong ID or endpoint changed).
+3. **Response validation:** After download, verify the response starts with `Cr24` magic bytes. If the response is HTML (Google error page) or empty, fail with a descriptive error.
+4. **Timeout:** 30-second timeout per download attempt. Extensions can be 50MB+ so this is generous.
+
 **Extension ID format:** 32 lowercase a-p characters. Extract from CWS URLs via regex: `/\/([a-p]{32})(?:[/?]|$)/`
 
 **Already-installed check:** If `~/.tandem/extensions/{id}/` already exists, return success immediately with manifest info.
 
-**Post-extraction verification:**
+### 1.4 Post-extraction Verification
 
-- After extracting the CRX, verify that `manifest.json` contains a `key` field. If `key` is missing, set a `warning` field on the `InstallResult` — the extension may work but OAuth and some APIs will fail because Electron will assign a random ID instead of the deterministic CWS ID.
-- After `session.loadExtension()`, compare the assigned Electron extension ID with the expected CWS extension ID. Log both IDs. If they don't match, log a warning.
+After extracting the CRX:
 
-### 1.2 Add adm-zip dependency
+1. **Manifest key field:** Verify that `manifest.json` contains a `key` field. If `key` is missing, set a `warning` field on the `InstallResult` — the extension may work but OAuth and some APIs will fail because Electron will assign a random ID instead of the deterministic CWS ID.
+2. **ID matching:** After `session.loadExtension()`, compare the assigned Electron extension ID with the expected CWS extension ID. Log both IDs. If they don't match, log a warning.
+3. **Content script inventory:** Read the `content_scripts` array from `manifest.json` and log which URL patterns the extension will inject into. This creates a paper trail for security auditing. Store this metadata in the `InstallResult`:
+   ```typescript
+   contentScriptPatterns?: string[];  // e.g. ["<all_urls>", "https://github.com/*"]
+   ```
+
+### 1.5 Add adm-zip dependency
 
 ```bash
 npm install adm-zip @types/adm-zip
@@ -82,7 +139,7 @@ npm install adm-zip @types/adm-zip
 
 `adm-zip` is used to extract the ZIP payload from CRX files. It works with `Buffer` input (no temp file needed for the ZIP portion).
 
-### 1.3 Create Extension Manager
+### 1.6 Create Extension Manager
 
 Create `src/extensions/manager.ts`:
 
@@ -94,17 +151,19 @@ export class ExtensionManager {
 
   constructor()
   async init(session: Session): Promise<void>  // calls loader.loadAllExtensions()
-  async install(input: string, session: Session): Promise<InstallResult>  // download + load
+  async install(input: string, session: Session): Promise<InstallResult>  // download + verify + load
   list(): { loaded: LoadedExtension[], available: AvailableExtension[] }
   uninstall(extensionId: string, session: Session): boolean  // session.removeExtension() + rm -rf from disk
+  getExtensionMetadata(extensionId: string): ExtensionMetadata | null  // manifest info, content scripts, permissions
 }
 ```
 
-- `install()`: calls `downloader.installFromCws()`, then `loader.loadExtension()` on success
+- `install()`: calls `downloader.installFromCws()` (which includes signature verification), then `loader.loadExtension()` on success
 - `uninstall()`: calls `session.removeExtension(id)` to unload immediately (no restart needed), then removes `~/.tandem/extensions/{id}/` directory recursively
 - `list()`: returns both `loader.listLoaded()` and `loader.listAvailable()`
+- `getExtensionMetadata()`: reads `manifest.json` for a given extension ID, returns parsed permissions, content scripts, API usage
 
-### 1.4 Wire ExtensionManager into main.ts
+### 1.7 Wire ExtensionManager into main.ts
 
 Replace the direct `ExtensionLoader` usage:
 - Import `ExtensionManager` instead of (or alongside) `ExtensionLoader`
@@ -112,7 +171,7 @@ Replace the direct `ExtensionLoader` usage:
 - Call `extensionManager.init(session)` where `extensionLoader.loadAllExtensions()` is currently called (~line 343)
 - Pass `extensionManager` to the API server
 
-### 1.5 Wire ExtensionManager into api/server.ts
+### 1.8 Wire ExtensionManager into api/server.ts
 
 - Update the server options interface to accept `ExtensionManager`
 - Update existing `/extensions/list` and `/extensions/load` routes to use ExtensionManager
@@ -124,15 +183,20 @@ Replace the direct `ExtensionLoader` usage:
 - [ ] `adm-zip` and `@types/adm-zip` in package.json
 - [ ] CRX2 header parsing works (version field = 2)
 - [ ] CRX3 header parsing works (version field = 3)
+- [ ] **CRX3 signature verification passes** for a known-good CWS download (test with uBlock Origin)
+- [ ] **Tampered CRX is rejected** — modify a byte in the ZIP payload, verify install fails
 - [ ] Non-CRX files rejected (wrong magic bytes)
 - [ ] Extension ID extracted from bare ID: `cjpalhdlnbpafiamejdnhcphjbkeiagm`
 - [ ] Extension ID extracted from CWS URL: `https://chromewebstore.google.com/detail/ublock-origin/cjpalhdlnbpafiamejdnhcphjbkeiagm`
 - [ ] `prodversion` in CWS download URL uses `process.versions.chrome` (not hardcoded)
+- [ ] CWS download uses spoofed Chrome User-Agent header
+- [ ] Retry logic works: simulate a failure, verify 3 retries with backoff
 - [ ] Downloaded extension appears in `~/.tandem/extensions/{id}/` with `manifest.json`
 - [ ] Extracted `manifest.json` contains `key` field (log warning if missing)
+- [ ] Content script patterns logged for installed extension
 - [ ] Extension ID assigned by Electron matches the CWS extension ID (log both)
 - [ ] ExtensionManager.init() loads existing extensions on startup
-- [ ] ExtensionManager.install() downloads + extracts + loads a new extension
+- [ ] ExtensionManager.install() downloads + verifies + extracts + loads a new extension
 - [ ] ExtensionManager.uninstall() calls `session.removeExtension()` + removes files (no restart needed)
 - [ ] Extension network requests are visible in RequestDispatcher logs (Guardian sees them)
 - [ ] Test interaction with DNR-based extensions: install uBlock Origin, load a page with known trackers, verify Guardian's `onBeforeRequest` still fires. Document result in STATUS.md.
@@ -149,3 +213,4 @@ Replace the direct `ExtensionLoader` usage:
 ## After Completion
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
+3. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section

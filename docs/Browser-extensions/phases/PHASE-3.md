@@ -61,6 +61,17 @@ Extensions/
 2. Copy the version folder contents to `~/.tandem/extensions/{id}/`
 3. Skip if already exists in Tandem's extensions dir
 4. Use `fs.cpSync()` for recursive copy (available in Node 16.7+)
+5. **Store CWS source metadata:** After copying, write a `.tandem-meta.json` file inside the extension directory:
+   ```json
+   {
+     "source": "chrome-import",
+     "importedAt": "2026-02-25T14:30:00Z",
+     "cwsId": "cjpalhdlnbpafiamejdnhcphjbkeiagm",
+     "importedVersion": "1.57.0"
+   }
+   ```
+   This metadata is critical for Phase 9 (auto-updates) — imported extensions need to be registered for CWS update checks. Without the `cwsId`, the update checker wouldn't know where to check for updates.
+6. **Verify `key` field in manifest:** After copying, check if `manifest.json` contains a `key` field. If missing, log a warning — the extension may get a different ID in Electron than in Chrome.
 
 **ChromeExtensionInfo interface:**
 ```typescript
@@ -113,6 +124,8 @@ After import, optionally load the newly imported extensions into the session (ca
 - [ ] Chrome internal extensions (`__MSG_` names) are filtered out
 - [ ] `importExtension()` copies extension to `~/.tandem/extensions/{id}/`
 - [ ] Imported extension has valid `manifest.json`
+- [ ] `.tandem-meta.json` written with `source: "chrome-import"` and `cwsId` field
+- [ ] `manifest.json` `key` field presence checked (warning logged if missing)
 - [ ] `importAll()` imports all Chrome extensions, skips already-imported
 - [ ] `GET /extensions/chrome/list` returns extensions with `alreadyImported` flag
 - [ ] `POST /extensions/chrome/import` with `{ extensionId: "..." }` imports one extension
@@ -129,3 +142,4 @@ After import, optionally load the newly imported extensions into the session (ca
 ## After Completion
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
+3. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section

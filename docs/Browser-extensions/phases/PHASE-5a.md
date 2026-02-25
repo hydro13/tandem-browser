@@ -1,4 +1,4 @@
-# Phase 5: Settings Panel UI — Extensions
+# Phase 5a: Settings Panel UI — Extensions
 
 > **Priority:** MEDIUM | **Effort:** ~1 day | **Dependencies:** Phase 2, 3, 4
 
@@ -15,13 +15,13 @@ Add an "Extensions" section to Tandem's settings panel with three tabs: Installe
 
 ## Tasks
 
-### 5.1 Add "Extensions" section to settings panel
+### 5a.1 Add "Extensions" section to settings panel
 
 - Add a new tab/section "Extensions" in the settings panel navigation
 - Tab navigation within Extensions: **Installed** | **From Chrome** | **Gallery**
 - Match the existing settings panel design and layout conventions
 
-### 5.2 Implement "Installed" tab
+### 5a.2 Implement "Installed" tab
 
 Shows all extensions currently in `~/.tandem/extensions/`.
 
@@ -35,8 +35,9 @@ Shows all extensions currently in `~/.tandem/extensions/`.
   - Not loaded (on disk but not active — needs restart)
   - Error (manifest missing or load failed)
 - "Remove" button → calls `DELETE /extensions/uninstall/:id`
+- Conflict warnings (if any) — from `GET /extensions/list` conflicts array (Phase 10a)
 
-### 5.3 Implement "From Chrome" tab
+### 5a.3 Implement "From Chrome" tab
 
 Shows extensions available to import from the user's Chrome installation.
 
@@ -49,7 +50,7 @@ Shows extensions available to import from the user's Chrome installation.
 - Already-imported extensions show "Imported" badge instead of Import button
 - Empty state: "Chrome not found" or "No extensions found in Chrome"
 
-### 5.4 Implement "Gallery" tab
+### 5a.4 Implement "Gallery" tab
 
 Curated gallery of recommended extensions.
 
@@ -61,11 +62,12 @@ Curated gallery of recommended extensions.
   - Name + description
   - Category badge
   - Compatibility badge: "Works" (green), "Partial" (yellow), "Needs Setup" (orange)
+  - Security conflict badge if applicable: "DNR Overlap" (amber), "Native Messaging" (blue)
   - "Install" button → calls `POST /extensions/install` with `{ input: extension.id }`
   - Already-installed extensions show "Installed" badge instead of Install button
 - Featured extensions highlighted or shown first
 
-### 5.5 Wire up install/uninstall actions
+### 5a.5 Wire up install/uninstall actions
 
 - Install button: show loading spinner during download + extraction
 - Success: update card to show "Installed" badge, refresh Installed tab
@@ -90,8 +92,10 @@ Curated gallery of recommended extensions.
 - ONLY modify settings panel UI files
 - Do NOT change API endpoints — use them as-is from Phase 1-4
 - Do NOT add new functionality — this is purely UI
+- Do NOT build the extension toolbar — that's Phase 5b
 - Match existing design patterns — don't introduce new CSS frameworks or patterns
 
 ## After Completion
 1. Update `docs/Browser-extensions/STATUS.md`
 2. Update `docs/Browser-extensions/ROADMAP.md` — check off completed tasks
+3. **Commit and push** — follow the commit format in CLAUDE.md "After You Finish" section
