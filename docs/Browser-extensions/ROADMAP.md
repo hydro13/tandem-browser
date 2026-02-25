@@ -91,15 +91,15 @@
 ## Phase 4: Curated Extension Gallery
 **Priority:** MEDIUM | **Effort:** ~half day | **Dependencies:** Phase 1
 
-- [ ] **4.1** Create `src/extensions/gallery.ts`
+- [x] **4.1** Create `src/extensions/gallery-defaults.ts` + `gallery-loader.ts`
   - Curated list of verified-compatible extensions
   - Include all 10 recommended from TOP30-EXTENSIONS.md analysis
   - Include all 30 from TOP30-EXTENSIONS.md with compatibility + API status
   - Each entry: id, name, description, category, compatibility, mechanism, securityConflict
-- [ ] **4.2** Implement `GET /extensions/gallery` endpoint
+- [x] **4.2** Implement `GET /extensions/gallery` endpoint
   - Returns gallery entries with installed status per entry
   - Merge with `ExtensionManager.list()` to show installed flag
-- [ ] **4.3** Add category filtering support
+- [x] **4.3** Add category filtering support
   - Categories: privacy, password, productivity, appearance, developer, media, shopping, language, web3
 
 ---
@@ -321,7 +321,7 @@
 | 1 | CRX Downloader + Extension Manager | DONE | 8/8 |
 | 2 | Extension API Routes | PENDING | 0/4 |
 | 3 | Chrome Profile Importer | PENDING | 0/3 |
-| 4 | Curated Extension Gallery | PENDING | 0/3 |
+| 4 | Curated Extension Gallery | DONE | 3/3 |
 | 5a | Settings Panel UI | PENDING | 0/5 |
 | 5b | Extension Toolbar + Popup UI | PENDING | 0/6 |
 | 6 | Native Messaging Support | PENDING | 0/3 |

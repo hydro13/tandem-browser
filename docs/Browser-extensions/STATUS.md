@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 4
-**Last completed phase:** Phase 3
+**Next phase to implement:** Phase 5a
+**Last completed phase:** Phase 4
 **Overall status:** IN PROGRESS
 
 ---
@@ -113,21 +113,35 @@
 
 ## Phase 4: Curated Extension Gallery
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** 96c30df
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] `gallery-defaults.ts` contains 30 curated extensions with IDs, names, descriptions, categories
-  - [ ] All entries include `securityConflict` field (`'none' | 'dnr-overlap' | 'native-messaging'`)
-  - [ ] All 10 recommended extensions from TOP30-EXTENSIONS.md are included
-  - [ ] `~/.tandem/extensions/gallery.json` loaded if exists (user overrides)
-  - [ ] User gallery entries override defaults by ID, can add new entries
-  - [ ] `GET /extensions/gallery` returns merged gallery with installed status per entry
-  - [ ] Gallery entries include compatibility status from TOP30 assessment
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] `gallery-defaults.ts` contains 30 curated extensions with IDs, names, descriptions, categories
+  - [x] All entries include `securityConflict` field (`'none' | 'dnr-overlap' | 'native-messaging'`)
+  - [x] All 10 recommended extensions from TOP30-EXTENSIONS.md are included (uBlock Origin, Bitwarden, Pocket, Momentum, StayFocusd, Dark Reader, React DevTools, Wappalyzer, Video Speed Controller, MetaMask)
+  - [x] `~/.tandem/extensions/gallery.json` loaded if exists (user overrides)
+  - [x] User gallery entries override defaults by ID, can add new entries
+  - [x] `GET /extensions/gallery` returns merged gallery with installed status per entry
+  - [x] `GET /extensions/gallery?category=privacy` returns 6 privacy extensions
+  - [x] `GET /extensions/gallery?featured=true` returns 10 featured extensions
+  - [x] Gallery entries include compatibility status from TOP30 assessment (23 works, 5 partial, 2 needs-work)
+  - [x] 6 extensions flagged `dnr-overlap` (uBlock Origin, AdBlock Plus, AdBlock, Ghostery, DuckDuckGo, StayFocusd)
+  - [x] 3 extensions flagged `native-messaging` (LastPass, 1Password, Postman Interceptor)
+  - [x] `GET /extensions/list` still responds (regression check)
+  - [x] App launches, browsing works
+- **Issues encountered:**
+  - None
+- **Notes for next phase:**
+  - `GalleryLoader` is in `src/extensions/gallery-loader.ts` — instantiate per request (reads user gallery.json each time, so edits take effect immediately)
+  - `GalleryExtension` and `ExtensionCategory` types are exported from `src/extensions/gallery-defaults.ts`
+  - `GalleryEntry` (extends `GalleryExtension` with `installed: boolean`) and `GalleryResponse` types are exported from `gallery-loader.ts`
+  - `GET /extensions/gallery` supports `?category=<category>` and `?featured=true` query params for filtering
+  - The `installed` field checks if the extension ID exists as a folder in `~/.tandem/extensions/` (uses `extensionManager.list().available`)
+  - The merge architecture uses a spread-based `Map` merge — user gallery entries override defaults field-by-field (partial overrides work). The merge method accepts variadic sources, so a third layer (remote gallery) can be added without changing the merge logic
+  - User gallery format: `{ version: 1, extensions: [{ id, name, description, category, compatibility, securityConflict, mechanism, featured }] }` — entries need at minimum an `id` field
+  - No new npm dependencies added
 
 ---
 
@@ -336,6 +350,8 @@
 | `src/extensions/manager.ts` | 1 | Created — ExtensionManager wrapping ExtensionLoader + CrxDownloader |
 | `src/main.ts` | 1 | Modified — ExtensionManager replaces direct ExtensionLoader usage |
 | `src/extensions/chrome-importer.ts` | 3 | Created — Chrome profile detection + extension import |
-| `src/api/server.ts` | 1, 2, 3 | Modified — Phase 1: extensionManager to options, list route. Phase 2: install/uninstall/list API routes. Phase 3: Chrome list/import routes |
+| `src/extensions/gallery-defaults.ts` | 4 | Created — 30 curated extensions with types (GalleryExtension, ExtensionCategory) |
+| `src/extensions/gallery-loader.ts` | 4 | Created — Two-layer gallery merge logic (defaults + user overrides) |
+| `src/api/server.ts` | 1, 2, 3, 4 | Modified — Phase 1: extensionManager to options, list route. Phase 2: install/uninstall/list API routes. Phase 3: Chrome list/import routes. Phase 4: gallery route |
 | `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
 | `package-lock.json` | 1 | Modified — Lock file updated |

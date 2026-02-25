@@ -30,6 +30,7 @@ import { AudioCaptureManager } from '../audio/capture';
 import { ExtensionLoader } from '../extensions/loader';
 import { ExtensionManager } from '../extensions/manager';
 import { ChromeExtensionImporter } from '../extensions/chrome-importer';
+import { GalleryLoader } from '../extensions/gallery-loader';
 import { ClaroNoteManager } from '../claronote/manager';
 import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
@@ -2372,6 +2373,25 @@ export class TandemAPI {
         });
       } catch (e: any) {
         console.error('Chrome extension import error:', e);
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // GET /extensions/gallery — Curated extension gallery with install status
+    this.app.get('/extensions/gallery', (_req: Request, res: Response) => {
+      try {
+        const gallery = new GalleryLoader();
+
+        // Build set of installed extension IDs (folder names on disk)
+        const { available } = this.extensionManager.list();
+        const installedIds = new Set(available.map(e => path.basename(e.path)));
+
+        const category = typeof _req.query.category === 'string' ? _req.query.category : undefined;
+        const featured = typeof _req.query.featured === 'string' ? _req.query.featured : undefined;
+
+        const result = gallery.getGalleryResponse(installedIds, { category, featured });
+        res.json(result);
+      } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
     });
