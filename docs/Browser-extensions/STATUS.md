@@ -183,7 +183,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** TBD
+- **Commit:** d10f61b
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Extension toolbar visible in browser UI (right side of URL bar, between screenshot button and status dot)
