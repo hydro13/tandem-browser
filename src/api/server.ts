@@ -2192,13 +2192,17 @@ export class TandemAPI {
     });
 
     // ═══════════════════════════════════════════════
-    // EXTENSIONS — Phase 5.7
+    // EXTENSIONS — Phase 5.7 + Phase 2 API Routes
     // ═══════════════════════════════════════════════
 
     this.app.get('/extensions/list', (_req: Request, res: Response) => {
       try {
         const { loaded, available } = this.extensionManager.list();
-        res.json({ loaded, available });
+        res.json({
+          loaded,
+          available,
+          count: { loaded: loaded.length, available: available.length },
+        });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
@@ -2213,6 +2217,101 @@ export class TandemAPI {
         res.json({ ok: true, extension: result });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /extensions/install — Install extension from CWS URL or extension ID
+    this.app.post('/extensions/install', async (req: Request, res: Response) => {
+      try {
+        const { input } = req.body;
+        if (!input || typeof input !== 'string' || !input.trim()) {
+          res.status(400).json({ success: false, error: 'Missing or invalid "input" field — provide a CWS URL or extension ID' });
+          return;
+        }
+        const ses = this.win.webContents.session;
+        const result = await this.extensionManager.install(input.trim(), ses);
+        if (!result.success) {
+          res.status(400).json(result);
+          return;
+        }
+        res.json(result);
+      } catch (e: any) {
+        console.error('Extension install error:', e);
+        res.status(500).json({ success: false, error: e.message });
+      }
+    });
+
+    // DELETE /extensions/uninstall/:id — Uninstall extension by ID (accepts CWS ID or Electron ID)
+    this.app.delete('/extensions/uninstall/:id', (req: Request, res: Response) => {
+      try {
+        const id = req.params.id as string;
+        // Validate extension ID format (32 lowercase a-p chars)
+        if (!/^[a-p]{32}$/.test(id)) {
+          res.status(400).json({ success: false, error: 'Invalid extension ID format — must be 32 lowercase a-p characters' });
+          return;
+        }
+
+        const { loaded, available } = this.extensionManager.list();
+        const ses = this.win.webContents.session;
+
+        // Resolve IDs: user may pass CWS ID (folder name) or Electron runtime ID
+        // When manifest lacks "key" field, these differ — we need both for correct cleanup
+        let electronId: string | null = null;
+        let diskId: string | null = null;
+
+        // Check if ID matches a loaded extension's Electron ID
+        const byElectronId = loaded.find(e => e.id === id);
+        if (byElectronId) {
+          electronId = id;
+          diskId = path.basename(byElectronId.path);
+        }
+
+        // Check if ID matches a CWS/disk folder name
+        if (!diskId) {
+          const onDisk = available.some(e => path.basename(e.path) === id);
+          if (onDisk) {
+            diskId = id;
+            // Find Electron ID for session removal
+            const byPath = loaded.find(e => path.basename(e.path) === id);
+            if (byPath) electronId = byPath.id;
+          }
+        }
+
+        if (!electronId && !diskId) {
+          res.status(404).json({ success: false, error: `Extension ${id} not found` });
+          return;
+        }
+
+        // Remove from session using Electron ID (may differ from CWS ID)
+        if (electronId) {
+          try {
+            ses.removeExtension(electronId);
+            console.log(`🧩 Extension removed from session — Electron ID: ${electronId}`);
+          } catch (err: unknown) {
+            const msg = err instanceof Error ? err.message : String(err);
+            console.warn(`⚠️ session.removeExtension(${electronId}) failed: ${msg}`);
+          }
+        }
+
+        // Remove from disk using CWS/disk ID (the folder name)
+        if (diskId) {
+          const extPath = path.join(os.homedir(), '.tandem', 'extensions', diskId);
+          if (fs.existsSync(extPath)) {
+            try {
+              fs.rmSync(extPath, { recursive: true, force: true });
+              console.log(`🧩 Extension removed from disk: ${extPath}`);
+            } catch (err: unknown) {
+              const msg = err instanceof Error ? err.message : String(err);
+              res.status(500).json({ success: false, error: `Failed to remove extension files: ${msg}` });
+              return;
+            }
+          }
+        }
+
+        res.json({ success: true });
+      } catch (e: any) {
+        console.error('Extension uninstall error:', e);
+        res.status(500).json({ success: false, error: e.message });
       }
     });
 
