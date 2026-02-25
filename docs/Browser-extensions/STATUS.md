@@ -220,7 +220,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-25
-- **Commit:** (pending)
+- **Commit:** 6c40464
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Native messaging host directories detected per platform (3 macOS directories checked: system Chrome, user Chrome, user Chromium)
