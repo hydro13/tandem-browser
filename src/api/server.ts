@@ -29,6 +29,7 @@ import { DownloadManager } from '../downloads/manager';
 import { AudioCaptureManager } from '../audio/capture';
 import { ExtensionLoader } from '../extensions/loader';
 import { ExtensionManager } from '../extensions/manager';
+import { ChromeExtensionImporter } from '../extensions/chrome-importer';
 import { ClaroNoteManager } from '../claronote/manager';
 import { ContentExtractor } from '../content/extractor';
 import { WorkflowEngine } from '../workflow/engine';
@@ -2312,6 +2313,66 @@ export class TandemAPI {
       } catch (e: any) {
         console.error('Extension uninstall error:', e);
         res.status(500).json({ success: false, error: e.message });
+      }
+    });
+
+    // GET /extensions/chrome/list — List Chrome extensions available for import
+    this.app.get('/extensions/chrome/list', (req: Request, res: Response) => {
+      try {
+        const profile = typeof req.query.profile === 'string' ? req.query.profile : 'Default';
+        const importer = new ChromeExtensionImporter(profile);
+        const chromeDir = importer.getChromeExtensionsDir();
+
+        if (!chromeDir) {
+          res.json({ chromeDir: null, extensions: [] });
+          return;
+        }
+
+        const extensions = importer.listChromeExtensions().map(ext => ({
+          id: ext.id,
+          name: ext.name,
+          version: ext.version,
+          alreadyImported: importer.isAlreadyImported(ext.id),
+        }));
+
+        res.json({ chromeDir, extensions });
+      } catch (e: any) {
+        res.status(500).json({ error: e.message });
+      }
+    });
+
+    // POST /extensions/chrome/import — Import Chrome extension(s) into Tandem
+    this.app.post('/extensions/chrome/import', (req: Request, res: Response) => {
+      try {
+        const profile = typeof req.body.profile === 'string' ? req.body.profile : 'Default';
+        const importer = new ChromeExtensionImporter(profile);
+
+        if (req.body.all === true) {
+          const result = importer.importAll();
+          res.json(result);
+          return;
+        }
+
+        const extensionId = req.body.extensionId;
+        if (!extensionId || typeof extensionId !== 'string') {
+          res.status(400).json({ error: 'Missing "extensionId" or set "all: true" to import all' });
+          return;
+        }
+
+        const result = importer.importExtension(extensionId.trim());
+        if (!result.success && !result.skipped) {
+          res.status(400).json(result);
+          return;
+        }
+        res.json({
+          imported: result.skipped ? 0 : 1,
+          skipped: result.skipped ? 1 : 0,
+          failed: 0,
+          details: [result],
+        });
+      } catch (e: any) {
+        console.error('Chrome extension import error:', e);
+        res.status(500).json({ error: e.message });
       }
     });
 

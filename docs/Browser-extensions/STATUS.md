@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2
-**Last completed phase:** Phase 1
+**Next phase to implement:** Phase 4
+**Last completed phase:** Phase 3
 **Overall status:** IN PROGRESS
 
 ---
@@ -84,22 +84,30 @@
 
 ## Phase 3: Chrome Profile Importer
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-25
+- **Commit:** bfb023b
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Chrome extensions directory detected on current platform
-  - [ ] `GET /extensions/chrome/list` returns Chrome extensions
-  - [ ] `POST /extensions/chrome/import` copies extension to `~/.tandem/extensions/`
-  - [ ] `.tandem-meta.json` written with `source: "chrome-import"` and `cwsId`
-  - [ ] `manifest.json` `key` field checked (warning if missing)
-  - [ ] `POST /extensions/chrome/import` with `{ all: true }` imports all
-  - [ ] Already-imported extensions are skipped (not duplicated)
-  - [ ] Chrome internal extensions (e.g. `__MSG_` names) are filtered out
-  - [ ] App launches, browsing works
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Chrome extensions directory detected on current platform (macOS)
+  - [x] `GET /extensions/chrome/list` returns Chrome extensions (10 detected on test machine)
+  - [x] `POST /extensions/chrome/import` copies extension to `~/.tandem/extensions/`
+  - [x] `.tandem-meta.json` written with `source: "chrome-import"` and `cwsId`
+  - [x] `manifest.json` `key` field checked (warning logged if missing)
+  - [x] `POST /extensions/chrome/import` with `{ all: true }` imports all
+  - [x] Already-imported extensions are skipped (not duplicated)
+  - [x] Chrome internal extensions (e.g. `__MSG_` names) are filtered out
+  - [x] App launches, browsing works
+- **Issues encountered:**
+  - None
+- **Notes for next phase:**
+  - `ChromeExtensionImporter` is in `src/extensions/chrome-importer.ts` — it is NOT a singleton; each API call creates a new instance with the requested Chrome profile name
+  - The importer does NOT auto-load imported extensions into the session — they are just copied to disk. User can restart the app or use `POST /extensions/load` to load them
+  - `GET /extensions/chrome/list` supports `?profile=ProfileName` query param (defaults to `Default`)
+  - `POST /extensions/chrome/import` supports `{ profile: "ProfileName" }` in the body
+  - Chrome internal extensions are filtered by checking if the name is missing, non-string, or starts with `__MSG_` — this catches i18n-only names used by Chrome built-ins
+  - The `.tandem-meta.json` format: `{ source: "chrome-import", importedAt: ISO, cwsId: string, importedVersion: string }` — Phase 9 should use `cwsId` for update checks
+  - No new npm dependencies were added
 
 ---
 
@@ -327,6 +335,7 @@
 | `src/extensions/crx-downloader.ts` | 1 | Created — CRX download, format verification, extraction |
 | `src/extensions/manager.ts` | 1 | Created — ExtensionManager wrapping ExtensionLoader + CrxDownloader |
 | `src/main.ts` | 1 | Modified — ExtensionManager replaces direct ExtensionLoader usage |
-| `src/api/server.ts` | 1, 2 | Modified — Phase 1: extensionManager to options, list route. Phase 2: install/uninstall/list API routes |
+| `src/extensions/chrome-importer.ts` | 3 | Created — Chrome profile detection + extension import |
+| `src/api/server.ts` | 1, 2, 3 | Modified — Phase 1: extensionManager to options, list route. Phase 2: install/uninstall/list API routes. Phase 3: Chrome list/import routes |
 | `package.json` | 1 | Modified — Added adm-zip + @types/adm-zip |
 | `package-lock.json` | 1 | Modified — Lock file updated |
