@@ -1,24 +1,6 @@
 import { OnBeforeRequestListenerDetails } from 'electron';
 import { SecurityDB } from './security-db';
-import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, KNOWN_TRACKERS } from './types';
-
-// Known WebSocket service providers (not suspicious)
-const KNOWN_WS_SERVICES = new Set([
-  // Pusher
-  'ws.pusherapp.com', 'sockjs.pusher.com',
-  // Socket.IO CDN / common endpoints
-  'socket.io', 'cdn.socket.io',
-  // Firebase
-  's-usc1c-nss-2.firebaseio.com', 'firebaseio.com',
-  // Ably
-  'realtime.ably.io',
-  // Supabase
-  'realtime.supabase.co',
-  // Common chat/collab
-  'wss.slack.com', 'gateway.discord.gg',
-  // Intercom
-  'nexus-websocket-a.intercom.io',
-]);
+import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, KNOWN_TRACKERS, KNOWN_WS_SERVICES } from './types';
 
 // Credential field patterns in POST bodies
 const CREDENTIAL_PATTERN = /(?:^|&|"|,\s*")(?:password|passwd|pw|pass|secret|token|api[_-]?key|access[_-]?token|credit[_-]?card|card[_-]?number|cvv|cvc|ssn|social[_-]?security)(?:"|]?\s*[:=])/i;
