@@ -76,7 +76,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-26
-- **Commit:** (pending)
+- **Commit:** 1d9df8e
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] macOS `activate` handler uses async/await
