@@ -8,9 +8,9 @@
 | # | Verbetering | Status | Sessie | Notities |
 |---|-------------|--------|--------|----------|
 | 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 regels. 12 route files + context.ts |
-| 2 | Split `main.ts` (IPC, bootstrap, menu) | TODO | — | 1016 regels → ipc/, bootstrap/, menu.ts |
+| 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 regels. 3 modules: ipc/, menu/, notifications/ |
 | 3 | Shared utilities (`paths`, `url`, `errors`) | TODO | — | Quick win. src/utils/ aanmaken |
-| 4 | Fix circulaire deps (`copilotAlert`) | TODO | — | Quick win. Verplaats naar src/notifications/ |
+| 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
 | 5 | Unified `npm test` + meer tests | TODO | — | TabManager, API routes, activity handler |
 | 6 | Type safety: CDP types + minder `any` | TODO | — | Begin bij devtools/types.ts |
 | 7 | Split `shell/index.html` | TODO | — | JS naar shell/js/, CSS naar shell/css/ |
@@ -47,6 +47,20 @@ Of voor meerdere quick wins:
   - `src/api/routes/media.ts` — 19 routes (panel, chat, voice, audio, screenshots)
   - `src/api/routes/misc.ts` — 58 routes (status, passwords, events, live, workflows, etc.)
 - **Bestanden gewijzigd:** `src/api/server.ts` (3032→349 regels)
+- **Tests:** passing (86 passed, 38 skipped)
+- **Openstaand:** geen
+
+### 2026-02-26 — Punt 2+4: Split `main.ts` + fix circulaire deps
+- **Wat gedaan:** main.ts (1016 regels) opgesplitst in 3 modules + copilotAlert circulaire dependency opgelost
+- **Bestanden aangemaakt:**
+  - `src/notifications/alert.ts` — copilotAlert + setMainWindow setter (breekt circulaire dep)
+  - `src/menu/app-menu.ts` — buildAppMenu + MenuDeps interface (~130 regels)
+  - `src/ipc/handlers.ts` — registerIpcHandlers + IpcDeps interface + syncTabsToContext (~295 regels)
+- **Bestanden gewijzigd:**
+  - `src/main.ts` (1016→575 regels)
+  - `src/api/routes/browser.ts` — import copilotAlert van notifications/alert
+  - `src/watch/watcher.ts` — import copilotAlert van notifications/alert
+  - `src/headless/manager.ts` — import copilotAlert van notifications/alert
 - **Tests:** passing (86 passed, 38 skipped)
 - **Openstaand:** geen
 
