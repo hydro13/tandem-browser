@@ -103,6 +103,8 @@ let locatorFinder: LocatorFinder | null = null;
 let deviceEmulator: DeviceEmulator | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
+/** Queue tab-register IPC when it arrives before tabManager is ready */
+let pendingTabRegister: { webContentsId: number; url: string } | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = 'persist:tandem';
@@ -265,7 +267,10 @@ async function createWindow(): Promise<BrowserWindow> {
   mainWindow.on('closed', () => {
     mainWindow = null;
     tabManager = null;
-    if (behaviorObserver) behaviorObserver.destroy();
+    if (behaviorObserver) {
+      behaviorObserver.destroy();
+      behaviorObserver = null;
+    }
   });
 
   return mainWindow;
@@ -433,7 +438,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-copilot', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image'];
+  const ipcHandlers = ['snap-for-copilot', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
@@ -454,7 +459,11 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   // Listen for initial tab registration
   ipcMain.on('tab-register', (_event, data: { webContentsId: number; url: string }) => {
-    if (tabManager && tabManager.count === 0) {
+    if (!tabManager) {
+      pendingTabRegister = data;
+      return;
+    }
+    if (tabManager.count === 0) {
       const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
       // Notify renderer of the tab ID
       win.webContents.send('tab-registered', { tabId: tab.id });
@@ -803,6 +812,20 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       return { success: false, error: String(error) };
     }
   });
+
+  // Process any tab-register message that arrived before startAPI was ready
+  if (pendingTabRegister && tabManager && tabManager.count === 0) {
+    const data = pendingTabRegister;
+    pendingTabRegister = null;
+    const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
+    win.webContents.send('tab-registered', { tabId: tab.id });
+    eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
+    syncTabsToContext();
+    setTimeout(async () => {
+      await devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
+      securityManager?.onTabAttached().catch(() => {});
+    }, 500);
+  }
 }
 
 function buildAppMenu(): void {
@@ -937,6 +960,11 @@ export function copilotAlert(title: string, body: string): void {
 }
 
 app.whenReady().then(async () => {
+  // Register tab-register early to avoid race with window loading
+  ipcMain.on('tab-register', (_event, data: { webContentsId: number; url: string }) => {
+    pendingTabRegister = data;
+  });
+
   const win = await createWindow();
   await startAPI(win);
   buildAppMenu();
@@ -946,8 +974,8 @@ app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow().then(w => {
-        startAPI(w);
+      createWindow().then(async (w) => {
+        await startAPI(w);
         buildAppMenu();
       });
     }

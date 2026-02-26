@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 4
-**Last completed phase:** Phase 3
+**Next phase to implement:** Phase 5
+**Last completed phase:** Phase 4
 **Overall status:** IN PROGRESS
 
 ---
@@ -74,20 +74,20 @@
 
 ## Phase 4: Init & Lifecycle Fixes
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-26
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] macOS `activate` handler uses async/await
-  - [ ] IPC cleanup list is complete (no duplicate handler crashes)
-  - [ ] `tab-register` IPC is queued when tabManager not yet ready
-  - [ ] RequestDispatcher uses stable handler (no reattach mid-flight)
-  - [ ] BehaviorObserver not double-destroyed
-  - [ ] App launches, close all windows, click dock icon — app recovers (macOS)
-  - [ ] All Phase 1+2+3 fixes still work
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] macOS `activate` handler uses async/await
+  - [x] IPC cleanup list is complete (added 7 missing handlers: navigate, go-back, go-forward, reload, get-page-content, get-page-status, execute-js)
+  - [x] `tab-register` IPC is queued when tabManager not yet ready (early listener + pending processing)
+  - [x] RequestDispatcher uses stable handler (no reattach mid-flight, sorts dynamically per-request)
+  - [x] BehaviorObserver not double-destroyed (nulled after destroy in closed handler)
+  - [ ] App launches, close all windows, click dock icon — app recovers (macOS) — needs manual test
+  - [x] All Phase 1+2+3 fixes still work (API status, auth 401, security status all verified)
+- **Issues encountered:** None
+- **Notes for next phase:** Phase 5 can start immediately. The `is-window-maximized` IPC handler error in console is pre-existing (not related to Phase 4 changes). The RequestDispatcher now sorts consumer arrays on every request callback — negligible cost for 3-5 element arrays.
 
 ---
 

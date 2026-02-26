@@ -52,32 +52,26 @@ export class RequestDispatcher {
 
   registerBeforeRequest(consumer: BeforeRequestConsumer): void {
     this.beforeRequestConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   registerBeforeSendHeaders(consumer: BeforeSendHeadersConsumer): void {
     this.beforeSendHeadersConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   registerHeadersReceived(consumer: HeadersReceivedConsumer): void {
     this.headersReceivedConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   registerBeforeRedirect(consumer: BeforeRedirectConsumer): void {
     this.beforeRedirectConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   registerCompleted(consumer: CompletedConsumer): void {
     this.completedConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   registerError(consumer: ErrorConsumer): void {
     this.errorConsumers.push(consumer);
-    if (this.attached) this.reattach();
   }
 
   attach(): void {
@@ -86,11 +80,8 @@ export class RequestDispatcher {
   }
 
   private reattach(): void {
-    this.beforeRequestConsumers.sort((a, b) => a.priority - b.priority);
-    this.beforeSendHeadersConsumers.sort((a, b) => a.priority - b.priority);
-    this.headersReceivedConsumers.sort((a, b) => a.priority - b.priority);
-
     this.session.webRequest.onBeforeRequest((details, callback) => {
+      this.beforeRequestConsumers.sort((a, b) => a.priority - b.priority);
       const start = performance.now();
 
       for (const consumer of this.beforeRequestConsumers) {
@@ -117,6 +108,7 @@ export class RequestDispatcher {
     });
 
     this.session.webRequest.onBeforeSendHeaders((details, callback) => {
+      this.beforeSendHeadersConsumers.sort((a, b) => a.priority - b.priority);
       let headers = { ...details.requestHeaders };
 
       for (const consumer of this.beforeSendHeadersConsumers) {
@@ -131,6 +123,7 @@ export class RequestDispatcher {
     });
 
     this.session.webRequest.onHeadersReceived((details, callback) => {
+      this.headersReceivedConsumers.sort((a, b) => a.priority - b.priority);
       let responseHeaders = { ...(details.responseHeaders || {}) };
 
       for (const consumer of this.headersReceivedConsumers) {
