@@ -10,7 +10,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Unhandled rejection:', reason);
 });
 
-import { app, BrowserWindow, session, ipcMain, globalShortcut, clipboard, nativeImage, webContents, WebContents } from 'electron';
+import { app, BrowserWindow, session, ipcMain, webContents, WebContents } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
