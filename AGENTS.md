@@ -2,38 +2,84 @@
 
 ## Wie ben je?
 
-Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Kees (AI) browsen samen het web. Jij schrijft de code.
+Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Copilot (AI) browsen samen het web. Jij schrijft de code.
 
 **Lees EERST `PROJECT.md`** — dat is het complete overzicht van wat Tandem is, hoe het werkt, en waarom.
 
 ## Het project
 
 - **Repo:** `hydro13/tandem-browser` (privé, GitHub: hydro13)
-- **Stack:** Electron + TypeScript + Express.js API (localhost:8765)
+- **Stack:** Electron 40 + TypeScript + Express.js API (localhost:8765)
 - **Doel:** Browser waar een AI (via HTTP API + WebSocket) en een mens (via UI) samen browsen
 - **Filosofie:** Lokaal, privacy-first, geen cloud dependencies
-- **~8,900 lines TypeScript, ~3,500 lines HTML/JS, ~111 API endpoints**
-- **Phases 1-5 complete** — zie PROJECT.md voor details
+- **Omvang:** ~28,750 regels TypeScript (81 bestanden), ~10,190 regels HTML/JS (shell/), 170+ API endpoints, 38 src modules
+- **Tests:** 124 geautomatiseerd (51 security + 73 extensions) via Vitest
+- **Versie:** v0.10.0 — zie CHANGELOG.md voor volledige historie
+
+## Projectstructuur
+
+```
+tandem-browser/
+├── src/                          # 81 TypeScript bestanden, ~28,750 regels
+│   ├── api/server.ts             # Express API (170+ endpoints)
+│   ├── main.ts                   # Electron main process
+│   ├── security/                 # 5-layer shield + intelligence upgrade
+│   ├── extensions/               # Browser extension systeem (12 bestanden)
+│   ├── snapshot/                 # Accessibility tree met @refs
+│   ├── network/                  # Inspector + mocking
+│   ├── sessions/                 # Multi-session isolatie
+│   ├── mcp/                      # MCP protocol server
+│   ├── agents/                   # TaskManager, X-Scout, TabLockManager
+│   ├── devtools/                 # CDP bridge
+│   └── ...                       # 28 andere modules
+├── shell/                        # Browser UI (~10,190 regels HTML/JS)
+├── cli/                          # tandem CLI (@hydro13/tandem-cli)
+├── docs/
+│   ├── implementations/          # Voltooide implementatie-plannen
+│   │   ├── ai-integratie/        # MCP, EventStream, ChatRouter, Autonomie
+│   │   ├── agent-browser-gaps/   # Snapshot, mock, sessions, CLI
+│   │   ├── linux-portatie/       # Linux portatie roadmap
+│   │   ├── cdp-devtools/         # DevTools Bridge plannen
+│   │   ├── context-menu/         # Context Menu plannen
+│   │   ├── copilot-vision/       # Copilot Vision plannen
+│   │   └── liquid-glass/         # Liquid Glass Lite docs
+│   ├── plans/                    # Niet-geïmplementeerde plannen
+│   ├── archive/                  # Historische documenten
+│   ├── Browser-extensions/       # Extension systeem (10 phases)
+│   ├── agent-tools/              # Agent tools (3 phases + phase 4 TBD)
+│   ├── security-fixes/           # Security fixes
+│   ├── security-shield/          # Security Shield (5 layers)
+│   └── security-upgrade/         # Security Intelligence (9 phases)
+├── scripts/                      # Test & launch scripts
+├── skill/                        # OpenClaw skill file
+├── release/                      # Build artifacts (DMG, ZIP)
+├── README.md
+├── PROJECT.md
+├── CHANGELOG.md
+├── AGENTS.md                     # ← dit bestand
+└── TODO.md
+```
 
 ## Regels — WAT JE MOET DOEN
 
 ### 1. Lees eerst, bouw dan
-- Lees ALTIJD `TODO.md` voor je begint — weet wat de huidige fase is
+- Lees ALTIJD `TODO.md` voor je begint — weet wat de huidige prioriteiten zijn
 - Lees ALTIJD de bestaande code in `src/` — snap de architectuur
 - Lees `PROJECT.md` voor de visie als je twijfelt over design keuzes
+- Check `docs/implementations/` voor context over voltooide subsystemen
 
 ### 2. Test je eigen code
 - **Compileer altijd:** `npx tsc` moet FOUTLOOS zijn voor je klaar bent
 - **Start de app:** `npm run dev` en verifieer dat het opstart zonder crashes
 - **Test API endpoints:** Gebruik `curl` om elke nieuwe/gewijzigde endpoint te testen
 - **Test UI:** Neem een screenshot en verifieer visueel dat het er goed uitziet
+- **Run tests:** `npx vitest run` — alle bestaande tests moeten blijven slagen
 - **Rapporteer:** Geef een samenvatting van wat je getest hebt en wat de resultaten waren
 
 ### 3. Documentatie bijwerken
-- **TODO.md:** Vink af wat je gebouwd hebt `[x]`, voeg nieuwe items toe als je iets ontdekt
-- **README.md:** Update API docs als je endpoints toevoegt/wijzigt
-- **Code comments:** JSDoc voor publieke functies, inline comments voor complexe logica
+- **TODO.md:** Vink af wat je gebouwd hebt, voeg nieuwe items toe als je iets ontdekt
 - **CHANGELOG.md:** Voeg een entry toe per fase/feature die je afrondt
+- **Code comments:** JSDoc voor publieke functies, inline comments voor complexe logica
 
 ### 4. Git discipline
 - Commit na elke afgeronde sub-feature (niet één mega-commit)
@@ -70,13 +116,13 @@ Je bent een developer agent die werkt aan **Tandem Browser** — een Electron br
 ## ⚔️ ANTI-DETECTIE ARCHITECTUUR — KRITISCH
 
 ### De Gouden Regel
-**Alles wat Kees doet moet onzichtbaar zijn vanuit de webpagina's JavaScript context.**
+**Alles wat Copilot doet moet onzichtbaar zijn vanuit de webpagina's JavaScript context.**
 
-De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Kees staat over Robin's schouder mee te kijken, maar de website weet dat niet.
+De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Copilot staat over Robin's schouder mee te kijken, maar de website weet dat niet.
 
 ### Twee-lagen architectuur
 - **Layer 1 (website ziet):** Normale Chromium webview, echte sessie, menselijk gedrag
-- **Layer 2 (onzichtbaar):** Electron main process + shell UI waar Kees opereert
+- **Layer 2 (onzichtbaar):** Electron main process + shell UI waar Copilot opereert
 
 ### Verplichte patronen
 
@@ -88,12 +134,12 @@ De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Kees sta
 | Page lezen | Injected DOM crawler script | `executeJavaScript()` vanuit main process (kort, minimaal) |
 | Draw overlay | Canvas IN de webview | Canvas in de shell BOVEN de webview |
 | Voice | Web Speech API in webview | Web Speech API in de shell |
-| Kees paneel | iframe/element in webview | Electron panel, apart van webview |
+| Copilot paneel | iframe/element in webview | Electron panel, apart van webview |
 | Activity track | MutationObserver in pagina | Electron webview events |
 
 ### Wat websites detecteren
 - `Event.isTrusted` — programmatische events = false → gebruik sendInputEvent
-- `document.hasFocus()` — als Kees panel focus heeft → mock focus behouden
+- `document.hasFocus()` — als Copilot panel focus heeft → mock focus behouden
 - `performance.now()` timing — te snel = bot → random delays 80-300ms
 - Injected DOM elements — alles wat niet van de site is → NOOIT in webview
 - WebSocket naar localhost — onze API mag NIET vanuit de webview aangeroepen worden
@@ -102,7 +148,7 @@ De website mag ALLEEN zien: "een mens in Chrome op een Mac in België". Kees sta
 - `localhost:8765` port scan — sites kunnen proberen onze API te detecteren → CORS strict, geen response op cross-origin
 
 ### ⚠️ FUNDAMENTELE REGEL: GEEN UNIEKE FINGERPRINT
-Tandem mag NOOIT een herkenbare fingerprint hebben. Als platforms (Meta, Google, LinkedIn) 
+Tandem mag NOOIT een herkenbare fingerprint hebben. Als platforms (Meta, Google, LinkedIn)
 Tandem als "AI browser" kunnen identificeren, is het game over voor ALLE gebruikers.
 
 Tandem moet ononderscheidbaar zijn van echte Chrome op macOS.
@@ -142,7 +188,7 @@ Tandem leert Robin's gedragspatronen en repliceert die bij automated acties.
 
 ## 💬 Chat Architectuur — BELANGRIJK
 
-Het Kees panel heeft een Chat tab die Robin en Kees laat communiceren. Deze verbindt **direct via WebSocket** met de OpenClaw gateway (ws://127.0.0.1:18789).
+Het Copilot panel heeft een Chat tab die Robin en Copilot laat communiceren. Deze verbindt **direct via WebSocket** met de OpenClaw gateway (ws://127.0.0.1:18789).
 
 ### Hoe het werkt
 1. WebSocket naar `ws://127.0.0.1:18789`
@@ -173,45 +219,20 @@ xattr -cr node_modules/electron/dist/Electron.app
 
 Dit moet na elke `npm install` of als Electron opnieuw gedownload wordt. Bouw dit in start scripts in.
 
-## Bestandsstructuur
-
-```
-src/
-├── main.ts                 # Electron main process — app lifecycle
-├── preload.ts              # Context bridge — renderer ↔ main
-├── api/
-│   └── server.ts           # Express API — alle HTTP endpoints
-├── stealth/
-│   └── manager.ts          # Anti-detect patches
-├── tabs/                   # Tab management (Phase 2.1)
-│   └── manager.ts
-├── panel/                  # Kees paneel (Phase 2.2)
-│   └── manager.ts
-├── draw/                   # Annotatie tool (Phase 2.3)
-│   └── overlay.ts
-├── voice/                  # Voice input (Phase 2.4)
-│   └── recognition.ts
-└── activity/               # Activity tracking (Phase 2.5)
-    └── tracker.ts
-
-shell/
-├── index.html              # Hoofd UI
-├── css/                    # Stylesheets (extract uit index.html als het groeit)
-└── js/                     # Client-side scripts (als nodig)
-```
-
 ## Development Workflow
 
 ```
-1. Lees TODO.md → kies de volgende sub-feature
-2. Lees bestaande code → snap de context
-3. Schrijf de code
-4. `npx tsc` → fix alle type errors
-5. `npm run dev` → test handmatig
-6. `curl` test voor API endpoints
-7. Update documentatie (TODO.md, README.md)
-8. Git commit + push
-9. Rapporteer aan Robin/Kees wat je gebouwd en getest hebt
+1. Lees TODO.md → kies de volgende feature
+2. Check docs/implementations/ en docs/plans/ voor context
+3. Lees bestaande code → snap de architectuur
+4. Schrijf de code
+5. `npx tsc` → fix alle type errors
+6. `npx vitest run` → alle tests moeten slagen
+7. `npm run dev` → test handmatig
+8. `curl` test voor API endpoints
+9. Update documentatie (TODO.md, CHANGELOG.md)
+10. Git commit + push
+11. Rapporteer aan Robin wat je gebouwd en getest hebt
 ```
 
 ## Hoe je rapporteert
@@ -225,13 +246,14 @@ Na elke sessie, geef:
 
 ## Getest
 - ✅ `npx tsc` — geen errors
+- ✅ `npx vitest run` — alle tests slagen
 - ✅ `npm run dev` — app start, geen crashes
 - ✅ `curl localhost:8765/nieuwe-endpoint` — response OK
 - ⚠️ [eventuele issues gevonden]
 
 ## Documentatie
-- TODO.md bijgewerkt: [x] items afgevinkt
-- README.md bijgewerkt: nieuwe endpoints gedocumenteerd
+- TODO.md bijgewerkt
+- CHANGELOG.md bijgewerkt
 
 ## Volgende stap
 - [wat er nu aan de beurt is volgens TODO.md]

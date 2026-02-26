@@ -4,6 +4,46 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.10.0] — 2026-02-25
+
+### Browser Extensions System
+
+A complete browser extension infrastructure — from CRX download to runtime — built in 10 implementation phases with 73 automated tests.
+
+#### 📦 Extension Loading & Management
+- **CRX Downloader**: fetch extensions directly from Chrome Web Store by extension ID
+- **Extension Gallery**: built-in gallery UI with 30 pre-curated extensions, search, categories, one-click install
+- **Manifest V2 + V3 support**: parses and validates both manifest versions
+- **Extension lifecycle**: install, enable, disable, uninstall with persistent state across restarts
+
+#### 🧩 Runtime & Integration
+- **Content Scripts**: automatic injection based on manifest `matches` patterns, `run_at` timing (`document_start`, `document_idle`, `document_end`)
+- **Background Scripts**: service worker execution environment for Manifest V3
+- **Browser Action / Page Action**: toolbar button rendering with badge text, badge color, popup HTML
+- **Native Messaging**: host registration and message passing between extensions and native apps
+- **OAuth Polyfill**: `chrome.identity.getAuthToken` / `launchWebAuthFlow` implementation for extensions that need Google auth
+
+#### 🔒 Security & Isolation
+- **Permission system**: manifest permissions parsed and enforced
+- **Conflict detection**: warns when multiple extensions modify the same resources
+- **CSP enforcement**: Content Security Policy applied per extension context
+
+#### 🔄 Auto-Updates
+- Extension update checks against Chrome Web Store
+- Automatic download and install of new versions
+- Version comparison logic (semver-compatible)
+
+#### 🛠️ Extension Toolbar
+- Dedicated toolbar area for extension icons
+- Click to trigger browser action popup
+- Right-click context menu per extension (options, disable, remove)
+
+#### ✅ Test Coverage
+- **73 automated tests** via Vitest — all passing
+- Covers: CRX parsing, manifest validation, content script injection, permission checks, conflict detection, update logic, gallery search
+
+---
+
 ## [0.9.0] — 2026-02-25
 
 ### Security Intelligence Upgrade
@@ -125,7 +165,13 @@ The most significant security release in Tandem's history. Inspired by reference
 
 ## [0.6.0] — 2026-02-21
 
-### Agent Tools + Security Hardening
+### Agent Tools + Electron Upgrade + Security Hardening
+
+#### ⚡ Electron Upgrade v28 → v40
+- **Electron 40.6.0** (was v28) — major framework upgrade
+- **Chromium 128 → 144** — latest rendering engine, Web API improvements
+- **Node.js 18 → 24** — V8 engine update, performance improvements
+- All deprecated APIs migrated, no breaking changes in Tandem code
 
 #### 🤖 Agent Browser Tools
 Three phases of Playwright-style agent automation built on top of Tandem's native CDP bridge:
@@ -287,12 +333,18 @@ Full right-click context menu system built in 6 phases:
 ### Multi-Model AI + Session Management
 
 #### 🤖 AI Coordination
-- **MCP server** (Model Context Protocol) — standardized AI ↔ browser interface
-- **EventStream** — server-sent events for real-time page activity
+- **MCP server** (Model Context Protocol) — 15 tools + 4 resources, standardized AI ↔ browser interface
+- **EventStream** — server-sent events (SSE) for real-time page activity
 - **ContextManager** — maintains browsing context across AI sessions
 - **ChatRouter** — routes messages to multiple AI backends (OpenClaw, local models)
 - **DualMode**: human and AI can control the same tab simultaneously with source tracking
 - **TabLockManager**: prevents AI actions on tabs currently controlled by the human
+
+#### 🤖 Agent Autonomie
+- **TaskManager**: autonomous task queue — AI agent can plan, approve, execute, and report multi-step browser tasks
+- **Approval UI**: user-facing approval panel for agent-proposed actions (allow/deny/modify)
+- **Noodrem (Emergency Stop)**: hard kill switch for all agent activity — immediately halts autonomous execution
+- **X-Scout**: background reconnaissance agent that pre-fetches and analyzes pages before the main agent visits them
 
 #### 📋 Tab Sessions & State
 - Tab source tracking: each tab has a `source` field (`'robin'` | `'copilot'`)
@@ -336,6 +388,21 @@ The first major feature release — transforming the initial prototype into a ca
 - **Electron giveaway removal**: strips `window.process`, `require`, `module`, `exports`, `Buffer`, `__dirname`
 - **`navigator.userAgentData` mock**: matches Chrome 131 including `getHighEntropyValues`
 - **Google auth bypass**: intercepts Google login and opens in native BrowserWindow popup (bypasses embedded browser block)
+
+#### 🎙️ Tab Audio Capture
+- **Cmd+R** to capture tab audio stream
+- Audio routed from webview to Copilot for real-time transcription/analysis
+- Visual indicator in tab bar when audio capture is active
+
+#### ❓ Help & Keyboard Shortcuts
+- **Help page** (`tandem://help`) — full feature overview and getting started guide
+- **Keyboard shortcuts overlay** (Cmd+?) — quick reference for all shortcuts
+- All shortcuts documented and organized by category
+
+#### 🔑 API Authentication
+- **Bearer token auth** on all API endpoints (`localhost:8765`)
+- Token generated on startup, stored in `~/.tandem/api-token`
+- Unauthorized requests return 401 — prevents local network exploitation
 
 #### 🎙️ ClaroNote Integration
 - Native voice-to-text recording via ClaroNote API
