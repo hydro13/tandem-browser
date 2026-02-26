@@ -95,7 +95,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-26
-- **Commit:** (pending)
+- **Commit:** be6578a
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] HistoryManager.save() is debounced (2s timer, writeFileSync deferred)
