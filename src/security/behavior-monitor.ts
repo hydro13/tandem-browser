@@ -131,10 +131,8 @@ export class BehaviorMonitor {
    * Polls CPU metrics every 10 seconds via Performance.getMetrics.
    */
   startResourceMonitoring(): void {
-    // Clear existing interval if any
-    if (this.cpuCheckInterval) {
-      clearInterval(this.cpuCheckInterval);
-    }
+    // Guard: if already running, don't restart (prevents double-start on repeated onTabAttached calls)
+    if (this.cpuCheckInterval) return;
 
     this.cpuCheckInterval = setInterval(async () => {
       try {

@@ -46,6 +46,8 @@ export class SecurityManager {
   private eventCounter: number = 0;
   private correlationRunning: boolean = false;
   private correlationInterval: ReturnType<typeof setInterval> | null = null;
+  private lastCorrelationTime: number = 0;
+  private static readonly MIN_CORRELATION_INTERVAL = 60_000; // throttle: max once per 60s
 
   // Phase 0-B: Blocklist update scheduling
   private blocklistInterval: ReturnType<typeof setInterval> | null = null;
@@ -299,6 +301,9 @@ export class SecurityManager {
    */
   private runCorrelation(): void {
     if (this.correlationRunning) return;
+    const now = Date.now();
+    if (now - this.lastCorrelationTime < SecurityManager.MIN_CORRELATION_INTERVAL) return;
+    this.lastCorrelationTime = now;
     this.correlationRunning = true;
     try {
       const threats = this.threatIntel.correlateEvents();

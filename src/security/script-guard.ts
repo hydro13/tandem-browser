@@ -212,6 +212,8 @@ export class ScriptGuard {
   private monitorInjected = false;
   private scriptsParsed: Map<string, { url: string; length: number }> = new Map();
   private wasmEvents: number[] = []; // timestamps of WASM instantiations
+  /** URLs fully analyzed this session — skip re-analysis on reload/navigation within same tab */
+  private analyzedUrls: Set<string> = new Set();
 
   /** Callback for critical script-analysis detections (wired by SecurityManager for Gatekeeper notification) */
   onCriticalDetection: ((domain: string, analysis: ScriptAnalysisResult) => void) | null = null;
@@ -288,8 +290,9 @@ export class ScriptGuard {
     }
 
     // 4. Static analysis + entropy for external scripts (async — fires in background)
+    // Skip if already analyzed this session (same URL = same CDN script, no need to re-analyze)
     const scriptLength = length || 0;
-    if (scriptLength <= MAX_SCRIPT_SIZE) {
+    if (scriptLength <= MAX_SCRIPT_SIZE && !this.analyzedUrls.has(url)) {
       const pageDomain = this.getCurrentPageDomain();
       if (pageDomain && domain !== pageDomain) {
         this.analyzeExternalScript(scriptId, url, domain).catch(() => {});
@@ -647,6 +650,9 @@ export class ScriptGuard {
         this.runSimilarityCheck(astNode, domain, url);
       }
 
+      // Mark URL as analyzed so reloads/navigations within this session skip re-analysis
+      this.analyzedUrls.add(url);
+
       const perfMs = performance.now() - perfStart;
       if (perfMs > 50) {
         console.warn(`[ScriptGuard] Slow analysis: ${url} took ${perfMs.toFixed(1)}ms`);
@@ -897,6 +903,7 @@ export class ScriptGuard {
   reset(): void {
     this.monitorInjected = false;
     this.scriptsParsed.clear();
+    this.analyzedUrls.clear();
   }
 
   private extractDomain(url: string): string | null {
