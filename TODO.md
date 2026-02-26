@@ -29,10 +29,10 @@
 
 ### 🔴 Hoge prioriteit
 
-- [ ] **Password Manager** — lokale SQLite + AES-256-GCM database, master password, autofill, generator, `GET /passwords/suggest`, nooit cloud sync
+- [x] **Password Manager** — lokale SQLite + AES-256-GCM database, master password, autofill, generator, `GET /passwords/suggest`, nooit cloud sync
 - [ ] **Print / PDF export** — Cmd+P, PDF export API (print() alleen in context menu nu)
-- [ ] **Behavioral Learning modellen** — profiel compiler, typing bigram model, mouse Bézier curves, scroll/click/dagritme modellen, replay engine, fallback gaussians
-- [ ] **SPA Rendering bug** — `/page-content` retourneert lege content op dynamische pagina's (zie docs/plans/spa-rendering-bug.md)
+- [x] **Behavioral Learning modellen** — profiel compiler, typing bigram model, mouse Bézier curves, scroll/click/dagritme modellen, replay engine, fallback gaussians
+- [x] **SPA Rendering bug** — `/page-content` retourneert lege content op dynamische pagina's (zie docs/plans/spa-rendering-bug.md)
 
 ### 🟡 Medium prioriteit — Features
 

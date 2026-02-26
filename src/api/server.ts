@@ -28,6 +28,7 @@ import { HistoryManager } from '../history/manager';
 import { DownloadManager } from '../downloads/manager';
 import { AudioCaptureManager } from '../audio/capture';
 import { ExtensionLoader } from '../extensions/loader';
+import { passwordManager } from '../passwords/manager';
 import { ExtensionManager } from '../extensions/manager';
 import { ChromeExtensionImporter } from '../extensions/chrome-importer';
 import { GalleryLoader } from '../extensions/gallery-loader';
@@ -199,7 +200,7 @@ export class TandemAPI {
     this.contentExtractor = new ContentExtractor();
     this.workflowEngine = new WorkflowEngine();
     this.loginManager = new LoginManager();
-    
+
     this.app = express();
     this.app.use(cors({
       origin: (origin, callback) => {
@@ -332,6 +333,70 @@ export class TandemAPI {
       } catch (e: any) {
         res.json({ ready: false, error: e.message });
       }
+    });
+
+    // ═══════════════════════════════════════════════
+    // PASSWORD MANAGER
+    // ═══════════════════════════════════════════════
+
+    this.app.get('/passwords/status', (_req: Request, res: Response) => {
+      res.json({
+        unlocked: passwordManager.isVaultUnlocked,
+        isNewVault: passwordManager.isNewVault()
+      });
+    });
+
+    this.app.post('/passwords/unlock', async (req: Request, res: Response) => {
+      const { password } = req.body;
+      if (!password) {
+        res.status(400).json({ error: 'Password required' });
+        return;
+      }
+      const success = await passwordManager.unlock(password);
+      if (success) {
+        res.json({ success: true, isNewVault: false });
+      } else {
+        res.status(401).json({ error: 'Incorrect master password' });
+      }
+    });
+
+    this.app.post('/passwords/lock', (_req: Request, res: Response) => {
+      passwordManager.lock();
+      res.json({ success: true });
+    });
+
+    this.app.get('/passwords/suggest', (req: Request, res: Response) => {
+      const domain = req.query.domain as string;
+      if (!domain) {
+        res.status(400).json({ error: 'Domain query parameter required' });
+        return;
+      }
+      try {
+        const identities = passwordManager.getIdentitiesForDomain(domain);
+        res.json({ identities });
+      } catch (err: any) {
+        res.status(403).json({ error: err.message });
+      }
+    });
+
+    this.app.post('/passwords/save', (req: Request, res: Response) => {
+      const { domain, username, payload } = req.body;
+      if (!domain || !username || !payload) {
+        res.status(400).json({ error: 'domain, username, and payload required' });
+        return;
+      }
+      try {
+        passwordManager.saveItem(domain, username, payload);
+        res.json({ success: true });
+      } catch (err: any) {
+        res.status(403).json({ error: err.message });
+      }
+    });
+
+    this.app.get('/passwords/generate', (req: Request, res: Response) => {
+      const { PasswordCrypto } = require('../security/crypto');
+      const length = req.query.length ? parseInt(req.query.length as string) : 24;
+      res.json({ password: PasswordCrypto.generatePassword(length) });
     });
 
     // ═══════════════════════════════════════════════
@@ -471,6 +536,8 @@ export class TandemAPI {
       try {
         const settleMs = parseInt(req.query.settle as string) || 800;
         const maxWait = parseInt(req.query.timeout as string) || 10000;
+        const targetLength = parseInt(req.query.minLength as string) || 1000;
+
         const content = await this.execInSessionTab(req, `
           new Promise((resolve) => {
             const extract = () => {
@@ -482,48 +549,62 @@ export class TandemAPI {
               return { title, url, description, text, length: text.length };
             };
 
+            const deadline = Date.now() + ${maxWait};
+            let timer = null;
+            let observer = null;
+
+            const cleanupAndResolve = () => {
+              if (timer) clearTimeout(timer);
+              if (observer) observer.disconnect();
+              resolve(extract());
+            };
+
             // Quick check: if content is already substantial, return immediately
+            // But for SPA docs, we sometimes want to wait anyway if it's too short
             const quick = extract();
-            if (quick.length > 500) {
+            if (quick.length > ${targetLength}) {
               resolve(quick);
               return;
             }
 
             // SPA wait: use MutationObserver to detect when DOM settles
-            let timer = null;
-            const deadline = Date.now() + ${maxWait};
-            const settle = ${settleMs};
+            // Real sliding timeout: reset the settle timer on every mutation
+            const onSettle = () => {
+              // Wait period elapsed with no mutations
+              const current = extract();
+              // If we are settled but still suspiciously short, it might mean the 
+              // API fetch is still ongoing and hasn't mutated the DOM yet.
+              // In this case, we extend the wait until the hard deadline.
+              if (current.length < ${targetLength} && Date.now() < deadline) {
+                // Check again in 500ms
+                timer = setTimeout(onSettle, 500);
+              } else {
+                cleanupAndResolve();
+              }
+            };
 
-            const observer = new MutationObserver(() => {
-              clearTimeout(timer);
+            const onMutation = () => {
               if (Date.now() >= deadline) {
-                observer.disconnect();
-                resolve(extract());
+                cleanupAndResolve();
                 return;
               }
-              timer = setTimeout(() => {
-                observer.disconnect();
-                resolve(extract());
-              }, settle);
-            });
+              // Reset settle timer
+              if (timer) clearTimeout(timer);
+              timer = setTimeout(onSettle, ${settleMs});
+            };
+
+            observer = new MutationObserver(onMutation);
 
             observer.observe(document.body, {
               childList: true, subtree: true,
               characterData: true, attributes: false
             });
 
-            // Start the settle timer (in case no mutations happen at all)
-            timer = setTimeout(() => {
-              observer.disconnect();
-              resolve(extract());
-            }, settle);
+            // Start the initial settle timer (in case no mutations happen)
+            timer = setTimeout(onSettle, ${settleMs});
 
             // Hard deadline safety
-            setTimeout(() => {
-              clearTimeout(timer);
-              observer.disconnect();
-              resolve(extract());
-            }, ${maxWait});
+            setTimeout(cleanupAndResolve, ${maxWait});
           })
         `);
         res.json(content);
@@ -2565,7 +2646,7 @@ export class TandemAPI {
           res.status(400).json({ error: 'Email and password required' });
           return;
         }
-        
+
         const result = await this.claroNoteManager.login(email, password);
         if (result.success) {
           res.json({ success: true, user: this.claroNoteManager.getAuth()?.user });
@@ -2813,7 +2894,7 @@ export class TandemAPI {
           return;
         }
         const status = await this.workflowEngine.getExecutionStatus(executionId);
-        
+
         if (!status) {
           res.status(404).json({ error: 'Execution not found' });
           return;

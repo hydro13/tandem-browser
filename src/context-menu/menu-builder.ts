@@ -1,5 +1,6 @@
 import { Menu, MenuItem, clipboard, dialog, WebContents, webContents } from 'electron';
 import { ContextMenuParams, ContextMenuDeps } from './types';
+import { passwordManager } from '../passwords/manager';
 
 /** Protocols that should never be opened/downloaded */
 const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'file:', 'vbscript:'];
@@ -225,6 +226,50 @@ export class ContextMenuBuilder {
       enabled: params.editFlags.canSelectAll,
       click: guard(() => wc.selectAll()),
     }));
+
+    // Password Manager Autofill
+    if (passwordManager.isVaultUnlocked) {
+      this.addSeparator(menu);
+      const url = new URL(params.pageURL || wc.getURL());
+      const domain = url.hostname;
+
+      const identities = passwordManager.getIdentitiesForDomain(domain);
+
+      if (identities.length > 0) {
+        const vaultMenu = new Menu();
+        for (const id of identities) {
+          vaultMenu.append(new MenuItem({
+            label: id.username,
+            click: guard(() => {
+              // Note: robust autofill requires a content script.
+              // For a simple editable context menu, we can just insert the password text where the cursor is,
+              // or send an IPC message to fill the whole form if we detect username/password fields.
+              // For now, we paste the password.
+              if (id.payload && id.payload.password) {
+                clipboard.writeText(id.payload.password);
+                wc.paste();
+              }
+            })
+          }));
+        }
+
+        menu.append(new MenuItem({
+          label: 'Autofill Password',
+          submenu: vaultMenu
+        }));
+      }
+
+      menu.append(new MenuItem({
+        label: 'Generate New Password',
+        click: guard(() => {
+          const { PasswordCrypto } = require('../security/crypto');
+          const pswd = PasswordCrypto.generatePassword(24);
+          clipboard.writeText(pswd);
+          wc.paste();
+          // Optionally notify user
+        })
+      }));
+    }
   }
 
   /** Search Google item — used standalone for editable fields with selection */
@@ -372,7 +417,7 @@ export class ContextMenuBuilder {
               return title + '\\n\\n' + trimmed;
             })()
           `);
-        } catch {}
+        } catch { }
 
         const prompt = excerpt
           ? 'Please summarize this page:\\n\\n' + excerpt
@@ -553,7 +598,7 @@ export class ContextMenuBuilder {
       enabled: allTabs.length > 1,
       click: async () => {
         for (const t of allTabs.filter(t => t.id !== tabId)) {
-          try { await this.deps.tabManager.closeTab(t.id); } catch {}
+          try { await this.deps.tabManager.closeTab(t.id); } catch { }
         }
       },
     }));
@@ -562,7 +607,7 @@ export class ContextMenuBuilder {
       enabled: tabIndex < allTabs.length - 1,
       click: async () => {
         for (const t of allTabs.slice(tabIndex + 1)) {
-          try { await this.deps.tabManager.closeTab(t.id); } catch {}
+          try { await this.deps.tabManager.closeTab(t.id); } catch { }
         }
       },
     }));

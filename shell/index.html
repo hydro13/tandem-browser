@@ -1,42 +1,47 @@
 <!DOCTYPE html>
 <html lang="nl">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tandem Browser</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     /* === Liquid Glass Lite Design Tokens === */
-    
+
     /* LGL Base Tokens */
     :root {
       /* Lensing Parameters */
       --lgl-refraction-strength: 0.15;
       --lgl-displacement-max: 15px;
-      
+
       /* Blur */
       --lgl-blur-radius: 20px;
       --lgl-blur-radius-subtle: 12px;
       --lgl-blur-radius-strong: 30px;
-      
+
       /* Saturation Boost */
       --lgl-saturation: 1.4;
       --lgl-saturation-subtle: 1.2;
       --lgl-saturation-strong: 1.6;
-      
+
       /* Shadow */
       --lgl-shadow-opacity: 0.08;
       --lgl-shadow-opacity-text: 0.18;
       --lgl-shadow-opacity-image: 0.12;
       --lgl-shadow-spread: 8px;
       --lgl-shadow-spread-text: 12px;
-      
+
       /* Base Shadow */
       --lgl-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.05);
       --lgl-shadow-depth: 0 8px var(--lgl-shadow-spread) rgba(0, 0, 0, var(--lgl-shadow-opacity));
       --lgl-shadow: var(--lgl-shadow-contact), var(--lgl-shadow-depth);
-      
+
       /* Border Radius */
       --lgl-radius-none: 0;
       --lgl-radius-small: 8px;
@@ -44,7 +49,7 @@
       --lgl-radius-large: 16px;
       --lgl-radius-xlarge: 20px;
       --lgl-radius-pill: 9999px;
-      
+
       /* Spacing */
       --lgl-space-xs: 4px;
       --lgl-space-sm: 8px;
@@ -52,20 +57,20 @@
       --lgl-space-lg: 16px;
       --lgl-space-xl: 24px;
       --lgl-space-2xl: 32px;
-      
+
       /* Transitions */
       --lgl-transition-fast: 150ms ease-out;
       --lgl-transition-normal: 300ms ease-out;
       --lgl-transition-slow: 400ms ease-out;
       --lgl-transition-spring: 400ms cubic-bezier(0.5, 0.9, 0.1, 1.0);
-      
+
       /* Z-index layers */
       --lgl-z-background: 0;
       --lgl-z-content: 1;
       --lgl-z-glass: 10;
       --lgl-z-overlay: 100;
       --lgl-z-modal: 1000;
-      
+
       /* LGL Light Mode Tokens */
       --lgl-tint-light: rgba(255, 255, 255, 0.45);
       --lgl-tint: var(--lgl-tint-light);
@@ -78,7 +83,7 @@
       --lgl-contrast-border: rgba(0, 0, 0, 0.2);
       --lgl-edge-color: rgba(0, 0, 0, 0.15);
       --lgl-focus-ring: rgba(0, 122, 255, 0.6);
-      
+
       /* Tandem-specific variables */
       --bg: #1a1a2e;
       --surface: #16213e;
@@ -92,7 +97,7 @@
       --tab-active: #16213e;
       --tab-hover: #1a2744;
     }
-    
+
     /* LGL Dark Mode Tokens */
     [data-theme="dark"],
     @media (prefers-color-scheme: dark) {
@@ -160,22 +165,24 @@
       display: flex;
       align-items: center;
       background: var(--tab-bg);
-      border-bottom: 1px solid rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
       height: 36px;
       -webkit-app-region: drag;
       overflow-x: auto;
       overflow-y: hidden;
       position: relative;
     }
-    
+
     /* Platform-specific padding for native controls */
     body.platform-darwin .tab-bar {
-      padding-left: 80px; /* macOS traffic lights */
+      padding-left: 80px;
+      /* macOS traffic lights */
     }
-    
+
     body.platform-linux .tab-bar,
     body.platform-win32 .tab-bar {
-      padding-right: 140px; /* Space for custom window controls */
+      padding-right: 140px;
+      /* Space for custom window controls */
     }
 
     /* ═══ macOS native glass chrome ═══
@@ -206,8 +213,10 @@
       -webkit-backdrop-filter: blur(30px) saturate(160%);
       backdrop-filter: blur(30px) saturate(160%);
     }
-    
-    .tab-bar::-webkit-scrollbar { height: 0; }
+
+    .tab-bar::-webkit-scrollbar {
+      height: 0;
+    }
 
     .tab {
       -webkit-app-region: no-drag;
@@ -223,13 +232,18 @@
       color: var(--text-dim);
       font-size: 12px;
       cursor: pointer;
-      border-right: 1px solid rgba(255,255,255,0.04);
+      border-right: 1px solid rgba(255, 255, 255, 0.04);
       position: relative;
       transition: background 0.15s, color 0.15s;
       white-space: nowrap;
       overflow: hidden;
     }
-    .tab:hover { background: var(--tab-hover); color: var(--text); }
+
+    .tab:hover {
+      background: var(--tab-hover);
+      color: var(--text);
+    }
+
     .tab.active {
       background: var(--tab-active);
       color: var(--text);
@@ -272,8 +286,15 @@
       flex-shrink: 0;
       transition: opacity 0.15s, background 0.15s;
     }
-    .tab:hover .tab-close { opacity: 1; }
-    .tab .tab-close:hover { background: rgba(233,69,96,0.3); color: var(--accent); }
+
+    .tab:hover .tab-close {
+      opacity: 1;
+    }
+
+    .tab .tab-close:hover {
+      background: rgba(233, 69, 96, 0.3);
+      color: var(--accent);
+    }
 
     .tab-new-btn {
       -webkit-app-region: no-drag;
@@ -287,7 +308,10 @@
       transition: color 0.15s;
       flex-shrink: 0;
     }
-    .tab-new-btn:hover { color: var(--text); }
+
+    .tab-new-btn:hover {
+      color: var(--text);
+    }
 
     /* Hamburger menu button */
     .menu-btn {
@@ -305,8 +329,9 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    .menu-btn:hover { 
-      color: var(--text); 
+
+    .menu-btn:hover {
+      color: var(--text);
       background: var(--tab-hover);
     }
 
@@ -325,7 +350,8 @@
     /* Window controls (Linux/Windows only) */
     .window-controls {
       -webkit-app-region: no-drag;
-      display: none; /* Hidden by default */
+      display: none;
+      /* Hidden by default */
       align-items: center;
       height: 100%;
       position: absolute;
@@ -376,7 +402,7 @@
       gap: 8px;
       padding: 6px 12px;
       background: var(--surface);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .toolbar button {
@@ -389,12 +415,16 @@
       border-radius: 4px;
       transition: all 0.15s;
     }
-    .toolbar button:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+
+    .toolbar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
 
     .url-bar {
       flex: 1;
       background: var(--input-bg);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 20px;
       padding: 7px 16px;
       color: var(--text);
@@ -402,7 +432,10 @@
       outline: none;
       transition: border-color 0.2s;
     }
-    .url-bar:focus { border-color: var(--accent); }
+
+    .url-bar:focus {
+      border-color: var(--accent);
+    }
 
     .status-dot {
       width: 10px;
@@ -411,12 +444,26 @@
       background: var(--success);
       transition: background 0.3s;
     }
-    .status-dot.loading { background: var(--warning); animation: pulse 1s infinite; }
-    .status-dot.error { background: var(--accent); }
+
+    .status-dot.loading {
+      background: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    .status-dot.error {
+      background: var(--accent);
+    }
 
     @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
     }
 
     .copilot-badge {
@@ -437,6 +484,7 @@
       margin: 0 4px;
       position: relative;
     }
+
     .ext-toolbar-btn {
       position: relative;
       background: none;
@@ -451,13 +499,18 @@
       width: 28px;
       height: 28px;
     }
-    .ext-toolbar-btn:hover { background: rgba(255,255,255,0.1); }
+
+    .ext-toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
     .ext-toolbar-btn img {
       width: 18px;
       height: 18px;
       border-radius: 2px;
       pointer-events: none;
     }
+
     .ext-toolbar-btn .ext-badge {
       position: absolute;
       bottom: 0;
@@ -473,6 +526,7 @@
       min-width: 10px;
       text-align: center;
     }
+
     .ext-overflow-btn {
       background: none;
       border: none;
@@ -488,7 +542,12 @@
       color: var(--text-dim);
       font-size: 16px;
     }
-    .ext-overflow-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+    .ext-overflow-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
     .ext-overflow-dropdown {
       display: none;
       position: absolute;
@@ -496,14 +555,18 @@
       right: 0;
       margin-top: 4px;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       padding: 4px;
       z-index: 1000;
       min-width: 200px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     }
-    .ext-overflow-dropdown.visible { display: block; }
+
+    .ext-overflow-dropdown.visible {
+      display: block;
+    }
+
     .ext-overflow-item {
       display: flex;
       align-items: center;
@@ -519,13 +582,18 @@
       font-size: 12px;
       transition: background 0.15s;
     }
-    .ext-overflow-item:hover { background: rgba(255,255,255,0.08); }
+
+    .ext-overflow-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
     .ext-overflow-item img {
       width: 16px;
       height: 16px;
       border-radius: 2px;
       flex-shrink: 0;
     }
+
     .ext-overflow-item .ext-badge {
       font-size: 8px;
       font-weight: 700;
@@ -551,8 +619,14 @@
       transition: all 0.15s;
       line-height: 1;
     }
-    .bookmark-star:hover { color: var(--warning); }
-    .bookmark-star.bookmarked { color: var(--warning); }
+
+    .bookmark-star:hover {
+      color: var(--warning);
+    }
+
+    .bookmark-star.bookmarked {
+      color: var(--warning);
+    }
 
     /* ═══ Bookmarks bar ═══ */
     .bookmarks-bar {
@@ -561,7 +635,7 @@
       gap: 2px;
       padding: 3px 12px;
       background: var(--surface);
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       overflow: visible;
       white-space: nowrap;
       height: 28px;
@@ -569,8 +643,15 @@
       z-index: 500;
       flex-wrap: nowrap;
     }
-    .bookmarks-bar.visible { display: flex; }
-    .bookmarks-bar::-webkit-scrollbar { height: 0; }
+
+    .bookmarks-bar.visible {
+      display: flex;
+    }
+
+    .bookmarks-bar::-webkit-scrollbar {
+      height: 0;
+    }
+
     .bookmarks-bar a {
       display: flex;
       align-items: center;
@@ -585,8 +666,18 @@
       white-space: nowrap;
       flex-shrink: 0;
     }
-    .bookmarks-bar a:hover, .bookmarks-bar .bm-folder:hover { color: var(--text); background: rgba(255,255,255,0.08); }
-    .bookmarks-bar a img { width: 14px; height: 14px; border-radius: 2px; }
+
+    .bookmarks-bar a:hover,
+    .bookmarks-bar .bm-folder:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bookmarks-bar a img {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
 
     /* Bookmark folder items */
     .bookmarks-bar .bm-folder {
@@ -603,7 +694,10 @@
       position: relative;
       user-select: none;
     }
-    .bm-folder-icon { font-size: 12px; }
+
+    .bm-folder-icon {
+      font-size: 12px;
+    }
 
     /* Overflow chevron button */
     .bm-overflow {
@@ -621,8 +715,16 @@
       position: relative;
       user-select: none;
     }
-    .bm-overflow:hover { color: var(--text); background: rgba(255,255,255,0.08); }
-    .bm-overflow .bm-dropdown { right: 0; left: auto; }
+
+    .bm-overflow:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bm-overflow .bm-dropdown {
+      right: 0;
+      left: auto;
+    }
 
     /* Folder dropdown */
     .bm-dropdown {
@@ -633,13 +735,17 @@
       min-width: 220px;
       max-width: 350px;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
       z-index: 2000;
       padding: 4px 0;
     }
-    .bm-dropdown.open { display: block; }
+
+    .bm-dropdown.open {
+      display: block;
+    }
+
     .bm-dropdown a {
       display: flex;
       align-items: center;
@@ -653,6 +759,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+
     .bm-dropdown .bm-subfolder {
       display: flex;
       align-items: center;
@@ -663,36 +770,70 @@
       cursor: pointer;
       white-space: nowrap;
     }
-    .bm-dropdown a:hover, .bm-dropdown .bm-subfolder:hover {
+
+    .bm-dropdown a:hover,
+    .bm-dropdown .bm-subfolder:hover {
       color: var(--text);
-      background: rgba(255,255,255,0.08);
+      background: rgba(255, 255, 255, 0.08);
     }
-    .bm-dropdown a img { width: 14px; height: 14px; border-radius: 2px; flex-shrink: 0; }
-    .bm-dropdown .bm-subfolder { position: relative; }
-    .bm-dropdown .bm-subfolder::after { content: '▸'; margin-left: auto; font-size: 10px; opacity: 0.5; }
-    .bm-dropdown .bm-subfolder .bm-dropdown { left: 100%; top: -4px; }
-    .bm-dropdown .bm-subfolder .bm-dropdown.flip-left { left: auto; right: 100%; }
-    .bm-dropdown .bm-subfolder .bm-dropdown.flip-top { top: auto; bottom: 0; }
+
+    .bm-dropdown a img {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .bm-dropdown .bm-subfolder {
+      position: relative;
+    }
+
+    .bm-dropdown .bm-subfolder::after {
+      content: '▸';
+      margin-left: auto;
+      font-size: 10px;
+      opacity: 0.5;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown {
+      left: 100%;
+      top: -4px;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-left {
+      left: auto;
+      right: 100%;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-top {
+      top: auto;
+      bottom: 0;
+    }
 
     /* ═══ Find in page bar ═══ */
     .find-bar {
       display: none;
       position: absolute;
-      top: 0; right: 20px;
+      top: 0;
+      right: 20px;
       z-index: 150;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-top: none;
       border-radius: 0 0 10px 10px;
       padding: 8px 12px;
       gap: 6px;
       align-items: center;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
     }
-    .find-bar.visible { display: flex; }
+
+    .find-bar.visible {
+      display: flex;
+    }
+
     .find-bar input {
       background: var(--input-bg);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 6px;
       padding: 5px 10px;
       color: var(--text);
@@ -700,13 +841,18 @@
       outline: none;
       width: 220px;
     }
-    .find-bar input:focus { border-color: var(--accent); }
+
+    .find-bar input:focus {
+      border-color: var(--accent);
+    }
+
     .find-bar .find-count {
       font-size: 11px;
       color: var(--text-dim);
       min-width: 50px;
       text-align: center;
     }
+
     .find-bar button {
       background: none;
       border: none;
@@ -717,7 +863,11 @@
       border-radius: 4px;
       transition: all 0.15s;
     }
-    .find-bar button:hover { color: var(--text); background: rgba(255,255,255,0.1); }
+
+    .find-bar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
 
     /* ═══ Main layout (browser + panel) ═══ */
     .main-layout {
@@ -736,12 +886,14 @@
 
     .browser-content webview {
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       border: none;
       display: none;
     }
+
     .browser-content webview.active {
       display: flex;
     }
@@ -749,20 +901,27 @@
     /* ═══ Draw overlay canvas ═══ */
     .draw-overlay {
       position: absolute;
-      top: 0; left: 0;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
       z-index: 100;
-      pointer-events: none; /* Allow page interaction */
+      pointer-events: none;
+      /* Allow page interaction */
       cursor: default;
       display: none;
     }
+
     .draw-overlay.active {
-      display: block; /* Visible when draw mode on */
-      pointer-events: none; /* STILL allow page interaction */
+      display: block;
+      /* Visible when draw mode on */
+      pointer-events: none;
+      /* STILL allow page interaction */
     }
+
     .draw-overlay.drawing {
-      pointer-events: auto; /* ONLY block during actual drawing */
+      pointer-events: auto;
+      /* ONLY block during actual drawing */
       cursor: crosshair;
     }
 
@@ -775,14 +934,18 @@
       transform: translateX(-50%);
       z-index: 101;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 10px;
       padding: 6px 10px;
       gap: 6px;
       align-items: center;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
     }
-    .draw-toolbar.visible { display: flex; }
+
+    .draw-toolbar.visible {
+      display: flex;
+    }
+
     .draw-toolbar button {
       background: none;
       border: 1px solid transparent;
@@ -793,29 +956,46 @@
       border-radius: 6px;
       transition: all 0.15s;
     }
-    .draw-toolbar button:hover { color: var(--text); background: rgba(255,255,255,0.1); }
-    .draw-toolbar button.active { color: var(--accent); border-color: var(--accent); }
+
+    .draw-toolbar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .draw-toolbar button.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
     .draw-toolbar .color-btn {
-      width: 20px; height: 20px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       border: 2px solid transparent;
       cursor: pointer;
       padding: 0;
     }
-    .draw-toolbar .color-btn.active { border-color: #fff; }
+
+    .draw-toolbar .color-btn.active {
+      border-color: #fff;
+    }
+
     .draw-toolbar .separator {
-      width: 1px; height: 20px;
-      background: rgba(255,255,255,0.15);
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.15);
       margin: 0 4px;
     }
 
     /* ═══ Copilot Panel ═══ */
     .copilot-panel {
       position: absolute;
-      top: 0; right: 0; bottom: 0;
+      top: 0;
+      right: 0;
+      bottom: 0;
       width: 360px;
       background: var(--surface);
-      border-left: 1px solid rgba(255,255,255,0.08);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -824,6 +1004,7 @@
       z-index: 100;
       will-change: transform;
     }
+
     .copilot-panel.open {
       transform: translateX(0);
     }
@@ -837,7 +1018,7 @@
       width: 20px;
       height: 48px;
       background: var(--surface);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-right: none;
       border-radius: 6px 0 0 6px;
       color: var(--text-dim);
@@ -849,6 +1030,7 @@
       z-index: 101;
       transition: background 0.15s, color 0.15s, right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     .copilot-panel-toggle:hover {
       background: var(--tab-bg);
       color: var(--text);
@@ -856,7 +1038,8 @@
 
     .panel-resize-handle {
       position: absolute;
-      top: 0; bottom: 0;
+      top: 0;
+      bottom: 0;
       width: 5px;
       cursor: col-resize;
       z-index: 201;
@@ -864,12 +1047,16 @@
       display: none;
       transition: background 0.15s;
     }
+
     .panel-resize-handle:hover,
     .panel-resize-handle.dragging {
       background: rgba(233, 69, 96, 0.4);
     }
-    .copilot-panel.open ~ .panel-resize-handle,
-    .panel-resize-handle.visible { display: block; }
+
+    .copilot-panel.open~.panel-resize-handle,
+    .panel-resize-handle.visible {
+      display: block;
+    }
 
     .copilot-badge.panel-open {
       background: rgba(233, 69, 96, 0.4);
@@ -879,21 +1066,38 @@
     .panel-header {
       padding: 12px 14px;
       background: var(--tab-bg);
-      border-bottom: 1px solid rgba(255,255,255,0.06);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
       display: flex;
       align-items: center;
       gap: 8px;
       flex-shrink: 0;
     }
-    .panel-header h2 { font-size: 14px; font-weight: 600; flex: 1; }
-    .panel-header .panel-tab {
-      background: none; border: none;
-      color: var(--text-dim); font-size: 12px;
-      cursor: pointer; padding: 4px 8px;
-      border-radius: 4px; transition: all 0.15s;
+
+    .panel-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
     }
-    .panel-header .panel-tab:hover { color: var(--text); }
-    .panel-header .panel-tab.active { color: var(--accent); background: rgba(233,69,96,0.15); }
+
+    .panel-header .panel-tab {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .panel-header .panel-tab:hover {
+      color: var(--text);
+    }
+
+    .panel-header .panel-tab.active {
+      color: var(--accent);
+      background: rgba(233, 69, 96, 0.15);
+    }
 
     .panel-body {
       flex: 1;
@@ -907,27 +1111,70 @@
     /* Activity log */
     .activity-item {
       padding: 6px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.03);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
       font-size: 11px;
       color: var(--text-dim);
       display: flex;
       gap: 6px;
       align-items: flex-start;
     }
-    .activity-item .a-icon { flex-shrink: 0; }
-    .activity-item .a-source { flex-shrink: 0; font-size: 10px; }
-    .activity-item .a-source.robin { color: var(--success); }
-    .activity-item .a-source.copilot { color: var(--accent); }
-    .activity-item .a-text { flex: 1; word-break: break-word; }
-    .activity-item .a-time { flex-shrink: 0; opacity: 0.5; font-size: 10px; }
+
+    .activity-item .a-icon {
+      flex-shrink: 0;
+    }
+
+    .activity-item .a-source {
+      flex-shrink: 0;
+      font-size: 10px;
+    }
+
+    .activity-item .a-source.robin {
+      color: var(--success);
+    }
+
+    .activity-item .a-source.copilot {
+      color: var(--accent);
+    }
+
+    .activity-item .a-text {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .activity-item .a-time {
+      flex-shrink: 0;
+      opacity: 0.5;
+      font-size: 10px;
+    }
 
     /* Tab source indicator */
-    .tab .tab-source { font-size: 10px; flex-shrink: 0; margin-right: 2px; }
+    .tab .tab-source {
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-right: 2px;
+    }
 
     /* Chat */
-    .chat-messages { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; gap: 6px; padding-bottom: 8px; min-width: 0; }
-    .chat-messages::-webkit-scrollbar { width: 4px; }
-    .chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 8px;
+      min-width: 0;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+
     .chat-msg {
       padding: 8px 10px;
       border-radius: 10px;
@@ -938,22 +1185,47 @@
       overflow-wrap: break-word;
       min-width: 0;
     }
-    .chat-msg.robin { background: rgba(78, 204, 163, 0.2); border: 1px solid rgba(78, 204, 163, 0.3); align-self: flex-end; color: var(--text); }
-    .chat-msg.copilot { background: rgba(233,69,96,0.15); border: 1px solid rgba(233,69,96,0.2); align-self: flex-start; color: var(--text); overflow-wrap: break-word; }
-    .chat-msg .msg-from { font-size: 10px; opacity: 0.5; margin-bottom: 2px; }
-    .chat-msg .msg-time { font-size: 9px; opacity: 0.35; margin-top: 3px; text-align: right; }
+
+    .chat-msg.robin {
+      background: rgba(78, 204, 163, 0.2);
+      border: 1px solid rgba(78, 204, 163, 0.3);
+      align-self: flex-end;
+      color: var(--text);
+    }
+
+    .chat-msg.copilot {
+      background: rgba(233, 69, 96, 0.15);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      align-self: flex-start;
+      color: var(--text);
+      overflow-wrap: break-word;
+    }
+
+    .chat-msg .msg-from {
+      font-size: 10px;
+      opacity: 0.5;
+      margin-bottom: 2px;
+    }
+
+    .chat-msg .msg-time {
+      font-size: 9px;
+      opacity: 0.35;
+      margin-top: 3px;
+      text-align: right;
+    }
 
     .chat-input-wrap {
       display: flex;
       gap: 6px;
       padding-top: 8px;
-      border-top: 1px solid rgba(255,255,255,0.06);
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
       flex-shrink: 0;
     }
+
     .chat-input {
       flex: 1;
       background: var(--input-bg);
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
       padding: 8px 10px;
       color: var(--text);
@@ -963,7 +1235,11 @@
       min-height: 36px;
       max-height: 80px;
     }
-    .chat-input:focus { border-color: var(--accent); }
+
+    .chat-input:focus {
+      border-color: var(--accent);
+    }
+
     .chat-send-btn {
       background: var(--accent);
       border: none;
@@ -974,24 +1250,30 @@
       font-size: 14px;
       transition: opacity 0.15s;
     }
-    .chat-send-btn:hover { opacity: 0.85; }
+
+    .chat-send-btn:hover {
+      opacity: 0.85;
+    }
+
     .chat-image-preview {
       position: relative;
       padding: 6px 12px;
-      background: rgba(255,255,255,0.05);
-      border-top: 1px solid rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
+
     .chat-image-preview img {
       max-width: 200px;
       max-height: 150px;
       border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.15);
+      border: 1px solid rgba(255, 255, 255, 0.15);
     }
+
     .chat-image-preview .remove-preview {
       position: absolute;
       top: 2px;
       right: 8px;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       color: #fff;
       border: none;
       border-radius: 50%;
@@ -1003,32 +1285,40 @@
       align-items: center;
       justify-content: center;
     }
-    .chat-image-preview .remove-preview:hover { background: rgba(255,0,0,0.6); }
+
+    .chat-image-preview .remove-preview:hover {
+      background: rgba(255, 0, 0, 0.6);
+    }
+
     .chat-msg img.chat-msg-image {
       max-width: 250px;
       max-height: 200px;
       border-radius: 6px;
       margin-top: 4px;
       cursor: pointer;
-      border: 1px solid rgba(255,255,255,0.1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       display: block;
     }
-    .chat-msg img.chat-msg-image:hover { border-color: var(--accent); }
+
+    .chat-msg img.chat-msg-image:hover {
+      border-color: var(--accent);
+    }
 
     /* Backend selector (Phase 3) */
     .chat-backend-selector {
       display: flex;
       gap: 4px;
       padding: 4px 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.04);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
       flex-shrink: 0;
     }
+
     .backend-option {
       display: flex;
       align-items: center;
       gap: 4px;
       padding: 3px 10px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 6px;
       background: transparent;
       color: var(--text-dim);
@@ -1036,12 +1326,17 @@
       cursor: pointer;
       transition: all 0.15s;
     }
-    .backend-option:hover { background: rgba(255,255,255,0.04); }
+
+    .backend-option:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
     .backend-option.active {
-      background: rgba(255,255,255,0.08);
-      border-color: rgba(255,255,255,0.15);
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
       color: var(--text);
     }
+
     .backend-dot {
       width: 6px;
       height: 6px;
@@ -1049,49 +1344,129 @@
       background: var(--accent);
       flex-shrink: 0;
     }
-    .backend-dot.connected { background: var(--success); }
+
+    .backend-dot.connected {
+      background: var(--success);
+    }
 
     /* Noodrem button — emergency stop */
     .noodrem-btn {
       margin-left: auto;
       padding: 2px 8px;
       background: transparent;
-      border: 1px solid rgba(233,69,96,0.3);
+      border: 1px solid rgba(233, 69, 96, 0.3);
       border-radius: 6px;
       font-size: 14px;
       cursor: pointer;
       transition: all 0.15s;
       opacity: 0.6;
     }
-    .noodrem-btn:hover { background: rgba(233,69,96,0.2); opacity: 1; }
-    .noodrem-btn.active { background: rgba(233,69,96,0.3); opacity: 1; animation: noodrem-pulse 1s infinite; }
-    @keyframes noodrem-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(233,69,96,0.4); } 50% { box-shadow: 0 0 8px 2px rgba(233,69,96,0.4); } }
+
+    .noodrem-btn:hover {
+      background: rgba(233, 69, 96, 0.2);
+      opacity: 1;
+    }
+
+    .noodrem-btn.active {
+      background: rgba(233, 69, 96, 0.3);
+      opacity: 1;
+      animation: noodrem-pulse 1s infinite;
+    }
+
+    @keyframes noodrem-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 8px 2px rgba(233, 69, 96, 0.4);
+      }
+    }
 
     /* Approval request cards */
-    .approval-container { flex-shrink: 0; }
+    .approval-container {
+      flex-shrink: 0;
+    }
+
     .approval-card {
       margin: 6px 8px;
       padding: 10px 12px;
-      background: rgba(124,58,237,0.15);
-      border: 1px solid rgba(124,58,237,0.3);
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.3);
       border-radius: 8px;
       font-size: 12px;
     }
-    .approval-card .approval-title { font-weight: 600; color: var(--text); margin-bottom: 6px; }
-    .approval-card .approval-desc { color: var(--text-dim); margin-bottom: 4px; line-height: 1.4; }
-    .approval-card .approval-site { color: var(--text-dim); font-size: 10px; margin-bottom: 8px; }
-    .approval-card .approval-risk { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; margin-bottom: 8px; }
-    .approval-card .approval-risk.risk-medium { background: rgba(251,191,36,0.2); color: #fbbf24; }
-    .approval-card .approval-risk.risk-high { background: rgba(239,68,68,0.2); color: #ef4444; }
-    .approval-card .approval-actions { display: flex; gap: 8px; }
-    .approval-card .approval-actions button {
-      flex: 1; padding: 5px 10px; border: none; border-radius: 6px;
-      font-size: 11px; cursor: pointer; transition: all 0.15s;
+
+    .approval-card .approval-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
     }
-    .approval-card .btn-approve { background: rgba(16,185,129,0.2); color: #10b981; }
-    .approval-card .btn-approve:hover { background: rgba(16,185,129,0.35); }
-    .approval-card .btn-reject { background: rgba(239,68,68,0.2); color: #ef4444; }
-    .approval-card .btn-reject:hover { background: rgba(239,68,68,0.35); }
+
+    .approval-card .approval-desc {
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .approval-card .approval-site {
+      color: var(--text-dim);
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+
+    .approval-card .approval-risk {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+
+    .approval-card .approval-risk.risk-medium {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .approval-card .approval-risk.risk-high {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .approval-card .approval-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .approval-card .approval-actions button {
+      flex: 1;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .approval-card .btn-approve {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .approval-card .btn-approve:hover {
+      background: rgba(16, 185, 129, 0.35);
+    }
+
+    .approval-card .btn-reject {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .approval-card .btn-reject:hover {
+      background: rgba(239, 68, 68, 0.35);
+    }
 
     /* Tab source indicator — AI controlled tabs */
     .tab-header .tab-source-indicator {
@@ -1099,15 +1474,30 @@
       margin-right: 3px;
       opacity: 0.8;
     }
+
     .tab-header.ai-controlled {
       border-bottom: 2px solid #7c3aed;
     }
 
     /* Source styling — visual distinction per origin */
-    .chat-msg.source-openclaw { border-left: 3px solid #ff6b35; }
-    .chat-msg.source-claude { border-left: 3px solid #7c3aed; }
-    .chat-msg.source-robin { border-left: 3px solid #10b981; }
-    .chat-msg.claude { background: rgba(124,58,237,0.15); border: 1px solid rgba(124,58,237,0.2); align-self: flex-start; color: var(--text); }
+    .chat-msg.source-openclaw {
+      border-left: 3px solid #ff6b35;
+    }
+
+    .chat-msg.source-claude {
+      border-left: 3px solid #7c3aed;
+    }
+
+    .chat-msg.source-robin {
+      border-left: 3px solid #10b981;
+    }
+
+    .chat-msg.claude {
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      align-self: flex-start;
+      color: var(--text);
+    }
 
     /* Voice indicator — large, prominent */
     .voice-indicator {
@@ -1123,19 +1513,38 @@
       margin-bottom: 8px;
       font-weight: 600;
     }
-    .voice-indicator.active { display: flex; }
+
+    .voice-indicator.active {
+      display: flex;
+    }
+
     .voice-dot {
-      width: 16px; height: 16px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
       background: var(--accent);
       animation: voicePulse 0.8s ease-in-out infinite;
       flex-shrink: 0;
     }
+
     @keyframes voicePulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.4); opacity: 0.5; }
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.4);
+        opacity: 0.5;
+      }
     }
-    .voice-label { white-space: nowrap; }
+
+    .voice-label {
+      white-space: nowrap;
+    }
+
     .voice-transcript-live {
       flex: 1;
       font-style: italic;
@@ -1153,20 +1562,40 @@
       color: var(--text-dim);
       font-style: italic;
     }
-    .typing-indicator.active { display: flex; }
+
+    .typing-indicator.active {
+      display: flex;
+    }
+
     .typing-dots span {
       display: inline-block;
-      width: 5px; height: 5px;
+      width: 5px;
+      height: 5px;
       border-radius: 50%;
       background: var(--accent);
       margin: 0 1px;
       animation: typingBounce 1.2s infinite;
     }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
     @keyframes typingBounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-4px); }
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+      }
+
+      40% {
+        transform: translateY(-4px);
+      }
     }
 
     /* Voice Input Indicator */
@@ -1185,7 +1614,11 @@
       z-index: 10000;
       pointer-events: none;
     }
-    .voice-indicator-overlay.active { display: flex; }
+
+    .voice-indicator-overlay.active {
+      display: flex;
+    }
+
     .voice-pulse {
       width: 60px;
       height: 60px;
@@ -1193,20 +1626,33 @@
       border-radius: 50%;
       animation: voicePulse 1.5s infinite;
     }
+
     @keyframes voicePulse {
-      0%, 100% { transform: scale(1); opacity: 1; }
-      50% { transform: scale(1.2); opacity: 0.7; }
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+      }
     }
+
     .voice-text {
       display: flex;
       flex-direction: column;
       gap: 8px;
     }
+
     .voice-status {
       font-size: 18px;
       font-weight: 600;
       color: var(--text);
     }
+
     .voice-live-text {
       font-size: 14px;
       color: var(--text-dim);
@@ -1216,7 +1662,10 @@
     /* Onboarding Overlay */
     .onboarding-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       background: rgba(0, 0, 0, 0.95);
       backdrop-filter: blur(20px);
       display: none;
@@ -1224,7 +1673,11 @@
       justify-content: center;
       z-index: 100000;
     }
-    .onboarding-overlay.visible { display: flex; }
+
+    .onboarding-overlay.visible {
+      display: flex;
+    }
+
     .onboarding-content {
       background: var(--surface);
       border-radius: 20px;
@@ -1232,17 +1685,20 @@
       max-width: 600px;
       text-align: center;
     }
+
     .onboarding-step h2 {
       font-size: 28px;
       margin-bottom: 15px;
       color: var(--text);
     }
+
     .onboarding-step p {
       font-size: 16px;
       color: var(--text-dim);
       margin-bottom: 30px;
       line-height: 1.6;
     }
+
     .onboarding-feature {
       display: flex;
       align-items: center;
@@ -1252,6 +1708,7 @@
       font-size: 15px;
       color: var(--text);
     }
+
     .onboarding-icon {
       background: var(--accent);
       color: white;
@@ -1260,6 +1717,7 @@
       font-weight: 600;
       font-size: 13px;
     }
+
     .onboarding-nav {
       display: flex;
       align-items: center;
@@ -1267,6 +1725,7 @@
       margin-top: 40px;
       gap: 15px;
     }
+
     .onboarding-nav button {
       background: var(--accent);
       color: white;
@@ -1277,23 +1736,28 @@
       font-size: 14px;
       transition: opacity 0.2s;
     }
+
     .onboarding-nav button:disabled {
       opacity: 0.3;
       cursor: not-allowed;
     }
+
     .onboarding-nav button:hover:not(:disabled) {
       opacity: 0.8;
     }
+
     .onboarding-nav #onboarding-skip {
       background: transparent;
       color: var(--text-dim);
     }
+
     .onboarding-dots {
       display: flex;
       gap: 8px;
       flex: 1;
       justify-content: center;
     }
+
     .onboarding-dots .dot {
       width: 8px;
       height: 8px;
@@ -1301,6 +1765,7 @@
       background: var(--text-dim);
       opacity: 0.3;
     }
+
     .onboarding-dots .dot.active {
       background: var(--accent);
       opacity: 1;
@@ -1312,21 +1777,27 @@
       grid-template-columns: 1fr 1fr;
       gap: 8px;
     }
+
     .screenshot-preview .ss-item {
       display: flex;
       flex-direction: column;
       gap: 4px;
     }
+
     .screenshot-preview img {
       width: 100%;
       aspect-ratio: 16/10;
       object-fit: cover;
       border-radius: 6px;
-      border: 1px solid rgba(255,255,255,0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
       cursor: pointer;
       transition: border-color 0.15s;
     }
-    .screenshot-preview img:hover { border-color: var(--accent); }
+
+    .screenshot-preview img:hover {
+      border-color: var(--accent);
+    }
+
     .screenshot-preview .ss-label {
       font-size: 9px;
       color: var(--text-dim);
@@ -1347,13 +1818,27 @@
       border-radius: 12px;
       padding: 16px 20px;
       max-width: 360px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
       z-index: 1000;
       animation: slideIn 0.3s ease;
     }
-    .copilot-overlay.visible { display: block; }
-    .copilot-overlay h3 { color: var(--accent); margin-bottom: 8px; font-size: 14px; }
-    .copilot-overlay p { color: var(--text-dim); font-size: 13px; line-height: 1.5; }
+
+    .copilot-overlay.visible {
+      display: block;
+    }
+
+    .copilot-overlay h3 {
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .copilot-overlay p {
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
     .copilot-overlay .dismiss {
       position: absolute;
       top: 8px;
@@ -1366,8 +1851,15 @@
     }
 
     @keyframes slideIn {
-      from { transform: translateY(20px); opacity: 0; }
-      to { transform: translateY(0); opacity: 1; }
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
 
     /* ═══════════════════════════════════════════════════════════
@@ -1376,48 +1868,48 @@
 
     /* Core glass effect */
     /* ═══ Liquid Glass Lite Effects ═══ */
-    
+
     /* Glass base — only used on elements that OVERLAP content (copilot panel, overlays) */
     .lgl-glass {
-      backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
-                       saturate(var(--lgl-saturation));
-      -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) 
-                               saturate(var(--lgl-saturation));
+      backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
+      -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
       transition: background var(--lgl-transition),
-                  box-shadow var(--lgl-transition);
+        box-shadow var(--lgl-transition);
     }
 
     /* Tab bar — gradient background with subtle depth (no backdrop-filter needed) */
     .lgl-glass-navbar {
-      background: linear-gradient(180deg, rgba(15,18,35,0.98) 0%, rgba(20,25,48,0.95) 100%) !important;
-      box-shadow: 0 1px 0 rgba(255,255,255,0.06),
-                  0 4px 12px rgba(0,0,0,0.3);
+      background: linear-gradient(180deg, rgba(15, 18, 35, 0.98) 0%, rgba(20, 25, 48, 0.95) 100%) !important;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 4px 12px rgba(0, 0, 0, 0.3);
     }
+
     .lgl-glass-navbar .tab.active {
-      background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.15),
-                  0 0 12px rgba(233,69,96,0.15);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 0 12px rgba(233, 69, 96, 0.15);
     }
 
     /* Toolbar — sleek gradient with specular highlight */
     .lgl-glass-toolbar {
-      background: linear-gradient(180deg, rgba(18,22,42,0.97) 0%, rgba(22,33,62,0.98) 100%) !important;
-      box-shadow: inset 0 1px 0 rgba(255,255,255,0.04),
-                  0 2px 8px rgba(0,0,0,0.2);
+      background: linear-gradient(180deg, rgba(18, 22, 42, 0.97) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     /* URL bar — glass-on-glass look */
     .lgl-glass-toolbar .url-bar {
-      background: rgba(255,255,255,0.06);
-      border: 1px solid rgba(255,255,255,0.1);
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.2),
-                  0 1px 0 rgba(255,255,255,0.03);
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2),
+        0 1px 0 rgba(255, 255, 255, 0.03);
     }
+
     .lgl-glass-toolbar .url-bar:focus {
-      background: rgba(255,255,255,0.1);
+      background: rgba(255, 255, 255, 0.1);
       border-color: var(--accent);
-      box-shadow: inset 0 1px 3px rgba(0,0,0,0.15),
-                  0 0 8px rgba(233,69,96,0.2);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15),
+        0 0 8px rgba(233, 69, 96, 0.2);
     }
 
     /* Copilot panel — TRUE glass effect (overlaps webview, backdrop-filter works!) */
@@ -1425,8 +1917,8 @@
       background: rgba(16, 20, 38, 0.78) !important;
       backdrop-filter: blur(20px) saturate(1.3);
       -webkit-backdrop-filter: blur(20px) saturate(1.3);
-      box-shadow: -4px 0 24px rgba(0,0,0,0.4),
-                  inset 1px 0 0 rgba(255,255,255,0.06);
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4),
+        inset 1px 0 0 rgba(255, 255, 255, 0.06);
     }
 
     /* Floating glass (draw toolbar) — overlaps webview, glass works */
@@ -1434,8 +1926,8 @@
       background: rgba(20, 24, 44, 0.82) !important;
       backdrop-filter: blur(16px) saturate(1.3);
       -webkit-backdrop-filter: blur(16px) saturate(1.3);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.5),
-                  inset 0 1px 0 rgba(255,255,255,0.08);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
     }
 
     /* Overlay glass (modals) */
@@ -1449,22 +1941,24 @@
     [data-theme="light"] .lgl-glass-navbar,
     @media (prefers-color-scheme: light) {
       [data-theme="system"] .lgl-glass-navbar {
-        background: linear-gradient(180deg, rgba(240,243,250,0.98) 0%, rgba(235,238,248,0.96) 100%) !important;
-        box-shadow: 0 1px 0 rgba(0,0,0,0.06), 0 2px 8px rgba(0,0,0,0.08);
+        background: linear-gradient(180deg, rgba(240, 243, 250, 0.98) 0%, rgba(235, 238, 248, 0.96) 100%) !important;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
       }
     }
+
     [data-theme="light"] .lgl-glass-toolbar,
     @media (prefers-color-scheme: light) {
       [data-theme="system"] .lgl-glass-toolbar {
-        background: linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(241,245,249,0.97) 100%) !important;
-        box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 1px 4px rgba(0,0,0,0.06);
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.97) 100%) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 4px rgba(0, 0, 0, 0.06);
       }
     }
+
     [data-theme="light"] .lgl-glass-sidebar,
     @media (prefers-color-scheme: light) {
       [data-theme="system"] .lgl-glass-sidebar {
         background: rgba(248, 250, 252, 0.82) !important;
-        box-shadow: -2px 0 12px rgba(0,0,0,0.08), inset 1px 0 0 rgba(0,0,0,0.04);
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.08), inset 1px 0 0 rgba(0, 0, 0, 0.04);
       }
     }
 
@@ -1473,9 +1967,17 @@
       .lgl-materialize {
         animation: lgl-materialize 400ms cubic-bezier(0.4, 0, 0.2, 1);
       }
+
       @keyframes lgl-materialize {
-        from { opacity: 0; transform: scale(0.98); }
-        to { opacity: 1; transform: scale(1); }
+        from {
+          opacity: 0;
+          transform: scale(0.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
       }
     }
 
@@ -1483,17 +1985,28 @@
     .lgl-pressable {
       transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1.2);
     }
+
     .lgl-pressable:active {
       transform: scale(0.97);
       transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
     }
+
     @media (prefers-reduced-motion: reduce) {
-      .lgl-pressable { transition: none; }
-      .lgl-pressable:active { transform: none; }
+      .lgl-pressable {
+        transition: none;
+      }
+
+      .lgl-pressable:active {
+        transform: none;
+      }
     }
 
     /* Inner glow on hover */
-    .lgl-glow { position: relative; overflow: hidden; }
+    .lgl-glow {
+      position: relative;
+      overflow: hidden;
+    }
+
     .lgl-glow::after {
       content: '';
       position: absolute;
@@ -1504,24 +2017,27 @@
       opacity: 0;
       transition: opacity 200ms ease;
     }
+
     .lgl-glow:hover::after {
       opacity: 1;
-      background: radial-gradient(
-        circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
-        rgba(255, 255, 255, 0.12) 0%,
-        rgba(255, 255, 255, 0.04) 30%,
-        transparent 60%
-      );
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+          rgba(255, 255, 255, 0.12) 0%,
+          rgba(255, 255, 255, 0.04) 30%,
+          transparent 60%);
     }
 
     /* Disable glass on reduced motion preference */
     @media (prefers-reduced-motion: reduce) {
-      .lgl-glass { backdrop-filter: none; -webkit-backdrop-filter: none; }
+      .lgl-glass {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
     }
 
     /* END LGL STYLES */
   </style>
 </head>
+
 <body>
 
   <!-- Tab bar (Chrome-style compact title bar) -->
@@ -1530,17 +2046,23 @@
     <!-- Tabs will be inserted here dynamically -->
     <button class="tab-new-btn" id="btn-new-tab" title="Nieuwe tab (Cmd+T)">+</button>
     <div class="tab-bar-spacer"></div>
-    
+
     <!-- Window controls (Linux/Windows only) -->
     <div class="window-controls">
       <button class="window-control-btn minimize" id="btn-window-minimize" title="Minimize">
-        <svg viewBox="0 0 10 1"><path d="M0,0 L10,0 L10,1 L0,1 Z" /></svg>
+        <svg viewBox="0 0 10 1">
+          <path d="M0,0 L10,0 L10,1 L0,1 Z" />
+        </svg>
       </button>
       <button class="window-control-btn maximize" id="btn-window-maximize" title="Maximize">
-        <svg viewBox="0 0 10 10"><path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" /></svg>
+        <svg viewBox="0 0 10 10">
+          <path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" />
+        </svg>
       </button>
       <button class="window-control-btn close" id="btn-window-close" title="Close">
-        <svg viewBox="0 0 10 10"><path d="M0,0 L10,10 M10,0 L0,10" stroke="currentColor" stroke-width="1.5" /></svg>
+        <svg viewBox="0 0 10 10">
+          <path d="M0,0 L10,10 M10,0 L0,10" stroke="currentColor" stroke-width="1.5" />
+        </svg>
       </button>
     </div>
   </div>
@@ -1660,6 +2182,42 @@
       </div>
     </div>
 
+    <!-- Password Vault Overlay -->
+    <div class="onboarding-overlay" id="vault-overlay" style="display:none;">
+      <div class="onboarding-content" style="max-width: 400px; padding: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <h2 style="margin:0;">🔒 Password Vault</h2>
+          <button id="vault-close"
+            style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;">✕</button>
+        </div>
+
+        <div id="vault-locked-view">
+          <p style="color:var(--text-dim); font-size:14px; margin-bottom:16px; line-height:1.5;">
+            Master password is required to decrypt your local vault. No data is ever synced to the cloud.
+          </p>
+          <input type="password" id="vault-master-password" placeholder="Master Password"
+            style="width:100%; padding:10px; background:var(--input-bg); border:1px solid rgba(255,255,255,0.1); border-radius:6px; color:var(--text); margin-bottom:12px;" />
+          <button id="vault-unlock-btn"
+            style="width:100%; padding:10px; background:var(--accent); color:white; border:none; border-radius:6px; cursor:pointer;">
+            Unlock Vault
+          </button>
+          <div id="vault-error-msg" style="color:var(--warning); font-size:12px; margin-top:8px; display:none;"></div>
+        </div>
+
+        <div id="vault-unlocked-view" style="display:none; text-align:center;">
+          <div style="font-size:40px; margin-bottom:12px;">🔓</div>
+          <p style="color:var(--success); font-weight:500; margin-bottom:8px;">Vault Unlocked</p>
+          <p style="color:var(--text-dim); font-size:12px; margin-bottom:20px;">
+            You can now autofill and generate passwords using the right-click context menu on any login field.
+          </p>
+          <button id="vault-lock-btn"
+            style="padding:8px 16px; background:rgba(255,255,255,0.1); color:var(--text); border:none; border-radius:6px; cursor:pointer; font-size:13px;">
+            Lock Vault
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Copilot Panel Toggle Button -->
     <button class="copilot-panel-toggle" id="copilot-panel-toggle" title="Toggle Copilot panel">▶</button>
     <!-- Copilot Panel (SHELL layer, NOT in webview — anti-detect!) -->
@@ -1669,8 +2227,11 @@
         <button class="panel-tab active" data-panel-tab="activity">Activity</button>
         <button class="panel-tab" data-panel-tab="chat">Chat</button>
         <button class="panel-tab" data-panel-tab="screenshots">📸</button>
-        <button class="panel-tab" data-panel-tab="claronote">🎙️</button>
-        <button class="live-toggle-btn" id="live-toggle-btn" title="Live Mode — Copilot kijkt mee" style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text-dim);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all 0.15s;">👁️</button>
+        <button class="panel-tab" data-panel-tab="claronote" title="Voice Notes">🎙️</button>
+        <button class="vault-toggle-btn" id="vault-toggle-btn" title="Password Vault"
+          style="background:none;border:none;color:var(--text-dim);font-size:16px;cursor:pointer;margin-left:auto;transition:color 0.15s;">🔒</button>
+        <button class="live-toggle-btn" id="live-toggle-btn" title="Live Mode — Copilot kijkt mee"
+          style="background:none;border:1px solid rgba(255,255,255,0.15);color:var(--text-dim);font-size:12px;cursor:pointer;padding:4px 8px;border-radius:4px;transition:all 0.15s;">👁️</button>
         <button class="noodrem-btn" id="noodrem-btn" title="Noodrem — stop alle AI activiteit (Escape)">🛑</button>
       </div>
       <div class="panel-body" id="panel-body">
@@ -1678,7 +2239,8 @@
         <div class="panel-content" id="panel-activity" style="display:flex;flex-direction:column;flex:1;">
         </div>
         <!-- Chat tab — Multi-backend via ChatRouter (Phase 3) -->
-        <div class="panel-content" id="panel-chat" style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
+        <div class="panel-content" id="panel-chat"
+          style="display:none;flex-direction:column;flex:1;min-height:0;overflow:hidden;">
           <div class="chat-backend-selector" id="chat-backend-selector">
             <button class="backend-option active" data-backend="openclaw" id="btn-backend-openclaw">
               <span class="backend-dot" id="dot-openclaw"></span>
@@ -1693,8 +2255,10 @@
               🐙🤖 Beide
             </button>
           </div>
-          <div class="ws-status" id="ws-status" style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);">
-            <span class="ws-dot" id="ws-dot" style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
+          <div class="ws-status" id="ws-status"
+            style="display:flex;align-items:center;gap:6px;padding:4px 8px;font-size:10px;color:var(--text-dim);border-bottom:1px solid rgba(255,255,255,0.04);">
+            <span class="ws-dot" id="ws-dot"
+              style="width:7px;height:7px;border-radius:50%;background:var(--accent);"></span>
             <span id="ws-status-text">Disconnected</span>
           </div>
           <div class="approval-container" id="approval-container" style="display:none;"></div>
@@ -1712,10 +2276,11 @@
         <!-- Screenshots tab -->
         <div class="panel-content" id="panel-screenshots" style="display:none;flex-direction:column;flex:1;">
           <div class="screenshot-preview" id="screenshot-list">
-            <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Nog geen screenshots. Gebruik Cmd+D → 📸</p>
+            <p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Nog geen screenshots.
+              Gebruik Cmd+D → 📸</p>
           </div>
         </div>
-        
+
         <!-- ClaroNote tab -->
         <div class="panel-content" id="panel-claronote" style="display:none;flex-direction:column;flex:1;">
           <!-- Login screen (shown when not authenticated) -->
@@ -1723,29 +2288,30 @@
             <div style="padding:20px;text-align:center;">
               <h3 style="margin-bottom:15px;color:var(--text);">🎙️ ClaroNote</h3>
               <p style="font-size:12px;color:var(--text-dim);margin-bottom:20px;">Log in met je ClaroNote account</p>
-              
+
               <form id="claronote-login-form" style="display:flex;flex-direction:column;gap:12px;">
                 <input type="email" id="claronote-email" placeholder="Email" required
-                       style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
+                  style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
                 <input type="password" id="claronote-password" placeholder="Wachtwoord" required
-                       style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
+                  style="background:var(--input-bg);border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:10px;color:var(--text);font-size:12px;" />
                 <button type="submit" id="claronote-login-btn"
-                        style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;transition:opacity 0.15s;">
+                  style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:10px;cursor:pointer;font-size:12px;transition:opacity 0.15s;">
                   Inloggen
                 </button>
               </form>
-              
-              <div class="claronote-error" id="claronote-error" style="display:none;margin-top:10px;color:var(--warning);font-size:11px;"></div>
+
+              <div class="claronote-error" id="claronote-error"
+                style="display:none;margin-top:10px;color:var(--warning);font-size:11px;"></div>
             </div>
           </div>
-          
+
           <!-- Main interface (shown when authenticated) -->
           <div class="claronote-main" id="claronote-main" style="display:none;flex:1;flex-direction:column;">
             <!-- Recording interface -->
             <div class="claronote-recording" style="padding:15px;border-bottom:1px solid rgba(255,255,255,0.06);">
               <div class="recording-controls" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-                <button id="claronote-record-btn" 
-                        style="background:var(--accent);border:none;color:#fff;border-radius:50%;width:44px;height:44px;cursor:pointer;font-size:20px;transition:all 0.15s;">
+                <button id="claronote-record-btn"
+                  style="background:var(--accent);border:none;color:#fff;border-radius:50%;width:44px;height:44px;cursor:pointer;font-size:20px;transition:all 0.15s;">
                   🎙️
                 </button>
                 <div class="recording-status" id="claronote-status">
@@ -1753,22 +2319,24 @@
                   <div style="font-size:10px;color:var(--text-dim);" id="claronote-timer"></div>
                 </div>
               </div>
-              
+
               <!-- Waveform visualization placeholder -->
-              <div class="recording-waveform" id="claronote-waveform" 
-                   style="display:none;height:30px;background:rgba(233,69,96,0.1);border-radius:4px;margin-top:8px;position:relative;overflow:hidden;">
-                <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--accent);">
+              <div class="recording-waveform" id="claronote-waveform"
+                style="display:none;height:30px;background:rgba(233,69,96,0.1);border-radius:4px;margin-top:8px;position:relative;overflow:hidden;">
+                <div
+                  style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:10px;color:var(--accent);">
                   Recording...
                 </div>
               </div>
             </div>
-            
+
             <!-- Notes list -->
             <div class="claronote-notes" style="flex:1;overflow-y:auto;">
-              <div style="padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;">
+              <div
+                style="padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);font-size:11px;color:var(--text-dim);display:flex;justify-content:space-between;align-items:center;">
                 <span>Recent notes</span>
-                <button id="claronote-refresh" 
-                        style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:2px 6px;border-radius:3px;">
+                <button id="claronote-refresh"
+                  style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:10px;padding:2px 6px;border-radius:3px;">
                   🔄
                 </button>
               </div>
@@ -1802,13 +2370,13 @@
 
   <script>
     function escapeHtml(s) {
-      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
     }
 
     // ═══════════════════════════════════════════════
     // Platform detection & Chrome-style title bar setup
     // ═══════════════════════════════════════════════
-    
+
     // Detect platform and add class to body for CSS targeting
     (async () => {
       const platform = await window.tandem?.getPlatform?.() || 'unknown';
@@ -2004,7 +2572,7 @@
           try {
             const url = entry.webview.getURL();
             urlBar.value = url || '';
-          } catch (_) {}
+          } catch (_) { }
 
           // Restore zoom level for this tab
           const zoomLevel = tabZoomLevels.get(tabId) || 0;
@@ -2259,13 +2827,13 @@
           document.getElementById('panel-chat').style.display = 'none';
           document.getElementById('panel-screenshots').style.display = 'none';
           document.getElementById('panel-claronote').style.display = 'flex';
-          
+
           // Open panel if closed
           if (!document.getElementById('copilot-panel').classList.contains('open')) {
             document.getElementById('copilot-panel').classList.add('open');
             updatePanelLayout();
           }
-          
+
           // Initialize and toggle recording
           initClaroNote().then(() => {
             toggleClaroNoteRecording();
@@ -2406,7 +2974,7 @@
         }
         document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
         document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
-        
+
         // Initialize ClaroNote if switching to that tab
         if (tab === 'claronote') {
           initClaroNote();
@@ -2479,13 +3047,13 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ tabId, source: 'robin' })
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
       };
       // Hook into existing tab click by patching focusTab handler
       const _origFocusTab = window.__tandemTabs.focusTab;
-      window.__tandemTabs.focusTab = function(tabId) {
+      window.__tandemTabs.focusTab = function (tabId) {
         origTabClickHandler(tabId);
         return _origFocusTab.call(window.__tandemTabs, tabId);
       };
@@ -2544,17 +3112,17 @@
       // Safety check
       if (!messagesEl || !inputEl || !sendBtn || !typingEl || !wsDot || !wsStatusText) {
         console.error('[chatRouter] Missing required DOM elements, chat will not initialize');
-        return { ensureConnected() {}, disconnect() {} };
+        return { ensureConnected() { }, disconnect() { } };
       }
 
       // ── Shared helpers ──
 
       function scrollToBottom() {
-        requestAnimationFrame(() => { 
+        requestAnimationFrame(() => {
           messagesEl.scrollTop = messagesEl.scrollHeight;
         });
       }
-      
+
       function ensureElementAtBottom(element) {
         // Ensure the element is at the very bottom of the container
         messagesEl.appendChild(element);
@@ -2568,7 +3136,7 @@
       }
 
       function escapeHtml(s) {
-        return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
       }
 
       function appendMessage(role, text, timestamp, source, image) {
@@ -2686,7 +3254,7 @@
             });
           }
         }
-        
+
         currentMode = id;
         messagesEl.innerHTML = '';
         streamingMessages.clear();
@@ -2735,7 +3303,7 @@
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ general: { activeBackend: id } })
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       btnOC.addEventListener('click', () => switchBackend('openclaw'));
@@ -2785,7 +3353,7 @@
               });
             }
           }
-          
+
           // Finalize any active streaming messages with correct timestamp
           for (const [convId, streamData] of streamingMessages.entries()) {
             const timeEl = streamData.element.querySelector('.msg-time');
@@ -2793,21 +3361,21 @@
           }
           streamingMessages.clear();
           currentConversationId = null;
-          
+
           // Re-add local Robin messages after any history operations
           setTimeout(() => {
             for (const localMsg of localRobinMessages) {
               // Check if this message is already in the DOM (from history)
               let alreadyExists = false;
               for (const child of messagesEl.children) {
-                if (child.classList.contains('robin') && 
-                    child.querySelector('.msg-text').textContent === localMsg.text &&
-                    child.dataset.fromHistory === 'true') {
+                if (child.classList.contains('robin') &&
+                  child.querySelector('.msg-text').textContent === localMsg.text &&
+                  child.dataset.fromHistory === 'true') {
                   alreadyExists = true;
                   break;
                 }
               }
-              
+
               // Only add if not already present from history
               if (!alreadyExists) {
                 const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
@@ -2823,13 +3391,13 @@
           if (!currentConversationId) {
             currentConversationId = crypto.randomUUID();
           }
-          
+
           let streamData = streamingMessages.get(currentConversationId);
           if (!streamData) {
             // Create new streaming message element - always insert at the very end
             const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
-            streamData = { 
-              element, 
+            streamData = {
+              element,
               startTime: Date.now(),
               lastPosition: messagesEl.children.length - 1
             };
@@ -2837,7 +3405,7 @@
           } else {
             // Update existing streaming element content
             streamData.element.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
-            
+
             // Ensure streaming element stays at the end (after any Robin messages sent during streaming)
             const currentIndex = Array.from(messagesEl.children).indexOf(streamData.element);
             const lastIndex = messagesEl.children.length - 1;
@@ -2883,18 +3451,18 @@
               });
             }
           }
-          
+
           // Clear and rebuild to avoid duplicates
           messagesEl.innerHTML = '';
           streamingMessages.clear();
           dualStreamingConversations = {};
-          
+
           if (Array.isArray(msg)) {
             for (const m of msg) {
               const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
               el.dataset.fromHistory = 'true';
             }
-            
+
             // Re-add local Robin messages that aren't in history
             for (const localMsg of localRobinMessages) {
               const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
@@ -2912,15 +3480,15 @@
               started: false
             };
           }
-          
+
           const convId = dualStreamingConversations[backendId].conversationId;
           let streamData = streamingMessages.get(convId);
-          
+
           if (!streamData) {
             // Create new streaming message element
             const element = appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
-            streamData = { 
-              element, 
+            streamData = {
+              element,
               startTime: Date.now(),
               backendId
             };
@@ -2929,7 +3497,7 @@
           } else {
             // Update existing streaming element content
             streamData.element.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
-            
+
             // Ensure streaming element stays at the end
             const currentIndex = Array.from(messagesEl.children).indexOf(streamData.element);
             const lastIndex = messagesEl.children.length - 1;
@@ -3169,7 +3737,7 @@
         if (window.tandem && window.tandem.emergencyStop) {
           window.tandem.emergencyStop();
         } else {
-          fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => {});
+          fetch('http://localhost:8765/emergency-stop', { method: 'POST' }).catch(() => { });
         }
       }
 
@@ -3251,7 +3819,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stepId: data.stepId })
-          }).catch(() => {});
+          }).catch(() => { });
           card.remove();
           if (approvalContainer.children.length === 0) approvalContainer.style.display = 'none';
         });
@@ -3261,7 +3829,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ stepId: data.stepId })
-          }).catch(() => {});
+          }).catch(() => { });
           card.remove();
           if (approvalContainer.children.length === 0) approvalContainer.style.display = 'none';
         });
@@ -3270,7 +3838,7 @@
       }
 
       function escapeHtmlSimple(s) {
-        return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
 
       // Emergency stop clears all approval cards
@@ -3507,7 +4075,7 @@
         const dx = s.ex - s.sx;
         const dy = s.ey - s.sy;
         const angle = Math.atan2(dy, dx);
-        const len = Math.sqrt(dx*dx + dy*dy);
+        const len = Math.sqrt(dx * dx + dy * dy);
         // Line
         ctx.beginPath();
         ctx.moveTo(s.sx, s.sy);
@@ -3716,7 +4284,7 @@
 
     // Override the existing updateTabMeta to also log activity
     const _origUpdateTabMeta = updateTabMeta;
-    updateTabMeta = function(tabId, data) {
+    updateTabMeta = function (tabId, data) {
       // Track navigation
       if (data.url && window.tandem) {
         // Activity is tracked via IPC in main process, but we also
@@ -3727,7 +4295,7 @@
 
     // Patch __tandemTabs.createTab to add activity tracking on webview events
     const _origCreateTab = window.__tandemTabs.createTab;
-    window.__tandemTabs.createTab = function(tabId, url, partition) {
+    window.__tandemTabs.createTab = function (tabId, url, partition) {
       const result = _origCreateTab.call(window.__tandemTabs, tabId, url, partition);
       // After tab is created, wire activity events
       const entry = tabs.get(tabId);
@@ -3835,7 +4403,7 @@
       speechRecognition.onend = () => {
         // Auto-restart if still supposed to be listening
         if (voiceActive && speechRecognition) {
-          try { speechRecognition.start(); } catch(e) {}
+          try { speechRecognition.start(); } catch (e) { }
         }
       };
 
@@ -3849,7 +4417,7 @@
         document.getElementById('panel-activity').style.display = 'none';
         document.getElementById('panel-chat').style.display = 'flex';
         document.getElementById('panel-screenshots').style.display = 'none';
-      } catch(e) {
+      } catch (e) {
         console.error('Failed to start speech recognition:', e);
       }
     }
@@ -3857,7 +4425,7 @@
     function stopVoiceRecognition() {
       voiceActive = false;
       if (speechRecognition) {
-        try { speechRecognition.stop(); } catch(e) {}
+        try { speechRecognition.stop(); } catch (e) { }
         speechRecognition = null;
       }
       document.getElementById('voice-indicator').classList.remove('active');
@@ -3963,7 +4531,7 @@
         const url = entry.webview.getURL();
         const title = entry.webview.getTitle() || url;
         if (!url || url.startsWith('file://') || url === 'about:blank') return;
-        
+
         if (bookmarkStar.classList.contains('bookmarked')) {
           // Remove bookmark
           const checkResp = await fetch(`http://localhost:8765/bookmarks/check?url=${encodeURIComponent(url)}`);
@@ -4004,7 +4572,7 @@
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ general: { showBookmarksBar: bookmarksBarVisible } }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
 
     // Transparent overlay to catch clicks outside dropdowns
@@ -4040,7 +4608,7 @@
     function createBookmarkLink(item) {
       const a = document.createElement('a');
       let hostname = '';
-      try { hostname = new URL(item.url).hostname; } catch {}
+      try { hostname = new URL(item.url).hostname; } catch { }
       const shortName = (item.name || hostname).substring(0, 40);
       a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${escapeHtml(shortName)}`;
       a.title = item.url;
@@ -4280,7 +4848,7 @@
 
     // Update star when URL changes
     const _prevUpdateTabMeta2 = updateTabMeta;
-    updateTabMeta = function(tabId, data) {
+    updateTabMeta = function (tabId, data) {
       _prevUpdateTabMeta2(tabId, data);
       if (data.url && tabId === activeTabId) {
         setTimeout(updateBookmarkStar, 200);
@@ -4347,7 +4915,7 @@
 
     // Wire find events for existing and new tabs
     const _origCreateTab2 = window.__tandemTabs.createTab;
-    window.__tandemTabs.createTab = function(tabId, url, partition) {
+    window.__tandemTabs.createTab = function (tabId, url, partition) {
       const result = _origCreateTab2.call(window.__tandemTabs, tabId, url, partition);
       const entry = tabs.get(tabId);
       if (entry && entry.webview) wireFindEvents(entry.webview);
@@ -4377,7 +4945,7 @@
 
     // Patch updateTabMeta to clear URL bar on newtab
     const _prevUpdateTabMeta = updateTabMeta;
-    updateTabMeta = function(tabId, data) {
+    updateTabMeta = function (tabId, data) {
       _prevUpdateTabMeta(tabId, data);
       if (data.url && tabId === activeTabId && isNewtabUrl(data.url)) {
         urlBar.value = '';
@@ -4544,7 +5112,7 @@
         startRecordingTimer();
 
         // Notify server (state tracking only)
-        fetch('http://localhost:8765/claronote/record/start', { method: 'POST' }).catch(() => {});
+        fetch('http://localhost:8765/claronote/record/start', { method: 'POST' }).catch(() => { });
       } catch (error) {
         showClaroNoteError('Microfoon niet beschikbaar');
       }
@@ -4604,7 +5172,7 @@
         };
 
         claroNoteMediaRecorder.stop();
-        fetch('http://localhost:8765/claronote/record/stop', { method: 'POST' }).catch(() => {});
+        fetch('http://localhost:8765/claronote/record/stop', { method: 'POST' }).catch(() => { });
       });
     }
 
@@ -4647,7 +5215,7 @@
         const elapsed = Math.floor((Date.now() - claroNoteStartTime) / 1000);
         const minutes = Math.floor(elapsed / 60);
         const seconds = elapsed % 60;
-        document.getElementById('claronote-timer').textContent = 
+        document.getElementById('claronote-timer').textContent =
           `${minutes}:${seconds.toString().padStart(2, '0')}`;
       }, 1000);
     }
@@ -4664,7 +5232,7 @@
       try {
         const response = await fetch('http://localhost:8765/claronote/notes?limit=10');
         const data = await response.json();
-        
+
         if (data.notes) {
           displayClaroNoteNotes(data.notes);
         }
@@ -4675,18 +5243,18 @@
 
     function displayClaroNoteNotes(notes) {
       const listEl = document.getElementById('claronote-notes-list');
-      
+
       if (notes.length === 0) {
         listEl.innerHTML = '<p style="font-size:12px;color:var(--text-dim);text-align:center;padding:20px;">Nog geen notities opgenomen</p>';
         return;
       }
-      
+
       listEl.innerHTML = '';
-      
+
       notes.forEach(note => {
         const noteEl = document.createElement('div');
         noteEl.style.cssText = 'padding:10px 15px;border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:background 0.15s;';
-        
+
         // Status indicator
         let statusColor = 'var(--text-dim)';
         let statusText = note.status;
@@ -4694,7 +5262,7 @@
         else if (note.status === 'PROCESSING') { statusColor = 'var(--warning)'; statusText = 'Verwerken...'; }
         else if (note.status === 'UPLOADING') { statusColor = 'var(--accent)'; statusText = 'Uploaden...'; }
         else if (note.status === 'ERROR') { statusColor = 'var(--warning)'; statusText = 'Fout'; }
-        
+
         noteEl.innerHTML = `
           <div style="display:flex;justify-content:between;align-items:flex-start;gap:8px;">
             <div style="flex:1;">
@@ -4717,19 +5285,19 @@
             </div>
           </div>
         `;
-        
+
         noteEl.addEventListener('mouseenter', () => {
           noteEl.style.background = 'rgba(255,255,255,0.03)';
         });
-        
+
         noteEl.addEventListener('mouseleave', () => {
           noteEl.style.background = '';
         });
-        
+
         noteEl.addEventListener('click', () => {
           showNoteDetails(note);
         });
-        
+
         listEl.appendChild(noteEl);
       });
     }
@@ -4749,7 +5317,7 @@
         align-items: center;
         z-index: 10000;
       `;
-      
+
       const content = document.createElement('div');
       content.style.cssText = `
         background: var(--surface);
@@ -4761,7 +5329,7 @@
         color: var(--text);
         border: 1px solid rgba(255,255,255,0.1);
       `;
-      
+
       content.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
           <h3 style="margin:0;color:var(--text);">${note.title || 'Notitie'}</h3>
@@ -4788,10 +5356,10 @@
           </div>
         ` : '<div style="font-size:12px;color:var(--text-dim);">Transcript nog niet beschikbaar</div>'}
       `;
-      
+
       modal.appendChild(content);
       document.body.appendChild(modal);
-      
+
       // Close on backdrop click
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -4804,7 +5372,7 @@
       try {
         const response = await fetch(`http://localhost:8765/claronote/notes/${noteId}`);
         const data = await response.json();
-        
+
         if (data.note && (data.note.status === 'PROCESSING' || data.note.status === 'UPLOADING')) {
           // Still processing, poll again in 2 seconds
           setTimeout(() => pollNoteStatus(noteId), 2000);
@@ -4960,7 +5528,7 @@
     }
 
     // Toggle overflow dropdown
-    (function() {
+    (function () {
       const overflowBtn = document.getElementById('ext-overflow-btn');
       const overflowDropdown = document.getElementById('ext-overflow-dropdown');
       if (overflowBtn && overflowDropdown) {
@@ -5013,7 +5581,7 @@
       // Load initial toolbar state
       window.tandem.getToolbarExtensions().then(exts => {
         renderExtToolbar(exts);
-      }).catch(() => {});
+      }).catch(() => { });
     }
   </script>
 
@@ -5024,11 +5592,11 @@
         <h2>⌨️ Keyboard Shortcuts</h2>
         <button class="shortcuts-close" onclick="hideShortcutsOverlay()">✕</button>
       </div>
-      
+
       <div class="shortcuts-search">
         <input type="text" id="shortcuts-search" placeholder="Zoek shortcuts..." autocomplete="off">
       </div>
-      
+
       <div class="shortcuts-grid">
         <div class="shortcut-group">
           <h3>Navigation</h3>
@@ -5114,7 +5682,7 @@
           </div>
         </div>
       </div>
-      
+
       <div class="shortcuts-footer">
         <p>💡 Tip: Type to search • Press <kbd>Esc</kbd> to close</p>
       </div>
@@ -5135,11 +5703,11 @@
       align-items: center;
       justify-content: center;
     }
-    
+
     .shortcuts-overlay.visible {
       display: flex;
     }
-    
+
     .shortcuts-content {
       background: var(--surface);
       border-radius: 16px;
@@ -5150,12 +5718,19 @@
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
       animation: shortcutsFadeIn 0.3s ease-out;
     }
-    
+
     @keyframes shortcutsFadeIn {
-      from { opacity: 0; transform: scale(0.95); }
-      to { opacity: 1; transform: scale(1); }
+      from {
+        opacity: 0;
+        transform: scale(0.95);
+      }
+
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
-    
+
     .shortcuts-header {
       display: flex;
       align-items: center;
@@ -5163,13 +5738,13 @@
       padding: 24px 32px 16px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
-    
+
     .shortcuts-header h2 {
       font-size: 22px;
       font-weight: 600;
       margin: 0;
     }
-    
+
     .shortcuts-close {
       background: rgba(255, 255, 255, 0.1);
       border: none;
@@ -5183,16 +5758,16 @@
       justify-content: center;
       transition: background 0.2s ease;
     }
-    
+
     .shortcuts-close:hover {
       background: rgba(255, 255, 255, 0.2);
     }
-    
+
     .shortcuts-search {
       padding: 16px 32px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
-    
+
     .shortcuts-search input {
       width: 100%;
       background: var(--input-bg);
@@ -5202,23 +5777,23 @@
       color: var(--text);
       font-size: 14px;
     }
-    
+
     .shortcuts-search input::placeholder {
       color: var(--text-dim);
     }
-    
+
     .shortcuts-search input:focus {
       outline: none;
       border-color: var(--accent);
     }
-    
+
     .shortcuts-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       gap: 24px;
       padding: 32px;
     }
-    
+
     .shortcut-group h3 {
       color: var(--accent);
       font-size: 16px;
@@ -5227,7 +5802,7 @@
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    
+
     .shortcut-item {
       display: flex;
       justify-content: space-between;
@@ -5236,20 +5811,20 @@
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       transition: opacity 0.2s ease;
     }
-    
+
     .shortcut-item:last-child {
       border-bottom: none;
     }
-    
+
     .shortcut-item.hidden {
       display: none;
     }
-    
+
     .shortcut-desc {
       color: var(--text);
       font-size: 14px;
     }
-    
+
     .shortcut {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -5261,7 +5836,7 @@
       font-weight: 600;
       white-space: nowrap;
     }
-    
+
     .shortcuts-footer {
       padding: 16px 32px;
       text-align: center;
@@ -5269,7 +5844,7 @@
       color: var(--text-dim);
       font-size: 12px;
     }
-    
+
     .shortcuts-footer kbd {
       background: rgba(255, 255, 255, 0.1);
       padding: 2px 6px;
@@ -5292,16 +5867,21 @@
       justify-content: center;
       animation: onboardingFadeIn 0.4s ease-out;
     }
-    
+
     .onboarding-overlay.visible {
       display: flex;
     }
-    
+
     @keyframes onboardingFadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
-    
+
     .onboarding-content {
       background: var(--surface);
       border-radius: 20px;
@@ -5312,22 +5892,29 @@
       overflow-y: auto;
       box-shadow: 0 25px 50px rgba(0, 0, 0, 0.7);
     }
-    
+
     .onboarding-step {
       padding: 40px;
       text-align: center;
       animation: stepSlideIn 0.3s ease-out;
     }
-    
+
     .onboarding-step.hidden {
       display: none;
     }
-    
+
     @keyframes stepSlideIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
-    
+
     .onboarding-header h1 {
       font-size: 28px;
       font-weight: 700;
@@ -5336,27 +5923,27 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
-    
+
     .onboarding-header h2 {
       font-size: 24px;
       font-weight: 600;
       margin-bottom: 8px;
       color: var(--text);
     }
-    
+
     .onboarding-header p {
       color: var(--text-dim);
       font-size: 16px;
       margin-bottom: 32px;
     }
-    
+
     .onboarding-body p {
       color: var(--text);
       line-height: 1.6;
       margin-bottom: 32px;
       font-size: 16px;
     }
-    
+
     .tandem-illustration {
       display: flex;
       align-items: center;
@@ -5365,31 +5952,40 @@
       margin: 32px 0;
       font-size: 48px;
     }
-    
-    .human-side, .ai-side {
+
+    .human-side,
+    .ai-side {
       text-align: center;
       font-size: 32px;
       line-height: 1.2;
     }
-    
-    .human-side small, .ai-side small {
+
+    .human-side small,
+    .ai-side small {
       font-size: 14px;
       color: var(--text-dim);
       display: block;
       margin-top: 8px;
     }
-    
+
     .connection {
       font-size: 24px;
       color: var(--accent);
       animation: pulse 2s infinite;
     }
-    
+
     @keyframes pulse {
-      0%, 100% { opacity: 0.7; }
-      50% { opacity: 1; }
+
+      0%,
+      100% {
+        opacity: 0.7;
+      }
+
+      50% {
+        opacity: 1;
+      }
     }
-    
+
     .features-tour {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -5397,7 +5993,7 @@
       margin-bottom: 32px;
       text-align: left;
     }
-    
+
     .tour-feature {
       background: var(--tab-bg);
       border-radius: 12px;
@@ -5406,27 +6002,27 @@
       gap: 16px;
       align-items: flex-start;
     }
-    
+
     .tour-icon {
       font-size: 24px;
       width: 40px;
       flex-shrink: 0;
     }
-    
+
     .tour-info h4 {
       color: var(--text);
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 8px;
     }
-    
+
     .tour-info p {
       color: var(--text-dim);
       font-size: 14px;
       margin: 0;
       line-height: 1.5;
     }
-    
+
     .tour-info kbd {
       background: rgba(255, 255, 255, 0.1);
       padding: 2px 6px;
@@ -5434,7 +6030,7 @@
       font-size: 12px;
       color: var(--success);
     }
-    
+
     .import-options {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -5442,28 +6038,28 @@
       margin-bottom: 32px;
       text-align: left;
     }
-    
+
     .import-card {
       background: var(--tab-bg);
       border-radius: 12px;
       padding: 20px;
       border-left: 4px solid var(--success);
     }
-    
+
     .import-card h4 {
       color: var(--text);
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 8px;
     }
-    
+
     .import-card p {
       color: var(--text-dim);
       font-size: 14px;
       margin: 0;
       line-height: 1.4;
     }
-    
+
     .import-status {
       background: var(--tab-bg);
       border-radius: 8px;
@@ -5473,7 +6069,7 @@
       color: var(--text-dim);
       min-height: 20px;
     }
-    
+
     .completion-tips {
       background: var(--tab-bg);
       border-radius: 12px;
@@ -5481,20 +6077,20 @@
       margin-bottom: 32px;
       text-align: left;
     }
-    
+
     .completion-tips h4 {
       color: var(--text);
       font-size: 16px;
       font-weight: 600;
       margin-bottom: 16px;
     }
-    
+
     .completion-tips ul {
       list-style: none;
       margin: 0;
       padding: 0;
     }
-    
+
     .completion-tips li {
       color: var(--text-dim);
       font-size: 14px;
@@ -5503,7 +6099,7 @@
       padding-left: 20px;
       position: relative;
     }
-    
+
     .completion-tips li:before {
       content: "✓";
       color: var(--success);
@@ -5511,7 +6107,7 @@
       position: absolute;
       left: 0;
     }
-    
+
     .completion-tips kbd {
       background: rgba(255, 255, 255, 0.1);
       padding: 2px 6px;
@@ -5519,14 +6115,14 @@
       font-size: 12px;
       color: var(--success);
     }
-    
+
     .onboarding-actions {
       display: flex;
       gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
     }
-    
+
     .onboarding-actions .btn {
       padding: 12px 24px;
       border: none;
@@ -5537,26 +6133,26 @@
       transition: all 0.2s ease;
       text-decoration: none;
     }
-    
+
     .onboarding-actions .btn-primary {
       background: var(--accent);
       color: white;
     }
-    
+
     .onboarding-actions .btn-primary:hover {
       background: #d73c57;
     }
-    
+
     .onboarding-actions .btn-secondary {
       background: rgba(255, 255, 255, 0.1);
       color: var(--text);
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
-    
+
     .onboarding-actions .btn-secondary:hover {
       background: rgba(255, 255, 255, 0.2);
     }
-    
+
     .onboarding-actions .btn-large {
       padding: 16px 32px;
       font-size: 16px;
@@ -5569,26 +6165,26 @@
       const overlay = document.getElementById('shortcuts-overlay');
       overlay.classList.add('visible');
       document.getElementById('shortcuts-search').focus();
-      
+
       // Clear search
       document.getElementById('shortcuts-search').value = '';
       filterShortcuts('');
     }
-    
+
     function hideShortcutsOverlay() {
       const overlay = document.getElementById('shortcuts-overlay');
       overlay.classList.remove('visible');
     }
-    
+
     function filterShortcuts(query) {
       const items = document.querySelectorAll('.shortcut-item');
       const lowerQuery = query.toLowerCase();
-      
+
       items.forEach(item => {
         const searchText = item.getAttribute('data-search') || '';
         const descText = item.querySelector('.shortcut-desc')?.textContent || '';
         const combined = (searchText + ' ' + descText).toLowerCase();
-        
+
         if (!query || combined.includes(lowerQuery)) {
           item.classList.remove('hidden');
         } else {
@@ -5596,19 +6192,19 @@
         }
       });
     }
-    
+
     // Search functionality
     document.getElementById('shortcuts-search').addEventListener('input', (e) => {
       filterShortcuts(e.target.value);
     });
-    
+
     // Close overlay with Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         hideShortcutsOverlay();
       }
     });
-    
+
     // Close on backdrop click
     document.getElementById('shortcuts-overlay').addEventListener('click', (e) => {
       if (e.target === e.currentTarget) {
@@ -5729,21 +6325,21 @@
 
     async function startChromeImport() {
       const statusEl = document.getElementById('import-status');
-      
+
       try {
         statusEl.innerHTML = '📥 Importeren van Chrome bookmarks...';
-        
+
         const bookmarksResp = await fetch('http://localhost:8765/import/chrome/bookmarks', { method: 'POST' });
         if (bookmarksResp.ok) {
           statusEl.innerHTML += '<br>✅ Bookmarks geïmporteerd';
         }
-        
+
         statusEl.innerHTML += '<br>📚 Importing history...';
         const historyResp = await fetch('http://localhost:8765/import/chrome/history', { method: 'POST' });
         if (historyResp.ok) {
           statusEl.innerHTML += '<br>✅ History imported';
         }
-        
+
         statusEl.innerHTML += '<br>🍪 Importeren van cookies...';
         const cookiesResp = await fetch('http://localhost:8765/import/chrome/cookies', { method: 'POST' });
         if (cookiesResp.ok) {
@@ -5751,13 +6347,13 @@
         } else {
           statusEl.innerHTML += '<br>⚠️ Cookies kunnen niet geïmporteerd worden (encrypted)';
         }
-        
+
         statusEl.innerHTML += '<br><br>🎉 Import voltooid!';
-        
+
         setTimeout(() => {
           nextOnboardingStep();
         }, 2000);
-        
+
       } catch (error) {
         statusEl.innerHTML = '❌ Import mislukt. Chrome moet gesloten zijn om data te importeren.';
       }
@@ -5775,16 +6371,16 @@
             }
           })
         });
-        
+
         hideOnboarding();
-        
+
         // Show Copilot panel after a brief moment
         setTimeout(() => {
           if (window.tandem && window.tandem.openPanel) {
             window.tandem.openPanel();
           }
         }, 1000);
-        
+
       } catch (error) {
         hideOnboarding();
       }
@@ -5797,7 +6393,7 @@
         if (response.ok) {
           const config = await response.json();
           const onboardingComplete = config.general?.onboardingComplete || false;
-          
+
           if (!onboardingComplete) {
             // Show onboarding after a brief delay
             setTimeout(showOnboarding, 1500);
@@ -5844,6 +6440,133 @@
 
     // Load theme on startup
     setTimeout(loadThemeFromConfig, 100);
+
+    // ═══════════════════════════════════════════════
+    // Password Vault UI Logic
+    // ═══════════════════════════════════════════════
+    const vaultBtn = document.getElementById('vault-toggle-btn');
+    const vaultOverlay = document.getElementById('vault-overlay');
+    const vaultClose = document.getElementById('vault-close');
+    const vaultLockedView = document.getElementById('vault-locked-view');
+    const vaultUnlockedView = document.getElementById('vault-unlocked-view');
+    const vaultUnlockBtn = document.getElementById('vault-unlock-btn');
+    const vaultLockBtn = document.getElementById('vault-lock-btn');
+    const vaultMasterPassword = document.getElementById('vault-master-password');
+    const vaultErrorMsg = document.getElementById('vault-error-msg');
+
+    let isVaultUnlocked = false;
+
+    async function checkVaultStatus() {
+      try {
+        const res = await fetch('http://localhost:8765/passwords/status');
+        if (!res.ok) return;
+        const data = await res.json();
+        isVaultUnlocked = data.unlocked;
+
+        if (data.isNewVault) {
+          vaultMasterPassword.placeholder = "Create New Master Password";
+          vaultUnlockBtn.textContent = "Initialize Vault";
+        } else {
+          vaultMasterPassword.placeholder = "Master Password";
+          vaultUnlockBtn.textContent = "Unlock Vault";
+        }
+
+        updateVaultView();
+      } catch (err) {
+        console.error('Failed to check vault status', err);
+      }
+    }
+
+    function updateVaultView() {
+      if (isVaultUnlocked) {
+        vaultLockedView.style.display = 'none';
+        vaultUnlockedView.style.display = 'block';
+        vaultBtn.textContent = '🔓';
+        vaultBtn.style.color = 'var(--success)';
+      } else {
+        vaultLockedView.style.display = 'block';
+        vaultUnlockedView.style.display = 'none';
+        vaultBtn.textContent = '🔒';
+        vaultBtn.style.color = 'var(--text-dim)';
+        vaultMasterPassword.value = '';
+        vaultErrorMsg.style.display = 'none';
+      }
+    }
+
+    if (vaultBtn) {
+      vaultBtn.addEventListener('click', () => {
+        checkVaultStatus();
+        vaultOverlay.style.display = 'flex';
+        if (!isVaultUnlocked) vaultMasterPassword.focus();
+      });
+    }
+
+    if (vaultClose) {
+      vaultClose.addEventListener('click', () => {
+        vaultOverlay.style.display = 'none';
+      });
+    }
+
+    if (vaultUnlockBtn) {
+      vaultUnlockBtn.addEventListener('click', async () => {
+        const password = vaultMasterPassword.value;
+        if (!password) {
+          vaultErrorMsg.textContent = "Password cannot be empty";
+          vaultErrorMsg.style.display = 'block';
+          return;
+        }
+
+        try {
+          const res = await fetch('http://localhost:8765/passwords/unlock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password })
+          });
+
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            vaultErrorMsg.textContent = data.error || "Incorrect master password";
+            vaultErrorMsg.style.display = 'block';
+            return;
+          }
+
+          const data = await res.json();
+          if (data.success) {
+            isVaultUnlocked = true;
+            updateVaultView();
+          }
+        } catch (err) {
+          vaultErrorMsg.textContent = "Connection error";
+          vaultErrorMsg.style.display = 'block';
+        }
+      });
+    }
+
+    if (vaultLockBtn) {
+      vaultLockBtn.addEventListener('click', async () => {
+        try {
+          await fetch('http://localhost:8765/passwords/lock', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+          });
+          isVaultUnlocked = false;
+          updateVaultView();
+        } catch (err) {
+          console.error(err);
+        }
+      });
+    }
+
+    if (vaultMasterPassword) {
+      vaultMasterPassword.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') vaultUnlockBtn.click();
+      });
+    }
+
+    // Initial check after startup
+    setTimeout(checkVaultStatus, 1000);
+
   </script>
 </body>
+
 </html>

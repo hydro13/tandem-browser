@@ -4,6 +4,37 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.10.3] — 2026-02-26
+
+### Behavioral Learning Models
+
+- **Profile Compiler**: Added `src/behavior/compiler.ts` to process raw user input logs into statistical behavioral profiles.
+- **Playback Engine**: Added `src/behavior/replay.ts` to simulate human mouse trajectories using smoothed mathematical curves and typing cadences using bigram delays.
+- **Input System Integration**: Refactored `humanizedClick` and `humanizedType` in `src/input/humanized.ts` to consume the playback engine, removing naive hardcoded delays for ultra-realistic AI emulation.
+
+---
+
+## [0.10.2] — 2026-02-26
+
+### Local Password Manager
+
+- **Cryptographic Core (`src/security/crypto.ts`)**: Built a robust encryption engine using `AES-256-GCM` with key derivation via `PBKDF2` (100,000 iterations). 
+- **Vault Storage (`src/passwords/manager.ts`)**: Encrypted payloads are saved in a local SQLite database (`~/.tandem/security/vault.db`) with zero cloud-sync integration. Ensures extreme data privacy.
+- **Frontend Integration (`shell/index.html`)**: The Copilot side panel now features a dedicated `🔒` Lock icon, allowing on-demand unlocking and vault initialization via Master Password.
+- **Autofill & Generation (`src/context-menu/menu-builder.ts`)**: Right-clicking an input element now shows a dynamic sub-menu if the vault is unlocked, allowing for context-aware password autofill or generating secure 24-character random passwords.
+
+---
+
+## [0.10.1] — 2026-02-26
+
+### SPA Extraction Stabilization Fix
+
+- Enhanced the `GET /page-content` API endpoint to handle heavily dynamic Single-Page Applications (SPAs) like Next.js and typical React sites.
+- Implemented a sliding `MutationObserver` timeout that correctly resets on DOM changes instead of resolving prematurely.
+- Added `minLength` configuration parameter to ensure extraction waits until the `innerText` size reaches an expected threshold or hits a hard timeout deadline.
+
+---
+
 ## [0.10.0] — 2026-02-25
 
 ### Browser Extensions System

@@ -1,4 +1,5 @@
 import { WebContents } from 'electron';
+import { behaviorReplay } from '../behavior/replay';
 
 /**
  * Gaussian random number (Box-Muller transform).
@@ -20,10 +21,10 @@ function humanDelay(min: number = 80, max: number = 300): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
-/** Random typing delay per character (gaussian, 30-120ms) */
-function typingDelay(): Promise<void> {
-  const delay = gaussianRandom(75, 20);
-  return new Promise(resolve => setTimeout(resolve, Math.max(30, Math.min(120, delay))));
+/** Random typing delay per character using BehaviorReplay */
+function typingDelay(currentChar: string = '', nextChar: string = ''): Promise<void> {
+  const delay = behaviorReplay.getTypingDelay(currentChar, nextChar);
+  return new Promise(resolve => setTimeout(resolve, delay));
 }
 
 /**
@@ -69,12 +70,22 @@ export async function humanizedClick(wc: WebContents, selector: string): Promise
   // Pre-click hesitation (hover → click delay)
   await humanDelay(50, 150);
 
-  // Move mouse to position
-  wc.sendInputEvent({
-    type: 'mouseMove',
-    x,
-    y,
-  });
+  // Move mouse to position using trained trajectory
+  // E.g., start from a random nearby point representing current cursor
+  const startX = Math.round(x + gaussianRandom(0, 200));
+  const startY = Math.round(y + gaussianRandom(0, 200));
+  const trajectory = behaviorReplay.getMouseTrajectory(startX, startY, x, y);
+
+  for (const point of trajectory) {
+    wc.sendInputEvent({
+      type: 'mouseMove',
+      x: point.x,
+      y: point.y,
+    });
+    if (point.delayMs > 0) {
+      await new Promise(r => setTimeout(r, point.delayMs));
+    }
+  }
 
   await humanDelay(30, 80);
 
@@ -131,9 +142,11 @@ export async function humanizedType(wc: WebContents, selector: string, text: str
   }
 
   // Type each character with humanized delays
-  for (const char of text) {
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i];
+    const nextChar = i + 1 < text.length ? text[i + 1] : '';
     wc.sendInputEvent({ type: 'char', keyCode: char });
-    await typingDelay();
+    await typingDelay(char, nextChar);
   }
 
   return { ok: true };
