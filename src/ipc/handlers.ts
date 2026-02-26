@@ -63,7 +63,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   } = deps;
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
-  const ipcChannels = ['tab-update', 'tab-register', 'chat-send', 'voice-transcript', 'voice-status-update', 'activity-webview-event', 'form-submitted'];
+  const ipcChannels = ['tab-update', 'chat-send', 'voice-transcript', 'voice-status-update', 'activity-webview-event', 'form-submitted'];
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }

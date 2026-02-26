@@ -10,13 +10,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Unhandled rejection:', reason);
 });
 
-import { app, BrowserWindow, session, ipcMain, webContents, WebContents } from 'electron';
+import { app, BrowserWindow, session, ipcMain, WebContents } from 'electron';
 import path from 'path';
-import fs from 'fs';
-
-// Keep app name as Tandem — don't pretend to be Chrome (causes Google login mismatch)
-// TotalRecall V2 uses default Electron identity and Google login works fine
-import os from 'os';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
 import { TabManager } from './tabs/manager';
