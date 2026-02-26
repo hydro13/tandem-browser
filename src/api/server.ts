@@ -220,14 +220,12 @@ export class TandemAPI {
     this.app.use((req: Request, res: Response, next: NextFunction) => {
       // Allow /status without auth (health check)
       if (req.path === '/status') return next();
-      // Allow /extensions/identity/auth without auth (called by extension service workers)
-      if (req.path === '/extensions/identity/auth') return next();
       // Allow OPTIONS preflight
       if (req.method === 'OPTIONS') return next();
 
       // Allow requests from our own shell (file:// origin) and localhost
       const origin = req.headers.origin || '';
-      if (origin === 'file://' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1') || !origin) {
+      if (origin === 'file://' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
         return next();
       }
 
@@ -612,7 +610,20 @@ export class TandemAPI {
 
         if (req.query.save) {
           const fs = require('fs');
-          const filePath = req.query.save as string;
+          const filePath = path.resolve(req.query.save as string);
+
+          const allowedDirs = [
+            path.join(os.homedir(), 'Desktop'),
+            path.join(os.homedir(), 'Downloads'),
+            path.join(os.homedir(), '.tandem'),
+          ];
+          const isAllowed = allowedDirs.some(dir => filePath.startsWith(dir + path.sep) || filePath === dir);
+
+          if (!isAllowed) {
+            res.status(400).json({ error: 'Save path must be in ~/Desktop, ~/Downloads, or ~/.tandem' });
+            return;
+          }
+
           fs.writeFileSync(filePath, png);
           res.json({ ok: true, path: filePath, size: png.length });
         } else {

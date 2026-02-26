@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 3
-**Last completed phase:** Phase 2
+**Next phase to implement:** Phase 4
+**Last completed phase:** Phase 3
 **Overall status:** IN PROGRESS
 
 ---
@@ -54,21 +54,21 @@
 
 ## Phase 3: Auth Hardening
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-26
+- **Commit:** (pending)
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Requests without Origin header now require Bearer token
-  - [ ] Shell (file:// origin) still works without token
-  - [ ] `/screenshot?save=` validates path to allowed directory
-  - [ ] `/extensions/identity/auth` requires authentication
-  - [ ] `curl http://127.0.0.1:8765/execute-js` returns 401 (no token)
-  - [ ] MCP server still works (reads token from ~/.tandem/api-token)
-  - [ ] App launches, all panel features work
-  - [ ] All Phase 1+2 fixes still work
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Requests without Origin header now require Bearer token
+  - [x] Shell (file:// origin) still works without token
+  - [x] `/screenshot?save=` validates path to allowed directory
+  - [x] `/extensions/identity/auth` requires authentication
+  - [x] `curl http://127.0.0.1:8765/execute-js` returns 401 (no token)
+  - [ ] MCP server still works (reads token from ~/.tandem/api-token) — needs manual test
+  - [x] App launches, all panel features work
+  - [x] All Phase 1+2 fixes still work
+- **Issues encountered:** None
+- **Notes for next phase:** Phase 4 can start immediately. All unauthenticated requests now return 401 unless from file:// or localhost origins. The `/status` health check endpoint remains unauthenticated (by design). External tools (curl, scripts, MCP) must use `Authorization: Bearer <token>` header.
 
 ---
 
