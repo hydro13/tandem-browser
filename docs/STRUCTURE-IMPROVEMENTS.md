@@ -7,7 +7,7 @@
 
 | # | Verbetering | Status | Sessie | Notities |
 |---|-------------|--------|--------|----------|
-| 1 | Split `api/server.ts` in route files | TODO | — | Hoogste prioriteit. ~1700 regels → routes/ directory |
+| 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 regels. 12 route files + context.ts |
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | TODO | — | 1016 regels → ipc/, bootstrap/, menu.ts |
 | 3 | Shared utilities (`paths`, `url`, `errors`) | TODO | — | Quick win. src/utils/ aanmaken |
 | 4 | Fix circulaire deps (`copilotAlert`) | TODO | — | Quick win. Verplaats naar src/notifications/ |
@@ -29,6 +29,26 @@ Of voor meerdere quick wins:
 ## Logboek
 
 <!-- Voeg hier per sessie een entry toe -->
+
+### 2026-02-26 — Punt 1: Split `api/server.ts` in route files
+- **Wat gedaan:** server.ts (3032 regels, 160+ routes) opgesplitst in 12 route files + context module
+- **Bestanden aangemaakt:**
+  - `src/api/context.ts` — RouteContext interface + 5 shared helpers
+  - `src/api/routes/browser.ts` — 14 routes (navigate, click, type, execute-js, etc.)
+  - `src/api/routes/tabs.ts` — 7 routes (open, close, list, focus, etc.)
+  - `src/api/routes/snapshots.ts` — 8 routes (snapshot, find, click, fill, etc.)
+  - `src/api/routes/devtools.ts` — 15 routes (console, network, DOM, CDP, etc.)
+  - `src/api/routes/extensions.ts` — 14 routes (load, install, gallery, updates, etc.)
+  - `src/api/routes/network.ts` — 10 routes (log, mock, route, etc.)
+  - `src/api/routes/sessions.ts` — 11 routes (create, switch, device emulation, etc.)
+  - `src/api/routes/agents.ts` — 15 routes (tasks, autonomy, tab locks, etc.)
+  - `src/api/routes/data.ts` — 25 routes (bookmarks, history, downloads, config, import)
+  - `src/api/routes/content.ts` — 14 routes (extract, context bridge, scripts, styles)
+  - `src/api/routes/media.ts` — 19 routes (panel, chat, voice, audio, screenshots)
+  - `src/api/routes/misc.ts` — 58 routes (status, passwords, events, live, workflows, etc.)
+- **Bestanden gewijzigd:** `src/api/server.ts` (3032→349 regels)
+- **Tests:** passing (86 passed, 38 skipped)
+- **Openstaand:** geen
 
 ### Template
 ```
