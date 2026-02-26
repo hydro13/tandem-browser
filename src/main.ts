@@ -2,6 +2,14 @@
 process.stdout?.on('error', () => {});
 process.stderr?.on('error', () => {});
 
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('[FATAL] Unhandled rejection:', reason);
+});
+
 import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';

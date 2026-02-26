@@ -269,6 +269,10 @@
   </div>
 
   <script>
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
     const API = 'http://localhost:8765';
     let allBookmarks = [];
     let currentFolderId = null; // null = root, or folder id
@@ -323,7 +327,7 @@
           if (item.type !== 'folder') continue;
           const el = document.createElement('div');
           el.className = `tree-item ${currentFolderId === item.id ? 'active' : ''}`;
-          el.innerHTML = `<span class="icon">&#x1F4C1;</span><span class="name">${item.name}</span>`;
+          el.innerHTML = `<span class="icon">&#x1F4C1;</span><span class="name">${escapeHtml(item.name)}</span>`;
           const itemPath = [...path, { id: item.id, name: item.name }];
           el.addEventListener('click', (e) => {
             e.stopPropagation();

@@ -5,8 +5,8 @@
 
 ## Current State
 
-**Next phase to implement:** Phase 2
-**Last completed phase:** Phase 1
+**Next phase to implement:** Phase 3
+**Last completed phase:** Phase 2
 **Overall status:** IN PROGRESS
 
 ---
@@ -34,21 +34,21 @@
 
 ## Phase 2: XSS Fixes + Crash Handler
 
-- **Status:** PENDING
-- **Date:** —
-- **Commit:** —
+- **Status:** DONE
+- **Date:** 2026-02-26
+- **Commit:** 2c05e9d
 - **Verification:**
-  - [ ] `npx tsc --noEmit` — 0 errors
-  - [ ] Activity feed uses escapeHtml() for all dynamic text (shell/index.html)
-  - [ ] Bookmark names escaped (shell/index.html + shell/bookmarks.html)
-  - [ ] Download filenames escaped (shell/index.html)
-  - [ ] Chat message `name` field escaped (shell/index.html)
-  - [ ] uncaughtException handler added (main.ts)
-  - [ ] unhandledRejection handler added (main.ts)
-  - [ ] App launches, browse to a page with special chars in title — no XSS
-  - [ ] All Phase 1 fixes still work
-- **Issues encountered:** —
-- **Notes for next phase:** —
+  - [x] `npx tsc --noEmit` — 0 errors
+  - [x] Activity feed uses escapeHtml() for all dynamic text (shell/index.html)
+  - [x] Bookmark names escaped (shell/index.html + shell/bookmarks.html)
+  - [x] Download filenames escaped (shell/index.html) — 3 locations fixed
+  - [x] Chat message `name` field escaped (shell/index.html)
+  - [x] uncaughtException handler added (main.ts)
+  - [x] unhandledRejection handler added (main.ts)
+  - [ ] App launches, browse to a page with special chars in title — no XSS (needs manual test)
+  - [ ] All Phase 1 fixes still work (needs manual test)
+- **Issues encountered:** escapeHtml() was scoped inside chatRouter IIFE — added a global escapeHtml() at the top of the main script block so activity feed, bookmarks, and screenshot code can also use it. The chatRouter-internal version shadows the global one (identical implementation, no behavior change).
+- **Notes for next phase:** Phase 3 (Auth Hardening) can start immediately. The global escapeHtml() is now available throughout shell/index.html for any future innerHTML usage.
 
 ---
 

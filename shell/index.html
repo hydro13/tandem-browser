@@ -1801,6 +1801,10 @@
   <script src="lgl-integration.js"></script>
 
   <script>
+    function escapeHtml(s) {
+      return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
     // ═══════════════════════════════════════════════
     // Platform detection & Chrome-style title bar setup
     // ═══════════════════════════════════════════════
@@ -2436,7 +2440,7 @@
         const sourceEmoji = source === 'kees' ? '🤖' : '👤';
         const item = document.createElement('div');
         item.className = 'activity-item';
-        item.innerHTML = `<span class="a-icon">${icon}</span><span class="a-source ${source}">${sourceEmoji}</span><span class="a-text">${text}</span><span class="a-time">${time}</span>`;
+        item.innerHTML = `<span class="a-icon">${icon}</span><span class="a-source ${source}">${sourceEmoji}</span><span class="a-text">${escapeHtml(text)}</span><span class="a-time">${time}</span>`;
         activityEl.appendChild(item);
         activityEl.scrollTop = activityEl.scrollHeight;
         // Keep max 200 items
@@ -2521,7 +2525,7 @@
         const placeholder = listEl.querySelector('p');
         if (placeholder) placeholder.remove();
         const div = document.createElement('div');
-        div.innerHTML = `<div class="ss-label">${data.filename}</div>`;
+        div.innerHTML = `<div class="ss-label">${escapeHtml(data.filename)}</div>`;
         listEl.prepend(div);
       });
     }
@@ -2582,7 +2586,7 @@
         }
         const el = document.createElement('div');
         el.className = `chat-msg ${cls} source-${source || sourceClass}`;
-        el.innerHTML = `<div class="msg-from">${name}</div><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">${formatTime(timestamp)}</div>`;
+        el.innerHTML = `<div class="msg-from">${escapeHtml(name)}</div><div class="msg-text">${escapeHtml(text)}</div><div class="msg-time">${formatTime(timestamp)}</div>`;
         // Add image if present
         if (image) {
           const msgText = el.querySelector('.msg-text');
@@ -4038,7 +4042,7 @@
       let hostname = '';
       try { hostname = new URL(item.url).hostname; } catch {}
       const shortName = (item.name || hostname).substring(0, 40);
-      a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${shortName}`;
+      a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${escapeHtml(shortName)}`;
       a.title = item.url;
       a.addEventListener('click', (e) => {
         e.preventDefault();
@@ -4115,7 +4119,7 @@
       } else if (item.type === 'folder' && item.children) {
         const folder = document.createElement('div');
         folder.className = 'bm-folder';
-        folder.innerHTML = `<span class="bm-folder-icon">📁</span> ${(item.name || 'Folder').substring(0, 25)}`;
+        folder.innerHTML = `<span class="bm-folder-icon">📁</span> ${escapeHtml((item.name || 'Folder').substring(0, 25))}`;
         const dropdown = createFolderDropdown(item.children);
         folder.appendChild(dropdown);
         folder.addEventListener('click', (e) => {
@@ -4397,8 +4401,8 @@
         if (data.base64) {
           const imgSrc = `data:image/png;base64,${data.base64}`;
           div.innerHTML = `
-            <img src="${imgSrc}" alt="${data.filename}" title="Klik om te vergroten">
-            <div class="ss-label">${data.filename}</div>
+            <img src="${imgSrc}" alt="${escapeHtml(data.filename)}" title="Klik om te vergroten">
+            <div class="ss-label">${escapeHtml(data.filename)}</div>
           `;
           div.querySelector('img').addEventListener('click', () => {
             const win = window.open('', '_blank', 'width=1200,height=800');
@@ -4407,7 +4411,7 @@
             }
           });
         } else {
-          div.innerHTML = `<div class="ss-label">${data.filename}</div>`;
+          div.innerHTML = `<div class="ss-label">${escapeHtml(data.filename)}</div>`;
         }
         listEl.prepend(div);
       });
