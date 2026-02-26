@@ -1,6 +1,6 @@
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
-import { copilotAlert } from '../main';
+import { copilotAlert } from '../notifications/alert';
 
 /** Page load timeout in milliseconds */
 const PAGE_LOAD_TIMEOUT_MS = 30000;

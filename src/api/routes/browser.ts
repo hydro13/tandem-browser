@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import os from 'os';
 import { RouteContext, getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
-import { copilotAlert } from '../../main';
+import { copilotAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
 
 export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
