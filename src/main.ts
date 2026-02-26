@@ -10,7 +10,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Unhandled rejection:', reason);
 });
 
-import { app, BrowserWindow, session, ipcMain, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
+import { app, BrowserWindow, session, ipcMain, globalShortcut, clipboard, nativeImage, webContents, WebContents } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -48,6 +48,7 @@ import { TabLockManager } from './agents/tab-lock-manager';
 import { ContextMenuManager } from './context-menu/manager';
 import { DevToolsManager } from './devtools/manager';
 import { CopilotStream } from './activity/copilot-stream';
+import { buildAppMenu } from './menu/app-menu';
 import { RequestDispatcher } from './network/dispatcher';
 import { SecurityManager } from './security/security-manager';
 import { SnapshotManager } from './snapshot/manager';
@@ -831,128 +832,6 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   }
 }
 
-function buildAppMenu(): void {
-  const send = (action: string) => mainWindow?.webContents.send('shortcut', action);
-
-  const template: Electron.MenuItemConstructorOptions[] = [
-    {
-      label: app.name,
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => send('open-settings') },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    },
-    {
-      label: 'File',
-      submenu: [
-        { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => send('new-tab') },
-        { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
-        { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: () => {
-          tabManager?.reopenClosedTab();
-        }},
-        { type: 'separator' },
-        { label: 'Bookmark Page', accelerator: 'CmdOrCtrl+D', click: () => send('bookmark-page') },
-        { label: 'Toggle Bookmarks Bar', accelerator: 'CmdOrCtrl+Shift+B', click: () => send('toggle-bookmarks-bar') },
-        { label: 'Bookmark Manager', click: () => send('open-bookmarks') },
-        { label: 'Find in Page', accelerator: 'CmdOrCtrl+F', click: () => send('find-in-page') },
-        { label: 'History', accelerator: 'CmdOrCtrl+Y', click: () => send('open-history') },
-      ],
-    },
-    {
-      label: 'Edit',
-      submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' },
-      ],
-    },
-    {
-      label: 'View',
-      submenu: [
-        { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: () => send('zoom-in') },
-        { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => send('zoom-out') },
-        { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', click: () => send('zoom-reset') },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-      ],
-    },
-    {
-      label: configManager?.getConfig().general.agentName || 'Copilot',
-      submenu: [
-        { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
-          panelManager?.togglePanel();
-        }},
-        { label: 'Voice Input', accelerator: 'CmdOrCtrl+Shift+M', click: () => voiceManager?.toggleVoice() },
-        { label: 'PiP Mode', accelerator: 'CmdOrCtrl+Shift+P', click: () => pipManager?.toggle() },
-        { type: 'separator' },
-        { label: 'Draw Mode', accelerator: 'CmdOrCtrl+Shift+D', click: () => drawManager?.toggleDrawMode() },
-        { label: 'Quick Screenshot', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('quick-screenshot') },
-        { type: 'separator' },
-        { label: 'Record Tab Audio', accelerator: 'CmdOrCtrl+R', click: () => {
-          if (audioCaptureManager) {
-            if (audioCaptureManager.isRecording()) {
-              audioCaptureManager.stopRecording();
-              mainWindow?.webContents.send('audio-recording-status', { recording: false });
-            } else {
-              const activeTab = tabManager?.getActiveTab();
-              if (activeTab) {
-                audioCaptureManager.startRecording(activeTab.webContentsId).then(() => {
-                  mainWindow?.webContents.send('audio-recording-status', { recording: true });
-                }).catch((e) => console.warn('Audio capture start failed:', e.message));
-              }
-            }
-          }
-        }},
-        { label: 'ClaroNote Record', accelerator: 'CmdOrCtrl+Shift+C', click: () => send('claronote-record') },
-      ],
-    },
-    {
-      label: 'Window',
-      submenu: [
-        { role: 'minimize' },
-        { role: 'zoom' },
-        { type: 'separator' },
-        { role: 'front' },
-      ],
-    },
-    {
-      label: 'Help',
-      submenu: [
-        { label: 'Keyboard Shortcuts', accelerator: 'CmdOrCtrl+Shift+/', click: () => send('show-shortcuts') },
-        { type: 'separator' },
-        { label: 'Show Onboarding', click: () => send('show-onboarding') },
-      ],
-    },
-  ];
-
-  // Add Cmd+1-9 tab switching (hidden menu items)
-  const tabSwitchItems: Electron.MenuItemConstructorOptions[] = [];
-  for (let i = 1; i <= 9; i++) {
-    tabSwitchItems.push({
-      label: `Tab ${i}`,
-      accelerator: `CmdOrCtrl+${i}`,
-      visible: false,
-      click: () => send(`focus-tab-${i - 1}`),
-    });
-  }
-  (template[1].submenu as Electron.MenuItemConstructorOptions[]).push(
-    { type: 'separator' },
-    ...tabSwitchItems
-  );
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-}
 
 app.whenReady().then(async () => {
   // Register tab-register early to avoid race with window loading
@@ -962,7 +841,16 @@ app.whenReady().then(async () => {
 
   const win = await createWindow();
   await startAPI(win);
-  buildAppMenu();
+  buildAppMenu({
+    mainWindow: win,
+    tabManager,
+    panelManager,
+    drawManager,
+    voiceManager,
+    pipManager,
+    configManager,
+    audioCaptureManager,
+  });
 
   // Keep shortcuts always registered while app is running
   // (blur/focus approach broke shortcuts when webview had focus)
@@ -971,7 +859,16 @@ app.whenReady().then(async () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow().then(async (w) => {
         await startAPI(w);
-        buildAppMenu();
+        buildAppMenu({
+          mainWindow: w,
+          tabManager,
+          panelManager,
+          drawManager,
+          voiceManager,
+          pipManager,
+          configManager,
+          audioCaptureManager,
+        });
       });
     }
   });
