@@ -259,7 +259,7 @@ async function runSession(state: ScoutState): Promise<void> {
     const timelineFindings = await browseTimeline(state);
     
     // 2. Visit 1-2 new profiles (2-3 min each)
-    const profilesToVisit = ['levelsio']; // TODO: dynamic selection
+    const profilesToVisit: string[] = []; // TODO: dynamic selection from config/findings
     for (const handle of profilesToVisit) {
       if (!state.peopleFound.includes(handle)) {
         await wait(TIMING.betweenPages);

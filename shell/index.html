@@ -2271,8 +2271,6 @@
           if (window.tandem) window.tandem.toggleVoice();
         } else if (action === 'show-onboarding') {
           // Manually show onboarding
-          console.log('[DEBUG] Onboarding action received from menu');
-          console.log('[DEBUG] showOnboarding function exists?', typeof showOnboarding);
           showOnboarding();
         }
       });
@@ -5621,19 +5619,14 @@
     let currentOnboardingStep = 1;
 
     function showOnboarding() {
-      console.log('[DEBUG] showOnboarding() called');
       const overlay = document.getElementById('onboarding-overlay');
-      console.log('[DEBUG] Onboarding overlay element:', overlay);
 
       if (!overlay) {
-        console.error('[DEBUG] CRITICAL: onboarding-overlay element not found in DOM!');
+        console.error('onboarding-overlay element not found in DOM');
         return;
       }
 
-      console.log('[DEBUG] Adding visible class to overlay');
       overlay.classList.add('visible');
-      console.log('[DEBUG] Overlay classes after add:', overlay.className);
-      console.log('[DEBUG] Calling showOnboardingStep(1)');
       showOnboardingStep(1);
     }
 
@@ -5643,24 +5636,20 @@
     }
 
     function showOnboardingStep(step) {
-      console.log('[DEBUG] showOnboardingStep() called with step:', step);
       currentOnboardingStep = step;
 
       // Hide all steps
       for (let i = 1; i <= 4; i++) {
         const stepEl = document.getElementById(`onboarding-step-${i}`);
-        console.log(`[DEBUG] Step ${i} element:`, stepEl);
         if (stepEl) stepEl.style.display = 'none';
       }
 
       // Show current step
       const currentStep = document.getElementById(`onboarding-step-${step}`);
-      console.log('[DEBUG] Current step element:', currentStep);
       if (currentStep) {
         currentStep.style.display = 'block';
-        console.log('[DEBUG] Set display=block on step', step);
       } else {
-        console.error('[DEBUG] CRITICAL: onboarding-step-' + step + ' element not found!');
+        console.error('onboarding-step-' + step + ' element not found');
       }
 
       // Update dots
@@ -5703,25 +5692,17 @@
       const skipBtn = document.getElementById('onboarding-skip');
 
       if (nextBtn) nextBtn.addEventListener('click', () => {
-        console.log('[DEBUG] Next button clicked, current step:', currentOnboardingStep);
-        console.log('[DEBUG] Button text:', nextBtn.textContent);
-        console.log('[DEBUG] data-final-step attribute:', nextBtn.getAttribute('data-final-step'));
-
         // Check if we're on the final step (step 4) or if button says "Start!"
         if (currentOnboardingStep === 4 || nextBtn.textContent === 'Start!' || nextBtn.getAttribute('data-final-step') === 'true') {
           // Final step - hide and save
-          console.log('[DEBUG] Final step detected - hiding onboarding');
           hideOnboarding();
           fetch('http://localhost:8765/config', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ general: { onboardingComplete: true } })
-          }).then(() => console.log('[DEBUG] Onboarding completion saved'));
+          });
         } else if (currentOnboardingStep < 4) {
-          console.log('[DEBUG] Going to next step:', currentOnboardingStep + 1);
           showOnboardingStep(currentOnboardingStep + 1);
-        } else {
-          console.error('[DEBUG] UNEXPECTED STATE: step', currentOnboardingStep, 'but not final step logic triggered!');
         }
       });
 

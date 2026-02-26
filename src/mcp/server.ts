@@ -727,10 +727,10 @@ function startEventListener(): void {
     } catch { return ''; }
   })();
 
-  const url = `http://localhost:8765/events/stream${token ? `?token=${token}` : ''}`;
+  const url = 'http://localhost:8765/events/stream';
 
   const connect = () => {
-    fetch(url).then(async (response) => {
+    fetch(url, token ? { headers: { 'Authorization': `Bearer ${token}` } } : {}).then(async (response) => {
       if (!response.ok || !response.body) {
         console.error('SSE connect failed:', response.status);
         setTimeout(connect, 5000);

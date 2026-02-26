@@ -270,7 +270,7 @@ export class TabManager {
 
   /** Focus tab by index (0-based, for Cmd+1-9) */
   async focusByIndex(index: number): Promise<boolean> {
-    const tabs = Array.from(this.tabs.values());
+    const tabs = this.listTabs();
     if (index >= 0 && index < tabs.length) {
       return this.focusTab(tabs[index].id);
     }

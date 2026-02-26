@@ -50,7 +50,7 @@ export class Guardian {
     if (!this.gatekeeperWs) return;
 
     const status = this.gatekeeperWs.getStatus();
-    if (!status.connected && status.pendingDecisions >= 100) return;
+    if (!status.connected || status.pendingDecisions >= 100) return;
 
     const trust = this.db.getDomainInfo(domain)?.trustLevel ?? 30;
     const mode = this.getModeForDomain(domain);
@@ -558,6 +558,12 @@ export class Guardian {
     const cookies = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
     if (cookies && cookies.length > 0) {
       this.cookieCounts.set(domain, (this.cookieCounts.get(domain) || 0) + cookies.length);
+
+      // Evict oldest entries when map exceeds 1000 domains
+      if (this.cookieCounts.size > 1000) {
+        const firstKey = this.cookieCounts.keys().next().value;
+        if (firstKey) this.cookieCounts.delete(firstKey);
+      }
     }
 
     // Only analyze main frame navigations to reduce noise
