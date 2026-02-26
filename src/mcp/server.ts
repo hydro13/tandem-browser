@@ -222,6 +222,11 @@ server.tool(
   {
     code: z.string().describe('JavaScript code to execute'),
   },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: true,
+  },
   async ({ code }) => {
     const result = await apiCall('POST', '/execute-js', { code });
     await logActivity('execute_js', code.substring(0, 80));

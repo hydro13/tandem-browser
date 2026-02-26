@@ -356,6 +356,24 @@ export const IPV4_OCTAL_REGEX = /(?:0[0-3][0-7]{0,2}\.){3}0[0-3][0-7]{0,2}/g;
 // Email extraction
 export const EMAIL_REGEX = /[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*/g;
 
+// Known WebSocket service providers (not suspicious)
+export const KNOWN_WS_SERVICES = new Set([
+  // Pusher
+  'ws.pusherapp.com', 'sockjs.pusher.com',
+  // Socket.IO CDN / common endpoints
+  'socket.io', 'cdn.socket.io',
+  // Firebase
+  's-usc1c-nss-2.firebaseio.com', 'firebaseio.com',
+  // Ably
+  'realtime.ably.io',
+  // Supabase
+  'realtime.supabase.co',
+  // Common chat/collab
+  'wss.slack.com', 'gateway.discord.gg',
+  // Intercom
+  'nexus-websocket-a.intercom.io',
+]);
+
 // Known analytics/tracker domains (merged from outbound-guard + content-analyzer)
 export const KNOWN_TRACKERS = new Set([
   // Google Analytics / Tag Manager / Ads
