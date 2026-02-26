@@ -56,7 +56,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-26
-- **Commit:** (pending)
+- **Commit:** 2118d75
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] Requests without Origin header now require Bearer token
