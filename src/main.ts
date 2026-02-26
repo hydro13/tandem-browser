@@ -532,6 +532,8 @@ app.whenReady().then(async () => {
           configManager,
           audioCaptureManager,
         });
+      }).catch((err) => {
+        console.error('[activate] Failed to recreate window:', err);
       });
     }
   });

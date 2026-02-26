@@ -356,8 +356,7 @@ export function createXScout(): XScoutAPI {
       if (approval) {
         approval.status = 'approved';
         saveState(state);
-        // TODO: Execute the approved action
-        await chat(`✅ Goedgekeurd: ${approval.type} — ${approval.target || approval.content?.substring(0, 50)}`);
+        await chat(`⚠️ Goedgekeurd maar niet uitgevoerd: ${approval.type} — ${approval.target || approval.content?.substring(0, 50)} (actie-uitvoering nog niet geïmplementeerd)`);
       }
     },
     

@@ -228,9 +228,16 @@ server.tool(
     openWorldHint: true,
   },
   async ({ code }) => {
-    const result = await apiCall('POST', '/execute-js', { code });
-    await logActivity('execute_js', code.substring(0, 80));
-    return { content: [{ type: 'text', text: JSON.stringify(result.result ?? result, null, 2) }] };
+    try {
+      const result = await apiCall('POST', '/execute-js/confirm', { code });
+      await logActivity('execute_js', code.substring(0, 80));
+      return { content: [{ type: 'text', text: JSON.stringify(result.result ?? result, null, 2) }] };
+    } catch (err: any) {
+      if (err.message?.includes('rejected')) {
+        return { content: [{ type: 'text', text: 'User rejected JavaScript execution.' }], isError: true };
+      }
+      throw err;
+    }
   }
 );
 

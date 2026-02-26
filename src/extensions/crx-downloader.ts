@@ -202,7 +202,9 @@ export class CrxDownloader {
 
     console.log(`🧩 Extension ${extensionId} installed: ${manifestName} v${manifestVersion}`);
 
-    // TODO: Full CRX3 RSA signature verification via protobuf — future phase
+    // CRX3 RSA signature verification not yet implemented — warn user
+    console.warn(`⚠️ Extension ${extensionId} installed WITHOUT cryptographic signature verification. Only install extensions from trusted sources (Chrome Web Store).`);
+
     return {
       success: true,
       extensionId,
@@ -211,7 +213,7 @@ export class CrxDownloader {
       installPath,
       signatureVerified: false,
       contentScriptPatterns,
-      warning,
+      warning: warning || 'Extension signature not verified — installed from Google CDN only',
     };
   }
 

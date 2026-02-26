@@ -361,7 +361,7 @@
       const el = document.getElementById('breadcrumb');
       let html = '<span data-id="">Alle Bookmarks</span>';
       for (const item of currentFolderPath) {
-        html += `<span class="sep">›</span><span data-id="${item.id}">${item.name}</span>`;
+        html += `<span class="sep">›</span><span data-id="${escapeHtml(item.id || '')}">${escapeHtml(item.name || '')}</span>`;
       }
       el.innerHTML = html;
       el.querySelectorAll('span[data-id]').forEach(span => {
@@ -401,12 +401,12 @@
           el.innerHTML = `
             <div class="bm-icon">&#x1F4C1;</div>
             <div class="bm-info">
-              <div class="bm-name">${item.name}</div>
+              <div class="bm-name">${escapeHtml(item.name || '')}</div>
               <div class="bm-url">${count} items</div>
             </div>
             <div class="bm-actions">
-              <button class="edit" data-id="${item.id}">Bewerk</button>
-              <button class="delete" data-id="${item.id}">Verwijder</button>
+              <button class="edit" data-id="${escapeHtml(item.id || '')}">Bewerk</button>
+              <button class="delete" data-id="${escapeHtml(item.id || '')}">Verwijder</button>
             </div>
           `;
           el.addEventListener('dblclick', () => {
@@ -422,18 +422,19 @@
           let hostname = '';
           try { hostname = new URL(item.url).hostname; } catch {}
           el.innerHTML = `
-            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
+            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${escapeHtml(hostname)}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
             <div class="bm-info">
-              <div class="bm-name">${item.name || hostname}</div>
-              <div class="bm-url">${item.url || ''}</div>
+              <div class="bm-name">${escapeHtml(item.name || hostname)}</div>
+              <div class="bm-url">${escapeHtml(item.url || '')}</div>
             </div>
             <div class="bm-actions">
-              <button class="edit" data-id="${item.id}">Bewerk</button>
-              <button class="delete" data-id="${item.id}">Verwijder</button>
+              <button class="edit" data-id="${escapeHtml(item.id || '')}">Bewerk</button>
+              <button class="delete" data-id="${escapeHtml(item.id || '')}">Verwijder</button>
             </div>
           `;
           el.querySelector('.bm-info').addEventListener('click', () => {
-            window.location.href = item.url;
+            const url = item.url || '';
+            if (url.startsWith('http:') || url.startsWith('https:')) window.location.href = url;
           });
         }
 
@@ -561,13 +562,16 @@
           let hostname = '';
           try { hostname = new URL(item.url).hostname; } catch {}
           el.innerHTML = `
-            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
+            <div class="bm-icon"><img src="https://www.google.com/s2/favicons?domain=${escapeHtml(hostname)}&sz=32" onerror="this.parentElement.textContent='🔗'"></div>
             <div class="bm-info">
-              <div class="bm-name">${item.name || hostname}</div>
-              <div class="bm-url">${item.url || ''}</div>
+              <div class="bm-name">${escapeHtml(item.name || hostname)}</div>
+              <div class="bm-url">${escapeHtml(item.url || '')}</div>
             </div>
           `;
-          el.addEventListener('click', () => { window.location.href = item.url; });
+          el.addEventListener('click', () => {
+            const url = item.url || '';
+            if (url.startsWith('http:') || url.startsWith('https:')) window.location.href = url;
+          });
           list.appendChild(el);
         }
       }, 300);

@@ -3004,7 +3004,8 @@
         else if (event.data.selector) text = `${event.type}: ${event.data.selector}`;
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
-        const source = event.data.source || 'robin';
+        const rawSource = event.data.source || 'robin';
+        const source = ['kees', 'robin'].includes(rawSource) ? rawSource : 'robin';
         const sourceEmoji = source === 'kees' ? '🤖' : '👤';
         const item = document.createElement('div');
         item.className = 'activity-item';
@@ -6424,7 +6425,7 @@
           applyTheme(theme);
         }
       } catch (error) {
-        console.log('Failed to load theme config, using default dark theme');
+        // Default dark theme used (config load failed)
       }
     }
 

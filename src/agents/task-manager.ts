@@ -90,7 +90,7 @@ const ACTION_RISK: Record<string, RiskLevel> = {
   'reload': 'low',
   'click': 'medium',
   'select': 'medium',
-  'execute_js': 'medium',
+  'execute_js': 'high',
   'type': 'high',
   'fill_form': 'high',
   'submit': 'high',

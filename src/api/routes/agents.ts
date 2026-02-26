@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { RouteContext } from '../context';
+import { RouteContext, getActiveWC } from '../context';
 
 export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -87,6 +87,54 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
         ctx.panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
       }
       res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  // POST /execute-js/confirm — Execute JS with user approval gate (used by MCP)
+  router.post('/execute-js/confirm', async (req: Request, res: Response) => {
+    try {
+      const { code } = req.body;
+      if (!code || typeof code !== 'string') {
+        res.status(400).json({ error: 'code is required' });
+        return;
+      }
+
+      const preview = code.length > 120 ? code.substring(0, 120) + '...' : code;
+
+      // Create a task with a single step that requires approval
+      const task = ctx.taskManager.createTask(
+        `Execute JavaScript: ${preview}`,
+        'claude',
+        'claude',
+        [{
+          description: `Execute JS in active tab: ${preview}`,
+          action: { type: 'execute_js', params: { code } },
+          riskLevel: 'high',
+          requiresApproval: true,
+        }]
+      );
+
+      // Request approval — resolves when user clicks approve/reject
+      const approved = await Promise.race([
+        ctx.taskManager.requestApproval(task, 0),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 30000)),
+      ]);
+
+      if (!approved) {
+        res.status(403).json({ error: 'User rejected JS execution', rejected: true });
+        return;
+      }
+
+      // User approved — execute the code
+      const wc = await getActiveWC(ctx);
+      if (!wc) {
+        res.status(400).json({ error: 'No active tab' });
+        return;
+      }
+      const result = await wc.executeJavaScript(code);
+      res.json({ ok: true, result });
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
