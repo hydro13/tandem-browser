@@ -204,10 +204,12 @@ export class TandemAPI {
     this.app = express();
     this.app.use(cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (curl, Electron, server-to-server)
+        // Allow requests with no origin (curl, server-to-server)
         if (!origin) return callback(null, true);
         // Allow file:// protocol (Electron shell pages)
         if (origin.startsWith('file://')) return callback(null, true);
+        // Allow "null" origin — Electron sends this for file:// → http:// cross-origin fetches
+        if (origin === 'null') return callback(null, true);
         // Allow localhost origins (dev tools, other local apps)
         if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) return callback(null, true);
         // Block everything else
@@ -224,9 +226,10 @@ export class TandemAPI {
       // Allow OPTIONS preflight
       if (req.method === 'OPTIONS') return next();
 
-      // Allow requests from our own shell (file:// origin) and localhost
+      // Allow requests from our own shell (file:// / "null" origin) and localhost
+      // Note: Electron sends Origin: null (the string "null") for file:// → http:// fetches
       const origin = req.headers.origin || '';
-      if (origin === 'file://' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      if (origin === 'file://' || origin === 'null' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
         return next();
       }
 
