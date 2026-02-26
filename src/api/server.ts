@@ -1,4 +1,4 @@
-import express, { Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction, Router } from 'express';
 import cors from 'cors';
 import http from 'http';
 import path from 'path';
@@ -7,6 +7,9 @@ import os from 'os';
 import crypto from 'crypto';
 import { BrowserWindow, webContents } from 'electron';
 import { copilotAlert } from '../main';
+import { RouteContext } from './context';
+import { registerBrowserRoutes } from './routes/browser';
+import { registerTabRoutes } from './routes/tabs';
 import { TabManager } from '../tabs/manager';
 import { PanelManager } from '../panel/manager';
 import { DrawOverlayManager } from '../draw/overlay';
@@ -302,7 +305,55 @@ export class TandemAPI {
     return wc.executeJavaScript(code);
   }
 
+  private buildContext(): RouteContext {
+    return {
+      win: this.win,
+      tabManager: this.tabManager,
+      panelManager: this.panelManager,
+      drawManager: this.drawManager,
+      activityTracker: this.activityTracker,
+      voiceManager: this.voiceManager,
+      behaviorObserver: this.behaviorObserver,
+      configManager: this.configManager,
+      siteMemory: this.siteMemory,
+      watchManager: this.watchManager,
+      headlessManager: this.headlessManager,
+      formMemory: this.formMemory,
+      contextBridge: this.contextBridge,
+      pipManager: this.pipManager,
+      networkInspector: this.networkInspector,
+      chromeImporter: this.chromeImporter,
+      bookmarkManager: this.bookmarkManager,
+      historyManager: this.historyManager,
+      downloadManager: this.downloadManager,
+      audioCaptureManager: this.audioCaptureManager,
+      extensionLoader: this.extensionLoader,
+      extensionManager: this.extensionManager,
+      claroNoteManager: this.claroNoteManager,
+      contentExtractor: this.contentExtractor,
+      workflowEngine: this.workflowEngine,
+      loginManager: this.loginManager,
+      eventStream: this.eventStream,
+      taskManager: this.taskManager,
+      tabLockManager: this.tabLockManager,
+      devToolsManager: this.devToolsManager,
+      copilotStream: this.copilotStream,
+      securityManager: this.securityManager,
+      snapshotManager: this.snapshotManager,
+      networkMocker: this.networkMocker,
+      sessionManager: this.sessionManager,
+      stateManager: this.stateManager,
+      scriptInjector: this.scriptInjector,
+      locatorFinder: this.locatorFinder,
+      deviceEmulator: this.deviceEmulator,
+    };
+  }
+
   private setupRoutes(): void {
+    const ctx = this.buildContext();
+    registerBrowserRoutes(this.app as unknown as Router, ctx);
+    registerTabRoutes(this.app as unknown as Router, ctx);
+
     // ═══════════════════════════════════════════════
     // STATUS
     // ═══════════════════════════════════════════════
@@ -496,513 +547,6 @@ export class TandemAPI {
       }, 30000);
 
       req.on('close', () => { clearInterval(heartbeat); unsubscribe(); });
-    });
-
-    // ═══════════════════════════════════════════════
-    // NAVIGATION
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/navigate', async (req: Request, res: Response) => {
-      const { url, tabId } = req.body;
-      if (!url) { res.status(400).json({ error: 'url required' }); return; }
-      try {
-        const sessionName = req.headers['x-session'] as string;
-        if (sessionName && sessionName !== 'default') {
-          // Session-aware navigate: find or create tab for this session
-          const partition = this.getSessionPartition(req);
-          const sessionTabs = this.tabManager.listTabs().filter(t => t.partition === partition);
-          if (sessionTabs.length === 0) {
-            // No tab for this session — create one
-            const tab = await this.tabManager.openTab(url, undefined, 'copilot', partition);
-            this.panelManager.logActivity('navigate', { url, source: 'copilot', session: sessionName });
-            res.json({ ok: true, url, tab: tab.id });
-            return;
-          }
-          // Focus existing session tab
-          await this.tabManager.focusTab(sessionTabs[0].id);
-        } else if (tabId) {
-          // If tabId specified, focus that tab first
-          await this.tabManager.focusTab(tabId);
-        }
-        const wc = await this.getActiveWC();
-        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-        wc.loadURL(url);
-        // Mark tab as copilot-controlled when navigated via API
-        const activeTab = this.tabManager.getActiveTab();
-        if (activeTab) {
-          this.tabManager.setTabSource(activeTab.id, 'copilot');
-        }
-        this.panelManager.logActivity('navigate', { url, source: 'copilot' });
-        res.json({ ok: true, url });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // PAGE CONTENT
-    // ═══════════════════════════════════════════════
-
-    this.app.get('/page-content', async (req: Request, res: Response) => {
-      try {
-        const settleMs = parseInt(req.query.settle as string) || 800;
-        const maxWait = parseInt(req.query.timeout as string) || 10000;
-        const targetLength = parseInt(req.query.minLength as string) || 1000;
-
-        const content = await this.execInSessionTab(req, `
-          new Promise((resolve) => {
-            const extract = () => {
-              const title = document.title;
-              const url = window.location.href;
-              const meta = document.querySelector('meta[name="description"]');
-              const description = meta ? meta.getAttribute('content') : '';
-              const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
-              return { title, url, description, text, length: text.length };
-            };
-
-            const deadline = Date.now() + ${maxWait};
-            let timer = null;
-            let observer = null;
-
-            const cleanupAndResolve = () => {
-              if (timer) clearTimeout(timer);
-              if (observer) observer.disconnect();
-              resolve(extract());
-            };
-
-            // Quick check: if content is already substantial, return immediately
-            // But for SPA docs, we sometimes want to wait anyway if it's too short
-            const quick = extract();
-            if (quick.length > ${targetLength}) {
-              resolve(quick);
-              return;
-            }
-
-            // SPA wait: use MutationObserver to detect when DOM settles
-            // Real sliding timeout: reset the settle timer on every mutation
-            const onSettle = () => {
-              // Wait period elapsed with no mutations
-              const current = extract();
-              // If we are settled but still suspiciously short, it might mean the 
-              // API fetch is still ongoing and hasn't mutated the DOM yet.
-              // In this case, we extend the wait until the hard deadline.
-              if (current.length < ${targetLength} && Date.now() < deadline) {
-                // Check again in 500ms
-                timer = setTimeout(onSettle, 500);
-              } else {
-                cleanupAndResolve();
-              }
-            };
-
-            const onMutation = () => {
-              if (Date.now() >= deadline) {
-                cleanupAndResolve();
-                return;
-              }
-              // Reset settle timer
-              if (timer) clearTimeout(timer);
-              timer = setTimeout(onSettle, ${settleMs});
-            };
-
-            observer = new MutationObserver(onMutation);
-
-            observer.observe(document.body, {
-              childList: true, subtree: true,
-              characterData: true, attributes: false
-            });
-
-            // Start the initial settle timer (in case no mutations happen)
-            timer = setTimeout(onSettle, ${settleMs});
-
-            // Hard deadline safety
-            setTimeout(cleanupAndResolve, ${maxWait});
-          })
-        `);
-        res.json(content);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.get('/page-html', async (_req: Request, res: Response) => {
-      try {
-        const html = await this.execInActiveTab('document.documentElement.outerHTML');
-        res.type('html').send(html);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // CLICK — via sendInputEvent (Event.isTrusted = true)
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/click', async (req: Request, res: Response) => {
-      const { selector } = req.body;
-      if (!selector) { res.status(400).json({ error: 'selector required' }); return; }
-      try {
-        const wc = await this.getSessionWC(req);
-        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-        const result = await humanizedClick(wc, selector);
-        this.panelManager.logActivity('click', { selector });
-        res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // TYPE — via sendInputEvent char-by-char (Event.isTrusted = true)
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/type', async (req: Request, res: Response) => {
-      const { selector, text, clear } = req.body;
-      if (!selector || text === undefined) {
-        res.status(400).json({ error: 'selector and text required' });
-        return;
-      }
-      try {
-        const wc = await this.getSessionWC(req);
-        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-        const result = await humanizedType(wc, selector, text, !!clear);
-        this.panelManager.logActivity('input', { selector, textLength: text.length });
-        res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // EXECUTE JS
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/execute-js', async (req: Request, res: Response) => {
-      const script = req.body.code || req.body.script;
-      if (!script) { res.status(400).json({ error: 'code or script required' }); return; }
-      try {
-        const result = await this.execInActiveTab(script);
-        res.json({ ok: true, result });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // SCREENSHOT — via capturePage (main process, not in webview)
-    // ═══════════════════════════════════════════════
-
-    this.app.get('/screenshot', async (req: Request, res: Response) => {
-      try {
-        const wc = await this.getSessionWC(req);
-        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-        const image = await wc.capturePage();
-        const png = image.toPNG();
-
-        if (req.query.save) {
-          const fs = require('fs');
-          const filePath = path.resolve(req.query.save as string);
-
-          const allowedDirs = [
-            path.join(os.homedir(), 'Desktop'),
-            path.join(os.homedir(), 'Downloads'),
-            path.join(os.homedir(), '.tandem'),
-          ];
-          const isAllowed = allowedDirs.some(dir => filePath.startsWith(dir + path.sep) || filePath === dir);
-
-          if (!isAllowed) {
-            res.status(400).json({ error: 'Save path must be in ~/Desktop, ~/Downloads, or ~/.tandem' });
-            return;
-          }
-
-          fs.writeFileSync(filePath, png);
-          res.json({ ok: true, path: filePath, size: png.length });
-        } else {
-          res.type('png').send(png);
-        }
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // COOKIES
-    // ═══════════════════════════════════════════════
-
-    this.app.get('/cookies', async (req: Request, res: Response) => {
-      try {
-        const url = req.query.url as string || '';
-        const cookies = await this.win.webContents.session.cookies.get(
-          url ? { url } : {}
-        );
-        res.json({ cookies });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.post('/cookies/clear', async (req: Request, res: Response) => {
-      try {
-        const { domain } = req.body;
-        if (!domain) { res.status(400).json({ error: 'domain required' }); return; }
-        const allCookies = await this.win.webContents.session.cookies.get({});
-        const matching = allCookies.filter(c => (c.domain || '').includes(domain));
-        let removed = 0;
-        for (const c of matching) {
-          const protocol = c.secure ? 'https' : 'http';
-          const cookieUrl = `${protocol}://${(c.domain || '').replace(/^\./, '')}${c.path}`;
-          await this.win.webContents.session.cookies.remove(cookieUrl, c.name);
-          removed++;
-        }
-        res.json({ ok: true, removed, domain });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // SCROLL — via sendInputEvent (mouseWheel)
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/scroll', async (req: Request, res: Response) => {
-      const { direction = 'down', amount = 500, target, selector } = req.body;
-      try {
-        const wc = await this.getSessionWC(req);
-        if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-
-        // Smart scroll: target="top"|"bottom", selector=CSS selector, or classic deltaY
-        if (target === 'top') {
-          await wc.executeJavaScript('window.scrollTo({ top: 0, behavior: "smooth" })');
-        } else if (target === 'bottom') {
-          await wc.executeJavaScript('window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" })');
-        } else if (selector) {
-          const scrolled = await wc.executeJavaScript(`
-            (() => {
-              const el = document.querySelector(${JSON.stringify(selector)});
-              if (el) { el.scrollIntoView({ behavior: "smooth", block: "center" }); return true; }
-              return false;
-            })()
-          `);
-          if (!scrolled) {
-            res.status(404).json({ error: 'Selector not found', selector });
-            return;
-          }
-        } else {
-          const deltaY = direction === 'up' ? -amount : amount;
-          wc.sendInputEvent({
-            type: 'mouseWheel',
-            x: 400,
-            y: 400,
-            deltaX: 0,
-            deltaY,
-          });
-        }
-
-        // Always return scroll position info
-        const scrollInfo = await wc.executeJavaScript(`
-          JSON.stringify({
-            scrollTop: Math.round(document.documentElement.scrollTop),
-            scrollHeight: document.documentElement.scrollHeight,
-            clientHeight: document.documentElement.clientHeight,
-            atTop: document.documentElement.scrollTop <= 0,
-            atBottom: Math.ceil(document.documentElement.scrollTop + document.documentElement.clientHeight) >= document.documentElement.scrollHeight
-          })
-        `);
-        const scroll = JSON.parse(scrollInfo);
-
-        this.panelManager.logActivity('scroll', { direction, amount, target, selector });
-        this.behaviorObserver.recordScroll(target === 'up' ? -amount : amount);
-        res.json({ ok: true, scroll });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // COPILOT ALERT
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/copilot-alert', (req: Request, res: Response) => {
-      const { title = 'Hulp nodig', body = '' } = req.body;
-      copilotAlert(title, body);
-      res.json({ ok: true, sent: true });
-    });
-
-    // ═══════════════════════════════════════════════
-    // WAIT
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/wait', async (req: Request, res: Response) => {
-      const { selector, timeout = 10000 } = req.body;
-      try {
-        const code = selector ? `
-          new Promise((res, rej) => {
-            const check = () => {
-              const el = document.querySelector(${JSON.stringify(selector)});
-              if (el) return res({ ok: true, found: true });
-              setTimeout(check, 200);
-            };
-            check();
-            setTimeout(() => res({ ok: true, found: false, timeout: true }), ${JSON.stringify(timeout)});
-          })
-        ` : `
-          new Promise(res => {
-            if (document.readyState === 'complete') return res({ ok: true, ready: true });
-            window.addEventListener('load', () => res({ ok: true, ready: true }));
-            setTimeout(() => res({ ok: true, ready: false, timeout: true }), ${timeout});
-          })
-        `;
-        const result = await this.execInActiveTab(code);
-        res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // LINKS
-    // ═══════════════════════════════════════════════
-
-    this.app.get('/links', async (_req: Request, res: Response) => {
-      try {
-        const links = await this.execInActiveTab(`
-          Array.from(document.querySelectorAll('a[href]')).map(a => ({
-            text: a.textContent?.trim().substring(0, 100),
-            href: a.href,
-            visible: a.offsetParent !== null
-          })).filter(l => l.href && !l.href.startsWith('javascript:'))
-        `);
-        res.json({ links });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // FORMS
-    // ═══════════════════════════════════════════════
-
-    this.app.get('/forms', async (_req: Request, res: Response) => {
-      try {
-        const forms = await this.execInActiveTab(`
-          Array.from(document.querySelectorAll('form')).map((form, i) => ({
-            index: i,
-            action: form.action,
-            method: form.method,
-            fields: Array.from(form.querySelectorAll('input, textarea, select')).map(f => ({
-              tag: f.tagName.toLowerCase(),
-              type: f.type || '',
-              name: f.name || '',
-              id: f.id || '',
-              placeholder: f.placeholder || '',
-              value: f.value || ''
-            }))
-          }))
-        `);
-        res.json({ forms });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // TAB MANAGEMENT
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/tabs/open', async (req: Request, res: Response) => {
-      const { url = 'about:blank', groupId, source = 'robin', focus = true } = req.body;
-      try {
-        const tabSource = source === 'kees' || source === 'copilot' ? 'copilot' as const : 'robin' as const;
-        const tab = await this.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
-        this.panelManager.logActivity('tab-open', { url, source: tabSource });
-        res.json({ ok: true, tab });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.post('/tabs/close', async (req: Request, res: Response) => {
-      const { tabId } = req.body;
-      if (!tabId) { res.status(400).json({ error: 'tabId required' }); return; }
-      try {
-        const closed = await this.tabManager.closeTab(tabId);
-        res.json({ ok: closed });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.get('/tabs/list', async (_req: Request, res: Response) => {
-      try {
-        const tabs = this.tabManager.listTabs();
-        const groups = this.tabManager.listGroups();
-        res.json({ tabs, groups });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.post('/tabs/focus', async (req: Request, res: Response) => {
-      const { tabId } = req.body;
-      if (!tabId) { res.status(400).json({ error: 'tabId required' }); return; }
-      try {
-        const focused = await this.tabManager.focusTab(tabId);
-        res.json({ ok: focused });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    this.app.post('/tabs/group', async (req: Request, res: Response) => {
-      const { groupId, name, color = '#4285f4', tabIds } = req.body;
-      if (!groupId || !name || !tabIds) {
-        res.status(400).json({ error: 'groupId, name, and tabIds required' });
-        return;
-      }
-      try {
-        const group = this.tabManager.setGroup(groupId, name, color, tabIds);
-        res.json({ ok: true, group });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // Set tab source (robin/copilot)
-    this.app.post('/tabs/source', (req: Request, res: Response) => {
-      try {
-        const { tabId, source } = req.body;
-        if (!tabId || !source) {
-          return res.status(400).json({ error: 'tabId and source required' });
-        }
-        const ok = this.tabManager.setTabSource(tabId, source);
-        res.json({ ok });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // Cleanup zombie tabs (unmanaged webContents)
-    this.app.post('/tabs/cleanup', (_req: Request, res: Response) => {
-      try {
-        const trackedIds = new Set(
-          this.tabManager.listTabs().map(t => t.webContentsId)
-        );
-        // Also include the main window's webContents
-        const mainWcId = this.win.webContents.id;
-        trackedIds.add(mainWcId);
-
-        let destroyed = 0;
-        for (const wc of webContents.getAllWebContents()) {
-          if (wc.isDestroyed()) continue;
-          if (trackedIds.has(wc.id)) continue;
-          const wcUrl = wc.getURL();
-          if (wcUrl.startsWith('file://') || wcUrl.startsWith('devtools://') || wcUrl.startsWith('chrome://')) continue;
-          wc.close();
-          destroyed++;
-        }
-        res.json({ ok: true, destroyed });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
     });
 
     // ═══════════════════════════════════════════════
@@ -1722,22 +1266,6 @@ export class TandemAPI {
         if (!url || !note) { res.status(400).json({ error: 'url and note required' }); return; }
         const page = this.contextBridge.addNote(url, note);
         res.json({ ok: true, page });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // BIDIRECTIONAL STEERING — Phase 3.6
-    // ═══════════════════════════════════════════════
-
-    this.app.post('/tabs/source', (req: Request, res: Response) => {
-      try {
-        const { tabId, source } = req.body;
-        if (!tabId || !source) { res.status(400).json({ error: 'tabId and source required' }); return; }
-        if (source !== 'robin' && source !== 'kees' && source !== 'copilot') { res.status(400).json({ error: 'source must be robin, copilot, or kees' }); return; }
-        const ok = this.tabManager.setTabSource(tabId, source);
-        res.json({ ok });
       } catch (e: any) {
         res.status(500).json({ error: e.message });
       }
