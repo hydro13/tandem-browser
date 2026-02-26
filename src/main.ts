@@ -1005,6 +1005,7 @@ app.on('will-quit', () => {
   if (extensionToolbar) extensionToolbar.destroy();
   if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
   if (extensionManager) extensionManager.destroyUpdateChecker();
+  if (historyManager) historyManager.destroy();
 });
 
 app.on('window-all-closed', () => {

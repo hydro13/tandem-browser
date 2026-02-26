@@ -271,7 +271,7 @@ export class TandemAPI {
     return this.sessionManager.resolvePartition(sessionName);
   }
 
-  /** Get WebContents for a session (via X-Session header). Focuses matching tab. */
+  /** Get WebContents for a session (via X-Session header). */
   private async getSessionWC(req: Request): Promise<Electron.WebContents | null> {
     const sessionName = req.headers['x-session'] as string;
     if (!sessionName || sessionName === 'default') {
@@ -280,9 +280,7 @@ export class TandemAPI {
     const partition = this.getSessionPartition(req);
     const tabs = this.tabManager.listTabs().filter(t => t.partition === partition);
     if (tabs.length === 0) return null;
-    // Focus the first matching tab so getActiveWC works for subsequent calls
-    await this.tabManager.focusTab(tabs[0].id);
-    return this.getActiveWC();
+    return webContents.fromId(tabs[0].webContentsId) || null;
   }
 
   /** Run JS in a session's tab (via X-Session header) */

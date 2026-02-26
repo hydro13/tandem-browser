@@ -28,6 +28,7 @@ const MAX_ENTRIES = 10000;
 export class HistoryManager {
   private storePath: string;
   private store: HistoryStore;
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     const tandemDir = path.join(os.homedir(), '.tandem');
@@ -48,7 +49,27 @@ export class HistoryManager {
   }
 
   private save(): void {
-    fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => {
+      this.saveTimer = null;
+      try {
+        fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
+      } catch (e: any) {
+        console.warn('[HistoryManager] Failed to save:', e.message);
+      }
+    }, 2000);
+  }
+
+  destroy(): void {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+      try {
+        fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
+      } catch (e: any) {
+        console.warn('[HistoryManager] Failed to save on destroy:', e.message);
+      }
+    }
   }
 
   /** Record a page visit */
