@@ -227,10 +227,17 @@ export class TandemAPI {
       // Allow OPTIONS preflight
       if (req.method === 'OPTIONS') return next();
 
-      // Allow requests from our own shell (file:// / "null" origin) and localhost
-      // Note: Electron may send 'file://', 'file:///', 'file:///full/path', or 'null' as origin
+      // Since the server binds exclusively to 127.0.0.1, every TCP connection
+      // is local by definition. Use socket address as the authoritative check —
+      // Origin headers are unreliable across Electron versions (Chrome 131+
+      // file:// webviews send no Origin at all; older versions send 'null' or 'file://').
+      const remoteAddr = req.socket.remoteAddress || '';
+      if (remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1') {
+        return next();
+      }
+      // Fallback: also allow by origin for proxied setups
       const origin = req.headers.origin || '';
-      if (origin.startsWith('file://') || origin === 'null' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      if (!origin || origin.startsWith('file://') || origin === 'null' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
         return next();
       }
 
