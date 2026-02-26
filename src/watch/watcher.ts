@@ -4,7 +4,7 @@ import os from 'os';
 import crypto from 'crypto';
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
-import { copilotAlert } from '../main';
+import { copilotAlert } from '../notifications/alert';
 
 export interface WatchEntry {
   id: string;

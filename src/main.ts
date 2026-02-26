@@ -10,7 +10,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[FATAL] Unhandled rejection:', reason);
 });
 
-import { app, BrowserWindow, session, ipcMain, Notification, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
+import { app, BrowserWindow, session, ipcMain, globalShortcut, clipboard, nativeImage, webContents, WebContents, Menu } from 'electron';
 import path from 'path';
 import fs from 'fs';
 
@@ -57,6 +57,7 @@ import { StateManager } from './sessions/state';
 import { ScriptInjector } from './scripts/injector';
 import { LocatorFinder } from './locators/finder';
 import { DeviceEmulator } from './device/emulator';
+import { setMainWindow } from './notifications/alert';
 
 const IS_DEV = process.argv.includes('--dev');
 const API_PORT = 8765;
@@ -256,6 +257,7 @@ async function createWindow(): Promise<BrowserWindow> {
       sandbox: true,
     },
   });
+  setMainWindow(mainWindow);
 
   mainWindow.loadFile(path.join(__dirname, '..', 'shell', 'index.html'));
 
@@ -265,6 +267,7 @@ async function createWindow(): Promise<BrowserWindow> {
   }
 
   mainWindow.on('closed', () => {
+    setMainWindow(null);
     mainWindow = null;
     tabManager = null;
     if (behaviorObserver) {
@@ -949,14 +952,6 @@ function buildAppMenu(): void {
   );
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-}
-
-// Copilot alert — notify the human when the AI copilot needs help
-export function copilotAlert(title: string, body: string): void {
-  if (Notification.isSupported()) {
-    new Notification({ title: `🧀 ${title}`, body }).show();
-  }
-  mainWindow?.webContents.send('copilot-alert', { title, body });
 }
 
 app.whenReady().then(async () => {
