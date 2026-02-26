@@ -114,7 +114,7 @@
 
 - **Status:** DONE
 - **Date:** 2026-02-26
-- **Commit:** (pending)
+- **Commit:** 1fdadfd
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
   - [x] `sandbox: true` in webPreferences (main.ts)
