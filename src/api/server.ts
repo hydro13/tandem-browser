@@ -206,9 +206,10 @@ export class TandemAPI {
       origin: (origin, callback) => {
         // Allow requests with no origin (curl, server-to-server)
         if (!origin) return callback(null, true);
-        // Allow file:// protocol (Electron shell pages)
+        // Allow file:// protocol (Electron shell + webview pages)
+        // Note: Electron may send 'file://', 'file:///', or 'file:///full/path'
         if (origin.startsWith('file://')) return callback(null, true);
-        // Allow "null" origin — Electron sends this for file:// → http:// cross-origin fetches
+        // Allow "null" origin — some Electron contexts send this for file:// → http:// fetches
         if (origin === 'null') return callback(null, true);
         // Allow localhost origins (dev tools, other local apps)
         if (origin.match(/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/)) return callback(null, true);
@@ -227,9 +228,9 @@ export class TandemAPI {
       if (req.method === 'OPTIONS') return next();
 
       // Allow requests from our own shell (file:// / "null" origin) and localhost
-      // Note: Electron sends Origin: null (the string "null") for file:// → http:// fetches
+      // Note: Electron may send 'file://', 'file:///', 'file:///full/path', or 'null' as origin
       const origin = req.headers.origin || '';
-      if (origin === 'file://' || origin === 'null' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
+      if (origin.startsWith('file://') || origin === 'null' || origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1')) {
         return next();
       }
 
