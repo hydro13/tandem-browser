@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Version:** 0.11.0 (pending — bump after first item completed)
-**Last completed item:** —
-**Overall:** 0/19 done
+**Version:** 0.11.1
+**Last completed item:** #10
+**Overall:** 10/19 done
 
 ---
 
@@ -15,16 +15,16 @@
 
 | # | Description | Status | Session | Commit |
 |---|-------------|--------|---------|--------|
-| 1 | **Constants file** — Extract `API_PORT` (8765, 7 files), `WEBHOOK_PORT` (18789, 3 files), `DEFAULT_PARTITION` ('persist:tandem', 4 files), `AUTH_POPUP_DOMAINS`, named timeouts to `src/utils/constants.ts` | TODO | | |
-| 2 | **Delete dead code** — Remove `src/chat/interfaces.ts` (never imported). Rename duplicate `ActivityEntry` → `TaskActivityEntry` in `src/agents/task-manager.ts` | TODO | | |
-| 3 | **Fix tab-register race condition** — Remove duplicate `ipcMain.on('tab-register')` listener at `src/main.ts:509`. The handler at line 471 + pending drain at 491-503 already covers all cases | TODO | | |
-| 4 | **Silent catch → warn** — Replace 16× `.catch(() => {})` with `.catch(e => console.warn(...))` across 8 files (main.ts, panel/manager.ts, ipc/handlers.ts, device/emulator.ts, network/mocker.ts, script-guard.ts, security-manager.ts, mcp/server.ts) | TODO | | |
-| 5 | **Timing-safe token comparison** — Replace `===` with `crypto.timingSafeEqual` in `src/api/server.ts:111,113`. Deprecate query string token (`?token=`) with console.warn | TODO | | |
-| 6 | **Dutch → English** — Translate Dutch strings and comments to English in ~10 files (mcp/api-client.ts, device/emulator.ts, main.ts, task-manager.ts, tab-lock-manager.ts, routes/agents.ts, mcp/server.ts, context-bridge.ts) | TODO | | |
-| 7 | **Extract script-guard pure functions** — Move `calculateEntropy`, `normalizeScriptSource`, `computeASTHash`, `computeSimilarity` from `src/security/script-guard.ts` lines 9-160 → `src/security/script-utils.ts` | TODO | | |
-| 8 | **Named timeout constants** — Replace magic numbers `30000`, `500`, etc. with named constants like `CDP_ATTACH_DELAY_MS`, `DEFAULT_TIMEOUT_MS` | TODO | | |
-| 9 | **Fix require('fs') in route** — Move `const fs = require('fs')` to top-level import in `src/api/routes/browser.ts:212` | TODO | | |
-| 10 | **Fix setInterval(async) without try/catch** — Wrap async callbacks in `src/extensions/update-checker.ts:661` and `src/security/behavior-monitor.ts:137` | TODO | | |
+| 1 | **Constants file** — Extract `API_PORT`, `WEBHOOK_PORT`, `DEFAULT_PARTITION`, `AUTH_POPUP_PATTERNS` to `src/utils/constants.ts` | DONE | 2026-02-27 | 0995eae |
+| 2 | **Delete dead code** — Remove `src/chat/interfaces.ts`. Rename duplicate `ActivityEntry` → `TaskActivityEntry` | DONE | 2026-02-27 | 0995eae |
+| 3 | **Fix tab-register race condition** — Remove duplicate `ipcMain.on('tab-register')` listener | DONE | 2026-02-27 | 0995eae |
+| 4 | **Silent catch → warn** — Replace 16× `.catch(() => {})` with `.catch(e => console.warn(...))` | DONE | 2026-02-27 | 0995eae |
+| 5 | **Timing-safe token comparison** — `crypto.timingSafeEqual` + deprecate query string token | DONE | 2026-02-27 | 0995eae |
+| 6 | **Dutch → English** — Translate Dutch strings/comments in 12 files | DONE | 2026-02-27 | 7b81a52 |
+| 7 | **Extract script-guard pure functions** — 4 functions → `src/security/script-utils.ts` | DONE | 2026-02-27 | 7b81a52 |
+| 8 | **Named timeout constants** — `COOKIE_FLUSH_INTERVAL_MS`, `CDP_ATTACH_DELAY_MS`, `DEFAULT_TIMEOUT_MS` | DONE | 2026-02-27 | 7b81a52 |
+| 9 | **Fix require('fs') in route** — Move to top-level import in `routes/browser.ts` | DONE | 2026-02-27 | 7b81a52 |
+| 10 | **Fix setInterval(async) without try/catch** — Wrapped in `update-checker.ts` | DONE | 2026-02-27 | 7b81a52 |
 
 ## Medium Efforts (items 11–16)
 
@@ -50,6 +50,12 @@
 ## Session Log
 
 <!-- Add an entry after each session -->
+
+### 2026-02-27 — Session 1: Items 1-10 (all quick wins)
+- **Items completed:** #1, #2, #3, #4, #5, #6, #7, #8, #9, #10
+- **Version bumped to:** 0.11.1
+- **Commit(s):** `0995eae` (items 1-5), `7b81a52` (items 6-10)
+- **Notes:** All 10 quick wins done in one session using parallel subagents. 40+ files changed, 152 tests passing, 0 new TS errors. Created `src/utils/constants.ts`, `src/security/script-utils.ts`. Deleted `src/chat/interfaces.ts`.
 
 ### Template
 ```

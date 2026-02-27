@@ -4,6 +4,23 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.11.1] — 2026-02-27
+
+### Code Quality — Quick Wins (Items 1–10)
+
+- **Constants file**: `API_PORT`, `WEBHOOK_PORT`, `DEFAULT_PARTITION`, `AUTH_POPUP_PATTERNS`, timeout constants extracted to `src/utils/constants.ts`, replacing 15+ hardcoded values across 11 files
+- **Dead code cleanup**: deleted unused `src/chat/interfaces.ts`, renamed duplicate `ActivityEntry` → `TaskActivityEntry`
+- **Race condition fix**: removed duplicate `tab-register` IPC listener in main.ts
+- **Silent catches**: replaced 16 `.catch(() => {})` with contextual `console.warn` across 8 files
+- **Token security**: `crypto.timingSafeEqual` for API auth, deprecated query string token
+- **Dutch → English**: translated all Dutch strings and comments across 12 files
+- **Script utilities**: extracted 4 pure functions from `script-guard.ts` → `script-utils.ts` (independently testable, no Electron deps)
+- **Named timeouts**: `COOKIE_FLUSH_INTERVAL_MS`, `CDP_ATTACH_DELAY_MS`, `DEFAULT_TIMEOUT_MS` replace magic numbers
+- **Import fix**: moved `require('fs')` to top-level import in `routes/browser.ts`
+- **Async safety**: wrapped `setInterval(async)` callbacks in try/catch in `update-checker.ts`
+
+---
+
 ## [0.11.0] — 2026-02-27
 
 ### Code Quality & Architecture Refactoring
