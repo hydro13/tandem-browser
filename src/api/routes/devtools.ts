@@ -1,6 +1,10 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
+import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
+
+/** Maximum allowed expression length for evaluation endpoints (1 MB) */
+const MAX_CODE_LENGTH = 1_048_576;
 
 export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -139,9 +143,23 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
     try {
       const { expression, returnByValue = true, awaitPromise = true } = req.body;
       if (!expression) { res.status(400).json({ error: 'expression required' }); return; }
-      const result = await ctx.devToolsManager.evaluate(expression, { returnByValue, awaitPromise });
+      if (expression.length > MAX_CODE_LENGTH) {
+        res.status(413).json({ error: 'Expression too large (max 1MB)' });
+        return;
+      }
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Execution timed out')), DEFAULT_TIMEOUT_MS)
+      );
+      const result = await Promise.race([
+        ctx.devToolsManager.evaluate(expression, { returnByValue, awaitPromise }),
+        timeout,
+      ]);
       res.json({ ok: true, result });
     } catch (e) {
+      if (e instanceof Error && e.message === 'Execution timed out') {
+        res.status(408).json({ error: `Execution timed out after ${DEFAULT_TIMEOUT_MS / 1000}s` });
+        return;
+      }
       handleRouteError(res, e);
     }
   });

@@ -2,7 +2,7 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { RouteContext, getActiveWC } from '../context';
-import { passwordManager } from '../../passwords/manager';
+import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 
@@ -60,8 +60,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
   router.get('/passwords/status', (_req: Request, res: Response) => {
     res.json({
-      unlocked: passwordManager.isVaultUnlocked,
-      isNewVault: passwordManager.isNewVault()
+      unlocked: getPasswordManager().isVaultUnlocked,
+      isNewVault: getPasswordManager().isNewVault()
     });
   });
 
@@ -71,7 +71,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       res.status(400).json({ error: 'Password required' });
       return;
     }
-    const success = await passwordManager.unlock(password);
+    const success = await getPasswordManager().unlock(password);
     if (success) {
       res.json({ success: true, isNewVault: false });
     } else {
@@ -80,7 +80,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   });
 
   router.post('/passwords/lock', (_req: Request, res: Response) => {
-    passwordManager.lock();
+    getPasswordManager().lock();
     res.json({ success: true });
   });
 
@@ -91,7 +91,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      const identities = passwordManager.getIdentitiesForDomain(domain);
+      const identities = getPasswordManager().getIdentitiesForDomain(domain);
       res.json({ identities });
     } catch (err) {
       res.status(403).json({ error: err instanceof Error ? err.message : String(err) });
@@ -105,7 +105,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      passwordManager.saveItem(domain, username, payload);
+      getPasswordManager().saveItem(domain, username, payload);
       res.json({ success: true });
     } catch (err) {
       res.status(403).json({ error: err instanceof Error ? err.message : String(err) });

@@ -157,4 +157,11 @@ export class PasswordManager {
         return !meta;
     }
 }
-export const passwordManager = new PasswordManager();
+let _instance: PasswordManager | null = null;
+
+export function getPasswordManager(): PasswordManager {
+  if (!_instance) {
+    _instance = new PasswordManager();
+  }
+  return _instance;
+}

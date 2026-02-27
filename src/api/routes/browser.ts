@@ -7,6 +7,10 @@ import { tandemDir } from '../../utils/paths';
 import { copilotAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
 import { handleRouteError } from '../../utils/errors';
+import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
+
+/** Maximum allowed code length for JS execution endpoints (1 MB) */
+const MAX_CODE_LENGTH = 1_048_576;
 
 export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -190,10 +194,26 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   router.post('/execute-js', async (req: Request, res: Response) => {
     const script = req.body.code || req.body.script;
     if (!script) { res.status(400).json({ error: 'code or script required' }); return; }
+    if (script.length > MAX_CODE_LENGTH) {
+      res.status(413).json({ error: 'Code too large (max 1MB)' });
+      return;
+    }
     try {
-      const result = await execInActiveTab(ctx, script);
+      const wc = await getActiveWC(ctx);
+      if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Execution timed out')), DEFAULT_TIMEOUT_MS)
+      );
+      const result = await Promise.race([
+        wc.executeJavaScript(script),
+        timeout,
+      ]);
       res.json({ ok: true, result });
     } catch (e) {
+      if (e instanceof Error && e.message === 'Execution timed out') {
+        res.status(408).json({ error: `Execution timed out after ${DEFAULT_TIMEOUT_MS / 1000}s` });
+        return;
+      }
       handleRouteError(res, e);
     }
   });

@@ -21,6 +21,7 @@ import { registerDataRoutes } from './routes/data';
 import { registerContentRoutes } from './routes/content';
 import { registerMediaRoutes } from './routes/media';
 import { registerMiscRoutes } from './routes/misc';
+import { registerSecurityRoutes } from '../security/routes';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -123,7 +124,7 @@ export class TandemAPI {
 
     // Register SecurityManager API routes
     if (this.registry.securityManager) {
-      this.registry.securityManager.registerRoutes(this.app);
+      registerSecurityRoutes(this.app, this.registry.securityManager);
     }
   }
 

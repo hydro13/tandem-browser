@@ -1,6 +1,6 @@
 import { Menu, MenuItem, clipboard, dialog, WebContents, webContents } from 'electron';
 import { ContextMenuParams, ContextMenuDeps } from './types';
-import { passwordManager } from '../passwords/manager';
+import { getPasswordManager } from '../passwords/manager';
 
 /** Protocols that should never be opened/downloaded */
 const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'file:', 'vbscript:'];
@@ -228,12 +228,12 @@ export class ContextMenuBuilder {
     }));
 
     // Password Manager Autofill
-    if (passwordManager.isVaultUnlocked) {
+    if (getPasswordManager().isVaultUnlocked) {
       this.addSeparator(menu);
       const url = new URL(params.pageURL || wc.getURL());
       const domain = url.hostname;
 
-      const identities = passwordManager.getIdentitiesForDomain(domain);
+      const identities = getPasswordManager().getIdentitiesForDomain(domain);
 
       if (identities.length > 0) {
         const vaultMenu = new Menu();
