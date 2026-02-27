@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Version:** 0.11.1
-**Last completed item:** #10
-**Overall:** 10/19 done
+**Version:** 0.11.2
+**Last completed item:** #16
+**Overall:** 14/19 done
 
 ---
 
@@ -32,10 +32,10 @@
 |---|-------------|--------|---------|--------|
 | 11 | **Logger utility** — Create `src/utils/logger.ts` with levels (debug/info/warn/error) + config-driven min level. Replace 207 `console.log` calls across 48 files | TODO | | |
 | 12 | **ESLint setup** — Add `eslint.config.mjs` with `@typescript-eslint/recommended`, `no-floating-promises`, `no-console: warn`, `no-unused-vars`, `consistent-type-imports`. Add `npm run lint` script | TODO | | |
-| 13 | **Split security-manager routes** — Extract `registerRoutes()` (lines 391-965, 34 endpoints) from `src/security/security-manager.ts` (978 lines) → `src/security/routes.ts` | TODO | | |
-| 14 | **Lazy passwordManager** — Convert singleton at `src/passwords/manager.ts:160` to lazy init (factory/getter) so SQLite DB only opens when vault first accessed | TODO | | |
-| 15 | **Tests: pure logic modules** — Add tests for `config/manager.ts` (config load/merge/defaults), pure functions in `script-guard.ts`, `passwords/manager.ts` (encrypted CRUD) | TODO | | |
-| 16 | **Execute-js timeout** — Add `Promise.race` timeout (30s) and code length limit (1MB) on `/execute-js` endpoint in `src/api/routes/browser.ts` | TODO | | |
+| 13 | **Split security-manager routes** — 34 routes → `src/security/routes.ts` (978→414 lines) | DONE | 2026-02-27 | 4179a09 |
+| 14 | **Lazy passwordManager** — `getPasswordManager()` lazy init, DB opens on first access | DONE | 2026-02-27 | 4179a09 |
+| 15 | **Tests: pure logic modules** — 41 new tests (constants + config with fs mocking). 193 total | DONE | 2026-02-27 | 4179a09 |
+| 16 | **Execute-js timeout** — 30s timeout + 1MB limit on `/execute-js` and `/devtools/evaluate` | DONE | 2026-02-27 | 4179a09 |
 
 ## Large Efforts (items 17–19)
 
@@ -50,6 +50,12 @@
 ## Session Log
 
 <!-- Add an entry after each session -->
+
+### 2026-02-27 — Session 1 (continued): Items 13-16 (medium items)
+- **Items completed:** #13, #14, #15, #16
+- **Version bumped to:** 0.11.2
+- **Commit(s):** `4179a09`
+- **Notes:** Same session as quick wins, still had context left. Split security-manager.ts (978→414 lines), lazy passwordManager, 41 new tests (193 total), execution timeout on /execute-js and /devtools/evaluate.
 
 ### 2026-02-27 — Session 1: Items 1-10 (all quick wins)
 - **Items completed:** #1, #2, #3, #4, #5, #6, #7, #8, #9, #10
