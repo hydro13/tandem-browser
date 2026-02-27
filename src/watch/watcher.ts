@@ -5,6 +5,7 @@ import { tandemDir } from '../utils/paths';
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { copilotAlert } from '../notifications/alert';
+import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
 
 export interface WatchEntry {
   id: string;
@@ -112,7 +113,7 @@ export class WatchManager {
       await new Promise<void>((resolve, reject) => {
         const timeout = setTimeout(() => {
           reject(new Error('Page load timeout'));
-        }, 30000);
+        }, DEFAULT_TIMEOUT_MS);
 
         win.webContents.once('did-finish-load', () => {
           clearTimeout(timeout);

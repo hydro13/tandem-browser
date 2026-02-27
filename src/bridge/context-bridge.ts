@@ -34,7 +34,7 @@ export class ContextBridge {
   private indexPath: string;
   private index: Map<string, ContextSnapshot> = new Map();
 
-  // Live context state (Fase 2.2)
+  // Live context state (Phase 2.2)
   private activeTab: { url: string; title: string; tabId: string } | null = null;
   private openTabs: Array<{ id: string; title: string; url: string }> = [];
   private voiceActive = false;
@@ -179,7 +179,7 @@ export class ContextBridge {
   }
 
   // ═══════════════════════════════════════════════
-  // Live Context (Fase 2.2)
+  // Live Context (Phase 2.2)
   // ═══════════════════════════════════════════════
 
   /** Connect to EventStreamManager and start tracking live context */

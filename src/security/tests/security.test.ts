@@ -1,15 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
-// Mock Electron-dependent modules before importing script-guard
-vi.mock('electron', () => ({
-  webContents: { fromId: () => null },
-  WebContents: {},
-}));
-vi.mock('../security-db', () => ({}));
-vi.mock('../guardian', () => ({}));
-vi.mock('../../devtools/manager', () => ({}));
-
-import { calculateEntropy, normalizeScriptSource, computeASTHash, computeSimilarity } from '../script-guard';
+import { calculateEntropy, normalizeScriptSource, computeASTHash, computeSimilarity } from '../script-utils';
 import { JS_THREAT_RULES } from '../types';
 import * as acorn from 'acorn';
 

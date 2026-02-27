@@ -654,12 +654,20 @@ export class UpdateChecker {
 
     // First check after 5 minutes
     this.scheduledTimer = setTimeout(async () => {
-      await this.runScheduledCheck(session);
+      try {
+        await this.runScheduledCheck(session);
+      } catch (e) {
+        console.warn('[UpdateChecker] scheduled check failed:', e instanceof Error ? e.message : e);
+      }
 
       // Then schedule recurring checks
       const interval = this.state.checkIntervalMs || DEFAULT_CHECK_INTERVAL_MS;
       this.scheduledTimer = setInterval(async () => {
-        await this.runScheduledCheck(session);
+        try {
+          await this.runScheduledCheck(session);
+        } catch (e) {
+          console.warn('[UpdateChecker] scheduled check failed:', e instanceof Error ? e.message : e);
+        }
       }, interval);
     }, FIRST_CHECK_DELAY_MS);
 

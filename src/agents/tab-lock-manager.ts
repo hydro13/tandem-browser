@@ -1,5 +1,5 @@
 /**
- * TabLockManager — Prevents multiple agents from controlling the same tab (Fase 5)
+ * TabLockManager — Prevents multiple agents from controlling the same tab (Phase 5)
  *
  * Simple lock mechanism:
  * - First agent to claim a tab gets the lock

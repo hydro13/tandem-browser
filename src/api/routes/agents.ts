@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext, getActiveWC } from '../context';
 import { handleRouteError } from '../../utils/errors';
+import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 
 export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
-  // TASKS — Agent task management (Fase 5)
+  // TASKS — Agent task management (Phase 5)
   // ═══════════════════════════════════════════════
 
   router.get('/tasks', (req: Request, res: Response) => {
@@ -120,7 +121,7 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       // Request approval — resolves when user clicks approve/reject
       const approved = await Promise.race([
         ctx.taskManager.requestApproval(task, 0),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 30000)),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), DEFAULT_TIMEOUT_MS)),
       ]);
 
       if (!approved) {
@@ -185,7 +186,7 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
-  // TAB LOCKS — Multi-AI tab conflict prevention (Fase 5)
+  // TAB LOCKS — Multi-AI tab conflict prevention (Phase 5)
   // ═══════════════════════════════════════════════
 
   router.get('/tab-locks', (_req: Request, res: Response) => {

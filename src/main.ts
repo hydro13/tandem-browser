@@ -59,7 +59,7 @@ import { LoginManager } from './auth/login-manager';
 import { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
 import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
-import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS } from './utils/constants';
+import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS, CDP_ATTACH_DELAY_MS } from './utils/constants';
 
 const IS_DEV = process.argv.includes('--dev');
 
@@ -156,8 +156,8 @@ async function createWindow(): Promise<BrowserWindow> {
   // Attach dispatcher — activates all hooks with current consumers
   dispatcher.attach();
 
-  // Flush cookies to disk every 30 seconds for reliability
-  setInterval(() => { ses.cookies.flushStore().catch(e => console.warn('[Main] cookie flush failed:', e instanceof Error ? e.message : e)); }, 30000);
+  // Flush cookies to disk periodically for reliability
+  setInterval(() => { ses.cookies.flushStore().catch(e => console.warn('[Main] cookie flush failed:', e instanceof Error ? e.message : e)); }, COOKIE_FLUSH_INTERVAL_MS);
 
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
@@ -339,10 +339,10 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     }
   }
 
-  // Connect ContextBridge to EventStreamManager for live context (Fase 2.2)
+  // Connect ContextBridge to EventStreamManager for live context (Phase 2.2)
   contextBridge.connectEventStream(eventStream);
 
-  // Wire TaskManager events to renderer (Fase 4)
+  // Wire TaskManager events to renderer (Phase 4)
   taskManager.on('approval-request', (data: Record<string, unknown>) => {
     win.webContents.send('approval-request', data);
   });
@@ -479,11 +479,11 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext(tabManager!, contextBridge!);
       // Auto-attach CDP for Copilot Vision + Security on startup
-      // Reduced from 2000ms to 500ms to minimize ScriptGuard race window
+      // Reduced from 2000ms to CDP_ATTACH_DELAY_MS to minimize ScriptGuard race window
       setTimeout(async () => {
         await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
         securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
-      }, 500);
+      }, CDP_ATTACH_DELAY_MS);
     }
   });
 
@@ -498,7 +498,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     setTimeout(async () => {
       await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
       securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
-    }, 500);
+    }, CDP_ATTACH_DELAY_MS);
   }
 }
 

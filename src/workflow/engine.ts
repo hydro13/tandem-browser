@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir } from '../utils/paths';
+import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
 import { humanizedClick, humanizedType } from '../input/humanized';
 
 interface WorkflowStep {
@@ -332,7 +333,7 @@ export class WorkflowEngine {
   }
 
   private async executeStep(step: WorkflowStep, execution: WorkflowExecution, webview: BrowserWindow): Promise<any> {
-    const timeout = step.timeout || 30000; // 30 seconds default
+    const timeout = step.timeout || DEFAULT_TIMEOUT_MS;
 
     return new Promise(async (resolve, reject) => {
       const timer = setTimeout(() => {
@@ -385,7 +386,7 @@ export class WorkflowEngine {
     
     if (step.params.waitForLoad !== false) {
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Navigation timeout')), 30000);
+        const timeout = setTimeout(() => reject(new Error('Navigation timeout')), DEFAULT_TIMEOUT_MS);
         
         webview.webContents.once('did-finish-load', () => {
           clearTimeout(timeout);

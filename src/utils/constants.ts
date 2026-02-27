@@ -26,3 +26,14 @@ export const AUTH_POPUP_PATTERNS: string[] = [
   '/oauth',
   '/auth',
 ];
+
+// ─── Timeout / interval constants ────────────────
+
+/** Interval for flushing cookies to disk (main process) */
+export const COOKIE_FLUSH_INTERVAL_MS = 30_000;
+
+/** Delay before attaching CDP to a newly registered tab */
+export const CDP_ATTACH_DELAY_MS = 500;
+
+/** General-purpose timeout for page loads, navigation, approval prompts, etc. */
+export const DEFAULT_TIMEOUT_MS = 30_000;

@@ -445,7 +445,7 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
-// tandem_research — Autonomous research (Fase 4.2)
+// tandem_research — Autonomous research (Phase 4.2)
 // ═══════════════════════════════════════════════
 
 /**
@@ -730,7 +730,7 @@ server.resource(
 );
 
 // ═══════════════════════════════════════════════
-// SSE Event Listener — sends MCP notifications on browser events (Fase 2.2)
+// SSE Event Listener — sends MCP notifications on browser events (Phase 2.2)
 // ═══════════════════════════════════════════════
 
 function startEventListener(): void {

@@ -1,5 +1,5 @@
 /**
- * TaskManager — Agent Autonomie (Fase 4)
+ * TaskManager — Agent Autonomy (Phase 4)
  *
  * Manages AI tasks, approval workflow, risk assessment, and emergency stop.
  * Tasks are persisted to ~/.tandem/tasks/ as JSON files.

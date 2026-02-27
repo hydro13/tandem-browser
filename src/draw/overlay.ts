@@ -82,7 +82,7 @@ export class DrawOverlayManager {
 
       this.lastScreenshotPath = filePath;
 
-      // Step 4: Notify renderer of new screenshot (annotations blijven staan voor verdere bewerking)
+      // Step 4: Notify renderer of new screenshot (annotations remain for further editing)
       this.win.webContents.send('screenshot-taken', { path: filePath, filename });
 
       return { ok: true, path: filePath };
@@ -149,7 +149,7 @@ export class DrawOverlayManager {
       // Step 7: Import to Apple Photos (async, non-blocking)
       this.importToApplePhotos(picturesPath);
 
-      // Step 8: Notify renderer of new screenshot (annotations blijven staan)
+      // Step 8: Notify renderer of new screenshot (annotations remain)
       this.win.webContents.send('screenshot-taken', {
         path: picturesPath,
         appPath,

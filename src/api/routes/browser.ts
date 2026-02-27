@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { RouteContext, getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
@@ -209,7 +210,6 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const png = image.toPNG();
 
       if (req.query.save) {
-        const fs = require('fs');
         const filePath = path.resolve(req.query.save as string);
 
         const allowedDirs = [
