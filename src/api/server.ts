@@ -6,6 +6,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
 import { BrowserWindow } from 'electron';
+import { ManagerRegistry } from '../registry';
 import { RouteContext } from './context';
 import { registerBrowserRoutes } from './routes/browser';
 import { registerTabRoutes } from './routes/tabs';
@@ -19,44 +20,6 @@ import { registerDataRoutes } from './routes/data';
 import { registerContentRoutes } from './routes/content';
 import { registerMediaRoutes } from './routes/media';
 import { registerMiscRoutes } from './routes/misc';
-import { TabManager } from '../tabs/manager';
-import { PanelManager } from '../panel/manager';
-import { DrawOverlayManager } from '../draw/overlay';
-import { ActivityTracker } from '../activity/tracker';
-import { VoiceManager } from '../voice/recognition';
-import { BehaviorObserver } from '../behavior/observer';
-import { ConfigManager } from '../config/manager';
-import { SiteMemoryManager } from '../memory/site-memory';
-import { WatchManager } from '../watch/watcher';
-import { HeadlessManager } from '../headless/manager';
-import { FormMemoryManager } from '../memory/form-memory';
-import { ContextBridge } from '../bridge/context-bridge';
-import { PiPManager } from '../pip/manager';
-import { NetworkInspector } from '../network/inspector';
-import { ChromeImporter } from '../import/chrome-importer';
-import { BookmarkManager } from '../bookmarks/manager';
-import { HistoryManager } from '../history/manager';
-import { DownloadManager } from '../downloads/manager';
-import { AudioCaptureManager } from '../audio/capture';
-import { ExtensionLoader } from '../extensions/loader';
-import { ExtensionManager } from '../extensions/manager';
-import { ClaroNoteManager } from '../claronote/manager';
-import { ContentExtractor } from '../content/extractor';
-import { WorkflowEngine } from '../workflow/engine';
-import { LoginManager } from '../auth/login-manager';
-import { EventStreamManager } from '../events/stream';
-import { TaskManager } from '../agents/task-manager';
-import { TabLockManager } from '../agents/tab-lock-manager';
-import { DevToolsManager } from '../devtools/manager';
-import { CopilotStream } from '../activity/copilot-stream';
-import { SecurityManager } from '../security/security-manager';
-import { SnapshotManager } from '../snapshot/manager';
-import { NetworkMocker } from '../network/mocker';
-import { SessionManager } from '../sessions/manager';
-import { StateManager } from '../sessions/state';
-import { ScriptInjector } from '../scripts/injector';
-import { LocatorFinder } from '../locators/finder';
-import { DeviceEmulator } from '../device/emulator';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -69,8 +32,8 @@ function getOrCreateAuthToken(): string {
       const existing = fs.readFileSync(tokenPath, 'utf-8').trim();
       if (existing.length >= 32) return existing;
     }
-  } catch (e: any) {
-    console.warn('Could not read existing API token, generating new:', e.message);
+  } catch (e) {
+    console.warn('Could not read existing API token, generating new:', e instanceof Error ? e.message : e);
   }
 
   const token = crypto.randomBytes(32).toString('hex');
@@ -83,41 +46,7 @@ function getOrCreateAuthToken(): string {
 export interface TandemAPIOptions {
   win: BrowserWindow;
   port?: number;
-  tabManager: TabManager;
-  panelManager: PanelManager;
-  drawManager: DrawOverlayManager;
-  activityTracker: ActivityTracker;
-  voiceManager: VoiceManager;
-  behaviorObserver: BehaviorObserver;
-  configManager: ConfigManager;
-  siteMemory: SiteMemoryManager;
-  watchManager: WatchManager;
-  headlessManager: HeadlessManager;
-  formMemory: FormMemoryManager;
-  contextBridge: ContextBridge;
-  pipManager: PiPManager;
-  networkInspector: NetworkInspector;
-  chromeImporter: ChromeImporter;
-  bookmarkManager: BookmarkManager;
-  historyManager: HistoryManager;
-  downloadManager: DownloadManager;
-  audioCaptureManager: AudioCaptureManager;
-  extensionLoader: ExtensionLoader;
-  extensionManager: ExtensionManager;
-  claroNoteManager: ClaroNoteManager;
-  eventStream: EventStreamManager;
-  taskManager: TaskManager;
-  tabLockManager: TabLockManager;
-  devToolsManager: DevToolsManager;
-  copilotStream: CopilotStream;
-  securityManager?: SecurityManager;
-  snapshotManager: SnapshotManager;
-  networkMocker: NetworkMocker;
-  sessionManager: SessionManager;
-  stateManager: StateManager;
-  scriptInjector: ScriptInjector;
-  locatorFinder: LocatorFinder;
-  deviceEmulator: DeviceEmulator;
+  registry: ManagerRegistry;
 }
 
 export class TandemAPI {
@@ -126,88 +55,12 @@ export class TandemAPI {
   private win: BrowserWindow;
   private authToken: string;
   private port: number;
-  private tabManager: TabManager;
-  private panelManager: PanelManager;
-  private drawManager: DrawOverlayManager;
-  private activityTracker: ActivityTracker;
-  private voiceManager: VoiceManager;
-  private behaviorObserver: BehaviorObserver;
-  private configManager: ConfigManager;
-  private siteMemory: SiteMemoryManager;
-  private watchManager: WatchManager;
-  private headlessManager: HeadlessManager;
-  private formMemory: FormMemoryManager;
-  private contextBridge: ContextBridge;
-  private pipManager: PiPManager;
-  private networkInspector: NetworkInspector;
-  private chromeImporter: ChromeImporter;
-  private bookmarkManager: BookmarkManager;
-  private historyManager: HistoryManager;
-  private downloadManager: DownloadManager;
-  private audioCaptureManager: AudioCaptureManager;
-  private extensionLoader: ExtensionLoader;
-  private extensionManager: ExtensionManager;
-  private claroNoteManager: ClaroNoteManager;
-  private eventStream: EventStreamManager;
-  private taskManager: TaskManager;
-  private tabLockManager: TabLockManager;
-  private devToolsManager: DevToolsManager;
-  private copilotStream: CopilotStream;
-  private securityManager: SecurityManager | null;
-  private snapshotManager: SnapshotManager;
-  private networkMocker: NetworkMocker;
-  private sessionManager: SessionManager;
-  private stateManager: StateManager;
-  private scriptInjector: ScriptInjector;
-  private locatorFinder: LocatorFinder;
-  private deviceEmulator: DeviceEmulator;
-  private contentExtractor: ContentExtractor;
-  private workflowEngine: WorkflowEngine;
-  private loginManager: LoginManager;
+  private registry: ManagerRegistry;
 
   constructor(opts: TandemAPIOptions) {
     this.win = opts.win;
     this.port = opts.port ?? 8765;
-    this.tabManager = opts.tabManager;
-    this.panelManager = opts.panelManager;
-    this.drawManager = opts.drawManager;
-    this.activityTracker = opts.activityTracker;
-    this.voiceManager = opts.voiceManager;
-    this.behaviorObserver = opts.behaviorObserver;
-    this.configManager = opts.configManager;
-    this.siteMemory = opts.siteMemory;
-    this.watchManager = opts.watchManager;
-    this.headlessManager = opts.headlessManager;
-    this.formMemory = opts.formMemory;
-    this.contextBridge = opts.contextBridge;
-    this.pipManager = opts.pipManager;
-    this.networkInspector = opts.networkInspector;
-    this.chromeImporter = opts.chromeImporter;
-    this.bookmarkManager = opts.bookmarkManager;
-    this.historyManager = opts.historyManager;
-    this.downloadManager = opts.downloadManager;
-    this.audioCaptureManager = opts.audioCaptureManager;
-    this.extensionLoader = opts.extensionLoader;
-    this.extensionManager = opts.extensionManager;
-    this.claroNoteManager = opts.claroNoteManager;
-    this.eventStream = opts.eventStream;
-    this.taskManager = opts.taskManager;
-    this.tabLockManager = opts.tabLockManager;
-    this.devToolsManager = opts.devToolsManager;
-    this.copilotStream = opts.copilotStream;
-    this.securityManager = opts.securityManager || null;
-    this.snapshotManager = opts.snapshotManager;
-    this.networkMocker = opts.networkMocker;
-    this.sessionManager = opts.sessionManager;
-    this.stateManager = opts.stateManager;
-    this.scriptInjector = opts.scriptInjector;
-    this.locatorFinder = opts.locatorFinder;
-    this.deviceEmulator = opts.deviceEmulator;
-
-    // Initialize new Phase 5 managers
-    this.contentExtractor = new ContentExtractor();
-    this.workflowEngine = new WorkflowEngine();
-    this.loginManager = new LoginManager();
+    this.registry = opts.registry;
 
     this.app = express();
     this.app.use(cors({
@@ -265,57 +118,13 @@ export class TandemAPI {
     this.setupRoutes();
 
     // Register SecurityManager API routes
-    if (this.securityManager) {
-      this.securityManager.registerRoutes(this.app);
+    if (this.registry.securityManager) {
+      this.registry.securityManager.registerRoutes(this.app);
     }
   }
 
-  private buildContext(): RouteContext {
-    return {
-      win: this.win,
-      tabManager: this.tabManager,
-      panelManager: this.panelManager,
-      drawManager: this.drawManager,
-      activityTracker: this.activityTracker,
-      voiceManager: this.voiceManager,
-      behaviorObserver: this.behaviorObserver,
-      configManager: this.configManager,
-      siteMemory: this.siteMemory,
-      watchManager: this.watchManager,
-      headlessManager: this.headlessManager,
-      formMemory: this.formMemory,
-      contextBridge: this.contextBridge,
-      pipManager: this.pipManager,
-      networkInspector: this.networkInspector,
-      chromeImporter: this.chromeImporter,
-      bookmarkManager: this.bookmarkManager,
-      historyManager: this.historyManager,
-      downloadManager: this.downloadManager,
-      audioCaptureManager: this.audioCaptureManager,
-      extensionLoader: this.extensionLoader,
-      extensionManager: this.extensionManager,
-      claroNoteManager: this.claroNoteManager,
-      contentExtractor: this.contentExtractor,
-      workflowEngine: this.workflowEngine,
-      loginManager: this.loginManager,
-      eventStream: this.eventStream,
-      taskManager: this.taskManager,
-      tabLockManager: this.tabLockManager,
-      devToolsManager: this.devToolsManager,
-      copilotStream: this.copilotStream,
-      securityManager: this.securityManager,
-      snapshotManager: this.snapshotManager,
-      networkMocker: this.networkMocker,
-      sessionManager: this.sessionManager,
-      stateManager: this.stateManager,
-      scriptInjector: this.scriptInjector,
-      locatorFinder: this.locatorFinder,
-      deviceEmulator: this.deviceEmulator,
-    };
-  }
-
   private setupRoutes(): void {
-    const ctx = this.buildContext();
+    const ctx: RouteContext = { win: this.win, ...this.registry };
     const router = this.app as unknown as Router;
     registerBrowserRoutes(router, ctx);
     registerTabRoutes(router, ctx);

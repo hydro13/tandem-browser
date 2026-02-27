@@ -53,6 +53,10 @@ import { StateManager } from './sessions/state';
 import { ScriptInjector } from './scripts/injector';
 import { LocatorFinder } from './locators/finder';
 import { DeviceEmulator } from './device/emulator';
+import { ContentExtractor } from './content/extractor';
+import { WorkflowEngine } from './workflow/engine';
+import { LoginManager } from './auth/login-manager';
+import { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
 import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
 
@@ -383,9 +387,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     chromeImporter.startSync();
   }
 
-  api = new TandemAPI({
-    win,
-    port: API_PORT,
+  const registry: ManagerRegistry = {
     tabManager: tabManager!,
     panelManager: panelManager!,
     drawManager: drawManager!,
@@ -408,6 +410,9 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     extensionLoader: extensionLoader!,
     extensionManager: extensionManager!,
     claroNoteManager: claroNoteManager!,
+    contentExtractor: new ContentExtractor(),
+    workflowEngine: new WorkflowEngine(),
+    loginManager: new LoginManager(),
     eventStream: eventStream!,
     taskManager: taskManager!,
     tabLockManager: tabLockManager!,
@@ -421,7 +426,9 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     scriptInjector: scriptInjector!,
     locatorFinder: locatorFinder!,
     deviceEmulator: deviceEmulator!,
-  });
+  };
+
+  api = new TandemAPI({ win, port: API_PORT, registry });
   await api.start();
   console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
 
