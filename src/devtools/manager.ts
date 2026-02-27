@@ -160,7 +160,7 @@ export class DevToolsManager {
     this.attachedWcId = wc.id;
 
     // Listen for CDP events
-    wc.debugger.on('message', (_event: Electron.Event, method: string, params: any) => {
+    wc.debugger.on('message', (_event: Electron.Event, method: string, params: Record<string, unknown>) => {
       this.handleCDPEvent(method, params);
     });
 

@@ -100,7 +100,7 @@ export class ContentExtractor {
     const html = await this.getPageHTML(webview);
     const pageType = this.detectPageType(url, html);
     
-    let content: any;
+    let content: ArticleContent | ProfileContent | ProductContent | SearchContent | GenericContent;
     switch (pageType) {
       case 'article':
         content = await this.extractArticle(webview, html);
@@ -130,6 +130,7 @@ export class ContentExtractor {
   /**
    * Extract content from a specific URL using headless browser
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- HeadlessManager API mismatch (legacy dead code)
   async extractFromURL(url: string, headlessManager: any): Promise<PageContent> {
     const headlessWindow = await headlessManager.openHeadless(url);
     

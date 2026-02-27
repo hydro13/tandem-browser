@@ -184,7 +184,7 @@ export class ConfigManager {
           delete raw.general.keesPanelPosition;
           delete raw.general.keesPanelDefaultOpen;
         }
-        return this.deepMerge(DEFAULT_CONFIG, raw);
+        return this.deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw) as unknown as TandemConfig;
       }
     } catch (e) {
       console.warn('Config file corrupted, using defaults:', e instanceof Error ? e.message : String(e));
@@ -202,21 +202,22 @@ export class ConfigManager {
   }
 
   /** Deep merge source into target (returns new object) */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private deepMerge(target: any, source: any): any {
+  private deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
     const result = { ...target };
     for (const key of Object.keys(source)) {
+      const sourceVal = source[key];
+      const targetVal = target[key];
       if (
-        source[key] &&
-        typeof source[key] === 'object' &&
-        !Array.isArray(source[key]) &&
-        target[key] &&
-        typeof target[key] === 'object' &&
-        !Array.isArray(target[key])
+        sourceVal &&
+        typeof sourceVal === 'object' &&
+        !Array.isArray(sourceVal) &&
+        targetVal &&
+        typeof targetVal === 'object' &&
+        !Array.isArray(targetVal)
       ) {
-        result[key] = this.deepMerge(target[key], source[key]);
+        result[key] = this.deepMerge(targetVal as Record<string, unknown>, sourceVal as Record<string, unknown>);
       } else {
-        result[key] = source[key];
+        result[key] = sourceVal;
       }
     }
     return result;
@@ -229,7 +230,7 @@ export class ConfigManager {
 
   /** Partial update — deep merges the patch into config */
   updateConfig(patch: Record<string, unknown>): TandemConfig {
-    const merged = this.deepMerge(this.config, patch) as TandemConfig;
+    const merged = this.deepMerge(this.config as unknown as Record<string, unknown>, patch) as unknown as TandemConfig;
     // Enforce clipboard always true
     merged.screenshots.clipboard = true;
     this.config = merged;

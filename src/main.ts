@@ -344,13 +344,13 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   contextBridge.connectEventStream(eventStream);
 
   // Wire TaskManager events to renderer (Fase 4)
-  taskManager.on('approval-request', (data: any) => {
+  taskManager.on('approval-request', (data: Record<string, unknown>) => {
     win.webContents.send('approval-request', data);
   });
-  taskManager.on('task-updated', (task: any) => {
+  taskManager.on('task-updated', (task: Record<string, unknown>) => {
     win.webContents.send('task-updated', task);
   });
-  taskManager.on('emergency-stop', (data: any) => {
+  taskManager.on('emergency-stop', (data: Record<string, unknown>) => {
     win.webContents.send('emergency-stop', data);
   });
 

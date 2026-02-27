@@ -92,7 +92,7 @@ export class PasswordManager {
     /**
      * Add or update an item in the vault.
      */
-    public saveItem(domain: string, username: string, payload: any): void {
+    public saveItem(domain: string, username: string, payload: Record<string, unknown>): void {
         if (!this.isUnlocked || !this.vaultKey) throw new Error('Vault is locked');
 
         // Always generate a fresh salt+IV per item securely via our crypto layer.
@@ -112,7 +112,7 @@ export class PasswordManager {
     /**
      * Retrieve structured payload for a domain + user.
      */
-    public getItem(domain: string, username: string): any | null {
+    public getItem(domain: string, username: string): Record<string, unknown> | null {
         if (!this.isUnlocked || !this.vaultKey) throw new Error('Vault is locked');
 
         const row = this.db.prepare('SELECT encryptedBlob FROM vault WHERE domain = ? AND username = ?')
@@ -132,7 +132,7 @@ export class PasswordManager {
     /**
      * Get all identities for a specific domain (for autofill dropdowns).
      */
-    public getIdentitiesForDomain(domain: string): Array<{ username: string, payload: any }> {
+    public getIdentitiesForDomain(domain: string): Array<{ username: string, payload: Record<string, unknown> }> {
         if (!this.isUnlocked || !this.vaultKey) throw new Error('Vault is locked');
 
         const rows = this.db.prepare('SELECT username, encryptedBlob FROM vault WHERE domain = ?').all(domain.toLowerCase()) as Array<{ username: string, encryptedBlob: Buffer }>;

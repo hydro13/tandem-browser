@@ -143,7 +143,7 @@ export class ContentAnalyzer {
       });
       if (formResult.result?.value) {
         const forms = JSON.parse(formResult.result.value);
-        analysis.forms = forms.map((f: any) => ({
+        analysis.forms = forms.map((f: Omit<FormInfo, 'isExternalAction'>) => ({
           ...f,
           isExternalAction: f.action ? this.isExternalUrl(f.action, domain) : false,
         }));
@@ -175,7 +175,7 @@ export class ContentAnalyzer {
       });
       if (scriptResult.result?.value) {
         const scripts = JSON.parse(scriptResult.result.value);
-        analysis.scripts = scripts.map((s: any) => {
+        analysis.scripts = scripts.map((s: { url: string; size: number }) => {
           const scriptDomain = this.extractDomain(s.url);
           const isExternal = scriptDomain !== domain;
           const isKnown = scriptDomain ? !!this.db.getScriptFingerprint(scriptDomain, s.url) : false;

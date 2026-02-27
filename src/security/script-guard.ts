@@ -33,6 +33,9 @@ export function normalizeScriptSource(source: string): string {
 // Phase 6-A: AST parsing + hashing (Ghidra BSim-inspired obfuscation-resistant fingerprinting)
 const MAX_AST_PARSE_SIZE = 200 * 1024; // 200KB — larger scripts too expensive to parse
 
+/** Loosely-typed AST node — acorn's Node type only exposes type/start/end, but subtypes have arbitrary properties */
+type ASTNode = Record<string, unknown> & { type?: string };
+
 /** Parse JavaScript source to AST using Acorn. Returns null on syntax errors. */
 function parseToAST(source: string): acorn.Node | null {
   try {
@@ -48,15 +51,15 @@ function parseToAST(source: string): acorn.Node | null {
 }
 
 /** Build a structural feature string for a single AST node (excludes variable names and literal values) */
-function buildNodeFeature(node: any): string {
-  const parts = [node.type];
+function buildNodeFeature(node: ASTNode): string {
+  const parts: unknown[] = [node.type];
 
   // Operators are structural
   if (node.operator) parts.push(node.operator);
 
   // Parameter/argument count (arity)
-  if (node.params) parts.push(`params:${node.params.length}`);
-  if (node.arguments) parts.push(`args:${node.arguments.length}`);
+  if (Array.isArray(node.params)) parts.push(`params:${node.params.length}`);
+  if (Array.isArray(node.arguments)) parts.push(`args:${node.arguments.length}`);
 
   // Control flow structure
   if (node.consequent) parts.push('has:consequent');
@@ -70,7 +73,7 @@ function buildNodeFeature(node: any): string {
 }
 
 /** Recursively walk AST and collect structural feature strings */
-function walkAST(node: any, features: string[]): void {
+function walkAST(node: ASTNode, features: string[]): void {
   if (!node || typeof node !== 'object') return;
 
   if (node.type) {
@@ -82,12 +85,12 @@ function walkAST(node: any, features: string[]): void {
     const child = node[key];
     if (Array.isArray(child)) {
       for (const item of child) {
-        if (item && typeof item === 'object' && item.type) {
-          walkAST(item, features);
+        if (item && typeof item === 'object' && (item as ASTNode).type) {
+          walkAST(item as ASTNode, features);
         }
       }
-    } else if (child && typeof child === 'object' && child.type) {
-      walkAST(child, features);
+    } else if (child && typeof child === 'object' && (child as ASTNode).type) {
+      walkAST(child as ASTNode, features);
     }
   }
 }
@@ -95,7 +98,7 @@ function walkAST(node: any, features: string[]): void {
 /** Compute obfuscation-resistant AST hash (Ghidra BSim-inspired iterative graph hashing) @internal */
 export function computeASTHash(node: acorn.Node): string {
   const features: string[] = [];
-  walkAST(node, features);
+  walkAST(node as unknown as ASTNode, features);
   return createHash('sha256').update(features.join('|')).digest('hex').substring(0, 32);
 }
 
@@ -106,11 +109,11 @@ const SIMILARITY_IDENTICAL = 0.95;    // "structurally identical" — same as AS
 /** Build AST feature vector: count occurrences of each node type/structural feature */
 function computeASTFeatureVector(node: acorn.Node): Map<string, number> {
   const features = new Map<string, number>();
-  walkForFeatures(node, features);
+  walkForFeatures(node as unknown as ASTNode, features);
   return features;
 }
 
-function walkForFeatures(node: any, features: Map<string, number>): void {
+function walkForFeatures(node: ASTNode, features: Map<string, number>): void {
   if (!node || typeof node !== 'object') return;
   if (node.type) {
     const feature = buildNodeFeature(node);
@@ -121,12 +124,12 @@ function walkForFeatures(node: any, features: Map<string, number>): void {
     const child = node[key];
     if (Array.isArray(child)) {
       for (const item of child) {
-        if (item && typeof item === 'object' && item.type) {
-          walkForFeatures(item, features);
+        if (item && typeof item === 'object' && (item as ASTNode).type) {
+          walkForFeatures(item as ASTNode, features);
         }
       }
-    } else if (child && typeof child === 'object' && child.type) {
-      walkForFeatures(child, features);
+    } else if (child && typeof child === 'object' && (child as ASTNode).type) {
+      walkForFeatures(child as ASTNode, features);
     }
   }
 }
@@ -246,8 +249,11 @@ export class ScriptGuard {
   }
 
   /** Analyze every loaded script (called via CDP Debugger.scriptParsed) */
-  private analyzeScript(scriptInfo: any): void {
-    const { scriptId, url, length, hash } = scriptInfo;
+  private analyzeScript(scriptInfo: Record<string, unknown>): void {
+    const scriptId = scriptInfo.scriptId as string;
+    const url = scriptInfo.url as string | undefined;
+    const length = scriptInfo.length as number | undefined;
+    const hash = scriptInfo.hash as string | undefined;
 
     // Skip inline scripts (no URL), chrome-extension, devtools, and debugger scripts
     if (!url || url.startsWith('chrome-extension://') || url.startsWith('devtools://') || url.startsWith('debugger://')) return;
@@ -663,10 +669,10 @@ export class ScriptGuard {
   }
 
   /** Monitor console for suspicious patterns */
-  private monitorConsole(params: any): void {
+  private monitorConsole(params: Record<string, unknown>): void {
     // Watch for crypto mining indicators in console
     if (params.type === 'error' || params.type === 'warning') {
-      const text = (params.args || []).map((a: any) => a.value || a.description || '').join(' ');
+      const text = ((params.args as Record<string, unknown>[]) || []).map((a: Record<string, unknown>) => (a.value as string) || (a.description as string) || '').join(' ');
       if (/coinhive|cryptonight|monero|minero|coinbase.*miner/i.test(text)) {
         this.db.logEvent({
           timestamp: Date.now(),
@@ -811,7 +817,7 @@ export class ScriptGuard {
     }
   }
 
-  private handleSecurityAlert(alert: any): void {
+  private handleSecurityAlert(alert: Record<string, unknown>): void {
     // Get current URL for domain context
     const wc = this.devToolsManager.getAttachedWebContents();
     const currentUrl = wc ? wc.getURL() : '';
@@ -868,7 +874,7 @@ export class ScriptGuard {
 
       case 'form_action_change': {
         // Check if new action URL is external
-        const newDomain = this.extractDomain(alert.newAction);
+        const newDomain = this.extractDomain(alert.newAction as string);
         if (newDomain && domain && newDomain !== domain) {
           this.db.logEvent({
             timestamp: Date.now(),

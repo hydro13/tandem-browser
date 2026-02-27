@@ -524,7 +524,7 @@ server.tool(
       // Step 4: Get links from search results
       const linksData = await apiCall('GET', '/links');
       const links: Array<{ href: string; text: string }> = (linksData.links || [])
-        .filter((l: any) => {
+        .filter((l: { href?: string; text?: string }) => {
           const href = l.href || '';
           // Filter out search engine internal links
           return href.startsWith('http') &&

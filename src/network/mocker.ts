@@ -160,9 +160,10 @@ export class NetworkMocker {
   }
 
   /** Handle CDP Fetch.requestPaused event */
-  private async handleRequestPaused(params: any): Promise<void> {
+  private async handleRequestPaused(params: Record<string, unknown>): Promise<void> {
     const requestId = params.requestId as string;
-    const url = params.request?.url as string;
+    const request = params.request as Record<string, unknown> | undefined;
+    const url = request?.url as string;
 
     if (!requestId || !url) {
       // Safety: continue unmatched requests
