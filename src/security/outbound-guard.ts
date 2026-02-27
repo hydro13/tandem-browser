@@ -129,7 +129,7 @@ export class OutboundGuard {
       return { action: 'allow', reason: 'invalid-ws-url', severity: 'info' };
     }
 
-    // Skip internal/Tandem WebSocket endpoints (e.g. ws://127.0.0.1:18789/)
+    // Skip internal/Tandem WebSocket endpoints (e.g. ws://127.0.0.1:WEBHOOK_PORT/)
     try {
       const wsUrl = new URL(url);
       if (wsUrl.hostname === 'localhost' || wsUrl.hostname === '127.0.0.1' || wsUrl.hostname === '::1') {

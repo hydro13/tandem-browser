@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { tandemDir } from '../utils/paths';
+import { WEBHOOK_PORT } from '../utils/constants';
 
 /**
  * TandemConfig — All configurable settings for Tandem Browser.
@@ -136,7 +137,7 @@ const DEFAULT_CONFIG: TandemConfig = {
   },
   webhook: {
     enabled: true,
-    url: 'http://127.0.0.1:18789',
+    url: `http://127.0.0.1:${WEBHOOK_PORT}`,
     secret: '',
     notifyOnRobinChat: true,
     notifyOnActivity: true,

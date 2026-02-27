@@ -225,7 +225,7 @@ export class NetworkMocker {
     this.devtools.unsubscribe('NetworkMocker');
     // Don't await disableFetch here — app is quitting
     if (this.fetchEnabled) {
-      this.devtools.sendCommand('Fetch.disable', {}).catch(() => {});
+      this.devtools.sendCommand('Fetch.disable', {}).catch(e => console.warn('[NetworkMocker] Fetch.disable on destroy failed:', e instanceof Error ? e.message : e));
       this.fetchEnabled = false;
     }
   }

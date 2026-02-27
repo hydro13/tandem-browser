@@ -20,8 +20,9 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { API_PORT } from '../utils/constants';
 
-const API = 'http://localhost:8765';
+const API = `http://localhost:${API_PORT}`;
 const SCOUT_DIR = path.join(process.env.HOME || '', '.tandem', 'x-scout');
 const STATE_FILE = path.join(SCOUT_DIR, 'state.json');
 const FINDINGS_FILE = path.join(SCOUT_DIR, 'findings.json');

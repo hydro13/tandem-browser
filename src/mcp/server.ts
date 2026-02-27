@@ -2,6 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { apiCall, logActivity } from './api-client.js';
+import { API_PORT } from '../utils/constants';
 
 const server = new McpServer({
   name: 'tandem-browser',
@@ -740,7 +741,7 @@ function startEventListener(): void {
     } catch { return ''; }
   })();
 
-  const url = 'http://localhost:8765/events/stream';
+  const url = `http://localhost:${API_PORT}/events/stream`;
 
   const connect = () => {
     fetch(url, token ? { headers: { 'Authorization': `Bearer ${token}` } } : {}).then(async (response) => {
@@ -773,11 +774,11 @@ function startEventListener(): void {
               const event = JSON.parse(line.slice(6));
               // Send MCP notifications for meaningful events
               if (['navigation', 'page-loaded', 'tab-focused'].includes(event.type)) {
-                server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(() => {});
-                server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(() => {});
+                server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(e => console.warn('[MCP] sendResourceUpdated page/current failed:', e instanceof Error ? e.message : e));
+                server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(e => console.warn('[MCP] sendResourceUpdated context failed:', e instanceof Error ? e.message : e));
               }
               if (['tab-opened', 'tab-closed', 'tab-focused'].includes(event.type)) {
-                server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(() => {});
+                server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(e => console.warn('[MCP] sendResourceUpdated tabs/list failed:', e instanceof Error ? e.message : e));
               }
             } catch {
               // Ignore parse errors (comments, heartbeats)

@@ -186,7 +186,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
             console.warn('[DeviceEmulator] reloadIntoTab failed:', e.message)
           );
         }
-      }).catch(() => {});
+      }).catch(e => console.warn('[IPC] getActiveWebContents for script/emulator reload failed:', e instanceof Error ? e.message : e));
     }
     // Flush network data when navigating away
     if (data.type === 'did-start-navigation' && data.url) {
@@ -288,8 +288,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     syncTabsToContext(tabManager, contextBridge);
     // Attach CDP to the focused tab directly (avoids race with TabManager active tab state)
     if (tab?.webContentsId) {
-      await devToolsManager.attachToTab(tab.webContentsId).catch(() => {});
-      securityManager?.onTabAttached().catch(() => {});
+      await devToolsManager.attachToTab(tab.webContentsId).catch(e => console.warn('[IPC] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+      securityManager?.onTabAttached().catch(e => console.warn('[IPC] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
     }
     return result;
   });

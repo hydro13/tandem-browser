@@ -1,7 +1,8 @@
 import * as fs from 'fs';
 import { tandemDir } from '../utils/paths';
+import { API_PORT } from '../utils/constants';
 
-const API_BASE = 'http://localhost:8765';
+const API_BASE = `http://localhost:${API_PORT}`;
 
 function getToken(): string {
   const tokenPath = tandemDir('api-token');
