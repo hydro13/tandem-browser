@@ -31,7 +31,7 @@
 | # | Description | Status | Session | Commit |
 |---|-------------|--------|---------|--------|
 | 11 | **Logger utility** — Create `src/utils/logger.ts` with levels (debug/info/warn/error) + config-driven min level. Replace 207 `console.log` calls across 48 files | DONE | 2026-02-27 | 688d812 |
-| 12 | **ESLint setup** — Add `eslint.config.mjs` with `@typescript-eslint/recommended`, `no-floating-promises`, `no-console: warn`, `no-unused-vars`, `consistent-type-imports`. Add `npm run lint` script | DONE | 2026-02-27 | pending |
+| 12 | **ESLint setup** — Add `eslint.config.mjs` with `@typescript-eslint/recommended`, `no-floating-promises`, `no-console: warn`, `no-unused-vars`, `consistent-type-imports`. Add `npm run lint` script | DONE | 2026-02-27 | a691983 |
 | 13 | **Split security-manager routes** — 34 routes → `src/security/routes.ts` (978→414 lines) | DONE | 2026-02-27 | 4179a09 |
 | 14 | **Lazy passwordManager** — `getPasswordManager()` lazy init, DB opens on first access | DONE | 2026-02-27 | 4179a09 |
 | 15 | **Tests: pure logic modules** — 41 new tests (constants + config with fs mocking). 193 total | DONE | 2026-02-27 | 4179a09 |
@@ -55,7 +55,7 @@
 
 - **Items completed:** #12
 - **Version bumped to:** 0.11.4
-- **Commit(s):** `pending`
+- **Commit(s):** `a691983`
 - **Notes:** Added `eslint.config.mjs` (flat config, ESLint 10 + typescript-eslint 8) with 5 specified rules + `no-explicit-any: warn` + `no-require-imports: off`. Added `npm run lint` script. Auto-fixed 222 `consistent-type-imports`. Manually fixed 92 errors across 40+ files: 50 unused vars (removed imports, prefixed args with `_`), 20 floating promises (`void`), 7 empty blocks (comments), 7 case declarations (block scoping), plus misc. Result: 0 errors, 98 warnings (75 `no-explicit-any` + 23 `no-console`). 202 tests passing, 0 TS errors.
 
 ### 2026-02-27 — Session 2: Item 11 (logger utility)
