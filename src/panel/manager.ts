@@ -168,10 +168,10 @@ export class PanelManager {
       if (!response.ok) {
         console.warn(`⚠️ Webhook failed (${response.status}): ${response.statusText}`);
       }
-    } catch (e: any) {
+    } catch (e) {
       // Silent fail — OpenClaw might not be running
-      if (e.name !== 'AbortError') {
-        console.warn('⚠️ Webhook dispatch failed (OpenClaw not running?):', e.message);
+      if (!(e instanceof Error) || e.name !== 'AbortError') {
+        console.warn('⚠️ Webhook dispatch failed (OpenClaw not running?):', e instanceof Error ? e.message : String(e));
       }
     }
   }

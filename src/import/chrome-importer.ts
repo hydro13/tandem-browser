@@ -93,8 +93,8 @@ export class ChromeImporter {
           results.push({ name: displayName, path: entry.name, hasBookmarks });
         }
       }
-    } catch (e: any) {
-      console.warn('Could not list Chrome profiles:', e.message);
+    } catch (e) {
+      console.warn('Could not list Chrome profiles:', e instanceof Error ? e.message : String(e));
     }
 
     return results;
@@ -149,15 +149,15 @@ export class ChromeImporter {
             if (result.ok) {
               console.log(`📚 Chrome bookmarks synced — ${result.count} bookmarks`);
             }
-          } catch (e: any) {
-            console.warn('📚 Chrome bookmark sync failed:', e.message);
+          } catch (e) {
+            console.warn('📚 Chrome bookmark sync failed:', e instanceof Error ? e.message : String(e));
           }
         }, 2000); // 2 second debounce
       });
 
       return true;
-    } catch (e: any) {
-      console.warn('📚 Could not start Chrome bookmark sync:', e.message);
+    } catch (e) {
+      console.warn('📚 Could not start Chrome bookmark sync:', e instanceof Error ? e.message : String(e));
       return false;
     }
   }

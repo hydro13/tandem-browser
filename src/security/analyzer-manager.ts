@@ -58,8 +58,8 @@ export class AnalyzerManager {
       // Sort by priority (lower first)
       this.analyzers.sort((a, b) => a.priority - b.priority);
       console.log(`[AnalyzerManager] Registered: ${analyzer.name} v${analyzer.version} (priority ${analyzer.priority})`);
-    } catch (error: any) {
-      console.error(`[AnalyzerManager] Failed to initialize ${analyzer.name}:`, error.message);
+    } catch (error) {
+      console.error(`[AnalyzerManager] Failed to initialize ${analyzer.name}:`, error instanceof Error ? error.message : String(error));
     }
   }
 
@@ -87,9 +87,9 @@ export class AnalyzerManager {
         try {
           const results = await analyzer.analyze(event);
           newEvents.push(...results);
-        } catch (error: any) {
+        } catch (error) {
           // A crashing analyzer must NEVER break the pipeline
-          console.error(`[AnalyzerManager] ${analyzer.name} crashed:`, error.message);
+          console.error(`[AnalyzerManager] ${analyzer.name} crashed:`, error instanceof Error ? error.message : String(error));
         }
       }
     } finally {

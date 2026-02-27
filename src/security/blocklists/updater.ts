@@ -82,7 +82,7 @@ export class BlocklistUpdater {
         results.sources.push({ name: source.name, domains: domains.length, added });
         results.totalAdded += added;
         console.log(`[BlocklistUpdater] ${source.name}: ${domains.length} domains parsed, ${added} synced to DB`);
-      } catch (err: any) {
+      } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         results.errors.push(`${source.name}: ${errMsg}`);
         console.error(`[BlocklistUpdater] Failed to update ${source.name}:`, errMsg);

@@ -63,9 +63,9 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       // Notify renderer to refresh extension toolbar
       ctx.win.webContents.send('extension-toolbar-refresh');
       res.json(result);
-    } catch (e: any) {
+    } catch (e) {
       console.error('Extension install error:', e);
-      res.status(500).json({ success: false, error: e.message });
+      res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -139,9 +139,9 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       // Notify renderer to refresh extension toolbar
       ctx.win.webContents.send('extension-toolbar-refresh');
       res.json({ success: true });
-    } catch (e: any) {
+    } catch (e) {
       console.error('Extension uninstall error:', e);
-      res.status(500).json({ success: false, error: e.message });
+      res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -199,9 +199,9 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         failed: 0,
         details: [result],
       });
-    } catch (e: any) {
+    } catch (e) {
       console.error('Chrome extension import error:', e);
-      res.status(500).json({ error: e.message });
+      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 

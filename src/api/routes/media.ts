@@ -102,8 +102,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
         status: response.status,
         url: config.webhook.url,
       });
-    } catch (e: any) {
-      res.json({ ok: false, error: e.message });
+    } catch (e) {
+      res.json({ ok: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
 

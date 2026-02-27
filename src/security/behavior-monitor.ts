@@ -261,8 +261,8 @@ export class BehaviorMonitor {
         confidence: AnalysisConfidence.BEHAVIORAL,
       });
       return true;
-    } catch (e: any) {
-      console.warn('[BehaviorMonitor] Kill script failed:', e.message);
+    } catch (e) {
+      console.warn('[BehaviorMonitor] Kill script failed:', e instanceof Error ? e.message : String(e));
       return false;
     }
   }

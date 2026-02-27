@@ -52,7 +52,7 @@ export class WatchManager {
       if (fs.existsSync(this.watchFile)) {
         return JSON.parse(fs.readFileSync(this.watchFile, 'utf-8'));
       }
-    } catch (e: any) { console.warn('Watch state load failed, starting fresh:', e.message); }
+    } catch (e) { console.warn('Watch state load failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { watches: [] };
   }
 
@@ -153,11 +153,12 @@ export class WatchManager {
       this.save();
 
       return { changed };
-    } catch (e: any) {
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
       watch.lastCheck = Date.now();
-      watch.lastError = e.message;
+      watch.lastError = message;
       this.save();
-      return { changed: false, error: e.message };
+      return { changed: false, error: message };
     } finally {
       this.checking = false;
     }

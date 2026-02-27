@@ -49,8 +49,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         tabs: ctx.tabManager.count,
         viewport,
       });
-    } catch (e: any) {
-      res.json({ ready: false, error: e.message });
+    } catch (e) {
+      res.json({ ready: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -93,8 +93,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const identities = passwordManager.getIdentitiesForDomain(domain);
       res.json({ identities });
-    } catch (err: any) {
-      res.status(403).json({ error: err.message });
+    } catch (err) {
+      res.status(403).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -107,8 +107,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       passwordManager.saveItem(domain, username, payload);
       res.json({ success: true });
-    } catch (err: any) {
-      res.status(403).json({ error: err.message });
+    } catch (err) {
+      res.status(403).json({ error: err instanceof Error ? err.message : String(err) });
     }
   });
 
@@ -482,8 +482,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const user = await ctx.claroNoteManager.getMe();
       res.json({ user });
-    } catch (e: any) {
-      res.status(401).json({ error: e.message });
+    } catch (e) {
+      res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -534,8 +534,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const limit = parseInt(limitParam as string || '10') || 10;
       const notes = await ctx.claroNoteManager.getNotes(limit);
       res.json({ notes });
-    } catch (e: any) {
-      res.status(401).json({ error: e.message });
+    } catch (e) {
+      res.status(401).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -544,8 +544,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const noteId = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
       const note = await ctx.claroNoteManager.getNote(noteId);
       res.json({ note });
-    } catch (e: any) {
-      res.status(404).json({ error: e.message });
+    } catch (e) {
+      res.status(404).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 

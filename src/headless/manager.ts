@@ -71,8 +71,8 @@ export class HeadlessManager {
       });
 
       return { ok: true };
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
@@ -94,8 +94,8 @@ export class HeadlessManager {
         })()
       `);
       return { ok: true, content: JSON.parse(content) };
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
@@ -227,7 +227,7 @@ export class HeadlessManager {
       } else if (!found) {
         this.captchaDetected = false;
       }
-    } catch (e: any) { console.warn('Captcha detection check failed (window may be destroyed):', e.message); }
+    } catch (e) { console.warn('Captcha detection check failed (window may be destroyed):', e instanceof Error ? e.message : String(e)); }
   }
 
   /** Destroy everything */

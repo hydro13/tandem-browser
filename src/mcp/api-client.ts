@@ -21,8 +21,9 @@ export async function apiCall(method: string, endpoint: string, body?: any): Pro
       },
       body: body ? JSON.stringify(body) : undefined
     });
-  } catch (err: any) {
-    if (err.code === 'ECONNREFUSED' || err.cause?.code === 'ECONNREFUSED') {
+  } catch (err) {
+    const errObj = err as NodeJS.ErrnoException & { cause?: NodeJS.ErrnoException };
+    if (errObj.code === 'ECONNREFUSED' || errObj.cause?.code === 'ECONNREFUSED') {
       throw new Error('Tandem Browser is niet actief. Start Tandem met \'npm start\' en probeer opnieuw.');
     }
     throw err;

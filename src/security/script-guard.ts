@@ -806,8 +806,8 @@ export class ScriptGuard {
 
       this.monitorInjected = true;
       console.log('[ScriptGuard] Security monitors injected');
-    } catch (e: any) {
-      console.warn('[ScriptGuard] Monitor injection failed:', e.message);
+    } catch (e) {
+      console.warn('[ScriptGuard] Monitor injection failed:', e instanceof Error ? e.message : String(e));
     }
   }
 

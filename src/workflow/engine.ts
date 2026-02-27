@@ -159,7 +159,7 @@ export class WorkflowEngine {
       }
 
       return workflows;
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to load workflows:', error);
       return [];
     }
@@ -296,13 +296,13 @@ export class WorkflowEngine {
           }
 
           stepIndex++;
-        } catch (stepError: any) {
+        } catch (stepError) {
           console.error(`Step ${step.id} failed:`, stepError);
-          
+
           execution.stepResults.push({
             stepId: step.id,
             status: 'failed',
-            error: stepError.message,
+            error: stepError instanceof Error ? stepError.message : String(stepError),
             executedAt: new Date().toISOString()
           });
 
@@ -323,9 +323,9 @@ export class WorkflowEngine {
       }
       execution.completedAt = new Date().toISOString();
 
-    } catch (error: any) {
+    } catch (error) {
       execution.status = 'failed';
-      execution.error = error.message;
+      execution.error = error instanceof Error ? error.message : String(error);
       execution.completedAt = new Date().toISOString();
       throw error;
     }
@@ -373,7 +373,7 @@ export class WorkflowEngine {
 
         clearTimeout(timer);
         resolve(result);
-      } catch (error: any) {
+      } catch (error) {
         clearTimeout(timer);
         reject(error);
       }

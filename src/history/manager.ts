@@ -44,7 +44,7 @@ export class HistoryManager {
       if (fs.existsSync(this.storePath)) {
         return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
       }
-    } catch (e: any) { console.warn('History file corrupted, starting fresh:', e.message); }
+    } catch (e) { console.warn('History file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { entries: [] };
   }
 
@@ -54,8 +54,8 @@ export class HistoryManager {
       this.saveTimer = null;
       try {
         fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
-      } catch (e: any) {
-        console.warn('[HistoryManager] Failed to save:', e.message);
+      } catch (e) {
+        console.warn('[HistoryManager] Failed to save:', e instanceof Error ? e.message : String(e));
       }
     }, 2000);
   }
@@ -66,8 +66,8 @@ export class HistoryManager {
       this.saveTimer = null;
       try {
         fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
-      } catch (e: any) {
-        console.warn('[HistoryManager] Failed to save on destroy:', e.message);
+      } catch (e) {
+        console.warn('[HistoryManager] Failed to save on destroy:', e instanceof Error ? e.message : String(e));
       }
     }
   }

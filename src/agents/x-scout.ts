@@ -293,8 +293,8 @@ async function runSession(state: ScoutState): Promise<void> {
       await chat('📊 Sessie klaar, niks bijzonders gevonden. Ik check later weer.');
     }
     
-  } catch (err: any) {
-    await chat(`⚠️ Scout error: ${err.message}. Ik stop even.`);
+  } catch (err) {
+    await chat(`⚠️ Scout error: ${err instanceof Error ? err.message : String(err)}. Ik stop even.`);
   }
   
   state.running = false;

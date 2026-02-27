@@ -101,8 +101,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
       const result = await drawManager.captureAnnotatedFull(activeTab.webContentsId, activeTab.url);
       return result;
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   });
 
@@ -114,8 +114,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
       const result = await drawManager.captureQuickScreenshot(activeTab.webContentsId, activeTab.url);
       return result;
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   });
 
@@ -196,7 +196,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
           const prevDomain = new URL(prevTab.url).hostname;
           if (prevDomain) networkInspector.flushDomain(prevDomain);
         }
-      } catch (e: any) { console.warn('Network flush domain parse failed:', e.message); }
+      } catch (e) { console.warn('Network flush domain parse failed:', e instanceof Error ? e.message : String(e)); }
     }
     // Track visit end when navigating away
     if (data.type === 'did-start-navigation' && data.url) {

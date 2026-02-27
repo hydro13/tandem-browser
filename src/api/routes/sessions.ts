@@ -79,8 +79,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
         tab = await ctx.tabManager.openTab(url, undefined, 'copilot', sess.partition);
       }
       res.json({ ok: true, name: sess.name, partition: sess.partition, tab: tab || undefined });
-    } catch (e: any) {
-      res.status(400).json({ error: e.message });
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -90,8 +90,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.sessionManager.setActive(name);
       res.json({ ok: true, active: name });
-    } catch (e: any) {
-      res.status(400).json({ error: e.message });
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 
@@ -108,8 +108,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       }
       ctx.sessionManager.destroy(name);
       res.json({ ok: true, name });
-    } catch (e: any) {
-      res.status(400).json({ error: e.message });
+    } catch (e) {
+      res.status(400).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });
 

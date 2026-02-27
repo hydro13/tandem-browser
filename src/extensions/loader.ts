@@ -50,12 +50,12 @@ export class ExtensionLoader {
         try {
           const result = await this.loadExtension(ses, extPath);
           if (result) results.push(result);
-        } catch (err: any) {
-          console.warn(`⚠️ Failed to load extension ${dir.name}: ${err.message}`);
+        } catch (err) {
+          console.warn(`⚠️ Failed to load extension ${dir.name}: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
-    } catch (err: any) {
-      console.warn(`⚠️ Could not read extensions directory: ${err.message}`);
+    } catch (err) {
+      console.warn(`⚠️ Could not read extensions directory: ${err instanceof Error ? err.message : String(err)}`);
     }
 
     if (results.length > 0) {
@@ -124,12 +124,12 @@ export class ExtensionLoader {
           try {
             const manifest = JSON.parse(fs.readFileSync(path.join(extPath, 'manifest.json'), 'utf-8'));
             name = manifest.name || dir.name;
-          } catch (e: any) { console.warn('Extension manifest parse failed for', dir.name + ':', e.message); }
+          } catch (e) { console.warn('Extension manifest parse failed for', dir.name + ':', e instanceof Error ? e.message : String(e)); }
         }
 
         results.push({ name, path: extPath, hasManifest, loaded: isLoaded });
       }
-    } catch (e: any) { console.warn('Extensions directory listing failed:', e.message); }
+    } catch (e) { console.warn('Extensions directory listing failed:', e instanceof Error ? e.message : String(e)); }
 
     return results;
   }

@@ -204,8 +204,8 @@ export class SecurityManager {
 
       // Start CPU/memory monitoring
       this.behaviorMonitor?.startResourceMonitoring();
-    } catch (e: any) {
-      console.warn('[SecurityManager] onTabAttached error:', e.message);
+    } catch (e) {
+      console.warn('[SecurityManager] onTabAttached error:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -312,8 +312,8 @@ export class SecurityManager {
 
       // 4. Update baseline with new data
       this.evolution.updateBaseline(domain, metrics);
-    } catch (e: any) {
-      console.warn('[SecurityManager] onPageLoaded error:', e.message);
+    } catch (e) {
+      console.warn('[SecurityManager] onPageLoaded error:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -349,8 +349,8 @@ export class SecurityManager {
           });
         }
       }
-    } catch (e: any) {
-      console.warn('[SecurityManager] Correlation error:', e.message);
+    } catch (e) {
+      console.warn('[SecurityManager] Correlation error:', e instanceof Error ? e.message : String(e));
     } finally {
       this.correlationRunning = false;
     }
@@ -382,8 +382,8 @@ export class SecurityManager {
       const result = await this.blocklistUpdater.update();
       this.db.setBlocklistMeta('lastUpdated', new Date().toISOString());
       console.log(`[SecurityManager] Blocklist update complete: ${result.totalAdded} entries, ${result.errors.length} errors`);
-    } catch (e: any) {
-      console.warn('[SecurityManager] Blocklist update failed:', e.message);
+    } catch (e) {
+      console.warn('[SecurityManager] Blocklist update failed:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -408,8 +408,8 @@ export class SecurityManager {
             behaviorMonitor: !!this.behaviorMonitor,
           },
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -417,8 +417,8 @@ export class SecurityManager {
     app.get('/security/guardian/status', (_req, res) => {
       try {
         res.json(this.guardian.getStatus());
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -437,8 +437,8 @@ export class SecurityManager {
         }
         this.guardian.setMode(domain, mode);
         res.json({ ok: true, domain, mode });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -450,8 +450,8 @@ export class SecurityManager {
         const category = req.query.category as string | undefined;
         const events = this.db.getRecentEvents(limit, severity, category);
         res.json({ events, total: events.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -461,8 +461,8 @@ export class SecurityManager {
         const limit = parseInt(req.query.limit as string) || 100;
         const domains = this.db.getDomains(limit);
         res.json({ domains, total: domains.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -477,8 +477,8 @@ export class SecurityManager {
         }
         const blockStatus = this.shield.checkDomain(domain);
         res.json({ ...info, blocked: blockStatus.blocked, blockReason: blockStatus.reason });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -493,8 +493,8 @@ export class SecurityManager {
         }
         this.db.upsertDomain(domain, { trustLevel: trust });
         res.json({ ok: true, domain, trust });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -507,8 +507,8 @@ export class SecurityManager {
           memory: memoryStats,
           database: dbStats,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -522,8 +522,8 @@ export class SecurityManager {
         }
         const result = this.shield.checkUrl(url);
         res.json({ url, ...result });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -533,8 +533,8 @@ export class SecurityManager {
     app.get('/security/outbound/stats', (_req, res) => {
       try {
         res.json(this.outboundGuard.getStats());
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -544,8 +544,8 @@ export class SecurityManager {
         const limit = parseInt(req.query.limit as string) || 50;
         const events = this.db.getRecentEvents(limit, undefined, 'outbound');
         res.json({ events, total: events.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -559,8 +559,8 @@ export class SecurityManager {
         }
         this.db.addWhitelistPair(origin.toLowerCase(), destination.toLowerCase());
         res.json({ ok: true, origin: origin.toLowerCase(), destination: destination.toLowerCase() });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -575,8 +575,8 @@ export class SecurityManager {
         }
         const analysis = await this.contentAnalyzer.analyzePage();
         res.json(analysis);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -605,8 +605,8 @@ export class SecurityManager {
           fingerprintedScripts: fingerprinted,
           totalFingerprints: this.db.getScriptFingerprintCount(),
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -623,8 +623,8 @@ export class SecurityManager {
           hasPasswordOnHttp: analysis.security.hasPasswordOnHttp,
           riskScore: analysis.riskScore,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -640,8 +640,8 @@ export class SecurityManager {
           trackers: analysis.trackers,
           total: analysis.trackers.length,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -659,8 +659,8 @@ export class SecurityManager {
           currentWasmActivity: wasmCount,
           snapshotCount: snapshots.length,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -678,8 +678,8 @@ export class SecurityManager {
           blocked: log.filter(p => p.action === 'blocked').length,
           allowed: log.filter(p => p.action === 'allowed').length,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -693,8 +693,8 @@ export class SecurityManager {
         const { scriptId } = req.body;
         const success = await this.behaviorMonitor.killScript(scriptId || 'current');
         res.json({ ok: success, scriptId: scriptId || 'current' });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -708,8 +708,8 @@ export class SecurityManager {
           return;
         }
         res.json(this.gatekeeperWs.getStatus());
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -722,8 +722,8 @@ export class SecurityManager {
         }
         const queue = this.gatekeeperWs.getQueue();
         res.json({ queue, total: queue.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -750,8 +750,8 @@ export class SecurityManager {
           return;
         }
         res.json({ ok: true, id, action });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -765,8 +765,8 @@ export class SecurityManager {
         const limit = parseInt(req.query.limit as string) || 50;
         const history = this.gatekeeperWs.getHistory(limit);
         res.json({ history, total: history.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -778,8 +778,8 @@ export class SecurityManager {
           return;
         }
         res.json({ secret: this.gatekeeperWs.getSecret(), path: '~/.tandem/security/gatekeeper.secret' });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -791,8 +791,8 @@ export class SecurityManager {
         const domain = req.params.domain;
         const baselines = this.db.getBaselinesByDomain(domain);
         res.json({ domain, baselines, total: baselines.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -802,8 +802,8 @@ export class SecurityManager {
         const limit = parseInt(req.query.limit as string) || 50;
         const anomalies = this.db.getRecentAnomalies(limit);
         res.json({ anomalies, total: anomalies.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -812,8 +812,8 @@ export class SecurityManager {
       try {
         const candidates = this.db.getOpenZeroDayCandidates();
         res.json({ candidates, total: candidates.length });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -832,8 +832,8 @@ export class SecurityManager {
           return;
         }
         res.json({ ok: true, id });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -848,8 +848,8 @@ export class SecurityManager {
         }
         const report = this.threatIntel.generateReport(period as 'day' | 'week' | 'month');
         res.json(report);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -858,8 +858,8 @@ export class SecurityManager {
       try {
         const result = await this.blocklistUpdater.update();
         res.json(result);
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -877,8 +877,8 @@ export class SecurityManager {
           : Date.now() - 2592000_000;
         const changes = this.db.getTrustChanges(since);
         res.json({ changes, total: changes.length, period });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -888,8 +888,8 @@ export class SecurityManager {
         const ninetyDaysMs = 90 * 86400_000;
         const pruned = this.db.pruneOldEvents(ninetyDaysMs);
         res.json({ ok: true, pruned, cutoffDays: 90 });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -942,8 +942,8 @@ export class SecurityManager {
           crossDomainScripts: this.db.getCrossDomainScriptCount(),
           astCorrelations: astResults.length,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 
@@ -957,8 +957,8 @@ export class SecurityManager {
           analyzers,
           total: analyzers.length,
         });
-      } catch (e: any) {
-        res.status(500).json({ error: e.message });
+      } catch (e) {
+        res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
       }
     });
 

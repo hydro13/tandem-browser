@@ -91,8 +91,8 @@ export class NetworkMocker {
     if (!this.fetchEnabled) return;
     try {
       await this.devtools.sendCommand('Fetch.disable', {});
-    } catch (e: any) {
-      console.warn('[NetworkMocker] Fetch.disable failed:', e.message);
+    } catch (e) {
+      console.warn('[NetworkMocker] Fetch.disable failed:', e instanceof Error ? e.message : String(e));
     }
     this.fetchEnabled = false;
     console.log('[NetworkMocker] Fetch.disable — interception stopped');
@@ -209,8 +209,8 @@ export class NetworkMocker {
           body: responseBody,
         });
       }
-    } catch (e: any) {
-      console.error(`[NetworkMocker] Error handling paused request ${url}:`, e.message);
+    } catch (e) {
+      console.error(`[NetworkMocker] Error handling paused request ${url}:`, e instanceof Error ? e.message : String(e));
       // Try to continue the request so the browser doesn't hang
       try {
         await this.devtools.sendCommand('Fetch.continueRequest', { requestId });

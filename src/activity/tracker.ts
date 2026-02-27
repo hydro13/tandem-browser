@@ -66,7 +66,7 @@ export class ActivityTracker {
         setTimeout(() => {
           try {
             this.win.webContents.send('auto-snapshot-request', { url });
-          } catch (e: any) { console.warn('Auto-snapshot send failed (window may be closed):', e.message); }
+          } catch (e) { console.warn('Auto-snapshot send failed (window may be closed):', e instanceof Error ? e.message : String(e)); }
         }, 3000);
       }
     }

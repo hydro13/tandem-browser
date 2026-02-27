@@ -186,8 +186,8 @@ export class ConfigManager {
         }
         return this.deepMerge(DEFAULT_CONFIG, raw);
       }
-    } catch (e: any) {
-      console.warn('Config file corrupted, using defaults:', e.message);
+    } catch (e) {
+      console.warn('Config file corrupted, using defaults:', e instanceof Error ? e.message : String(e));
     }
     return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
@@ -196,8 +196,8 @@ export class ConfigManager {
   private save(): void {
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-    } catch (e: any) {
-      console.warn('Config save failed:', e.message);
+    } catch (e) {
+      console.warn('Config save failed:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -248,8 +248,8 @@ export class ConfigManager {
     for (const listener of this.changeListeners) {
       try {
         listener(this.config, changed);
-      } catch (e: any) {
-        console.warn('Config change listener error:', e.message);
+      } catch (e) {
+        console.warn('Config change listener error:', e instanceof Error ? e.message : String(e));
       }
     }
   }

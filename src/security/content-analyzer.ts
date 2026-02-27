@@ -287,8 +287,8 @@ export class ContentAnalyzer {
         });
       }
 
-    } catch (e: any) {
-      console.warn('[ContentAnalyzer] Page analysis error:', e.message);
+    } catch (e) {
+      console.warn('[ContentAnalyzer] Page analysis error:', e instanceof Error ? e.message : String(e));
     }
 
     // 7. Typosquatting check
@@ -359,8 +359,8 @@ export class ContentAnalyzer {
           this.scanSourceForThreats(scriptContent, pageDomain, 'inline-script');
         }
       }
-    } catch (e: any) {
-      console.warn('[ContentAnalyzer] Deep scan error:', e.message);
+    } catch (e) {
+      console.warn('[ContentAnalyzer] Deep scan error:', e instanceof Error ? e.message : String(e));
     }
   }
 

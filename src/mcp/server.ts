@@ -232,8 +232,8 @@ server.tool(
       const result = await apiCall('POST', '/execute-js/confirm', { code });
       await logActivity('execute_js', code.substring(0, 80));
       return { content: [{ type: 'text', text: JSON.stringify(result.result ?? result, null, 2) }] };
-    } catch (err: any) {
-      if (err.message?.includes('rejected')) {
+    } catch (err) {
+      if (err instanceof Error && err.message?.includes('rejected')) {
         return { content: [{ type: 'text', text: 'User rejected JavaScript execution.' }], isError: true };
       }
       throw err;
@@ -555,12 +555,12 @@ server.tool(
             url: link.href,
             snippet: pageText,
           });
-        } catch (e: any) {
+        } catch (e) {
           // Page failed to load, skip
           findings.push({
             title: link.text,
             url: link.href,
-            snippet: `(Fout bij laden: ${e.message})`,
+            snippet: `(Fout bij laden: ${e instanceof Error ? e.message : String(e)})`,
           });
         }
       }
@@ -579,18 +579,19 @@ server.tool(
         } catch { /* optional */ }
       }
 
-    } catch (e: any) {
+    } catch (e) {
+      const eMsg = e instanceof Error ? e.message : String(e);
       if (taskId) {
         try {
-          await apiCall('POST', `/tasks/${taskId}/status`, { status: 'failed', result: e.message });
+          await apiCall('POST', `/tasks/${taskId}/status`, { status: 'failed', result: eMsg });
         } catch { /* optional */ }
       }
 
-      await logActivity('research_error', e.message);
+      await logActivity('research_error', eMsg);
       return {
         content: [{
           type: 'text',
-          text: `Research failed: ${e.message}\n\nPartial findings (${findings.length}):\n${findings.map(f => `- ${f.title}: ${f.snippet.substring(0, 100)}`).join('\n')}`,
+          text: `Research failed: ${eMsg}\n\nPartial findings (${findings.length}):\n${findings.map(f => `- ${f.title}: ${f.snippet.substring(0, 100)}`).join('\n')}`,
         }],
       };
     }

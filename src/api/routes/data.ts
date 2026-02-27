@@ -215,7 +215,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       // Chat history
       const chatPath = path.join(baseDir, 'chat-history.json');
       if (fs.existsSync(chatPath)) {
-        try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e: any) { console.warn('Chat history load failed:', e.message); }
+        try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e) { console.warn('Chat history load failed:', e instanceof Error ? e.message : String(e)); }
       }
 
       // Behavior stats

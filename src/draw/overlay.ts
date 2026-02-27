@@ -86,8 +86,8 @@ export class DrawOverlayManager {
       this.win.webContents.send('screenshot-taken', { path: filePath, filename });
 
       return { ok: true, path: filePath };
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
@@ -158,8 +158,8 @@ export class DrawOverlayManager {
       });
 
       return { ok: true, path: picturesPath };
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
@@ -207,8 +207,8 @@ export class DrawOverlayManager {
       });
 
       return { ok: true, path: picturesPath };
-    } catch (e: any) {
-      return { ok: false, error: e.message };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
   }
 
