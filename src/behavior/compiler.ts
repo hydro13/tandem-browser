@@ -79,7 +79,7 @@ export class BehaviorCompiler {
         if (fs.existsSync(this.profileDir)) {
             try {
                 return JSON.parse(fs.readFileSync(this.profileDir, 'utf8'));
-            } catch (e) {
+            } catch {
                 return this.getDefaultProfile();
             }
         }

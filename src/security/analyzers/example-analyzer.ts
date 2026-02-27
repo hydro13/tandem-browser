@@ -1,4 +1,5 @@
-import { SecurityAnalyzer, AnalyzerContext, SecurityEvent, AnalysisConfidence } from '../types';
+import type { SecurityAnalyzer, AnalyzerContext, SecurityEvent} from '../types';
+import { AnalysisConfidence } from '../types';
 
 /**
  * EventBurstAnalyzer — Detects rapid bursts of security events from a single domain.

@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import type { Response } from 'express';
 
 /** Standard error handler for API route catch blocks */
 export function handleRouteError(res: Response, e: unknown): void {

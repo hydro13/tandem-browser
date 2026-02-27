@@ -1,6 +1,6 @@
-import { DevToolsManager } from '../devtools/manager';
-import { SnapshotManager } from '../snapshot/manager';
-import { AccessibilityNode } from '../snapshot/types';
+import type { DevToolsManager } from '../devtools/manager';
+import type { SnapshotManager } from '../snapshot/manager';
+import type { AccessibilityNode } from '../snapshot/types';
 
 export type LocatorStrategy = 'role' | 'text' | 'placeholder' | 'label' | 'testid';
 

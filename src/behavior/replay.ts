@@ -1,4 +1,5 @@
-import { behaviorCompiler, BehavioralProfile } from './compiler';
+import type { BehavioralProfile } from './compiler';
+import { behaviorCompiler } from './compiler';
 
 export class BehaviorReplay {
     private profile: BehavioralProfile;
@@ -18,7 +19,7 @@ export class BehaviorReplay {
      * Calculates the delay (in milliseconds) before typing the next character,
      * based on the user's average WPM.
      */
-    public getTypingDelay(currentChar: string, nextChar: string): number {
+    public getTypingDelay(_currentChar: string, _nextChar: string): number {
         const wpm = this.profile.typingSpeed.meanWpm;
         // Average word is ~5 characters. WPM * 5 = CPM.
         const cpm = wpm * 5;
@@ -46,7 +47,7 @@ export class BehaviorReplay {
         // Simple linear interpolation with ease-in-out for now
         // A full implementation would use a cubic bézier curve based on the profile
         for (let i = 1; i <= steps; i++) {
-            let t = i / steps;
+            const t = i / steps;
 
             // Apply easing based on profile
             let easedT = t;

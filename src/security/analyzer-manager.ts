@@ -1,4 +1,4 @@
-import { SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import type { SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('AnalyzerManager');

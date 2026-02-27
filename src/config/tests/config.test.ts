@@ -4,7 +4,7 @@ import os from 'os';
 
 // Mock fs before importing ConfigManager
 vi.mock('fs', async () => {
-  const actual = await vi.importActual<typeof import('fs')>('fs');
+  const actual = await vi.importActual<typeof fs>('fs');
   return {
     ...actual,
     default: {
@@ -22,7 +22,7 @@ vi.mock('fs', async () => {
 });
 
 import fs from 'fs';
-import { ConfigManager, type TandemConfig } from '../manager';
+import { ConfigManager } from '../manager';
 
 describe('ConfigManager', () => {
   beforeEach(() => {

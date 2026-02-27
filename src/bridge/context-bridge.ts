@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { EventStreamManager, BrowserEvent, BrowserEventType } from '../events/stream';
+import type { EventStreamManager, BrowserEvent, BrowserEventType } from '../events/stream';
 import { tandemDir } from '../utils/paths';
 
 export interface ContextSnapshot {

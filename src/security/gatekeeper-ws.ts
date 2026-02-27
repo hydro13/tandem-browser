@@ -1,20 +1,21 @@
-import { Server as HttpServer } from 'http';
+import type { Server as HttpServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { IncomingMessage } from 'http';
+import type { IncomingMessage } from 'http';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
-import { Guardian } from './guardian';
-import { SecurityDB } from './security-db';
-import {
+import type { Guardian } from './guardian';
+import type { SecurityDB } from './security-db';
+import type {
   PendingDecision,
   GatekeeperDecision,
   GatekeeperStatus,
   GatekeeperHistoryEntry,
   GatekeeperAction,
   SecurityEvent,
-  GuardianMode,
+  GuardianMode} from './types';
+import {
   AnalysisConfidence,
 } from './types';
 import { createLogger } from '../utils/logger';
@@ -22,7 +23,7 @@ import { createLogger } from '../utils/logger';
 const log = createLogger('Gatekeeper');
 
 const MAX_QUEUE = 1000;
-const DEFAULT_TIMEOUT = 30_000;
+const _DEFAULT_TIMEOUT = 30_000;
 const HEARTBEAT_INTERVAL = 30_000;
 const MAX_HISTORY = 500;
 

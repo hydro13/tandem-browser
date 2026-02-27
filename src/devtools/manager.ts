@@ -1,13 +1,13 @@
-import { WebContents, webContents } from 'electron';
-import { TabManager } from '../tabs/manager';
+import type { WebContents} from 'electron';
+import { webContents } from 'electron';
+import type { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
-import { CopilotStream } from '../activity/copilot-stream';
-import { ActivityTracker } from '../activity/tracker';
-import {
-  ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, DOMNodeInfo, StorageData, PerformanceMetrics,
+import type { CopilotStream } from '../activity/copilot-stream';
+import type { ActivityTracker } from '../activity/tracker';
+import type {
+  ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, DOMNodeInfo, StorageData, PerformanceMetrics,
   CDPSubscriber, CDPRequestWillBeSentParams, CDPResponseReceivedParams, CDPLoadingFinishedParams, CDPLoadingFailedParams,
-  CDPBindingCalledParams, CDPCookie,
-} from './types';
+  CDPBindingCalledParams, CDPCookie} from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('CDP');
@@ -567,7 +567,7 @@ export class DevToolsManager {
       try {
         const htmlResult = await wc.debugger.sendCommand('DOM.getOuterHTML', { nodeId });
         outerHTML = htmlResult.outerHTML?.substring(0, 2000) || '';
-      } catch {}
+      } catch { /* node may have been removed from DOM */ }
 
       // Get bounding box via CSS
       let boundingBox: DOMNodeInfo['boundingBox'];
@@ -577,7 +577,7 @@ export class DevToolsManager {
           const c = box.model.content;
           boundingBox = { x: c[0], y: c[1], width: c[2] - c[0], height: c[5] - c[1] };
         }
-      } catch {}
+      } catch { /* box model unavailable for hidden/detached nodes */ }
 
       // Get inner text via Runtime
       let innerText = '';
@@ -591,7 +591,7 @@ export class DevToolsManager {
           });
           innerText = textResult.result?.value || '';
         }
-      } catch {}
+      } catch { /* node may not be resolvable */ }
 
       // Parse attributes into map
       const attrs: Record<string, string> = {};
@@ -802,7 +802,7 @@ export class DevToolsManager {
     const url = wc && !wc.isDestroyed() ? wc.getURL() : '';
 
     switch (params.name) {
-      case '__tandemScroll':
+      case '__tandemScroll': {
         const scrollPct = parseInt(params.payload, 10);
         this.copilotStream.emitDebounced(`scroll-${tab}`, {
           type: 'scroll-position',
@@ -814,6 +814,7 @@ export class DevToolsManager {
           type: 'scroll-position', tabId: tab, scrollPercent: scrollPct, url,
         });
         break;
+      }
 
       case '__tandemSelection':
         this.copilotStream.emitDebounced(`select-${tab}`, {

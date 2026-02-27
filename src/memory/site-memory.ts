@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { WebContents } from 'electron';
+import type { WebContents } from 'electron';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
@@ -147,7 +147,7 @@ export class SiteMemoryManager {
 
       // Load or create site data
       let site = this.loadSite(domain);
-      const isNew = !site;
+      const _isNew = !site;
 
       if (!site) {
         site = {

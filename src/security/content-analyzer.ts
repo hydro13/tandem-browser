@@ -1,6 +1,7 @@
-import { SecurityDB } from './security-db';
-import { DevToolsManager } from '../devtools/manager';
-import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import type { SecurityDB } from './security-db';
+import type { DevToolsManager } from '../devtools/manager';
+import type { SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ContentAnalyzer');

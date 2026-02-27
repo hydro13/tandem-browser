@@ -1,4 +1,4 @@
-import { BrowserWindow, app } from 'electron';
+import type { BrowserWindow} from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';

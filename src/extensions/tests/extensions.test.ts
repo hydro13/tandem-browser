@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterAll, beforeEach, afterEach } from 'vitest';
 import { CrxDownloader } from '../crx-downloader';
 import { ChromeExtensionImporter } from '../chrome-importer';
 import { GALLERY_DEFAULTS } from '../gallery-defaults';

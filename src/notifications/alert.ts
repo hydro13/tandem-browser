@@ -1,4 +1,5 @@
-import { BrowserWindow, Notification } from 'electron';
+import type { BrowserWindow} from 'electron';
+import { Notification } from 'electron';
 
 let mainWindow: BrowserWindow | null = null;
 

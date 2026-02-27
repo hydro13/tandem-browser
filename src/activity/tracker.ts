@@ -1,7 +1,7 @@
-import { BrowserWindow } from 'electron';
-import { PanelManager } from '../panel/manager';
-import { DrawOverlayManager } from '../draw/overlay';
-import { CopilotStream } from './copilot-stream';
+import type { BrowserWindow } from 'electron';
+import type { PanelManager } from '../panel/manager';
+import type { DrawOverlayManager } from '../draw/overlay';
+import type { CopilotStream } from './copilot-stream';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ActivityTracker');
@@ -84,7 +84,7 @@ export class ActivityTracker {
     switch (data.type) {
       case 'did-navigate':
       case 'did-navigate-in-page':
-        this.copilotStream.emit({
+        void this.copilotStream.emit({
           type: 'navigated',
           tabId,
           timestamp,
@@ -93,7 +93,7 @@ export class ActivityTracker {
         break;
 
       case 'did-finish-load':
-        this.copilotStream.emit({
+        void this.copilotStream.emit({
           type: 'page-loaded',
           tabId,
           timestamp,
@@ -102,7 +102,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-switch':
-        this.copilotStream.emit({
+        void this.copilotStream.emit({
           type: 'tab-switched',
           tabId,
           timestamp,
@@ -113,7 +113,7 @@ export class ActivityTracker {
       case 'tab-open':
         // Only stream user-initiated opens (source: 'robin'), not agent opens
         if (data.source === 'robin') {
-          this.copilotStream.emit({
+          void this.copilotStream.emit({
             type: 'tab-opened',
             tabId,
             timestamp,
@@ -123,7 +123,7 @@ export class ActivityTracker {
         break;
 
       case 'tab-close':
-        this.copilotStream.emit({
+        void this.copilotStream.emit({
           type: 'tab-closed',
           tabId,
           timestamp,

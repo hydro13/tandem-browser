@@ -83,7 +83,7 @@ export class StateManager {
           expirationDate: cookie.expirationDate,
         });
         restored++;
-      } catch (_e) {
+      } catch {
         // Skip cookies that fail to set (e.g. expired)
       }
     }

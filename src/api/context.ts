@@ -1,6 +1,7 @@
-import { Request } from 'express';
-import { BrowserWindow, webContents } from 'electron';
-import { ManagerRegistry } from '../registry';
+import type { Request } from 'express';
+import type { BrowserWindow} from 'electron';
+import { webContents } from 'electron';
+import type { ManagerRegistry } from '../registry';
 import { DEFAULT_PARTITION } from '../utils/constants';
 
 export type RouteContext = ManagerRegistry & { win: BrowserWindow };

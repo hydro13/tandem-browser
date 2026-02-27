@@ -1,7 +1,7 @@
-import { Server as HttpServer } from 'http';
-import { Session } from 'electron';
-import { RequestDispatcher } from '../network/dispatcher';
-import { DevToolsManager } from '../devtools/manager';
+import type { Server as HttpServer } from 'http';
+import type { Session } from 'electron';
+import type { RequestDispatcher } from '../network/dispatcher';
+import type { DevToolsManager } from '../devtools/manager';
 import { SecurityDB } from './security-db';
 import { NetworkShield } from './network-shield';
 import { Guardian } from './guardian';
@@ -15,7 +15,8 @@ import { ThreatIntel } from './threat-intel';
 import { BlocklistUpdater } from './blocklists/updater';
 import { AnalyzerManager } from './analyzer-manager';
 import { EventBurstAnalyzer } from './analyzers/example-analyzer';
-import { PageMetrics, AnalysisConfidence } from './types';
+import type { PageMetrics} from './types';
+import { AnalysisConfidence } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('SecurityManager');
@@ -368,7 +369,7 @@ export class SecurityManager {
     const lastUpdated = this.db.getBlocklistMeta('lastUpdated');
     if (!lastUpdated || (Date.now() - new Date(lastUpdated).getTime()) > TWENTY_FOUR_HOURS) {
       // Run asynchronously — don't block constructor
-      this.runBlocklistUpdate();
+      void this.runBlocklistUpdate();
     }
 
     // Schedule recurring updates every 24 hours

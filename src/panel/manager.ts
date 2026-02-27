@@ -1,7 +1,7 @@
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { ConfigManager } from '../config/manager';
+import type { ConfigManager } from '../config/manager';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 

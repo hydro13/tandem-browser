@@ -1,4 +1,4 @@
-import { WebContents } from 'electron';
+import type { WebContents } from 'electron';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('ScriptInjector');

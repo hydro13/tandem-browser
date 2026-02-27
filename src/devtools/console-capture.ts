@@ -1,5 +1,5 @@
-import { WebContents } from 'electron';
-import { ConsoleEntry, CDPConsoleAPICalledParams, CDPExceptionThrownParams, CDPRemoteObject, CDPCallFrame } from './types';
+import type { WebContents } from 'electron';
+import type { ConsoleEntry, CDPConsoleAPICalledParams, CDPExceptionThrownParams, CDPRemoteObject, CDPCallFrame } from './types';
 
 const MAX_CONSOLE_ENTRIES = 500;
 const MAX_ARG_LENGTH = 1000;
@@ -24,7 +24,7 @@ export class ConsoleCapture {
    * Start capturing console output from the given webContents.
    * PRECONDITION: webContents.debugger must already be attached.
    */
-  async enable(wc: WebContents, tabId?: string): Promise<void> {
+  async enable(wc: WebContents, _tabId?: string): Promise<void> {
     if (this.enabled) return;
 
     // Enable Runtime domain for console events

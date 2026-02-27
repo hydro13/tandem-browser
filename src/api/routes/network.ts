@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { RouteContext } from '../context';
+import type { Router, Request, Response } from 'express';
+import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
 export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {

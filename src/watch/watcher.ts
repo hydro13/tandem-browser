@@ -75,7 +75,7 @@ export class WatchManager {
     }
 
     const partition = 'persist:tandem';
-    const ses = session.fromPartition(partition);
+    const _ses = session.fromPartition(partition);
 
     this.hiddenWindow = new BrowserWindow({
       show: false,

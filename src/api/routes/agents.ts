@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
-import { RouteContext, getActiveWC } from '../context';
+import type { Router, Request, Response } from 'express';
+import type { RouteContext} from '../context';
+import { getActiveWC } from '../context';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 

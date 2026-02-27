@@ -2,9 +2,10 @@ import https from 'https';
 import fs from 'fs';
 import path from 'path';
 import { tandemDir } from '../../utils/paths';
-import { SecurityDB } from '../security-db';
-import { NetworkShield } from '../network-shield';
-import { UpdateResult, URL_LIST_SAFE_DOMAINS } from '../types';
+import type { SecurityDB } from '../security-db';
+import type { NetworkShield } from '../network-shield';
+import type { UpdateResult} from '../types';
+import { URL_LIST_SAFE_DOMAINS } from '../types';
 import { createLogger } from '../../utils/logger';
 
 const log = createLogger('BlocklistUpdater');

@@ -1,7 +1,8 @@
-import { Router, Request, Response } from 'express';
+import type { Router, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { RouteContext, getActiveWC } from '../context';
+import type { RouteContext} from '../context';
+import { getActiveWC } from '../context';
 import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
@@ -38,7 +39,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
             })
           `);
           viewport = JSON.parse(info);
-        } catch (_) { /* viewport info is best-effort */ }
+        } catch { /* viewport info is best-effort */ }
       }
       res.json({
         ready: !!wc,

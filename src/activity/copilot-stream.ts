@@ -1,4 +1,4 @@
-import { ConfigManager } from '../config/manager';
+import type { ConfigManager } from '../config/manager';
 
 interface CopilotEvent {
   type: string;
@@ -72,7 +72,7 @@ export class CopilotStream {
     if (existing) clearTimeout(existing);
     this.debounceTimers.set(key, setTimeout(() => {
       this.debounceTimers.delete(key);
-      this.emit(event);
+      void this.emit(event);
     }, delayMs));
   }
 

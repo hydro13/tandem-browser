@@ -1,4 +1,4 @@
-import { Session, OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
+import type { Session, OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('Dispatcher');

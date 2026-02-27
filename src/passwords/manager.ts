@@ -78,7 +78,7 @@ export class PasswordManager {
                 return true;
             }
             return false;
-        } catch (e) {
+        } catch {
             return false; // Wrong password
         }
     }
@@ -145,7 +145,7 @@ export class PasswordManager {
             try {
                 const plaintext = PasswordCrypto.decrypt(r.encryptedBlob, this.vaultKey);
                 results.push({ username: r.username, payload: JSON.parse(plaintext) });
-            } catch (e) {
+            } catch {
                 // ignore broken items silently during lists
             }
         }

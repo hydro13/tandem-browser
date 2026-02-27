@@ -1,7 +1,8 @@
-import { Session, BrowserWindow, ipcMain, Menu, MenuItem } from 'electron';
+import type { Session} from 'electron';
+import { BrowserWindow, ipcMain, Menu, MenuItem } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import { ExtensionManager } from './manager';
+import type { ExtensionManager } from './manager';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
@@ -260,7 +261,7 @@ export class ExtensionToolbar {
       },
     });
 
-    this.popupWindow.loadURL(ext.popupUrl);
+    void this.popupWindow.loadURL(ext.popupUrl);
 
     this.popupWindow.webContents.once('did-finish-load', () => {
       if (!this.popupWindow) return;

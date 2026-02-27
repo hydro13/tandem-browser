@@ -1,8 +1,9 @@
-import { Router, Request, Response } from 'express';
+import type { Router, Request, Response } from 'express';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { RouteContext, getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
+import type { RouteContext} from '../context';
+import { getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { copilotAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
@@ -41,7 +42,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       }
       const wc = await getActiveWC(ctx);
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-      wc.loadURL(url);
+      void wc.loadURL(url);
       // Mark tab as copilot-controlled when navigated via API
       const activeTab = ctx.tabManager.getActiveTab();
       if (activeTab) {

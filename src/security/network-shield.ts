@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { SecurityDB } from './security-db';
+import type { SecurityDB } from './security-db';
 import { tandemDir } from '../utils/paths';
 import { URL_LIST_SAFE_DOMAINS } from './types';
 import { createLogger } from '../utils/logger';

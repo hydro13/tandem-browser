@@ -1,4 +1,5 @@
-import { BrowserWindow, session, WebContents, webContents } from 'electron';
+import type { BrowserWindow, WebContents} from 'electron';
+import { webContents } from 'electron';
 
 export type TabSource = 'robin' | 'kees' | 'copilot';
 

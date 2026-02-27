@@ -1,6 +1,6 @@
-import { Session } from 'electron';
+import type { Session } from 'electron';
 import crypto from 'crypto';
-import { RequestDispatcher } from '../network/dispatcher';
+import type { RequestDispatcher } from '../network/dispatcher';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('StealthManager');

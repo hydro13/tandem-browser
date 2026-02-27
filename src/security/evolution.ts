@@ -1,5 +1,6 @@
-import { SecurityDB } from './security-db';
-import { PageMetrics, Anomaly, EventSeverity, AnalysisConfidence } from './types';
+import type { SecurityDB } from './security-db';
+import type { PageMetrics, Anomaly, EventSeverity} from './types';
+import { AnalysisConfidence } from './types';
 
 /**
  * EvolutionEngine — Baseline learning, anomaly detection, and trust evolution.

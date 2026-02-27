@@ -1,5 +1,5 @@
-import { BrowserWindow } from 'electron';
-import { PanelManager } from '../panel/manager';
+import type { BrowserWindow } from 'electron';
+import type { PanelManager } from '../panel/manager';
 
 /**
  * VoiceManager — Manages voice input via Web Speech API in the SHELL.

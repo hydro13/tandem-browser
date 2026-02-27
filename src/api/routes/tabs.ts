@@ -1,7 +1,6 @@
-import { Router, Request, Response } from 'express';
-import path from 'path';
+import type { Router, Request, Response } from 'express';
 import { webContents } from 'electron';
-import { RouteContext } from '../context';
+import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
 export function registerTabRoutes(router: Router, ctx: RouteContext): void {

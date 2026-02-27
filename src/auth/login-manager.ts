@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir } from '../utils/paths';
@@ -198,11 +198,11 @@ export class LoginManager {
 
   private async detectLoginState(webview: BrowserWindow, domain: string): Promise<LoginState> {
     const config = this.domainConfigs.get(domain);
-    const url = webview.webContents.getURL();
-    
+    const _url = webview.webContents.getURL();
+
     let loggedInScore = 0;
     let loggedOutScore = 0;
-    let detectionMethods: string[] = [];
+    const detectionMethods: string[] = [];
 
     try {
       // Check domain-specific rules if available
@@ -353,13 +353,14 @@ export class LoginManager {
             })()
           `);
 
-        case 'url-pattern':
+        case 'url-pattern': {
           const url = webview.webContents.getURL();
           const matches = new RegExp(rule.pattern, 'i').test(url);
-          
+
           if (rule.condition === 'exists' || rule.condition === 'contains') return matches;
           if (rule.condition === 'not-exists' || rule.condition === 'not-contains') return !matches;
           return false;
+        }
 
         case 'text-content':
           return await webview.webContents.executeJavaScript(`
@@ -374,22 +375,23 @@ export class LoginManager {
             })()
           `);
 
-        case 'cookie':
+        case 'cookie': {
           const cookies = await webview.webContents.session.cookies.get({ domain: this.extractDomain(webview.webContents.getURL()) });
           const cookieExists = cookies.some(cookie => cookie.name === rule.pattern);
-          
+
           if (rule.condition === 'exists') return cookieExists;
           if (rule.condition === 'not-exists') return !cookieExists;
-          
+
           if (rule.value && cookieExists) {
             const cookie = cookies.find(c => c.name === rule.pattern);
             const contains = cookie?.value.includes(rule.value) || false;
-            
+
             if (rule.condition === 'contains') return contains;
             if (rule.condition === 'not-contains') return !contains;
           }
-          
+
           return false;
+        }
 
         default:
           return false;

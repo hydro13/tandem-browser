@@ -1,9 +1,9 @@
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
-import { Session } from 'electron';
-import { CrxDownloader } from './crx-downloader';
-import { ExtensionLoader } from './loader';
+import type { Session } from 'electron';
+import type { CrxDownloader } from './crx-downloader';
+import type { ExtensionLoader } from './loader';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
@@ -51,21 +51,6 @@ export interface UpdateState {
     lastUpdateAttempt?: string;
     lastUpdateResult?: 'success' | 'failed' | 'rolled-back';
   }>;
-}
-
-interface UpdateProtocolApp {
-  appid: string;
-  updatecheck?: {
-    status: string;
-    version?: string;
-    codebase?: string;
-  };
-}
-
-interface UpdateProtocolResponse {
-  response?: {
-    app?: UpdateProtocolApp[];
-  };
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -281,7 +266,7 @@ export class UpdateChecker {
       const chromiumVersion = process.versions.chrome ?? '130.0.0.0';
       const cwsUrl = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${chromiumVersion}&acceptformat=crx2,crx3&x=id%3D${ext.id}%26uc`;
 
-      const responseText = await this.httpGet(cwsUrl, true);
+      const _responseText = await this.httpGet(cwsUrl, true);
       // responseText is actually binary for CRX, this approach is too heavy
       // Instead, just report unknown and let user trigger manual update
       return {
@@ -341,7 +326,7 @@ export class UpdateChecker {
     }
 
     log.info(`Downloading update for ${name} (${extensionId})...`);
-    const installResult = await this.downloader.installFromCws(extensionId);
+    const _installResult = await this.downloader.installFromCws(extensionId);
     // installFromCws extracts to extensionsDir/{id} which IS our current ext path
     // But the extension is already there, so installFromCws will return "already installed"
     // We need to work around this by temporarily renaming the existing dir
@@ -691,7 +676,7 @@ export class UpdateChecker {
   /**
    * Run a scheduled check — check all and log results.
    */
-  private async runScheduledCheck(session: Session): Promise<void> {
+  private async runScheduledCheck(_session: Session): Promise<void> {
     try {
       const installed = this.getInstalledExtensions();
       if (installed.length === 0) return;

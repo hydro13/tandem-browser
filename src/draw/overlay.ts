@@ -1,9 +1,10 @@
-import { BrowserWindow, app, webContents, clipboard, nativeImage } from 'electron';
+import type { BrowserWindow} from 'electron';
+import { app, webContents, clipboard, nativeImage } from 'electron';
 import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { ConfigManager } from '../config/manager';
+import type { ConfigManager } from '../config/manager';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('DrawOverlay');

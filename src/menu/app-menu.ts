@@ -1,11 +1,12 @@
-import { app, BrowserWindow, Menu } from 'electron';
-import { TabManager } from '../tabs/manager';
-import { PanelManager } from '../panel/manager';
-import { DrawOverlayManager } from '../draw/overlay';
-import { VoiceManager } from '../voice/recognition';
-import { PiPManager } from '../pip/manager';
-import { ConfigManager } from '../config/manager';
-import { AudioCaptureManager } from '../audio/capture';
+import type { BrowserWindow} from 'electron';
+import { app, Menu } from 'electron';
+import type { TabManager } from '../tabs/manager';
+import type { PanelManager } from '../panel/manager';
+import type { DrawOverlayManager } from '../draw/overlay';
+import type { VoiceManager } from '../voice/recognition';
+import type { PiPManager } from '../pip/manager';
+import type { ConfigManager } from '../config/manager';
+import type { AudioCaptureManager } from '../audio/capture';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('AppMenu');
@@ -45,7 +46,7 @@ export function buildAppMenu(deps: MenuDeps): void {
         { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => send('new-tab') },
         { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
         { label: 'Reopen Closed Tab', accelerator: 'CmdOrCtrl+Shift+T', click: () => {
-          deps.tabManager?.reopenClosedTab();
+          void deps.tabManager?.reopenClosedTab();
         }},
         { type: 'separator' },
         { label: 'Bookmark Page', accelerator: 'CmdOrCtrl+D', click: () => send('bookmark-page') },
