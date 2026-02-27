@@ -4,6 +4,35 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.11.0] — 2026-02-27
+
+### Code Quality & Architecture Refactoring
+
+Major internal restructuring — 12 refactoring commits, 60+ files changed, zero feature regressions. All 152 tests passing.
+
+#### Architecture
+- **Split api/server.ts** into 12 route modules + context.ts (3032→349 lines)
+- **Split main.ts** into ipc/handlers.ts, menu/app-menu.ts, notifications/alert.ts (1016→575 lines)
+- **Split shell/index.html** into external CSS/JS files (6572→451 lines, 4 new files)
+- **ManagerRegistry DI pattern**: replaced 35-param TandemAPIOptions with single registry interface
+- **Explicit init order**: SecurityManager.init() consolidates 3 scattered initialization calls
+
+#### Type Safety
+- **CDP types**: 12 typed interfaces for Runtime, Network, DOM protocol domains
+- **Removed all `catch(e: any)`**: 96 fixes across 32 files → `catch(e)` + `instanceof Error` checks
+- **Reduced `: any` annotations**: 48 unsafe `any` replaced with proper types (64→16 remaining, all genuinely polymorphic)
+
+#### Code Organization
+- **Shared utilities**: `tandemDir()` used in 40 files, `handleRouteError()` in 12 route files
+- **Fixed circular dependency**: copilotAlert extracted to `src/notifications/alert.ts`
+- **Naming consistency**: `cleanup()` → `destroy()` across session manager
+
+#### Testing
+- **Unified test runner**: `npm test` auto-discovers `src/**/tests/**/*.test.ts`
+- **152 tests** (was 86): added TabManager (30), TaskManager (26), utility (10) test suites
+
+---
+
 ## [0.10.3] — 2026-02-26
 
 ### Behavioral Learning Models
