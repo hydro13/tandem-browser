@@ -148,7 +148,7 @@ export class HeadlessManager {
     if (this.window && !this.window.isDestroyed()) return;
 
     const partition = 'persist:tandem';
-    const ses = session.fromPartition(partition);
+    const _ses = session.fromPartition(partition);
 
     this.window = new BrowserWindow({
       show: false,

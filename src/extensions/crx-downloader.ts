@@ -406,7 +406,7 @@ export class CrxDownloader {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Invalid ZIP payload: ${message}`);
+      throw new Error(`Invalid ZIP payload: ${message}`, { cause: err });
     }
 
     // Extract to extension directory

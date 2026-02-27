@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
-import { RouteContext } from '../context';
-import { LocatorQuery } from '../../locators/finder';
+import type { Router, Request, Response } from 'express';
+import type { RouteContext } from '../context';
+import type { LocatorQuery } from '../../locators/finder';
 import { handleRouteError } from '../../utils/errors';
 
 export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void {
@@ -73,7 +73,7 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
   });
 
   router.post('/find/click', async (req: Request, res: Response) => {
-    const { fillValue, ...query } = req.body;
+    const { fillValue: _fillValue, ...query } = req.body;
     if (!query.by || !query.value) {
       res.status(400).json({ error: '"by" and "value" required' }); return;
     }

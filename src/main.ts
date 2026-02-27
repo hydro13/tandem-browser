@@ -11,7 +11,8 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Main] Unhandled rejection:', reason);
 });
 
-import { app, BrowserWindow, session, ipcMain, WebContents } from 'electron';
+import type { WebContents } from 'electron';
+import { app, BrowserWindow, session, ipcMain } from 'electron';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
@@ -34,7 +35,7 @@ import { BookmarkManager } from './bookmarks/manager';
 import { HistoryManager } from './history/manager';
 import { DownloadManager } from './downloads/manager';
 import { AudioCaptureManager } from './audio/capture';
-import { ExtensionLoader } from './extensions/loader';
+import type { ExtensionLoader } from './extensions/loader';
 import { ExtensionManager } from './extensions/manager';
 import { ExtensionToolbar } from './extensions/toolbar';
 import { ClaroNoteManager } from './claronote/manager';
@@ -57,7 +58,7 @@ import { DeviceEmulator } from './device/emulator';
 import { ContentExtractor } from './content/extractor';
 import { WorkflowEngine } from './workflow/engine';
 import { LoginManager } from './auth/login-manager';
-import { ManagerRegistry } from './registry';
+import type { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
 import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
 import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS, CDP_ATTACH_DELAY_MS } from './utils/constants';
@@ -263,7 +264,7 @@ async function createWindow(): Promise<BrowserWindow> {
   });
   setMainWindow(mainWindow);
 
-  mainWindow.loadFile(path.join(__dirname, '..', 'shell', 'index.html'));
+  void mainWindow.loadFile(path.join(__dirname, '..', 'shell', 'index.html'));
 
   // Only open shell DevTools in dev mode (--dev flag)
   if (IS_DEV) {
@@ -507,7 +508,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 }
 
 
-app.whenReady().then(async () => {
+void app.whenReady().then(async () => {
   const win = await createWindow();
   await startAPI(win);
   buildAppMenu({

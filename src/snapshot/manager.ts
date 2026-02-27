@@ -1,5 +1,5 @@
-import { DevToolsManager } from '../devtools/manager';
-import { AccessibilityNode, RefMap, SnapshotOptions, SnapshotResult } from './types';
+import type { DevToolsManager } from '../devtools/manager';
+import type { AccessibilityNode, RefMap, SnapshotOptions, SnapshotResult } from './types';
 
 /** Roles considered interactive (buttons, inputs, links, etc.) */
 const INTERACTIVE_ROLES = new Set([

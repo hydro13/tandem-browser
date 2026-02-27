@@ -225,7 +225,7 @@ export function registerSecurityRoutes(
       const wc = devToolsManager?.getAttachedWebContents();
       const currentUrl = wc ? wc.getURL() : '';
       let domain: string | null = null;
-      try { domain = new URL(currentUrl).hostname.toLowerCase(); } catch {}
+      try { domain = new URL(currentUrl).hostname.toLowerCase(); } catch { /* invalid URL */ }
 
       const fingerprinted = domain ? sm.getDb().getScriptsByDomain(domain) : [];
 

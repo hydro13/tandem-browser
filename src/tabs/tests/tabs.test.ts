@@ -18,7 +18,7 @@ vi.mock('electron', () => {
   };
 });
 
-import { TabManager, Tab } from '../manager';
+import { TabManager } from '../manager';
 
 function createMockWindow() {
   let wcIdCounter = 100;

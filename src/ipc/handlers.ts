@@ -1,26 +1,27 @@
-import { ipcMain, BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
+import { ipcMain } from 'electron';
 import path from 'path';
-import { TabManager } from '../tabs/manager';
-import { PanelManager } from '../panel/manager';
-import { DrawOverlayManager } from '../draw/overlay';
-import { VoiceManager } from '../voice/recognition';
-import { BehaviorObserver } from '../behavior/observer';
-import { SiteMemoryManager } from '../memory/site-memory';
-import { FormMemoryManager } from '../memory/form-memory';
-import { ContextBridge } from '../bridge/context-bridge';
-import { NetworkInspector } from '../network/inspector';
-import { BookmarkManager } from '../bookmarks/manager';
-import { HistoryManager } from '../history/manager';
-import { EventStreamManager } from '../events/stream';
-import { TaskManager } from '../agents/task-manager';
-import { ContextMenuManager } from '../context-menu/manager';
-import { DevToolsManager } from '../devtools/manager';
-import { ActivityTracker } from '../activity/tracker';
-import { SecurityManager } from '../security/security-manager';
-import { ScriptInjector } from '../scripts/injector';
-import { DeviceEmulator } from '../device/emulator';
-import { CopilotStream } from '../activity/copilot-stream';
-import { SnapshotManager } from '../snapshot/manager';
+import type { TabManager } from '../tabs/manager';
+import type { PanelManager } from '../panel/manager';
+import type { DrawOverlayManager } from '../draw/overlay';
+import type { VoiceManager } from '../voice/recognition';
+import type { BehaviorObserver } from '../behavior/observer';
+import type { SiteMemoryManager } from '../memory/site-memory';
+import type { FormMemoryManager } from '../memory/form-memory';
+import type { ContextBridge } from '../bridge/context-bridge';
+import type { NetworkInspector } from '../network/inspector';
+import type { BookmarkManager } from '../bookmarks/manager';
+import type { HistoryManager } from '../history/manager';
+import type { EventStreamManager } from '../events/stream';
+import type { TaskManager } from '../agents/task-manager';
+import type { ContextMenuManager } from '../context-menu/manager';
+import type { DevToolsManager } from '../devtools/manager';
+import type { ActivityTracker } from '../activity/tracker';
+import type { SecurityManager } from '../security/security-manager';
+import type { ScriptInjector } from '../scripts/injector';
+import type { DeviceEmulator } from '../device/emulator';
+import type { CopilotStream } from '../activity/copilot-stream';
+import type { SnapshotManager } from '../snapshot/manager';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('IpcHandlers');
@@ -57,12 +58,12 @@ export function syncTabsToContext(tabManager: TabManager, contextBridge: Context
 
 export function registerIpcHandlers(deps: IpcDeps): void {
   const {
-    win, tabManager, panelManager, drawManager, voiceManager,
+    win: _win, tabManager, panelManager, drawManager, voiceManager,
     behaviorObserver, siteMemory, formMemory, contextBridge,
     networkInspector, bookmarkManager, historyManager, eventStream,
     taskManager, contextMenuManager, devToolsManager, activityTracker,
-    securityManager, scriptInjector, deviceEmulator, copilotStream,
-    snapshotManager,
+    securityManager, scriptInjector, deviceEmulator, copilotStream: _copilotStream,
+    snapshotManager: _snapshotManager,
   } = deps;
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
@@ -321,7 +322,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle('navigate', async (_event, url: string) => {
     const wc = await tabManager.getActiveWebContents();
     if (wc) {
-      wc.loadURL(url);
+      void wc.loadURL(url);
       return { success: true };
     }
     return { success: false, error: 'No active tab' };

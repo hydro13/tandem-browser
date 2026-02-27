@@ -58,7 +58,7 @@ export class PiPManager {
     });
 
     const pipHtmlPath = path.join(__dirname, '..', '..', 'shell', 'pip.html');
-    this.pipWindow.loadFile(pipHtmlPath);
+    void this.pipWindow.loadFile(pipHtmlPath);
 
     this.pipWindow.on('closed', () => {
       this.pipWindow = null;

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import { GALLERY_DEFAULTS, GalleryExtension, ExtensionCategory } from './gallery-defaults';
+import type { GalleryExtension, ExtensionCategory } from './gallery-defaults';
+import { GALLERY_DEFAULTS } from './gallery-defaults';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 

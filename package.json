@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.11.3",
+  "version": "0.11.4",
   "description": "AI-Human symbiotic browser — Kees & Robin browse as one",
   "main": "dist/main.js",
   "author": "Robin Waslander <keesbeest78@proton.me>",
@@ -17,7 +17,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:security": "vitest run src/security/tests/",
-    "test:extensions": "vitest run src/extensions/tests/"
+    "test:extensions": "vitest run src/extensions/tests/",
+    "lint": "eslint src/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.26.0",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@electron/rebuild": "^4.0.1",
+    "@eslint/js": "^10.0.1",
     "@types/better-sqlite3": "^7.6.13",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
@@ -43,7 +45,9 @@
     "@types/ws": "^8.18.1",
     "electron": "^40.6.0",
     "electron-builder": "^26.0.0",
+    "eslint": "^10.0.2",
     "typescript": "^5.6.0",
+    "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   },
   "productName": "Tandem Browser",

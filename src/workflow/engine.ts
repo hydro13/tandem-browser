@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir } from '../utils/paths';
@@ -338,12 +338,12 @@ export class WorkflowEngine {
   private async executeStep(step: WorkflowStep, execution: WorkflowExecution, webview: BrowserWindow): Promise<any> {
     const timeout = step.timeout || DEFAULT_TIMEOUT_MS;
 
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         reject(new Error(`Step ${step.id} timed out after ${timeout}ms`));
       }, timeout);
 
-      try {
+      (async () => {
         let result;
 
         switch (step.type) {
@@ -377,10 +377,10 @@ export class WorkflowEngine {
 
         clearTimeout(timer);
         resolve(result);
-      } catch (error) {
+      })().catch((error) => {
         clearTimeout(timer);
         reject(error);
-      }
+      });
     });
   }
 

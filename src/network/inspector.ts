@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import { RequestDispatcher } from './dispatcher';
+import type { RequestDispatcher } from './dispatcher';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 

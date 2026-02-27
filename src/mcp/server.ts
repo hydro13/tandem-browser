@@ -484,7 +484,7 @@ server.tool(
 
     // Check emergency stop
     try {
-      const stopCheck = await apiCall('GET', '/tasks/check-approval?actionType=navigate');
+      const _stopCheck = await apiCall('GET', '/tasks/check-approval?actionType=navigate');
       // If navigate needs approval, we should not auto-research
     } catch { /* ignore, continue */ }
 
@@ -523,7 +523,7 @@ server.tool(
 
       // Step 3: Read search results page
       const searchPage = await apiCall('GET', '/page-content');
-      const searchText = searchPage.text || '';
+      const _searchText = searchPage.text || '';
 
       // Step 4: Get links from search results
       const linksData = await apiCall('GET', '/links');
@@ -683,7 +683,7 @@ server.resource(
     const url = data.url || '';
     const bodyText = truncateToWords(data.text || '', 2000);
 
-    let text = `# ${title}\n**URL:** ${url}\n\n${bodyText}`;
+    const text = `# ${title}\n**URL:** ${url}\n\n${bodyText}`;
     return { contents: [{ uri: 'tandem://page/current', mimeType: 'text/plain', text }] };
   }
 );
@@ -795,7 +795,7 @@ function startEventListener(): void {
         }
       };
 
-      read();
+      void read();
     }).catch(() => {
       // Tandem not running yet, retry
       setTimeout(connect, 5000);

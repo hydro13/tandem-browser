@@ -1,6 +1,6 @@
-import { SecurityDB } from './security-db';
-import { EvolutionEngine } from './evolution';
-import { SecurityReport, CorrelatedThreat, EventSeverity } from './types';
+import type { SecurityDB } from './security-db';
+import type { EvolutionEngine } from './evolution';
+import type { SecurityReport, CorrelatedThreat, EventSeverity } from './types';
 
 /**
  * ThreatIntel — Intelligence layer for security reporting and event correlation.

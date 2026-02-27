@@ -1,4 +1,4 @@
-import { Session } from 'electron';
+import type { Session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir, ensureDir } from '../utils/paths';

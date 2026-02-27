@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
-import { ConfigManager } from '../config/manager';
+import type { ConfigManager } from '../config/manager';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
@@ -288,7 +288,7 @@ export class ChromeImporter {
       const tmpPath = path.join(this.tandemDir, '.chrome-history-tmp');
       fs.copyFileSync(historyPath, tmpPath);
 
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
+       
       const Database = require('better-sqlite3');
       const db = new Database(tmpPath, { readonly: true });
 
@@ -400,7 +400,7 @@ export class ChromeImporter {
   }
 
   /** Try to import cookies via Chrome DevTools Protocol */
-  private async importCookiesViaCDP(electronSession: Electron.Session): Promise<{ ok: boolean; count: number; error?: string }> {
+  private async importCookiesViaCDP(_electronSession: Electron.Session): Promise<{ ok: boolean; count: number; error?: string }> {
     // Try common debugging ports
     const ports = [9222, 9229, 9221];
     for (const port of ports) {

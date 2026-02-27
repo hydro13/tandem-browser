@@ -1,7 +1,7 @@
-import { Router, Request, Response } from 'express';
+import type { Router, Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
-import { RouteContext } from '../context';
+import type { RouteContext } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { ChromeExtensionImporter } from '../../extensions/chrome-importer';
 import { GalleryLoader } from '../../extensions/gallery-loader';

@@ -1,6 +1,7 @@
-import { OnBeforeRequestListenerDetails } from 'electron';
-import { SecurityDB } from './security-db';
-import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, KNOWN_TRACKERS, KNOWN_WS_SERVICES } from './types';
+import type { OnBeforeRequestListenerDetails } from 'electron';
+import type { SecurityDB } from './security-db';
+import type { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode} from './types';
+import { KNOWN_TRACKERS, KNOWN_WS_SERVICES } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('OutboundGuard');

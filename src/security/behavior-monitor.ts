@@ -1,9 +1,10 @@
-import { Session, WebContents } from 'electron';
-import { SecurityDB } from './security-db';
-import { Guardian } from './guardian';
-import { DevToolsManager } from '../devtools/manager';
-import { ScriptGuard } from './script-guard';
-import { AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import type { Session, WebContents } from 'electron';
+import type { SecurityDB } from './security-db';
+import type { Guardian } from './guardian';
+import type { DevToolsManager } from '../devtools/manager';
+import type { ScriptGuard } from './script-guard';
+import type { SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import { AnalysisConfidence } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('BehaviorMonitor');

@@ -1,8 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import https from 'https';
 import { tandemDir } from '../utils/paths';
-import { app } from 'electron';
 
 export interface ClaroNoteAuth {
   token: string;
@@ -88,7 +86,7 @@ export class ClaroNoteManager {
       
       // Check if token is expired
       if (auth.expiresAt && Date.now() > auth.expiresAt) {
-        this.logout();
+        void this.logout();
         return null;
       }
       
@@ -143,8 +141,8 @@ export class ClaroNoteManager {
       }
 
       // Calculate duration
-      const duration = Math.round((Date.now() - this.recordingStartTime) / 1000);
-      
+      const _duration = Math.round((Date.now() - this.recordingStartTime) / 1000);
+
       // Stop recording
       this.isRecording = false;
       

@@ -1,6 +1,6 @@
-import { WebContents } from 'electron';
+import type { WebContents } from 'electron';
 import { ContextMenuBuilder } from './menu-builder';
-import { ContextMenuParams, ContextMenuDeps } from './types';
+import type { ContextMenuParams, ContextMenuDeps } from './types';
 
 type ContextMenuListener = (event: Electron.Event, params: Electron.ContextMenuParams) => void;
 

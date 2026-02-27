@@ -1,4 +1,5 @@
-import { session as electronSession, Session, BrowserWindow } from 'electron';
+import type { Session} from 'electron';
+import { session as electronSession, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';

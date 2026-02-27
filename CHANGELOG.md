@@ -4,6 +4,14 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.11.4] — 2026-02-27
+
+### Code Quality — Item 12
+
+- **ESLint setup**: added `eslint.config.mjs` (flat config) with `@typescript-eslint/recommended`, `no-floating-promises`, `no-console: warn`, `consistent-type-imports`, `no-unused-vars`. Added `npm run lint` script. Auto-fixed 222 type imports, manually fixed 92 errors across 40+ files (unused vars, floating promises, empty blocks, case declarations). 0 errors, 98 warnings remaining (intentional `any` + `no-console`)
+
+---
+
 ## [0.11.3] — 2026-02-27
 
 ### Code Quality — Item 11

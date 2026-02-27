@@ -1,4 +1,5 @@
-import { session, Notification, BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
+import { Notification } from 'electron';
 import path from 'path';
 import os from 'os';
 

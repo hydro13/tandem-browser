@@ -1,5 +1,5 @@
 import { session } from 'electron';
-import { Session } from './types';
+import type { Session } from './types';
 import { DEFAULT_PARTITION } from '../utils/constants';
 
 export class SessionManager {

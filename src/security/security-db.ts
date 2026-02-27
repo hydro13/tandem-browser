@@ -2,7 +2,7 @@ import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
-import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry, BaselineEntry, ZeroDayCandidate, TrustChange } from './types';
+import type { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry, BaselineEntry, ZeroDayCandidate, TrustChange } from './types';
 
 export class SecurityDB {
   private db: Database.Database;

@@ -1,4 +1,4 @@
-import { Session } from 'electron';
+import type { Session } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
@@ -76,13 +76,14 @@ export class NativeMessagingSetup {
         dirs.push(path.join(os.homedir(), '.config', 'chromium', 'NativeMessagingHosts'));
         break;
 
-      case 'win32':
+      case 'win32': {
         // Windows: native messaging hosts are registered in the Windows Registry.
         // We cannot read registry values from Node.js without native modules,
         // so we check common filesystem paths where hosts may also be installed.
         const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
         dirs.push(path.join(localAppData, 'Google', 'Chrome', 'User Data', 'NativeMessagingHosts'));
         break;
+      }
     }
 
     return dirs.map(d => ({ path: d, exists: fs.existsSync(d) }));

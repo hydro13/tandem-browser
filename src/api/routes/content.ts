@@ -1,5 +1,6 @@
-import { Router, Request, Response } from 'express';
-import { RouteContext, getActiveWC, getSessionWC } from '../context';
+import type { Router, Request, Response } from 'express';
+import type { RouteContext} from '../context';
+import { getActiveWC, getSessionWC } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
 export function registerContentRoutes(router: Router, ctx: RouteContext): void {

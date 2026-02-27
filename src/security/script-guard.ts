@@ -1,9 +1,10 @@
 import { createHash } from 'crypto';
-import * as acorn from 'acorn';
-import { SecurityDB } from './security-db';
-import { Guardian } from './guardian';
-import { DevToolsManager } from '../devtools/manager';
-import { JS_THREAT_RULES, ThreatRuleMatch, ScriptAnalysisResult, AnalysisConfidence } from './types';
+import type * as acorn from 'acorn';
+import type { SecurityDB } from './security-db';
+import type { Guardian } from './guardian';
+import type { DevToolsManager } from '../devtools/manager';
+import type { ThreatRuleMatch, ScriptAnalysisResult} from './types';
+import { JS_THREAT_RULES, AnalysisConfidence } from './types';
 import {
   calculateEntropy,
   normalizeScriptSource,
@@ -713,7 +714,7 @@ export class ScriptGuard {
         });
         break;
 
-      case 'wasm_instantiate':
+      case 'wasm_instantiate': {
         // Track WASM instantiation timestamps for crypto miner correlation
         this.wasmEvents.push(Date.now());
         // Keep only recent events (last 5 minutes)
@@ -732,6 +733,7 @@ export class ScriptGuard {
           confidence: AnalysisConfidence.BEHAVIORAL,
         });
         break;
+      }
 
       case 'clipboard_read':
         this.db.logEvent({

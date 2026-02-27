@@ -1,6 +1,6 @@
-import { Router, Request, Response } from 'express';
+import type { Router, Request, Response } from 'express';
 import fs from 'fs';
-import { RouteContext } from '../context';
+import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {

@@ -1,9 +1,9 @@
-import { BrowserWindow } from 'electron';
-import { TabManager } from '../tabs/manager';
-import { BookmarkManager } from '../bookmarks/manager';
-import { HistoryManager } from '../history/manager';
-import { PanelManager } from '../panel/manager';
-import { DownloadManager } from '../downloads/manager';
+import type { BrowserWindow } from 'electron';
+import type { TabManager } from '../tabs/manager';
+import type { BookmarkManager } from '../bookmarks/manager';
+import type { HistoryManager } from '../history/manager';
+import type { PanelManager } from '../panel/manager';
+import type { DownloadManager } from '../downloads/manager';
 
 /**
  * Context info passed from Electron's context-menu event on webContents.

@@ -1,10 +1,11 @@
-import { OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
+import type { OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
 import crypto from 'crypto';
-import { RequestDispatcher } from '../network/dispatcher';
-import { SecurityDB } from './security-db';
-import { NetworkShield } from './network-shield';
-import { OutboundGuard } from './outbound-guard';
-import { GuardianMode, GuardianStatus, BANKING_PATTERNS, GatekeeperDecision, PendingDecision, AnalysisConfidence } from './types';
+import type { RequestDispatcher } from '../network/dispatcher';
+import type { SecurityDB } from './security-db';
+import type { NetworkShield } from './network-shield';
+import type { OutboundGuard } from './outbound-guard';
+import type { GuardianMode, GuardianStatus, GatekeeperDecision, PendingDecision} from './types';
+import { BANKING_PATTERNS, AnalysisConfidence } from './types';
 import type { GatekeeperWebSocket } from './gatekeeper-ws';
 import { createLogger } from '../utils/logger';
 

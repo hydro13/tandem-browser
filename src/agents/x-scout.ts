@@ -165,7 +165,7 @@ function addFinding(finding: Finding): void {
  * Browse the timeline naturally
  * Read 3-5 tweets, note interesting ones
  */
-async function browseTimeline(state: ScoutState): Promise<Finding[]> {
+async function browseTimeline(_state: ScoutState): Promise<Finding[]> {
   const findings: Finding[] = [];
   
   await chat('🔍 Casually scrolling through your timeline...');
@@ -177,7 +177,7 @@ async function browseTimeline(state: ScoutState): Promise<Finding[]> {
     await wait(TIMING.readingTime); // Actually "reading"
     
     // Take screenshot to analyze what's on screen
-    const img = await screenshot();
+    const _img = await screenshot();
     // TODO: Send to vision model for analysis
     // For now we use page content
     const content = await getPageContent();
@@ -208,7 +208,7 @@ async function visitProfile(handle: string, state: ScoutState): Promise<Finding 
   await navigate(`https://x.com/${handle}`);
   await wait(TIMING.readingTime);
   
-  const img = await screenshot();
+  const _img = await screenshot();
   const content = await getPageContent();
   
   // Scroll down to see recent tweets
@@ -231,7 +231,7 @@ async function visitProfile(handle: string, state: ScoutState): Promise<Finding 
 /**
  * Search for relevant content (slowly!)
  */
-async function searchTopics(query: string, state: ScoutState): Promise<Finding[]> {
+async function searchTopics(query: string, _state: ScoutState): Promise<Finding[]> {
   const findings: Finding[] = [];
   
   await wait(TIMING.betweenPages);

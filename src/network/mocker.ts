@@ -1,6 +1,6 @@
 import crypto from 'crypto';
-import { DevToolsManager } from '../devtools/manager';
-import { MockRule } from './types';
+import type { DevToolsManager } from '../devtools/manager';
+import type { MockRule } from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('NetworkMocker');
