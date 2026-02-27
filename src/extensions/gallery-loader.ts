@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import { GALLERY_DEFAULTS, GalleryExtension, ExtensionCategory } from './gallery-defaults';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('GalleryLoader');
 
 // ─── User Gallery JSON format ───────────────────────────────────────────────
 
@@ -107,21 +110,21 @@ export class GalleryLoader {
       const parsed: UserGalleryFile = JSON.parse(raw);
 
       if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.extensions)) {
-        console.warn('⚠️ gallery.json has invalid format — expected { version, extensions[] }');
+        log.warn('⚠️ gallery.json has invalid format — expected { version, extensions[] }');
         return [];
       }
 
       // Validate each entry has at minimum an id
       return parsed.extensions.filter(ext => {
         if (!ext || typeof ext !== 'object' || typeof ext.id !== 'string' || !ext.id.trim()) {
-          console.warn('⚠️ Skipping gallery.json entry with missing/invalid id');
+          log.warn('⚠️ Skipping gallery.json entry with missing/invalid id');
           return false;
         }
         return true;
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Failed to load gallery.json: ${message}`);
+      log.warn(`⚠️ Failed to load gallery.json: ${message}`);
       return [];
     }
   }

@@ -1,6 +1,9 @@
 import { OnBeforeRequestListenerDetails } from 'electron';
 import { SecurityDB } from './security-db';
 import { OutboundDecision, BodyAnalysis, OutboundStats, GuardianMode, KNOWN_TRACKERS, KNOWN_WS_SERVICES } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('OutboundGuard');
 
 // Credential field patterns in POST bodies
 const CREDENTIAL_PATTERN = /(?:^|&|"|,\s*")(?:password|passwd|pw|pass|secret|token|api[_-]?key|access[_-]?token|credit[_-]?card|card[_-]?number|cvv|cvc|ssn|social[_-]?security)(?:"|]?\s*[:=])/i;
@@ -30,7 +33,7 @@ export class OutboundGuard {
 
   constructor(db: SecurityDB) {
     this.db = db;
-    console.log('[OutboundGuard] Initialized');
+    log.info('Initialized');
   }
 
   /**

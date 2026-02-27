@@ -1,4 +1,7 @@
 import { Session, OnBeforeRequestListenerDetails, OnBeforeSendHeadersListenerDetails, OnHeadersReceivedListenerDetails } from 'electron';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('Dispatcher');
 
 export interface BeforeRequestConsumer {
   name: string;
@@ -91,19 +94,19 @@ export class RequestDispatcher {
             callback({ cancel: true });
             const elapsed = performance.now() - start;
             if (elapsed > 5) {
-              console.warn(`[Dispatcher] Slow onBeforeRequest: ${elapsed.toFixed(1)}ms (blocked by ${consumer.name})`);
+              log.warn(`Slow onBeforeRequest: ${elapsed.toFixed(1)}ms (blocked by ${consumer.name})`);
             }
             return;
           }
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onBeforeRequest:`, err);
+          log.error(`Error in ${consumer.name}.onBeforeRequest:`, err);
         }
       }
 
       callback({ cancel: false });
       const elapsed = performance.now() - start;
       if (elapsed > 5) {
-        console.warn(`[Dispatcher] Slow onBeforeRequest: ${elapsed.toFixed(1)}ms for ${details.url.substring(0, 80)}`);
+        log.warn(`Slow onBeforeRequest: ${elapsed.toFixed(1)}ms for ${details.url.substring(0, 80)}`);
       }
     });
 
@@ -115,7 +118,7 @@ export class RequestDispatcher {
         try {
           headers = consumer.handler(details, headers);
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onBeforeSendHeaders:`, err);
+          log.error(`Error in ${consumer.name}.onBeforeSendHeaders:`, err);
         }
       }
 
@@ -141,7 +144,7 @@ export class RequestDispatcher {
             responseHeaders = result as Record<string, string[]>;
           }
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onHeadersReceived:`, err);
+          log.error(`Error in ${consumer.name}.onHeadersReceived:`, err);
         }
       }
 
@@ -153,7 +156,7 @@ export class RequestDispatcher {
         try {
           consumer.handler(details);
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onBeforeRedirect:`, err);
+          log.error(`Error in ${consumer.name}.onBeforeRedirect:`, err);
         }
       }
     });
@@ -163,7 +166,7 @@ export class RequestDispatcher {
         try {
           consumer.handler(details);
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onCompleted:`, err);
+          log.error(`Error in ${consumer.name}.onCompleted:`, err);
         }
       }
     });
@@ -173,12 +176,12 @@ export class RequestDispatcher {
         try {
           consumer.handler(details);
         } catch (err) {
-          console.error(`[Dispatcher] Error in ${consumer.name}.onErrorOccurred:`, err);
+          log.error(`Error in ${consumer.name}.onErrorOccurred:`, err);
         }
       }
     });
 
-    console.log(`[Dispatcher] Attached with ${this.beforeRequestConsumers.length} onBeforeRequest, ${this.beforeSendHeadersConsumers.length} onBeforeSendHeaders, ${this.headersReceivedConsumers.length} onHeadersReceived consumers`);
+    log.info(`Attached with ${this.beforeRequestConsumers.length} onBeforeRequest, ${this.beforeSendHeadersConsumers.length} onBeforeSendHeaders, ${this.headersReceivedConsumers.length} onHeadersReceived consumers`);
   }
 
   getStatus(): object {

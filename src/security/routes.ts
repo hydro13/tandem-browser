@@ -1,6 +1,9 @@
 import type express from 'express';
 import type { SecurityManager } from './security-manager';
 import type { GuardianMode, GatekeeperAction } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('SecurityRoutes');
 
 /**
  * Register all 34 security API routes on the Express app.
@@ -601,5 +604,5 @@ export function registerSecurityRoutes(
     }
   });
 
-  console.log('[SecurityManager] 34 API routes registered under /security/*');
+  log.info('34 API routes registered under /security/*');
 }

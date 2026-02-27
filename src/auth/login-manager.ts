@@ -2,6 +2,9 @@ import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('LoginManager');
 
 interface LoginState {
   domain: string;
@@ -315,7 +318,7 @@ export class LoginManager {
       };
 
     } catch (error) {
-      console.error('Error detecting login state:', error);
+      log.error('Error detecting login state:', error);
       
       return {
         domain,
@@ -392,7 +395,7 @@ export class LoginManager {
           return false;
       }
     } catch (error) {
-      console.error('Error checking rule:', error);
+      log.error('Error checking rule:', error);
       return false;
     }
   }
@@ -418,7 +421,7 @@ export class LoginManager {
         }
       }
     } catch (error) {
-      console.error('Failed to load login states:', error);
+      log.error('Failed to load login states:', error);
     }
   }
 
@@ -427,7 +430,7 @@ export class LoginManager {
       const states = Array.from(this.states.values());
       fs.writeFileSync(this.statesFile, JSON.stringify(states, null, 2));
     } catch (error) {
-      console.error('Failed to save login states:', error);
+      log.error('Failed to save login states:', error);
     }
   }
 
@@ -443,7 +446,7 @@ export class LoginManager {
         }
       }
     } catch (error) {
-      console.error('Failed to load domain configs:', error);
+      log.error('Failed to load domain configs:', error);
     }
   }
 
@@ -452,7 +455,7 @@ export class LoginManager {
       const configs = Array.from(this.domainConfigs.values());
       fs.writeFileSync(this.configFile, JSON.stringify(configs, null, 2));
     } catch (error) {
-      console.error('Failed to save domain configs:', error);
+      log.error('Failed to save domain configs:', error);
     }
   }
 

@@ -6,6 +6,9 @@ import { tandemDir } from '../../utils/paths';
 import { ChromeExtensionImporter } from '../../extensions/chrome-importer';
 import { GalleryLoader } from '../../extensions/gallery-loader';
 import { handleRouteError } from '../../utils/errors';
+import { createLogger } from '../../utils/logger';
+
+const log = createLogger('ExtensionRoutes');
 
 export function registerExtensionRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -64,7 +67,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       ctx.win.webContents.send('extension-toolbar-refresh');
       res.json(result);
     } catch (e) {
-      console.error('Extension install error:', e);
+      log.error('Extension install error:', e);
       res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
@@ -114,10 +117,10 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       if (electronId) {
         try {
           ses.removeExtension(electronId);
-          console.log(`🧩 Extension removed from session — Electron ID: ${electronId}`);
+          log.info(`🧩 Extension removed from session — Electron ID: ${electronId}`);
         } catch (err: unknown) {
           const msg = err instanceof Error ? err.message : String(err);
-          console.warn(`⚠️ session.removeExtension(${electronId}) failed: ${msg}`);
+          log.warn(`⚠️ session.removeExtension(${electronId}) failed: ${msg}`);
         }
       }
 
@@ -127,7 +130,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         if (fs.existsSync(extPath)) {
           try {
             fs.rmSync(extPath, { recursive: true, force: true });
-            console.log(`🧩 Extension removed from disk: ${extPath}`);
+            log.info(`🧩 Extension removed from disk: ${extPath}`);
           } catch (err: unknown) {
             const msg = err instanceof Error ? err.message : String(err);
             res.status(500).json({ success: false, error: `Failed to remove extension files: ${msg}` });
@@ -140,7 +143,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       ctx.win.webContents.send('extension-toolbar-refresh');
       res.json({ success: true });
     } catch (e) {
-      console.error('Extension uninstall error:', e);
+      log.error('Extension uninstall error:', e);
       res.status(500).json({ success: false, error: e instanceof Error ? e.message : String(e) });
     }
   });
@@ -200,7 +203,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         details: [result],
       });
     } catch (e) {
-      console.error('Chrome extension import error:', e);
+      log.error('Chrome extension import error:', e);
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
   });

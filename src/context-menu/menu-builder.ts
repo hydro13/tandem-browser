@@ -1,6 +1,9 @@
 import { Menu, MenuItem, clipboard, dialog, WebContents, webContents } from 'electron';
 import { ContextMenuParams, ContextMenuDeps } from './types';
 import { getPasswordManager } from '../passwords/manager';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ContextMenu');
 
 /** Protocols that should never be opened/downloaded */
 const BLOCKED_PROTOCOLS = ['javascript:', 'data:', 'file:', 'vbscript:'];
@@ -318,7 +321,7 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: 'Save As...',
       accelerator: 'CmdOrCtrl+S',
-      click: () => { this.handleSaveAs(wc).catch(e => console.warn('Save As failed:', e.message)); },
+      click: () => { this.handleSaveAs(wc).catch(e => log.warn('Save As failed:', e.message)); },
     }));
     menu.append(new MenuItem({
       label: 'Print...',
@@ -362,7 +365,7 @@ export class ContextMenuBuilder {
       if (wc.isDestroyed()) return;
       const saveType = result.filePath.endsWith('.htm') ? 'HTMLOnly' : 'HTMLComplete';
       await wc.savePage(result.filePath, saveType as 'HTMLComplete' | 'HTMLOnly').catch((err) => {
-        console.warn('Save page failed:', err.message);
+        log.warn('Save page failed:', err.message);
       });
     }
   }

@@ -8,6 +8,9 @@ import {
   CDPSubscriber, CDPRequestWillBeSentParams, CDPResponseReceivedParams, CDPLoadingFinishedParams, CDPLoadingFailedParams,
   CDPBindingCalledParams, CDPCookie,
 } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('CDP');
 
 export type { CDPSubscriber };
 
@@ -68,7 +71,7 @@ export class DevToolsManager {
     // Remove existing subscriber with same name to avoid duplicates
     this.subscribers = this.subscribers.filter(s => s.name !== subscriber.name);
     this.subscribers.push(subscriber);
-    console.log(`[CDP] Subscriber registered: ${subscriber.name} for ${subscriber.events.join(', ')}`);
+    log.info(`Subscriber registered: ${subscriber.name} for ${subscriber.events.join(', ')}`);
   }
 
   /** Remove a subscriber by name */
@@ -88,9 +91,9 @@ export class DevToolsManager {
     try {
       await wc.debugger.sendCommand('Debugger.enable');
       await wc.debugger.sendCommand('Performance.enable');
-      console.log('[CDP] Security domains enabled (Debugger, Performance)');
+      log.info('Security domains enabled (Debugger, Performance)');
     } catch (e) {
-      console.warn('[CDP] Security domain enable failed:', e instanceof Error ? e.message : e);
+      log.warn('Security domain enable failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -149,9 +152,9 @@ export class DevToolsManager {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.includes('Already attached')) {
         // DevTools is open — we can still try to use it
-        console.warn('⚠️ DevTools debugger already attached (DevTools open?) — sharing session');
+        log.warn('⚠️ DevTools debugger already attached (DevTools open?) — sharing session');
       } else {
-        console.warn('❌ CDP attach failed:', msg);
+        log.warn('❌ CDP attach failed:', msg);
         return null;
       }
     }
@@ -166,7 +169,7 @@ export class DevToolsManager {
 
     // Auto-detach on destruction
     wc.debugger.on('detach', (_event: Electron.Event, reason: string) => {
-      console.log(`🔌 CDP detached: ${reason}`);
+      log.info(`🔌 CDP detached: ${reason}`);
       this.attached = false;
       this.attachedWcId = null;
       this.consoleCapture.reset();
@@ -188,7 +191,7 @@ export class DevToolsManager {
       await wc.debugger.sendCommand('Debugger.enable');
       await wc.debugger.sendCommand('Performance.enable');
     } catch (e) {
-      console.warn('⚠️ CDP domain enable partially failed:', e instanceof Error ? e.message : e);
+      log.warn('⚠️ CDP domain enable partially failed:', e instanceof Error ? e.message : e);
       // Continue — some domains may have succeeded
     }
 
@@ -210,7 +213,7 @@ export class DevToolsManager {
       // Inject listeners (runs in page context but communicates via invisible bindings)
       await this.injectCopilotListeners(wc);
     } catch (e) {
-      console.warn('⚠️ Copilot Vision bindings failed:', e instanceof Error ? e.message : e);
+      log.warn('⚠️ Copilot Vision bindings failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -283,7 +286,7 @@ export class DevToolsManager {
         wc.debugger.detach();
       }
     } catch (e) {
-      console.warn('CDP detach error (harmless):', e instanceof Error ? e.message : e);
+      log.warn('CDP detach error (harmless):', e instanceof Error ? e.message : e);
     }
     this.attached = false;
     this.attachedWcId = null;
@@ -328,7 +331,7 @@ export class DevToolsManager {
         try {
           sub.handler(method, params);
         } catch (err) {
-          console.error(`[CDP] Subscriber ${sub.name} error:`, err);
+          log.error(`Subscriber ${sub.name} error:`, err);
         }
       }
     }
@@ -498,7 +501,7 @@ export class DevToolsManager {
       }
       return nodes;
     } catch (e) {
-      console.warn('DOM query failed:', e instanceof Error ? e.message : e);
+      log.warn('DOM query failed:', e instanceof Error ? e.message : e);
       return [];
     }
   }
@@ -546,7 +549,7 @@ export class DevToolsManager {
       }
       return [];
     } catch (e) {
-      console.warn('XPath query failed:', e instanceof Error ? e.message : e);
+      log.warn('XPath query failed:', e instanceof Error ? e.message : e);
       return [];
     }
   }
@@ -611,7 +614,7 @@ export class DevToolsManager {
         boundingBox,
       };
     } catch (e) {
-      console.warn('getNodeInfo failed for nodeId', nodeId, ':', e instanceof Error ? e.message : e);
+      log.warn('getNodeInfo failed for nodeId', nodeId, ':', e instanceof Error ? e.message : e);
       return null;
     }
   }
@@ -668,7 +671,7 @@ export class DevToolsManager {
         sessionStorage: storageResult.result?.value?.sessionStorage || {},
       };
     } catch (e) {
-      console.warn('Storage fetch failed:', e instanceof Error ? e.message : e);
+      log.warn('Storage fetch failed:', e instanceof Error ? e.message : e);
       return empty;
     }
   }
@@ -688,7 +691,7 @@ export class DevToolsManager {
       }
       return { timestamp: Date.now(), metrics };
     } catch (e) {
-      console.warn('Performance metrics failed:', e instanceof Error ? e.message : e);
+      log.warn('Performance metrics failed:', e instanceof Error ? e.message : e);
       return null;
     }
   }
@@ -726,7 +729,7 @@ export class DevToolsManager {
 
       return Buffer.from(screenshot.data, 'base64');
     } catch (e) {
-      console.warn('Element screenshot failed:', e instanceof Error ? e.message : e);
+      log.warn('Element screenshot failed:', e instanceof Error ? e.message : e);
       return null;
     }
   }

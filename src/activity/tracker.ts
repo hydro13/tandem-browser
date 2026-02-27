@@ -2,6 +2,9 @@ import { BrowserWindow } from 'electron';
 import { PanelManager } from '../panel/manager';
 import { DrawOverlayManager } from '../draw/overlay';
 import { CopilotStream } from './copilot-stream';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ActivityTracker');
 
 export interface ActivityEntry {
   id: number;
@@ -66,7 +69,7 @@ export class ActivityTracker {
         setTimeout(() => {
           try {
             this.win.webContents.send('auto-snapshot-request', { url });
-          } catch (e) { console.warn('Auto-snapshot send failed (window may be closed):', e instanceof Error ? e.message : String(e)); }
+          } catch (e) { log.warn('Auto-snapshot send failed (window may be closed):', e instanceof Error ? e.message : String(e)); }
         }, 3000);
       }
     }

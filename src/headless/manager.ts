@@ -1,6 +1,9 @@
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { copilotAlert } from '../notifications/alert';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('HeadlessManager');
 
 /** Page load timeout in milliseconds */
 const PAGE_LOAD_TIMEOUT_MS = 30000;
@@ -65,7 +68,7 @@ export class HeadlessManager {
 
         this.window!.webContents.loadURL(url).catch((err) => {
           clearTimeout(timeout);
-          console.error('Headless window loadURL failed:', err.message);
+          log.error('Headless window loadURL failed:', err.message);
           reject(err);
         });
       });
@@ -163,7 +166,7 @@ export class HeadlessManager {
     this.window.webContents.on('did-finish-load', () => {
       if (this.window && !this.window.isDestroyed()) {
         this.window.webContents.executeJavaScript(StealthManager.getStealthScript())
-          .catch((e) => console.warn('Headless stealth injection failed:', e.message));
+          .catch((e) => log.warn('Headless stealth injection failed:', e.message));
       }
     });
 
@@ -197,7 +200,7 @@ export class HeadlessManager {
   private startCaptchaCheck(): void {
     this.stopCaptchaCheck();
     this.captchaCheckInterval = setInterval(() => {
-      this.detectCaptcha().catch((e) => console.warn('Captcha detection failed:', e.message));
+      this.detectCaptcha().catch((e) => log.warn('Captcha detection failed:', e.message));
     }, CAPTCHA_CHECK_INTERVAL_MS);
   }
 
@@ -227,7 +230,7 @@ export class HeadlessManager {
       } else if (!found) {
         this.captchaDetected = false;
       }
-    } catch (e) { console.warn('Captcha detection check failed (window may be destroyed):', e instanceof Error ? e.message : String(e)); }
+    } catch (e) { log.warn('Captcha detection check failed (window may be destroyed):', e instanceof Error ? e.message : String(e)); }
   }
 
   /** Destroy everything */

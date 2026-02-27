@@ -2,6 +2,9 @@ import { BrowserWindow, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('BehaviorObserver');
 
 /**
  * BehaviorObserver — Passive observation layer for behavioral learning.
@@ -60,7 +63,7 @@ export class BehaviorObserver {
       stream.write(JSON.stringify(event) + '\n');
       this.eventCount++;
     } catch (e) {
-      console.warn('Behavior event write failed:', e instanceof Error ? e.message : String(e));
+      log.warn('Behavior event write failed:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -98,7 +101,7 @@ export class BehaviorObserver {
       }
     });
 
-    console.log('🧬 Behavior observer active (passive mode)');
+    log.info('🧬 Behavior observer active (passive mode)');
   }
 
   /** Record a click event (called from activity tracker) */
@@ -151,14 +154,14 @@ export class BehaviorObserver {
       try {
         const content = fs.readFileSync(todayFile, 'utf-8');
         todayEvents = content.split('\n').filter(l => l.trim()).length;
-      } catch (e) { console.warn('Behavior stats read failed:', e instanceof Error ? e.message : String(e)); }
+      } catch (e) { log.warn('Behavior stats read failed:', e instanceof Error ? e.message : String(e)); }
     }
 
     // List all raw files
     let totalFiles = 0;
     try {
       totalFiles = fs.readdirSync(this.rawDir).filter(f => f.endsWith('.jsonl')).length;
-    } catch (e) { console.warn('Behavior rawDir read failed:', e instanceof Error ? e.message : String(e)); }
+    } catch (e) { log.warn('Behavior rawDir read failed:', e instanceof Error ? e.message : String(e)); }
 
     return {
       totalEventsSession: this.eventCount,

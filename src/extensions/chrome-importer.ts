@@ -2,6 +2,9 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ChromeImporter');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -149,7 +152,7 @@ export class ChromeExtensionImporter {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Could not read Chrome extensions directory: ${message}`);
+      log.warn(`⚠️ Could not read Chrome extensions directory: ${message}`);
     }
 
     return results;
@@ -246,7 +249,7 @@ export class ChromeExtensionImporter {
       try {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
         if (!manifest.key) {
-          console.warn(`⚠️ Chrome import: ${ext.name} (${ext.id}) manifest lacks "key" field — Electron may assign a different ID`);
+          log.warn(`⚠️ Chrome import: ${ext.name} (${ext.id}) manifest lacks "key" field — Electron may assign a different ID`);
         }
       } catch {
         // Non-fatal: manifest already verified during listing
@@ -265,7 +268,7 @@ export class ChromeExtensionImporter {
         'utf-8'
       );
 
-      console.log(`🧩 Chrome import: ${ext.name} (${ext.id}) v${ext.version} → ${destPath}`);
+      log.info(`🧩 Chrome import: ${ext.name} (${ext.id}) v${ext.version} → ${destPath}`);
       return { id: ext.id, name: ext.name, success: true };
 
     } catch (err: unknown) {

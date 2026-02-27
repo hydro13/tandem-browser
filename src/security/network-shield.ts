@@ -3,6 +3,9 @@ import fs from 'fs';
 import { SecurityDB } from './security-db';
 import { tandemDir } from '../utils/paths';
 import { URL_LIST_SAFE_DOMAINS } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('NetworkShield');
 
 export class NetworkShield {
   private blockedDomains: Set<string> = new Set();
@@ -25,7 +28,7 @@ export class NetworkShield {
     if (fs.existsSync(urlhausPath)) {
       const count = this.parseUrlList(urlhausPath);
       totalLoaded += count;
-      console.log(`[NetworkShield] URLhaus: ${count} domains loaded`);
+      log.info(`URLhaus: ${count} domains loaded`);
     }
 
     // 2. Load PhishTank (plain domain list, one per line)
@@ -33,7 +36,7 @@ export class NetworkShield {
     if (fs.existsSync(phishingPath)) {
       const count = this.parseDomainList(phishingPath);
       totalLoaded += count;
-      console.log(`[NetworkShield] PhishTank: ${count} domains loaded`);
+      log.info(`PhishTank: ${count} domains loaded`);
     }
 
     // 3. Load Steven Black hosts file (0.0.0.0 domain format)
@@ -41,20 +44,20 @@ export class NetworkShield {
     if (fs.existsSync(hostsPath)) {
       const count = this.parseHostsFile(hostsPath);
       totalLoaded += count;
-      console.log(`[NetworkShield] Steven Black: ${count} domains loaded`);
+      log.info(`Steven Black: ${count} domains loaded`);
     }
 
     // 4. Load dynamic entries from DB blocklist table
     const dbStats = this.db.getBlocklistStats();
     if (dbStats.total > 0) {
-      console.log(`[NetworkShield] DB blocklist: ${dbStats.total} entries (already checked via DB lookup)`);
+      log.info(`DB blocklist: ${dbStats.total} entries (already checked via DB lookup)`);
     }
 
     if (totalLoaded === 0) {
-      console.warn('[NetworkShield] No blocklist files found in', this.blocklistDir);
-      console.warn('[NetworkShield] Download blocklists to enable threat detection');
+      log.warn('No blocklist files found in', this.blocklistDir);
+      log.warn('Download blocklists to enable threat detection');
     } else {
-      console.log(`[NetworkShield] Total: ${this.blockedDomains.size} unique domains in memory`);
+      log.info(`Total: ${this.blockedDomains.size} unique domains in memory`);
     }
   }
 
@@ -77,7 +80,7 @@ export class NetworkShield {
         }
       }
     } catch (err) {
-      console.error('[NetworkShield] Error parsing hosts file:', err);
+      log.error('Error parsing hosts file:', err);
     }
     return count;
   }
@@ -97,7 +100,7 @@ export class NetworkShield {
         }
       }
     } catch (err) {
-      console.error('[NetworkShield] Error parsing domain list:', err);
+      log.error('Error parsing domain list:', err);
     }
     return count;
   }
@@ -147,10 +150,10 @@ export class NetworkShield {
         }
       }
     } catch (err) {
-      console.error('[NetworkShield] Error parsing URL list:', err);
+      log.error('Error parsing URL list:', err);
     }
     if (skipped > 0) {
-      console.log(`[NetworkShield] URLhaus: skipped ${skipped} entries from hosting platforms`);
+      log.info(`URLhaus: skipped ${skipped} entries from hosting platforms`);
     }
     return count;
   }

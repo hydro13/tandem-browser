@@ -6,6 +6,9 @@ import { VoiceManager } from '../voice/recognition';
 import { PiPManager } from '../pip/manager';
 import { ConfigManager } from '../config/manager';
 import { AudioCaptureManager } from '../audio/capture';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('AppMenu');
 
 export interface MenuDeps {
   mainWindow: BrowserWindow | null;
@@ -96,7 +99,7 @@ export function buildAppMenu(deps: MenuDeps): void {
               if (activeTab) {
                 deps.audioCaptureManager.startRecording(activeTab.webContentsId).then(() => {
                   deps.mainWindow?.webContents.send('audio-recording-status', { recording: true });
-                }).catch((e) => console.warn('Audio capture start failed:', e.message));
+                }).catch((e) => log.warn('Audio capture start failed:', e.message));
               }
             }
           }

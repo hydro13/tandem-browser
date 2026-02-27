@@ -2,6 +2,9 @@ import { desktopCapturer, webContents } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('AudioCapture');
 
 interface Recording {
   id: string;
@@ -104,7 +107,7 @@ export class AudioCaptureManager {
     this.recordings.push(recording);
     this.saveIndex();
 
-    console.log(`🎙️ Recording started: ${filename}`);
+    log.info(`🎙️ Recording started: ${filename}`);
     return { ok: true, id };
   }
 
@@ -132,7 +135,7 @@ export class AudioCaptureManager {
     this.currentRecordingId = null;
     this.startTime = 0;
 
-    console.log(`🎙️ Recording stopped${stopped ? `: ${stopped.filename} (${stopped.duration}s)` : ''}`);
+    log.info(`🎙️ Recording stopped${stopped ? `: ${stopped.filename} (${stopped.duration}s)` : ''}`);
     return { ok: true, recording: stopped };
   }
 

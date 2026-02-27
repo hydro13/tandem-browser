@@ -9,6 +9,9 @@ import { UpdateChecker, UpdateCheckResult, UpdateResult, UpdateState, InstalledE
 import { ConflictDetector, ExtensionConflict } from './conflict-detector';
 import { tandemDir } from '../utils/paths';
 import { API_PORT } from '../utils/constants';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ExtensionManager');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -55,7 +58,7 @@ export class ExtensionManager {
     // Inject chrome.identity polyfill into extensions that need it (before loading)
     const patchedExtensions = this.identityPolyfill.injectPolyfills();
     if (patchedExtensions.length > 0) {
-      console.log(`🔑 Identity polyfill injected into ${patchedExtensions.length} extension(s)`);
+      log.info(`🔑 Identity polyfill injected into ${patchedExtensions.length} extension(s)`);
     }
 
     // Register chromiumapp.org protocol handler for OAuth redirects
@@ -63,7 +66,7 @@ export class ExtensionManager {
 
     const loaded = await this.loader.loadAllExtensions(session);
     if (loaded.length > 0) {
-      console.log(`🧩 ExtensionManager initialized with ${loaded.length} extension(s)`);
+      log.info(`🧩 ExtensionManager initialized with ${loaded.length} extension(s)`);
     }
 
     // Detect and configure native messaging hosts
@@ -97,9 +100,9 @@ export class ExtensionManager {
       const loaded = await this.loader.loadExtension(session, result.installPath);
       if (loaded) {
         // ID matching: compare assigned Electron ID with expected CWS ID
-        console.log(`🧩 Extension loaded — CWS ID: ${result.extensionId}, Electron ID: ${loaded.id}`);
+        log.info(`🧩 Extension loaded — CWS ID: ${result.extensionId}, Electron ID: ${loaded.id}`);
         if (loaded.id !== result.extensionId) {
-          console.warn(`⚠️ Extension ID mismatch! CWS: ${result.extensionId}, Electron: ${loaded.id}`);
+          log.warn(`⚠️ Extension ID mismatch! CWS: ${result.extensionId}, Electron: ${loaded.id}`);
           result.warning = (result.warning ? result.warning + '; ' : '') +
             `Extension ID mismatch: CWS=${result.extensionId}, Electron=${loaded.id}`;
         }
@@ -118,7 +121,7 @@ export class ExtensionManager {
     const conflicts = this.conflictDetector.analyzeManifest(manifestPath);
     if (conflicts.length > 0) {
       (result as InstallResult & { conflicts: ExtensionConflict[] }).conflicts = conflicts;
-      console.log(`⚠️ ${conflicts.length} conflict(s) detected for ${result.name}: ${conflicts.map(c => c.conflictType).join(', ')}`);
+      log.info(`⚠️ ${conflicts.length} conflict(s) detected for ${result.name}: ${conflicts.map(c => c.conflictType).join(', ')}`);
     }
 
     return result;
@@ -143,10 +146,10 @@ export class ExtensionManager {
     try {
       // Unload from session (no restart needed)
       session.removeExtension(extensionId);
-      console.log(`🧩 Extension ${extensionId} removed from session`);
+      log.info(`🧩 Extension ${extensionId} removed from session`);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Failed to remove extension ${extensionId} from session: ${message}`);
+      log.warn(`⚠️ Failed to remove extension ${extensionId} from session: ${message}`);
       // Continue to remove from disk even if session removal fails
     }
 
@@ -156,10 +159,10 @@ export class ExtensionManager {
     if (fs.existsSync(extPath)) {
       try {
         fs.rmSync(extPath, { recursive: true, force: true });
-        console.log(`🧩 Extension ${extensionId} removed from disk: ${extPath}`);
+        log.info(`🧩 Extension ${extensionId} removed from disk: ${extPath}`);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        console.warn(`⚠️ Failed to remove extension files at ${extPath}: ${message}`);
+        log.warn(`⚠️ Failed to remove extension files at ${extPath}: ${message}`);
         return false;
       }
     }
@@ -345,16 +348,16 @@ export class ExtensionManager {
           loaded.push(ext.name || dir.name);
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          console.warn(`⚠️ Failed to load extension ${dir.name} into session: ${message}`);
+          log.warn(`⚠️ Failed to load extension ${dir.name} into session: ${message}`);
         }
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Could not read extensions directory for session loading: ${message}`);
+      log.warn(`⚠️ Could not read extensions directory for session loading: ${message}`);
     }
 
     if (loaded.length > 0) {
-      console.log(`🧩 Loaded ${loaded.length} extension(s) into session: ${loaded.join(', ')}`);
+      log.info(`🧩 Loaded ${loaded.length} extension(s) into session: ${loaded.join(', ')}`);
     }
 
     return loaded;

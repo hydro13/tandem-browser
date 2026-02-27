@@ -1,4 +1,7 @@
 import { WebContents } from 'electron';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('DeviceEmulator');
 
 export interface DeviceProfile {
   name: string;
@@ -172,7 +175,7 @@ export class DeviceEmulator {
         Object.defineProperty(navigator, 'maxTouchPoints', {
           get: () => 5, configurable: true
         });
-      `).catch(e => console.warn('[DeviceEmulator] touch event injection failed (page may not be ready):', e instanceof Error ? e.message : e));
+      `).catch(e => log.warn('touch event injection failed (page may not be ready):', e instanceof Error ? e.message : e));
     }
   }
 }

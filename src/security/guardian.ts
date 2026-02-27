@@ -6,6 +6,9 @@ import { NetworkShield } from './network-shield';
 import { OutboundGuard } from './outbound-guard';
 import { GuardianMode, GuardianStatus, BANKING_PATTERNS, GatekeeperDecision, PendingDecision, AnalysisConfidence } from './types';
 import type { GatekeeperWebSocket } from './gatekeeper-ws';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('Guardian');
 
 const DANGEROUS_EXTENSIONS = new Set(['.exe', '.scr', '.bat', '.cmd', '.ps1', '.vbs', '.msi', '.dll']);
 const OUTBOUND_METHODS = new Set(['POST', 'PUT', 'PATCH']);
@@ -33,7 +36,7 @@ export class Guardian {
   // Phase 4: Set the gatekeeper reference
   setGatekeeper(ws: GatekeeperWebSocket): void {
     this.gatekeeperWs = ws;
-    console.log('[Guardian] Gatekeeper agent bridge connected');
+    log.info('Gatekeeper agent bridge connected');
   }
 
   // Phase 4: Handle decisions from the agent
@@ -114,7 +117,7 @@ export class Guardian {
       }
     });
 
-    console.log('[Guardian] Registered with dispatcher (priority 1/20/20 + redirect)');
+    log.info('Registered with dispatcher (priority 1/20/20 + redirect)');
   }
 
   // === Request checking (synchronous, <5ms target) ===

@@ -3,11 +3,12 @@ process.stdout?.on('error', () => {});
 process.stderr?.on('error', () => {});
 
 process.on('uncaughtException', (err) => {
-  console.error('[FATAL] Uncaught exception:', err);
+  // log is not yet initialized at this point — use console directly for fatal bootstrap errors
+  console.error('[Main] Uncaught exception:', err);
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('[FATAL] Unhandled rejection:', reason);
+  console.error('[Main] Unhandled rejection:', reason);
 });
 
 import { app, BrowserWindow, session, ipcMain, WebContents } from 'electron';
@@ -60,6 +61,9 @@ import { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
 import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
 import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS, CDP_ATTACH_DELAY_MS } from './utils/constants';
+import { createLogger } from './utils/logger';
+
+const log = createLogger('Main');
 
 const IS_DEV = process.argv.includes('--dev');
 
@@ -157,7 +161,7 @@ async function createWindow(): Promise<BrowserWindow> {
   dispatcher.attach();
 
   // Flush cookies to disk periodically for reliability
-  setInterval(() => { ses.cookies.flushStore().catch(e => console.warn('[Main] cookie flush failed:', e instanceof Error ? e.message : e)); }, COOKIE_FLUSH_INTERVAL_MS);
+  setInterval(() => { ses.cookies.flushStore().catch(e => log.warn('cookie flush failed:', e instanceof Error ? e.message : e)); }, COOKIE_FLUSH_INTERVAL_MS);
 
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
@@ -170,10 +174,10 @@ async function createWindow(): Promise<BrowserWindow> {
         // Skip stealth injection on Google auth pages — our patches break their login detection
         const url = contents.getURL();
         if (url.includes('accounts.google.com') || url.includes('consent.google.com')) {
-          console.log('🔑 Skipping stealth for Google auth:', url.substring(0, 60));
+          log.info('🔑 Skipping stealth for Google auth:', url.substring(0, 60));
           return;
         }
-        contents.executeJavaScript(stealthScript).catch((e) => console.warn('Stealth script injection failed:', e.message));
+        contents.executeJavaScript(stealthScript).catch((e) => log.warn('Stealth script injection failed:', e.message));
       });
 
       // Register context menu for this webview (queue if manager not yet ready)
@@ -377,7 +381,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     // Send initial toolbar state to renderer
     extensionToolbar!.notifyToolbarUpdate(ses);
   }).catch((err) => {
-    console.warn('⚠️ Failed to load some extensions:', err);
+    log.warn('⚠️ Failed to load some extensions:', err);
     // Still register IPC handlers so toolbar works (just empty)
     extensionToolbar!.registerIpcHandlers(ses);
   });
@@ -430,7 +434,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   api = new TandemAPI({ win, port: API_PORT, registry });
   await api.start();
-  console.log(`🧠 Tandem API running on http://localhost:${API_PORT}`);
+  log.info(`🧠 Tandem API running on http://localhost:${API_PORT}`);
 
   // Phase 4: Wire GatekeeperWebSocket onto the running HTTP server
   if (securityManager) {
@@ -481,8 +485,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       // Auto-attach CDP for Copilot Vision + Security on startup
       // Reduced from 2000ms to CDP_ATTACH_DELAY_MS to minimize ScriptGuard race window
       setTimeout(async () => {
-        await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
-        securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
+        await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+        securityManager?.onTabAttached().catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
       }, CDP_ATTACH_DELAY_MS);
     }
   });
@@ -496,8 +500,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
     syncTabsToContext(tabManager!, contextBridge!);
     setTimeout(async () => {
-      await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
-      securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
+      await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+      securityManager?.onTabAttached().catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
     }, CDP_ATTACH_DELAY_MS);
   }
 }
@@ -535,7 +539,7 @@ app.whenReady().then(async () => {
           audioCaptureManager,
         });
       }).catch((err) => {
-        console.error('[activate] Failed to recreate window:', err);
+        log.error('Failed to recreate window:', err);
       });
     }
   });

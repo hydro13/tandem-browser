@@ -4,6 +4,14 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.11.3] — 2026-02-27
+
+### Code Quality — Item 11
+
+- **Logger utility**: new `src/utils/logger.ts` with `createLogger(namespace)` factory, levels debug/info/warn/error/silent, `TANDEM_LOG_LEVEL` env var. Replaced all 355 `console.log/warn/error` calls across 51 source files. 9 new tests (202 total)
+
+---
+
 ## [0.11.2] — 2026-02-27
 
 ### Code Quality — Medium Items (Items 13–16)

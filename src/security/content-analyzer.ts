@@ -1,6 +1,9 @@
 import { SecurityDB } from './security-db';
 import { DevToolsManager } from '../devtools/manager';
 import { KNOWN_TRACKERS, URL_REGEX, DOMAIN_REGEX, IPV4_REGEX, IPV4_OCTAL_REGEX, AnalysisConfidence, SecurityAnalyzer, AnalyzerContext, SecurityEvent } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ContentAnalyzer');
 
 /** Result of a page security analysis */
 export interface PageAnalysis {
@@ -288,7 +291,7 @@ export class ContentAnalyzer {
       }
 
     } catch (e) {
-      console.warn('[ContentAnalyzer] Page analysis error:', e instanceof Error ? e.message : String(e));
+      log.warn('Page analysis error:', e instanceof Error ? e.message : String(e));
     }
 
     // 7. Typosquatting check
@@ -317,7 +320,7 @@ export class ContentAnalyzer {
     await this.deepScanPageSource(domain);
     const scanMs = performance.now() - scanStart;
     if (scanMs > 100) {
-      console.warn(`[ContentAnalyzer] Slow deep scan: ${domain} took ${scanMs.toFixed(1)}ms`);
+      log.warn(`Slow deep scan: ${domain} took ${scanMs.toFixed(1)}ms`);
     }
 
     // Calculate risk score
@@ -360,7 +363,7 @@ export class ContentAnalyzer {
         }
       }
     } catch (e) {
-      console.warn('[ContentAnalyzer] Deep scan error:', e instanceof Error ? e.message : String(e));
+      log.warn('Deep scan error:', e instanceof Error ? e.message : String(e));
     }
   }
 

@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { ConfigManager } from '../config/manager';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('PanelManager');
 
 export interface ActivityEvent {
   id: number;
@@ -135,7 +138,7 @@ export class PanelManager {
     }
 
     // Fire webhook for robin messages (async, non-blocking)
-    this.fireWebhook(msg).catch(e => console.warn('[Panel] fireWebhook failed:', e instanceof Error ? e.message : e));
+    this.fireWebhook(msg).catch(e => log.warn('fireWebhook failed:', e instanceof Error ? e.message : e));
 
     return msg;
   }
@@ -166,12 +169,12 @@ export class PanelManager {
       });
 
       if (!response.ok) {
-        console.warn(`⚠️ Webhook failed (${response.status}): ${response.statusText}`);
+        log.warn(`⚠️ Webhook failed (${response.status}): ${response.statusText}`);
       }
     } catch (e) {
       // Silent fail — OpenClaw might not be running
       if (!(e instanceof Error) || e.name !== 'AbortError') {
-        console.warn('⚠️ Webhook dispatch failed (OpenClaw not running?):', e instanceof Error ? e.message : String(e));
+        log.warn('⚠️ Webhook dispatch failed (OpenClaw not running?):', e instanceof Error ? e.message : String(e));
       }
     }
   }

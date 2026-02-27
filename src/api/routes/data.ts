@@ -5,6 +5,9 @@ import fs from 'fs';
 import { RouteContext } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
+import { createLogger } from '../../utils/logger';
+
+const log = createLogger('DataRoutes');
 
 export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -215,7 +218,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       // Chat history
       const chatPath = path.join(baseDir, 'chat-history.json');
       if (fs.existsSync(chatPath)) {
-        try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e) { console.warn('Chat history load failed:', e instanceof Error ? e.message : String(e)); }
+        try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e) { log.warn('Chat history load failed:', e instanceof Error ? e.message : String(e)); }
       }
 
       // Behavior stats

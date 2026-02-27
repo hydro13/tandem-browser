@@ -21,6 +21,9 @@ import { ScriptInjector } from '../scripts/injector';
 import { DeviceEmulator } from '../device/emulator';
 import { CopilotStream } from '../activity/copilot-stream';
 import { SnapshotManager } from '../snapshot/manager';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('IpcHandlers');
 
 export interface IpcDeps {
   win: BrowserWindow;
@@ -160,8 +163,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       const activeTabForSiteMem = tabManager.getActiveTab();
       if (activeTabForSiteMem) {
         tabManager.getActiveWebContents().then(wc => {
-          if (wc) siteMemory.recordVisit(wc, data.url!).catch((e) => console.warn('Site memory recordVisit failed:', e.message));
-        }).catch((e) => console.warn('Get active webcontents for site memory failed:', e.message));
+          if (wc) siteMemory.recordVisit(wc, data.url!).catch((e) => log.warn('Site memory recordVisit failed:', e.message));
+        }).catch((e) => log.warn('Get active webcontents for site memory failed:', e.message));
       }
     }
     // Security: run baseline learning + anomaly detection on page load completion
@@ -170,7 +173,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
         const domain = new URL(data.url).hostname.toLowerCase();
         if (domain) {
           securityManager.onPageLoaded(domain).catch((e) =>
-            console.warn('[Security] onPageLoaded failed:', e.message)
+            log.warn('onPageLoaded failed:', e.message)
           );
         }
       } catch { /* invalid URL, skip */ }
@@ -180,13 +183,13 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       tabManager.getActiveWebContents().then(wc => {
         if (wc && !wc.isDestroyed()) {
           scriptInjector.reloadIntoTab(wc).catch((e) =>
-            console.warn('[ScriptInjector] reloadIntoTab failed:', e.message)
+            log.warn('reloadIntoTab failed:', e.message)
           );
           deviceEmulator.reloadIntoTab(wc).catch((e) =>
-            console.warn('[DeviceEmulator] reloadIntoTab failed:', e.message)
+            log.warn('reloadIntoTab failed:', e.message)
           );
         }
-      }).catch(e => console.warn('[IPC] getActiveWebContents for script/emulator reload failed:', e instanceof Error ? e.message : e));
+      }).catch(e => log.warn('getActiveWebContents for script/emulator reload failed:', e instanceof Error ? e.message : e));
     }
     // Flush network data when navigating away
     if (data.type === 'did-start-navigation' && data.url) {
@@ -196,7 +199,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
           const prevDomain = new URL(prevTab.url).hostname;
           if (prevDomain) networkInspector.flushDomain(prevDomain);
         }
-      } catch (e) { console.warn('Network flush domain parse failed:', e instanceof Error ? e.message : String(e)); }
+      } catch (e) { log.warn('Network flush domain parse failed:', e instanceof Error ? e.message : String(e)); }
     }
     // Track visit end when navigating away
     if (data.type === 'did-start-navigation' && data.url) {
@@ -220,9 +223,9 @@ export function registerIpcHandlers(deps: IpcDeps): void {
               })()
             `).then((pageData: { title: string; headings: string[]; linksCount: number; body: string }) => {
               contextBridge.recordSnapshot(data.url!, pageData.title, pageData.body, pageData.headings, pageData.linksCount);
-            }).catch((e) => console.warn('Context bridge snapshot failed:', e.message));
+            }).catch((e) => log.warn('Context bridge snapshot failed:', e.message));
           }
-        }).catch((e) => console.warn('Get active webcontents for context bridge failed:', e.message));
+        }).catch((e) => log.warn('Get active webcontents for context bridge failed:', e.message));
       }
     }
   });
@@ -288,8 +291,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     syncTabsToContext(tabManager, contextBridge);
     // Attach CDP to the focused tab directly (avoids race with TabManager active tab state)
     if (tab?.webContentsId) {
-      await devToolsManager.attachToTab(tab.webContentsId).catch(e => console.warn('[IPC] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
-      securityManager?.onTabAttached().catch(e => console.warn('[IPC] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
+      await devToolsManager.attachToTab(tab.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+      securityManager?.onTabAttached().catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
     }
     return result;
   });

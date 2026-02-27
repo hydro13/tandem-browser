@@ -3,6 +3,9 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { apiCall, logActivity } from './api-client.js';
 import { API_PORT } from '../utils/constants';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('McpServer');
 
 const server = new McpServer({
   name: 'tandem-browser',
@@ -746,7 +749,7 @@ function startEventListener(): void {
   const connect = () => {
     fetch(url, token ? { headers: { 'Authorization': `Bearer ${token}` } } : {}).then(async (response) => {
       if (!response.ok || !response.body) {
-        console.error('SSE connect failed:', response.status);
+        log.error('SSE connect failed:', response.status);
         setTimeout(connect, 5000);
         return;
       }
@@ -774,11 +777,11 @@ function startEventListener(): void {
               const event = JSON.parse(line.slice(6));
               // Send MCP notifications for meaningful events
               if (['navigation', 'page-loaded', 'tab-focused'].includes(event.type)) {
-                server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(e => console.warn('[MCP] sendResourceUpdated page/current failed:', e instanceof Error ? e.message : e));
-                server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(e => console.warn('[MCP] sendResourceUpdated context failed:', e instanceof Error ? e.message : e));
+                server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(e => log.warn('sendResourceUpdated page/current failed:', e instanceof Error ? e.message : e));
+                server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(e => log.warn('sendResourceUpdated context failed:', e instanceof Error ? e.message : e));
               }
               if (['tab-opened', 'tab-closed', 'tab-focused'].includes(event.type)) {
-                server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(e => console.warn('[MCP] sendResourceUpdated tabs/list failed:', e instanceof Error ? e.message : e));
+                server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(e => log.warn('sendResourceUpdated tabs/list failed:', e instanceof Error ? e.message : e));
               }
             } catch {
               // Ignore parse errors (comments, heartbeats)
@@ -810,13 +813,13 @@ function startEventListener(): void {
 async function main(): Promise<void> {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Tandem MCP server started (stdio transport)');
+  log.info('Tandem MCP server started (stdio transport)');
 
   // Start SSE listener for live notifications
   startEventListener();
 }
 
 main().catch((err) => {
-  console.error('Fatal error starting MCP server:', err);
+  log.error('Fatal error starting MCP server:', err);
   process.exit(1);
 });

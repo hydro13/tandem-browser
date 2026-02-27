@@ -5,6 +5,9 @@ import { tandemDir } from '../../utils/paths';
 import { SecurityDB } from '../security-db';
 import { NetworkShield } from '../network-shield';
 import { UpdateResult, URL_LIST_SAFE_DOMAINS } from '../types';
+import { createLogger } from '../../utils/logger';
+
+const log = createLogger('BlocklistUpdater');
 
 /** Download timeout in milliseconds */
 const DOWNLOAD_TIMEOUT = 60_000;
@@ -60,7 +63,7 @@ export class BlocklistUpdater {
 
     for (const source of BLOCKLIST_SOURCES) {
       try {
-        console.log(`[BlocklistUpdater] Downloading ${source.name} from ${source.url}...`);
+        log.info(`Downloading ${source.name} from ${source.url}...`);
         const content = await this.download(source.url);
         const filePath = path.join(this.dataDir, `${source.name}.txt`);
         fs.writeFileSync(filePath, content);
@@ -81,17 +84,17 @@ export class BlocklistUpdater {
         const added = this.db.syncBlocklistSource(source.name, domains, source.category);
         results.sources.push({ name: source.name, domains: domains.length, added });
         results.totalAdded += added;
-        console.log(`[BlocklistUpdater] ${source.name}: ${domains.length} domains parsed, ${added} synced to DB`);
+        log.info(`${source.name}: ${domains.length} domains parsed, ${added} synced to DB`);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
         results.errors.push(`${source.name}: ${errMsg}`);
-        console.error(`[BlocklistUpdater] Failed to update ${source.name}:`, errMsg);
+        log.error(`Failed to update ${source.name}:`, errMsg);
       }
     }
 
     // Reload in-memory blocklist
     this.shield.reload();
-    console.log(`[BlocklistUpdater] NetworkShield reloaded. Total added: ${results.totalAdded}, errors: ${results.errors.length}`);
+    log.info(`NetworkShield reloaded. Total added: ${results.totalAdded}, errors: ${results.errors.length}`);
 
     return results;
   }

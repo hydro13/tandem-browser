@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import { DevToolsManager } from '../devtools/manager';
 import { MockRule } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('NetworkMocker');
 
 export class NetworkMocker {
   private rules: MockRule[] = [];
@@ -83,7 +86,7 @@ export class NetworkMocker {
       patterns: [{ urlPattern: '*', requestStage: 'Request' }],
     });
     this.fetchEnabled = true;
-    console.log('[NetworkMocker] Fetch.enable — interception active');
+    log.info('Fetch.enable — interception active');
   }
 
   /** Disable CDP Fetch domain (performance: stop intercepting) */
@@ -92,10 +95,10 @@ export class NetworkMocker {
     try {
       await this.devtools.sendCommand('Fetch.disable', {});
     } catch (e) {
-      console.warn('[NetworkMocker] Fetch.disable failed:', e instanceof Error ? e.message : String(e));
+      log.warn('Fetch.disable failed:', e instanceof Error ? e.message : String(e));
     }
     this.fetchEnabled = false;
-    console.log('[NetworkMocker] Fetch.disable — interception stopped');
+    log.info('Fetch.disable — interception stopped');
   }
 
   /** Find the first matching rule for a URL */
@@ -211,7 +214,7 @@ export class NetworkMocker {
         });
       }
     } catch (e) {
-      console.error(`[NetworkMocker] Error handling paused request ${url}:`, e instanceof Error ? e.message : String(e));
+      log.error(`Error handling paused request ${url}:`, e instanceof Error ? e.message : String(e));
       // Try to continue the request so the browser doesn't hang
       try {
         await this.devtools.sendCommand('Fetch.continueRequest', { requestId });
@@ -225,7 +228,7 @@ export class NetworkMocker {
     this.devtools.unsubscribe('NetworkMocker');
     // Don't await disableFetch here — app is quitting
     if (this.fetchEnabled) {
-      this.devtools.sendCommand('Fetch.disable', {}).catch(e => console.warn('[NetworkMocker] Fetch.disable on destroy failed:', e instanceof Error ? e.message : e));
+      this.devtools.sendCommand('Fetch.disable', {}).catch(e => log.warn('Fetch.disable on destroy failed:', e instanceof Error ? e.message : e));
       this.fetchEnabled = false;
     }
   }

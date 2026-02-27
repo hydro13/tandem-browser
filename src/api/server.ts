@@ -22,6 +22,9 @@ import { registerContentRoutes } from './routes/content';
 import { registerMediaRoutes } from './routes/media';
 import { registerMiscRoutes } from './routes/misc';
 import { registerSecurityRoutes } from '../security/routes';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('TandemAPI');
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
@@ -35,12 +38,12 @@ function getOrCreateAuthToken(): string {
       if (existing.length >= 32) return existing;
     }
   } catch (e) {
-    console.warn('Could not read existing API token, generating new:', e instanceof Error ? e.message : e);
+    log.warn('Could not read existing API token, generating new:', e instanceof Error ? e.message : e);
   }
 
   const token = crypto.randomBytes(32).toString('hex');
   fs.writeFileSync(tokenPath, token, { mode: 0o600 });
-  console.log('🔑 New API token generated → ~/.tandem/api-token');
+  log.info('🔑 New API token generated → ~/.tandem/api-token');
   return token;
 }
 
@@ -113,7 +116,7 @@ export class TandemAPI {
         if (match && this.isTokenValid(match[1])) return next();
       }
       if (queryToken) {
-        console.warn('[API] Query string token auth is deprecated. Use Authorization: Bearer header instead.');
+        log.warn('Query string token auth is deprecated. Use Authorization: Bearer header instead.');
         if (this.isTokenValid(queryToken)) return next();
       }
 

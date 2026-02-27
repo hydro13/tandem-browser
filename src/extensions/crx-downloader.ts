@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import AdmZip from 'adm-zip';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('CrxDownloader');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -79,7 +82,7 @@ export class CrxDownloader {
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
           const contentScriptPatterns = this.extractContentScriptPatterns(manifest);
-          console.log(`🧩 Extension ${extensionId} already installed at ${existingPath}`);
+          log.info(`🧩 Extension ${extensionId} already installed at ${existingPath}`);
           return {
             success: true,
             extensionId,
@@ -99,7 +102,7 @@ export class CrxDownloader {
     const chromiumVersion = process.versions.chrome ?? '130.0.0.0';
     const cwsUrl = `https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${chromiumVersion}&acceptformat=crx2,crx3&x=id%3D${extensionId}%26uc`;
 
-    console.log(`🧩 Downloading extension ${extensionId} from CWS (prodversion=${chromiumVersion})`);
+    log.info(`🧩 Downloading extension ${extensionId} from CWS (prodversion=${chromiumVersion})`);
 
     // Download with retry
     let downloadResult: DownloadResult;
@@ -132,7 +135,7 @@ export class CrxDownloader {
       };
     }
 
-    console.log(`🧩 CRX format verified: ${verification.format}, downloadedFromGoogle=${verification.downloadedFromGoogle}`);
+    log.info(`🧩 CRX format verified: ${verification.format}, downloadedFromGoogle=${verification.downloadedFromGoogle}`);
 
     // Extract CRX to extension directory
     let installPath: string;
@@ -188,19 +191,19 @@ export class CrxDownloader {
     let warning: string | undefined;
     if (!manifest.key) {
       warning = 'manifest.json missing "key" field — extension ID may not match CWS ID, OAuth flows may break';
-      console.warn(`⚠️ Extension ${extensionId}: ${warning}`);
+      log.warn(`⚠️ Extension ${extensionId}: ${warning}`);
     }
 
     // Content script inventory for security auditing
     const contentScriptPatterns = this.extractContentScriptPatterns(manifest);
     if (contentScriptPatterns.length > 0) {
-      console.log(`🧩 Extension ${extensionId} content script patterns: ${contentScriptPatterns.join(', ')}`);
+      log.info(`🧩 Extension ${extensionId} content script patterns: ${contentScriptPatterns.join(', ')}`);
     }
 
-    console.log(`🧩 Extension ${extensionId} installed: ${manifestName} v${manifestVersion}`);
+    log.info(`🧩 Extension ${extensionId} installed: ${manifestName} v${manifestVersion}`);
 
     // CRX3 RSA signature verification not yet implemented — warn user
-    console.warn(`⚠️ Extension ${extensionId} installed WITHOUT cryptographic signature verification. Only install extensions from trusted sources (Chrome Web Store).`);
+    log.warn(`⚠️ Extension ${extensionId} installed WITHOUT cryptographic signature verification. Only install extensions from trusted sources (Chrome Web Store).`);
 
     return {
       success: true,
@@ -252,7 +255,7 @@ export class CrxDownloader {
         }
         if (attempt < MAX_RETRIES - 1) {
           const delay = RETRY_BACKOFF_MS[attempt];
-          console.log(`🧩 Download attempt ${attempt + 1} failed, retrying in ${delay}ms: ${lastError.message}`);
+          log.info(`🧩 Download attempt ${attempt + 1} failed, retrying in ${delay}ms: ${lastError.message}`);
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }

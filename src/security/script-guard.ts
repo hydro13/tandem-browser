@@ -12,6 +12,9 @@ import {
   computeSimilarity,
   parseToAST,
 } from './script-utils';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ScriptGuard');
 
 // Re-export pure functions for backward compatibility
 export { calculateEntropy, normalizeScriptSource, computeASTHash, computeSimilarity } from './script-utils';
@@ -173,7 +176,7 @@ export class ScriptGuard {
     if (scriptLength <= MAX_SCRIPT_SIZE && !this.analyzedUrls.has(url)) {
       const pageDomain = this.getCurrentPageDomain();
       if (pageDomain && domain !== pageDomain) {
-        this.analyzeExternalScript(scriptId, url, domain).catch(e => console.warn('[ScriptGuard] analyzeExternalScript failed:', e instanceof Error ? e.message : e));
+        this.analyzeExternalScript(scriptId, url, domain).catch(e => log.warn('analyzeExternalScript failed:', e instanceof Error ? e.message : e));
       }
     }
   }
@@ -533,7 +536,7 @@ export class ScriptGuard {
 
       const perfMs = performance.now() - perfStart;
       if (perfMs > 50) {
-        console.warn(`[ScriptGuard] Slow analysis: ${url} took ${perfMs.toFixed(1)}ms`);
+        log.warn(`Slow analysis: ${url} took ${perfMs.toFixed(1)}ms`);
       }
     } catch {
       // CDP command failed (tab closed, debugger detached) — silently ignore
@@ -683,9 +686,9 @@ export class ScriptGuard {
       });
 
       this.monitorInjected = true;
-      console.log('[ScriptGuard] Security monitors injected');
+      log.info('Security monitors injected');
     } catch (e) {
-      console.warn('[ScriptGuard] Monitor injection failed:', e instanceof Error ? e.message : String(e));
+      log.warn('Monitor injection failed:', e instanceof Error ? e.message : String(e));
     }
   }
 

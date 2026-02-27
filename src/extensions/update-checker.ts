@@ -5,6 +5,9 @@ import { Session } from 'electron';
 import { CrxDownloader } from './crx-downloader';
 import { ExtensionLoader } from './loader';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('UpdateChecker');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -134,7 +137,7 @@ export class UpdateChecker {
       responseXml = await this.httpGet(url);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      console.warn(`[UpdateChecker] Update protocol failed: ${message}`);
+      log.warn(`Update protocol failed: ${message}`);
       return this.fallbackCheckAll(extensions);
     }
 
@@ -232,7 +235,7 @@ export class UpdateChecker {
    * Used when the update protocol endpoint fails.
    */
   private async fallbackCheckAll(extensions: InstalledExtension[]): Promise<UpdateCheckResult[]> {
-    console.log(`[UpdateChecker] Falling back to CRX download for version checks (${extensions.length} extensions)`);
+    log.info(`Falling back to CRX download for version checks (${extensions.length} extensions)`);
     const results: UpdateCheckResult[] = [];
 
     for (const ext of extensions) {
@@ -337,7 +340,7 @@ export class UpdateChecker {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
 
-    console.log(`[UpdateChecker] Downloading update for ${name} (${extensionId})...`);
+    log.info(`Downloading update for ${name} (${extensionId})...`);
     const installResult = await this.downloader.installFromCws(extensionId);
     // installFromCws extracts to extensionsDir/{id} which IS our current ext path
     // But the extension is already there, so installFromCws will return "already installed"
@@ -413,7 +416,7 @@ export class UpdateChecker {
       if (oldKeyField && !newManifest.key) {
         newManifest.key = oldKeyField;
         fs.writeFileSync(newManifestPath, JSON.stringify(newManifest, null, 2), 'utf-8');
-        console.log(`[UpdateChecker] Preserved manifest.json key field for ${extensionId}`);
+        log.info(`Preserved manifest.json key field for ${extensionId}`);
       }
 
       // Restore .tandem-meta.json if it existed
@@ -435,17 +438,17 @@ export class UpdateChecker {
         session.removeExtension(extensionId);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`[UpdateChecker] session.removeExtension failed (may not be loaded): ${msg}`);
+        log.warn(`session.removeExtension failed (may not be loaded): ${msg}`);
       }
 
       // Load new version
       try {
         await this.loader.loadExtension(session, extPath);
-        console.log(`[UpdateChecker] Updated ${name}: ${previousVersion} → ${newVersion}`);
+        log.info(`Updated ${name}: ${previousVersion} → ${newVersion}`);
       } catch (err: unknown) {
         // Rollback on load failure
         const msg = err instanceof Error ? err.message : String(err);
-        console.error(`[UpdateChecker] Failed to load updated ${name}, rolling back: ${msg}`);
+        log.error(`Failed to load updated ${name}, rolling back: ${msg}`);
         if (fs.existsSync(extPath)) {
           fs.rmSync(extPath, { recursive: true, force: true });
         }
@@ -469,7 +472,7 @@ export class UpdateChecker {
     } catch (err: unknown) {
       // Unexpected error — attempt rollback
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[UpdateChecker] Unexpected error updating ${name}: ${msg}`);
+      log.error(`Unexpected error updating ${name}: ${msg}`);
       if (!fs.existsSync(extPath) && fs.existsSync(oldDir)) {
         fs.renameSync(oldDir, extPath);
       }
@@ -487,11 +490,11 @@ export class UpdateChecker {
     const updatable = checks.filter(c => c.updateAvailable);
 
     if (updatable.length === 0) {
-      console.log('[UpdateChecker] All extensions are up to date');
+      log.info('All extensions are up to date');
       return [];
     }
 
-    console.log(`[UpdateChecker] ${updatable.length} update(s) available`);
+    log.info(`${updatable.length} update(s) available`);
     const results: UpdateResult[] = [];
 
     for (const check of updatable) {
@@ -583,7 +586,7 @@ export class UpdateChecker {
     } catch { /* extensions dir may not exist */ }
 
     if (totalBytes > DISK_USAGE_WARNING_BYTES) {
-      console.warn(`[UpdateChecker] Extension storage exceeds 500MB: ${(totalBytes / 1048576).toFixed(1)}MB`);
+      log.warn(`Extension storage exceeds 500MB: ${(totalBytes / 1048576).toFixed(1)}MB`);
     }
 
     return { totalBytes, extensions };
@@ -624,7 +627,7 @@ export class UpdateChecker {
         // Remove .old directories (leftover from failed updates)
         if (dir.name.endsWith('.old') && dir.isDirectory()) {
           const fullPath = path.join(this.extensionsDir, dir.name);
-          console.log(`[UpdateChecker] Cleaning up stale .old directory: ${dir.name}`);
+          log.info(`Cleaning up stale .old directory: ${dir.name}`);
           fs.rmSync(fullPath, { recursive: true, force: true });
         }
       }
@@ -635,7 +638,7 @@ export class UpdateChecker {
         try {
           const stat = fs.statSync(tmpDir);
           if (now - stat.mtimeMs > STALE_TMP_THRESHOLD_MS) {
-            console.log('[UpdateChecker] Cleaning up stale .tmp directory');
+            log.info('Cleaning up stale .tmp directory');
             fs.rmSync(tmpDir, { recursive: true, force: true });
           }
         } catch { /* ignore */ }
@@ -657,7 +660,7 @@ export class UpdateChecker {
       try {
         await this.runScheduledCheck(session);
       } catch (e) {
-        console.warn('[UpdateChecker] scheduled check failed:', e instanceof Error ? e.message : e);
+        log.warn('scheduled check failed:', e instanceof Error ? e.message : e);
       }
 
       // Then schedule recurring checks
@@ -666,12 +669,12 @@ export class UpdateChecker {
         try {
           await this.runScheduledCheck(session);
         } catch (e) {
-          console.warn('[UpdateChecker] scheduled check failed:', e instanceof Error ? e.message : e);
+          log.warn('scheduled check failed:', e instanceof Error ? e.message : e);
         }
       }, interval);
     }, FIRST_CHECK_DELAY_MS);
 
-    console.log(`[UpdateChecker] Scheduled checks: first in ${FIRST_CHECK_DELAY_MS / 1000}s, then every ${(this.state.checkIntervalMs || DEFAULT_CHECK_INTERVAL_MS) / 3600000}h`);
+    log.info(`Scheduled checks: first in ${FIRST_CHECK_DELAY_MS / 1000}s, then every ${(this.state.checkIntervalMs || DEFAULT_CHECK_INTERVAL_MS) / 3600000}h`);
   }
 
   /**
@@ -699,17 +702,17 @@ export class UpdateChecker {
 
       if (withUpdates.length > 0) {
         const summaries = withUpdates.map(r => `${r.name} ${r.installedVersion} → ${r.latestVersion}`);
-        console.log(`[UpdateChecker] ${results.length} extensions checked, ${withUpdates.length} update(s) available: ${summaries.join(', ')}`);
+        log.info(`${results.length} extensions checked, ${withUpdates.length} update(s) available: ${summaries.join(', ')}`);
       } else {
-        console.log(`[UpdateChecker] ${results.length} extensions checked, all up to date`);
+        log.info(`${results.length} extensions checked, all up to date`);
       }
 
       if (withErrors.length > 0) {
-        console.warn(`[UpdateChecker] ${withErrors.length} check(s) had errors`);
+        log.warn(`${withErrors.length} check(s) had errors`);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.error(`[UpdateChecker] Scheduled check failed: ${msg}`);
+      log.error(`Scheduled check failed: ${msg}`);
     }
   }
 
@@ -743,7 +746,7 @@ export class UpdateChecker {
         };
       }
     } catch {
-      console.warn('[UpdateChecker] Could not load update state, starting fresh');
+      log.warn('Could not load update state, starting fresh');
     }
     return {
       lastCheckTimestamp: null,
@@ -760,7 +763,7 @@ export class UpdateChecker {
       fs.writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2), 'utf-8');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`[UpdateChecker] Failed to save update state: ${msg}`);
+      log.warn(`Failed to save update state: ${msg}`);
     }
   }
 

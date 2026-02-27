@@ -4,6 +4,9 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { ConfigManager } from '../config/manager';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('DrawOverlay');
 
 /**
  * DrawOverlayManager — Manages the transparent annotation canvas overlay.
@@ -234,9 +237,9 @@ export class DrawOverlayManager {
 
     execFile('osascript', ['-e', script], (error) => {
       if (error) {
-        console.warn('📸 Apple Photos import failed:', error.message);
+        log.warn('📸 Apple Photos import failed:', error.message);
       } else {
-        console.log('📸 Screenshot imported to Apple Photos:', path.basename(filePath));
+        log.info('📸 Screenshot imported to Apple Photos:', path.basename(filePath));
       }
     });
   }

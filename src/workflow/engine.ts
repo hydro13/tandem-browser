@@ -4,6 +4,9 @@ import * as path from 'path';
 import { tandemDir } from '../utils/paths';
 import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
 import { humanizedClick, humanizedType } from '../input/humanized';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('WorkflowEngine');
 
 interface WorkflowStep {
   id: string;
@@ -161,7 +164,7 @@ export class WorkflowEngine {
 
       return workflows;
     } catch (error) {
-      console.error('Failed to load workflows:', error);
+      log.error('Failed to load workflows:', error);
       return [];
     }
   }
@@ -265,7 +268,7 @@ export class WorkflowEngine {
         const step = workflow.steps[stepIndex];
         execution.currentStep = stepIndex;
 
-        console.log(`Executing step ${stepIndex + 1}/${workflow.steps.length}: ${step.type} - ${step.description || step.id}`);
+        log.info(`Executing step ${stepIndex + 1}/${workflow.steps.length}: ${step.type} - ${step.description || step.id}`);
 
         try {
           const result = await this.executeStep(step, execution, webview);
@@ -298,7 +301,7 @@ export class WorkflowEngine {
 
           stepIndex++;
         } catch (stepError) {
-          console.error(`Step ${step.id} failed:`, stepError);
+          log.error(`Step ${step.id} failed:`, stepError);
 
           execution.stepResults.push({
             stepId: step.id,

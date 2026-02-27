@@ -6,6 +6,9 @@ import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { copilotAlert } from '../notifications/alert';
 import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('Watcher');
 
 export interface WatchEntry {
   id: string;
@@ -53,7 +56,7 @@ export class WatchManager {
       if (fs.existsSync(this.watchFile)) {
         return JSON.parse(fs.readFileSync(this.watchFile, 'utf-8'));
       }
-    } catch (e) { console.warn('Watch state load failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
+    } catch (e) { log.warn('Watch state load failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { watches: [] };
   }
 
@@ -87,7 +90,7 @@ export class WatchManager {
 
     // Apply stealth script after page loads
     this.hiddenWindow.webContents.on('did-finish-load', () => {
-      this.hiddenWindow?.webContents.executeJavaScript(StealthManager.getStealthScript()).catch((e) => console.warn('Watch stealth injection failed:', e.message));
+      this.hiddenWindow?.webContents.executeJavaScript(StealthManager.getStealthScript()).catch((e) => log.warn('Watch stealth injection failed:', e.message));
     });
 
     return this.hiddenWindow;
@@ -169,7 +172,7 @@ export class WatchManager {
   private startTimer(watch: WatchEntry): void {
     this.stopTimer(watch.id);
     const timer = setInterval(() => {
-      this.checkUrl(watch.id).catch((e) => console.warn('Watch check failed for ' + watch.id + ':', e.message));
+      this.checkUrl(watch.id).catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
     }, watch.intervalMs);
     this.timers.set(watch.id, timer);
   }
@@ -218,7 +221,7 @@ export class WatchManager {
     this.startTimer(watch);
 
     // Do an initial check
-    this.checkUrl(watch.id).catch((e) => console.warn('Watch check failed for ' + watch.id + ':', e.message));
+    this.checkUrl(watch.id).catch((e) => log.warn('Watch check failed for ' + watch.id + ':', e.message));
 
     return watch;
   }

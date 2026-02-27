@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 import { tandemDir, ensureDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('BookmarkManager');
 
 /**
  * Bookmark — A single bookmark or folder.
@@ -41,7 +44,7 @@ export class BookmarkManager {
       if (fs.existsSync(this.storePath)) {
         return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
       }
-    } catch (e) { console.warn('Bookmarks file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
+    } catch (e) { log.warn('Bookmarks file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { bookmarks: [], lastModified: new Date().toISOString() };
   }
 

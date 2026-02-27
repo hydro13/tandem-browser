@@ -1,6 +1,9 @@
 import { Session } from 'electron';
 import crypto from 'crypto';
 import { RequestDispatcher } from '../network/dispatcher';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('StealthManager');
 
 /**
  * StealthManager — Makes Tandem Browser look like a regular human browser.
@@ -31,7 +34,7 @@ export class StealthManager {
     // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
     this.session.setUserAgent(this.USER_AGENT);
 
-    console.log('🛡️ Stealth patches applied (advanced fingerprint protection active)');
+    log.info('🛡️ Stealth patches applied (advanced fingerprint protection active)');
   }
 
   /** Register header modification as a dispatcher consumer */

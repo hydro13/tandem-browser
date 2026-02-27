@@ -16,6 +16,9 @@ import { BlocklistUpdater } from './blocklists/updater';
 import { AnalyzerManager } from './analyzer-manager';
 import { EventBurstAnalyzer } from './analyzers/example-analyzer';
 import { PageMetrics, AnalysisConfidence } from './types';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('SecurityManager');
 
 export class SecurityManager {
   private db: SecurityDB;
@@ -80,7 +83,7 @@ export class SecurityManager {
 
     // Register built-in analyzers
     this.analyzerManager.register(new EventBurstAnalyzer()).catch(e => {
-      console.warn('[SecurityManager] Failed to register EventBurstAnalyzer:', e.message);
+      log.warn('Failed to register EventBurstAnalyzer:', e.message);
     });
 
     // Phase 0-B: Auto-trigger correlateEvents() every 100 events or every hour
@@ -112,7 +115,7 @@ export class SecurityManager {
         }
         this.analyzerCascadeLogging = false;
       }).catch(e => {
-        console.warn('[SecurityManager] Analyzer routing error:', e.message);
+        log.warn('Analyzer routing error:', e.message);
       });
     };
     this.correlationInterval = setInterval(() => this.runCorrelation(), 3_600_000); // 1 hour
@@ -120,7 +123,7 @@ export class SecurityManager {
     // Phase 0-B: Blocklist update scheduling (24-hour cycle)
     this.scheduleBlocklistUpdate();
 
-    console.log('[SecurityManager] Initialized (Phase 1-7)');
+    log.info('Initialized (Phase 1-7)');
   }
 
   /**
@@ -162,15 +165,15 @@ export class SecurityManager {
     this.contentAnalyzer.isDomainBlocked = (domain: string) => this.shield.checkDomain(domain).blocked;
     // Phase 7-B: Register ContentAnalyzer as plugin
     this.analyzerManager.register(new ContentAnalyzerPlugin(this.contentAnalyzer)).catch(e => {
-      console.warn('[SecurityManager] Failed to register ContentAnalyzerPlugin:', e.message);
+      log.warn('Failed to register ContentAnalyzerPlugin:', e.message);
     });
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
     // Phase 7-C: Register BehaviorMonitor as plugin
     this.analyzerManager.register(new BehaviorMonitorPlugin(this.behaviorMonitor)).catch(e => {
-      console.warn('[SecurityManager] Failed to register BehaviorMonitorPlugin:', e.message);
+      log.warn('Failed to register BehaviorMonitorPlugin:', e.message);
     });
-    console.log('[SecurityManager] Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');
+    log.info('Phase 3 modules initialized (ScriptGuard, ContentAnalyzer, BehaviorMonitor)');
   }
 
   /**
@@ -204,7 +207,7 @@ export class SecurityManager {
       // Start CPU/memory monitoring
       this.behaviorMonitor?.startResourceMonitoring();
     } catch (e) {
-      console.warn('[SecurityManager] onTabAttached error:', e instanceof Error ? e.message : String(e));
+      log.warn('onTabAttached error:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -229,7 +232,7 @@ export class SecurityManager {
       };
     }
 
-    console.log('[SecurityManager] Phase 4: GatekeeperWebSocket initialized');
+    log.info('Phase 4: GatekeeperWebSocket initialized');
   }
 
   /**
@@ -312,7 +315,7 @@ export class SecurityManager {
       // 4. Update baseline with new data
       this.evolution.updateBaseline(domain, metrics);
     } catch (e) {
-      console.warn('[SecurityManager] onPageLoaded error:', e instanceof Error ? e.message : String(e));
+      log.warn('onPageLoaded error:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -328,7 +331,7 @@ export class SecurityManager {
     try {
       const threats = this.threatIntel.correlateEvents();
       if (threats.length > 0) {
-        console.log(`[SecurityManager] Correlation found ${threats.length} threat(s)`);
+        log.info(`Correlation found ${threats.length} threat(s)`);
         for (const threat of threats) {
           this.db.logEvent({
             timestamp: Date.now(),
@@ -349,7 +352,7 @@ export class SecurityManager {
         }
       }
     } catch (e) {
-      console.warn('[SecurityManager] Correlation error:', e instanceof Error ? e.message : String(e));
+      log.warn('Correlation error:', e instanceof Error ? e.message : String(e));
     } finally {
       this.correlationRunning = false;
     }
@@ -377,12 +380,12 @@ export class SecurityManager {
    */
   private async runBlocklistUpdate(): Promise<void> {
     try {
-      console.log('[SecurityManager] Running scheduled blocklist update...');
+      log.info('Running scheduled blocklist update...');
       const result = await this.blocklistUpdater.update();
       this.db.setBlocklistMeta('lastUpdated', new Date().toISOString());
-      console.log(`[SecurityManager] Blocklist update complete: ${result.totalAdded} entries, ${result.errors.length} errors`);
+      log.info(`Blocklist update complete: ${result.totalAdded} entries, ${result.errors.length} errors`);
     } catch (e) {
-      console.warn('[SecurityManager] Blocklist update failed:', e instanceof Error ? e.message : String(e));
+      log.warn('Blocklist update failed:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -404,11 +407,11 @@ export class SecurityManager {
   destroy(): void {
     if (this.correlationInterval) clearInterval(this.correlationInterval);
     if (this.blocklistInterval) clearInterval(this.blocklistInterval);
-    this.analyzerManager.destroy().catch(e => console.warn('[SecurityManager] analyzerManager.destroy failed:', e instanceof Error ? e.message : e));
+    this.analyzerManager.destroy().catch(e => log.warn('analyzerManager.destroy failed:', e instanceof Error ? e.message : e));
     this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();
     this.db.close();
-    console.log('[SecurityManager] Destroyed');
+    log.info('Destroyed');
   }
 }

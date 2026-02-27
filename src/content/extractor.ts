@@ -2,6 +2,9 @@ import { BrowserWindow, webContents } from 'electron';
 const TurndownService = require('turndown');
 import * as path from 'path';
 import * as fs from 'fs';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ContentExtractor');
 
 interface PageContent {
   url: string;
@@ -252,7 +255,7 @@ export class ContentExtractor {
           extracted.bodyText = this.turndown.turndown(contentHtml);
         }
       } catch (error) {
-        console.log('Failed to convert to markdown, using text content');
+        log.info('Failed to convert to markdown, using text content');
       }
     }
 

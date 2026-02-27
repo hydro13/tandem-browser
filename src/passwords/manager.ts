@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
 import { PasswordCrypto } from '../security/crypto';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('PasswordManager');
 
 export interface VaultItem {
     id?: number;
@@ -124,7 +127,7 @@ export class PasswordManager {
             const plaintext = PasswordCrypto.decrypt(row.encryptedBlob, this.vaultKey);
             return JSON.parse(plaintext);
         } catch (e) {
-            console.error('Failed to decrypt vault item (corrupt / wrong key)', e);
+            log.error('Failed to decrypt vault item (corrupt / wrong key)', e);
             return null;
         }
     }

@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
 import { API_PORT, DEFAULT_PARTITION } from '../utils/constants';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('IdentityPolyfill');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -160,10 +163,10 @@ export class IdentityPolyfill {
         // Prepend polyfill to the service worker
         fs.writeFileSync(swPath, polyfillCode + '\n' + existing, 'utf-8');
         patched.push(cwsId);
-        console.log(`🔑 Identity polyfill injected into ${manifest.name || cwsId}`);
+        log.info(`🔑 Identity polyfill injected into ${manifest.name || cwsId}`);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.warn(`⚠️ Failed to inject identity polyfill for ${dir.name}: ${msg}`);
+        log.warn(`⚠️ Failed to inject identity polyfill for ${dir.name}: ${msg}`);
       }
     }
 
@@ -185,7 +188,7 @@ export class IdentityPolyfill {
    */
   registerChromiumAppHandler(_ses: Session): void {
     // Intentionally a no-op. See comment above.
-    console.log('🔑 chromiumapp.org OAuth redirects handled via popup navigation events (no protocol intercept)');
+    log.info('🔑 chromiumapp.org OAuth redirects handled via popup navigation events (no protocol intercept)');
   }
 
   /**

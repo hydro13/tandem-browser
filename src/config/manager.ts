@@ -3,6 +3,9 @@ import fs from 'fs';
 import os from 'os';
 import { tandemDir } from '../utils/paths';
 import { WEBHOOK_PORT } from '../utils/constants';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ConfigManager');
 
 /**
  * TandemConfig — All configurable settings for Tandem Browser.
@@ -188,7 +191,7 @@ export class ConfigManager {
         return this.deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw) as unknown as TandemConfig;
       }
     } catch (e) {
-      console.warn('Config file corrupted, using defaults:', e instanceof Error ? e.message : String(e));
+      log.warn('Config file corrupted, using defaults:', e instanceof Error ? e.message : String(e));
     }
     return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   }
@@ -198,7 +201,7 @@ export class ConfigManager {
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
     } catch (e) {
-      console.warn('Config save failed:', e instanceof Error ? e.message : String(e));
+      log.warn('Config save failed:', e instanceof Error ? e.message : String(e));
     }
   }
 
@@ -251,7 +254,7 @@ export class ConfigManager {
       try {
         listener(this.config, changed);
       } catch (e) {
-        console.warn('Config change listener error:', e instanceof Error ? e.message : String(e));
+        log.warn('Config change listener error:', e instanceof Error ? e.message : String(e));
       }
     }
   }

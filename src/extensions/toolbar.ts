@@ -3,6 +3,9 @@ import path from 'path';
 import fs from 'fs';
 import { ExtensionManager } from './manager';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('ExtensionToolbar');
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -505,7 +508,7 @@ export class ExtensionToolbar {
       fs.writeFileSync(this.stateFilePath, JSON.stringify(this.toolbarState, null, 2));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      console.warn(`⚠️ Failed to save toolbar state: ${msg}`);
+      log.warn(`⚠️ Failed to save toolbar state: ${msg}`);
     }
   }
 }

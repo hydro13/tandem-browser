@@ -1,6 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('HistoryManager');
 
 /**
  * HistoryEntry — A single browsing history entry.
@@ -44,7 +47,7 @@ export class HistoryManager {
       if (fs.existsSync(this.storePath)) {
         return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
       }
-    } catch (e) { console.warn('History file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
+    } catch (e) { log.warn('History file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { entries: [] };
   }
 
@@ -55,7 +58,7 @@ export class HistoryManager {
       try {
         fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
       } catch (e) {
-        console.warn('[HistoryManager] Failed to save:', e instanceof Error ? e.message : String(e));
+        log.warn('Failed to save:', e instanceof Error ? e.message : String(e));
       }
     }, 2000);
   }
@@ -67,7 +70,7 @@ export class HistoryManager {
       try {
         fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
       } catch (e) {
-        console.warn('[HistoryManager] Failed to save on destroy:', e instanceof Error ? e.message : String(e));
+        log.warn('Failed to save on destroy:', e instanceof Error ? e.message : String(e));
       }
     }
   }
