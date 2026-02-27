@@ -14,6 +14,8 @@
     "mcp": "node dist/mcp/server.js",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "test:security": "vitest run src/security/tests/",
     "test:extensions": "vitest run src/extensions/tests/"
   },
