@@ -301,7 +301,7 @@ export class ScriptGuard {
     if (scriptLength <= MAX_SCRIPT_SIZE && !this.analyzedUrls.has(url)) {
       const pageDomain = this.getCurrentPageDomain();
       if (pageDomain && domain !== pageDomain) {
-        this.analyzeExternalScript(scriptId, url, domain).catch(() => {});
+        this.analyzeExternalScript(scriptId, url, domain).catch(e => console.warn('[ScriptGuard] analyzeExternalScript failed:', e instanceof Error ? e.message : e));
       }
     }
   }

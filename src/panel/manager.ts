@@ -135,7 +135,7 @@ export class PanelManager {
     }
 
     // Fire webhook for robin messages (async, non-blocking)
-    this.fireWebhook(msg).catch(() => {});
+    this.fireWebhook(msg).catch(e => console.warn('[Panel] fireWebhook failed:', e instanceof Error ? e.message : e));
 
     return msg;
   }

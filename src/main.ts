@@ -59,9 +59,9 @@ import { LoginManager } from './auth/login-manager';
 import { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
 import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
+import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS } from './utils/constants';
 
 const IS_DEV = process.argv.includes('--dev');
-const API_PORT = 8765;
 
 let mainWindow: BrowserWindow | null = null;
 let api: TandemAPI | null = null;
@@ -109,7 +109,7 @@ const pendingContextMenuWebContents: WebContents[] = [];
 let pendingTabRegister: { webContentsId: number; url: string } | null = null;
 
 async function createWindow(): Promise<BrowserWindow> {
-  const partition = 'persist:tandem';
+  const partition = DEFAULT_PARTITION;
   const ses = session.fromPartition(partition);
 
   const stealth = new StealthManager(ses, partition);
@@ -147,7 +147,7 @@ async function createWindow(): Promise<BrowserWindow> {
     priority: 50,
     handler: (details, headers) => {
       if (details.url.startsWith('ws://127.0.0.1') || details.url.startsWith('ws://localhost')) {
-        headers['Origin'] = 'http://127.0.0.1:18789';
+        headers['Origin'] = `http://127.0.0.1:${WEBHOOK_PORT}`;
       }
       return headers;
     }
@@ -157,7 +157,7 @@ async function createWindow(): Promise<BrowserWindow> {
   dispatcher.attach();
 
   // Flush cookies to disk every 30 seconds for reliability
-  setInterval(() => { ses.cookies.flushStore().catch(() => {}); }, 30000);
+  setInterval(() => { ses.cookies.flushStore().catch(e => console.warn('[Main] cookie flush failed:', e instanceof Error ? e.message : e)); }, 30000);
 
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
@@ -188,8 +188,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // Handle popups from webviews
       contents.setWindowOpenHandler(({ url }) => {
         // OAuth/auth popups need window.opener — allow as real popup with proper config
-        const isAuth = url.includes('accounts.google.com') || url.includes('appleid.apple.com')
-          || url.includes('login.microsoftonline.com') || url.includes('/oauth') || url.includes('/auth');
+        const isAuth = AUTH_POPUP_PATTERNS.some(p => url.includes(p));
         if (isAuth) {
           return {
             action: 'allow',
@@ -355,7 +354,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   });
 
   // Hook download manager into session
-  const partition = 'persist:tandem';
+  const partition = DEFAULT_PARTITION;
   const ses = session.fromPartition(partition);
   downloadManager.hookSession(ses, win);
 
@@ -482,8 +481,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       // Auto-attach CDP for Copilot Vision + Security on startup
       // Reduced from 2000ms to 500ms to minimize ScriptGuard race window
       setTimeout(async () => {
-        await devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
-        securityManager?.onTabAttached().catch(() => {});
+        await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+        securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
       }, 500);
     }
   });
@@ -497,19 +496,14 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
     syncTabsToContext(tabManager!, contextBridge!);
     setTimeout(async () => {
-      await devToolsManager?.attachToTab(data.webContentsId).catch(() => {});
-      securityManager?.onTabAttached().catch(() => {});
+      await devToolsManager?.attachToTab(data.webContentsId).catch(e => console.warn('[Main] devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
+      securityManager?.onTabAttached().catch(e => console.warn('[Main] securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
     }, 500);
   }
 }
 
 
 app.whenReady().then(async () => {
-  // Register tab-register early to avoid race with window loading
-  ipcMain.on('tab-register', (_event, data: { webContentsId: number; url: string }) => {
-    pendingTabRegister = data;
-  });
-
   const win = await createWindow();
   await startAPI(win);
   buildAppMenu({

@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { BrowserWindow, webContents } from 'electron';
 import { ManagerRegistry } from '../registry';
+import { DEFAULT_PARTITION } from '../utils/constants';
 
 export type RouteContext = ManagerRegistry & { win: BrowserWindow };
 
@@ -20,7 +21,7 @@ export async function execInActiveTab(ctx: RouteContext, code: string): Promise<
 export function getSessionPartition(ctx: RouteContext, req: Request): string {
   const sessionName = req.headers['x-session'] as string;
   if (!sessionName || sessionName === 'default') {
-    return 'persist:tandem';
+    return DEFAULT_PARTITION;
   }
   return ctx.sessionManager.resolvePartition(sessionName);
 }

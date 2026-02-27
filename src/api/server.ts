@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
+import { API_PORT } from '../utils/constants';
 import { BrowserWindow } from 'electron';
 import { ManagerRegistry } from '../registry';
 import { RouteContext } from './context';
@@ -59,7 +60,7 @@ export class TandemAPI {
 
   constructor(opts: TandemAPIOptions) {
     this.win = opts.win;
-    this.port = opts.port ?? 8765;
+    this.port = opts.port ?? API_PORT;
     this.registry = opts.registry;
 
     this.app = express();
@@ -108,9 +109,12 @@ export class TandemAPI {
 
       if (authHeader) {
         const match = authHeader.match(/^Bearer\s+(.+)$/i);
-        if (match && match[1] === this.authToken) return next();
+        if (match && this.isTokenValid(match[1])) return next();
       }
-      if (queryToken === this.authToken) return next();
+      if (queryToken) {
+        console.warn('[API] Query string token auth is deprecated. Use Authorization: Bearer header instead.');
+        if (this.isTokenValid(queryToken)) return next();
+      }
 
       res.status(401).json({ error: 'Unauthorized — provide Authorization: Bearer <token> header or ?token=<token>. Token is in ~/.tandem/api-token' });
     });
@@ -120,6 +124,17 @@ export class TandemAPI {
     // Register SecurityManager API routes
     if (this.registry.securityManager) {
       this.registry.securityManager.registerRoutes(this.app);
+    }
+  }
+
+  /** Timing-safe comparison of a candidate token against the stored auth token */
+  private isTokenValid(token: string): boolean {
+    try {
+      const bufA = Buffer.from(token);
+      const bufB = Buffer.from(this.authToken);
+      return bufA.length === bufB.length && crypto.timingSafeEqual(bufA, bufB);
+    } catch {
+      return false;
     }
   }
 

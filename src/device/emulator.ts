@@ -172,7 +172,7 @@ export class DeviceEmulator {
         Object.defineProperty(navigator, 'maxTouchPoints', {
           get: () => 5, configurable: true
         });
-      `).catch(() => {}); // Silently fail als page nog niet klaar is
+      `).catch(e => console.warn('[DeviceEmulator] touch event injection failed (page may not be ready):', e instanceof Error ? e.message : e));
     }
   }
 }

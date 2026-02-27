@@ -1,5 +1,6 @@
 import { session } from 'electron';
 import { Session } from './types';
+import { DEFAULT_PARTITION } from '../utils/constants';
 
 export class SessionManager {
   private sessions: Map<string, Session> = new Map();
@@ -9,7 +10,7 @@ export class SessionManager {
     // Register default session (Robin's persist:tandem)
     this.sessions.set('default', {
       name: 'default',
-      partition: 'persist:tandem',
+      partition: DEFAULT_PARTITION,
       createdAt: Date.now(),
       isDefault: true,
     });

@@ -50,7 +50,7 @@ export interface AITask {
   completedAt?: number;
 }
 
-export interface ActivityEntry {
+export interface TaskActivityEntry {
   timestamp: number;
   agent: string;
   taskId?: string;
@@ -115,7 +115,7 @@ const DEFAULT_AUTONOMY: AutonomySettings = {
 
 export class TaskManager extends EventEmitter {
   private tasksDir: string;
-  private activityLog: ActivityEntry[] = [];
+  private activityLog: TaskActivityEntry[] = [];
   private emergencyStopped = false;
   private autonomy: AutonomySettings;
 
@@ -430,7 +430,7 @@ export class TaskManager extends EventEmitter {
 
   // ── Activity Log ──
 
-  private loadActivityLog(): ActivityEntry[] {
+  private loadActivityLog(): TaskActivityEntry[] {
     const logPath = tandemDir('activity-log.json');
     try {
       if (fs.existsSync(logPath)) {
@@ -451,13 +451,13 @@ export class TaskManager extends EventEmitter {
     } catch { /* silent */ }
   }
 
-  logActivity(entry: ActivityEntry): void {
+  logActivity(entry: TaskActivityEntry): void {
     this.activityLog.push(entry);
     this.saveActivityLog();
     this.emit('activity', entry);
   }
 
-  getActivityLog(limit = 50): ActivityEntry[] {
+  getActivityLog(limit = 50): TaskActivityEntry[] {
     return this.activityLog.slice(-limit);
   }
 

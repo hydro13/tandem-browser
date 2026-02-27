@@ -2,6 +2,7 @@ import { session as electronSession, Session, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
+import { API_PORT, DEFAULT_PARTITION } from '../utils/constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -100,7 +101,7 @@ export class IdentityPolyfill {
   private apiPort: number;
   private activeAuthWindows: Map<string, BrowserWindow> = new Map();
 
-  constructor(apiPort: number = 8765) {
+  constructor(apiPort: number = API_PORT) {
     this.apiPort = apiPort;
   }
 
@@ -214,7 +215,7 @@ export class IdentityPolyfill {
     }
 
     return new Promise<LaunchWebAuthFlowResult>((resolve) => {
-      const ses = electronSession.fromPartition('persist:tandem');
+      const ses = electronSession.fromPartition(DEFAULT_PARTITION);
 
       const popup = new BrowserWindow({
         width: 500,

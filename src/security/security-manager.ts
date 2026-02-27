@@ -968,7 +968,7 @@ export class SecurityManager {
   destroy(): void {
     if (this.correlationInterval) clearInterval(this.correlationInterval);
     if (this.blocklistInterval) clearInterval(this.blocklistInterval);
-    this.analyzerManager.destroy().catch(() => {});
+    this.analyzerManager.destroy().catch(e => console.warn('[SecurityManager] analyzerManager.destroy failed:', e instanceof Error ? e.message : e));
     this.gatekeeperWs?.destroy();
     this.scriptGuard?.destroy();
     this.behaviorMonitor?.destroy();

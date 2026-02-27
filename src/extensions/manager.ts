@@ -8,6 +8,7 @@ import { IdentityPolyfill } from './identity-polyfill';
 import { UpdateChecker, UpdateCheckResult, UpdateResult, UpdateState, InstalledExtension } from './update-checker';
 import { ConflictDetector, ExtensionConflict } from './conflict-detector';
 import { tandemDir } from '../utils/paths';
+import { API_PORT } from '../utils/constants';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ export class ExtensionManager {
   private updateChecker: UpdateChecker;
   private conflictDetector: ConflictDetector;
 
-  constructor(apiPort: number = 8765) {
+  constructor(apiPort: number = API_PORT) {
     this.loader = new ExtensionLoader();
     this.downloader = new CrxDownloader();
     this.nativeMessaging = new NativeMessagingSetup();
