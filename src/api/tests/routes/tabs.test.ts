@@ -269,7 +269,7 @@ describe('Tab Routes', () => {
         { webContentsId: 100 } as any,
       ]);
       // Main window webContents id is 1 (from createMockContext)
-      ctx.win.webContents.id = 1;
+      (ctx.win.webContents as any).id = 1;
 
       const res = await request(app).post('/tabs/cleanup');
 
@@ -291,7 +291,7 @@ describe('Tab Routes', () => {
 
       vi.mocked(webContents.getAllWebContents).mockReturnValue([devtoolsWc, chromeWc] as any);
       vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
-      ctx.win.webContents.id = 1;
+      (ctx.win.webContents as any).id = 1;
 
       const res = await request(app).post('/tabs/cleanup');
 
