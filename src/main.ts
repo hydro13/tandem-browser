@@ -298,7 +298,6 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   networkInspector = new NetworkInspector();
   if (dispatcher) networkInspector.registerWith(dispatcher);
   securityManager = new SecurityManager();
-  if (dispatcher) securityManager.registerWith(dispatcher);
   chromeImporter = new ChromeImporter(configManager);
   bookmarkManager = new BookmarkManager();
   historyManager = new HistoryManager();
@@ -321,10 +320,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
-  // Phase 3: Wire DevToolsManager into SecurityManager for CDP-based security analysis
-  if (securityManager) {
-    securityManager.setDevToolsManager(devToolsManager);
-  }
+  // SecurityManager consolidated init (was 3 scattered calls, now 1)
+  // initGatekeeper() follows after api.start() since it needs the HTTP server
 
   contextMenuManager = new ContextMenuManager({
     win,
@@ -362,9 +359,13 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   const ses = session.fromPartition(partition);
   downloadManager.hookSession(ses, win);
 
-  // Phase 3: Setup permission handler for BehaviorMonitor
+  // Initialize SecurityManager with all external deps (consolidated from 3 scattered calls)
   if (securityManager) {
-    securityManager.setupPermissionHandler(ses);
+    securityManager.init({
+      dispatcher: dispatcher || undefined,
+      devToolsManager: devToolsManager!,
+      session: ses,
+    });
   }
 
   // Load extensions from ~/.tandem/extensions/

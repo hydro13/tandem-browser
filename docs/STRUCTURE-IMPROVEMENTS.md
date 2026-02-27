@@ -15,7 +15,7 @@
 | 6 | Type safety: CDP types + minder `any` | DONE | 2026-02-27 | 12 CDP types, catch blocks, subscriber handlers |
 | 7 | Split `shell/index.html` | DONE | 2026-02-27 | 6572→451 regels. 4 bestanden: css/main.css, css/shortcuts.css, js/main.js, js/shortcuts.js |
 | 8 | Manager registry / DI pattern | DONE | 2026-02-27 | ManagerRegistry in src/registry.ts. TandemAPIOptions: 35→3 params. RouteContext = type alias. |
-| 9 | Expliciete initialisatie volgorde | TODO | — | SecurityManager builder/init pattern |
+| 9 | Expliciete initialisatie volgorde | DONE | 2026-02-27 | SecurityManager.init() consolideert 3 losse calls. initGatekeeper apart (post-start). |
 | 10 | Naming consistency | DONE | 2026-02-27 | `SessionManager.cleanup()` → `destroy()`. ChatMessage/ActivityEntry later. |
 
 ## Hoe te gebruiken

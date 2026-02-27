@@ -124,6 +124,27 @@ export class SecurityManager {
     console.log('[SecurityManager] Initialized (Phase 1-7)');
   }
 
+  /**
+   * Initialize SecurityManager with all external dependencies.
+   * Consolidates the previously scattered init steps into one call.
+   *
+   * Call sequence:
+   *   1. new SecurityManager()           — internal modules
+   *   2. init({ dispatcher, devTools, session })  — wire external deps
+   *   3. initGatekeeper(httpServer)       — after API server starts
+   */
+  init(deps: {
+    dispatcher?: RequestDispatcher;
+    devToolsManager: DevToolsManager;
+    session: Session;
+  }): void {
+    if (deps.dispatcher) {
+      this.registerWith(deps.dispatcher);
+    }
+    this.setDevToolsManager(deps.devToolsManager);
+    this.setupPermissionHandler(deps.session);
+  }
+
   registerWith(dispatcher: RequestDispatcher): void {
     this.guardian.registerWith(dispatcher);
   }
