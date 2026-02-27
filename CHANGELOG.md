@@ -4,6 +4,17 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.11.2] — 2026-02-27
+
+### Code Quality — Medium Items (Items 13–16)
+
+- **Split security-manager routes**: extracted 34 Express route handlers from `SecurityManager` (978→414 lines) into new `security/routes.ts` (605 lines). SecurityManager no longer depends on Express
+- **Lazy passwordManager**: replaced eager singleton with `getPasswordManager()` — SQLite vault DB only opens on first access
+- **41 new tests**: `constants.test.ts` (14 tests), `config.test.ts` (27 tests with fs mocking and migration coverage). Total: 193 tests
+- **Execution timeout**: `/execute-js` and `/devtools/evaluate` now have 30s timeout + 1MB code limit (prevents infinite loop DoS)
+
+---
+
 ## [0.11.1] — 2026-02-27
 
 ### Code Quality — Quick Wins (Items 1–10)
