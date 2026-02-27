@@ -11,8 +11,8 @@
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 regels. 3 modules: ipc/, menu/, notifications/ |
 | 3 | Shared utilities (`paths`, `url`, `errors`) | DONE | 2026-02-27 | `tandemDir()` in 40 files, `handleRouteError()` in 12 routes. URL utils overgeslagen (te divers). |
 | 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
-| 5 | Unified `npm test` + meer tests | TODO | — | TabManager, API routes, activity handler |
-| 6 | Type safety: CDP types + minder `any` | TODO | — | Begin bij devtools/types.ts |
+| 5 | Unified `npm test` + meer tests | DONE | 2026-02-27 | 152 tests (was 86). TabManager, TaskManager, utils tests. |
+| 6 | Type safety: CDP types + minder `any` | DONE | 2026-02-27 | 12 CDP types, catch blocks, subscriber handlers |
 | 7 | Split `shell/index.html` | TODO | — | JS naar shell/js/, CSS naar shell/css/ |
 | 8 | Manager registry / DI pattern | TODO | — | Vervangt 35-param TandemAPIOptions |
 | 9 | Expliciete initialisatie volgorde | TODO | — | SecurityManager builder/init pattern |

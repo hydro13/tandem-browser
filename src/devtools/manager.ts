@@ -3,17 +3,16 @@ import { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
 import { CopilotStream } from '../activity/copilot-stream';
 import { ActivityTracker } from '../activity/tracker';
-import { ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, DOMNodeInfo, StorageData, PerformanceMetrics } from './types';
+import {
+  ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, CDPNetworkResponse, DOMNodeInfo, StorageData, PerformanceMetrics,
+  CDPSubscriber, CDPRequestWillBeSentParams, CDPResponseReceivedParams, CDPLoadingFinishedParams, CDPLoadingFailedParams,
+  CDPBindingCalledParams, CDPCookie,
+} from './types';
+
+export type { CDPSubscriber };
 
 const MAX_NETWORK_ENTRIES = 300;
 const MAX_RESPONSE_BODY_SIZE = 1_000_000; // 1MB
-
-/** CDP event subscriber — used by security modules to receive CDP events */
-export interface CDPSubscriber {
-  name: string;
-  events: string[];  // CDP event names to subscribe to, or ['*'] for all
-  handler: (method: string, params: any) => void;
-}
 
 /**
  * DevToolsManager — Provides CDP (Chrome DevTools Protocol) access to webview tabs.
@@ -90,8 +89,8 @@ export class DevToolsManager {
       await wc.debugger.sendCommand('Debugger.enable');
       await wc.debugger.sendCommand('Performance.enable');
       console.log('[CDP] Security domains enabled (Debugger, Performance)');
-    } catch (e: any) {
-      console.warn('[CDP] Security domain enable failed:', e.message);
+    } catch (e) {
+      console.warn('[CDP] Security domain enable failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -145,13 +144,14 @@ export class DevToolsManager {
   private async attach(wc: WebContents): Promise<WebContents | null> {
     try {
       wc.debugger.attach('1.3');
-    } catch (e: any) {
+    } catch (e) {
       // Already attached (DevTools open) or other error
-      if (e.message?.includes('Already attached')) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('Already attached')) {
         // DevTools is open — we can still try to use it
         console.warn('⚠️ DevTools debugger already attached (DevTools open?) — sharing session');
       } else {
-        console.warn('❌ CDP attach failed:', e.message);
+        console.warn('❌ CDP attach failed:', msg);
         return null;
       }
     }
@@ -187,8 +187,8 @@ export class DevToolsManager {
       // from the very first moments of page load (reduces monitor injection race window)
       await wc.debugger.sendCommand('Debugger.enable');
       await wc.debugger.sendCommand('Performance.enable');
-    } catch (e: any) {
-      console.warn('⚠️ CDP domain enable partially failed:', e.message);
+    } catch (e) {
+      console.warn('⚠️ CDP domain enable partially failed:', e instanceof Error ? e.message : e);
       // Continue — some domains may have succeeded
     }
 
@@ -209,8 +209,8 @@ export class DevToolsManager {
 
       // Inject listeners (runs in page context but communicates via invisible bindings)
       await this.injectCopilotListeners(wc);
-    } catch (e: any) {
-      console.warn('⚠️ Copilot Vision bindings failed:', e.message);
+    } catch (e) {
+      console.warn('⚠️ Copilot Vision bindings failed:', e instanceof Error ? e.message : e);
     }
   }
 
@@ -282,8 +282,8 @@ export class DevToolsManager {
       if (wc && !wc.isDestroyed() && wc.debugger.isAttached()) {
         wc.debugger.detach();
       }
-    } catch (e: any) {
-      console.warn('CDP detach error (harmless):', e.message);
+    } catch (e) {
+      console.warn('CDP detach error (harmless):', e instanceof Error ? e.message : e);
     }
     this.attached = false;
     this.attachedWcId = null;
@@ -291,15 +291,15 @@ export class DevToolsManager {
   }
 
   /** Route CDP events to sub-captures and subscribers */
-  private handleCDPEvent(method: string, params: any): void {
+  private handleCDPEvent(method: string, params: Record<string, unknown>): void {
     const tabId = this.attachedWcId ? this.findTabIdByWcId(this.attachedWcId) : undefined;
 
     // Copilot Vision: binding callbacks (check before subscribers for __tandem* bindings)
     if (method === 'Runtime.bindingCalled') {
       // Copilot bindings — handle internally
       const copilotBindings = ['__tandemScroll', '__tandemSelection', '__tandemFormFocus'];
-      if (copilotBindings.includes(params.name)) {
-        this.onCopilotBinding(params, tabId);
+      if (copilotBindings.includes(params.name as string)) {
+        this.onCopilotBinding(params as unknown as CDPBindingCalledParams, tabId);
       }
       // Fall through to subscribers (security bindings like __tandemSecurityAlert)
     }
@@ -313,13 +313,13 @@ export class DevToolsManager {
 
     // Network events
     if (method === 'Network.requestWillBeSent') {
-      this.onNetworkRequest(params, tabId);
+      this.onNetworkRequest(params as unknown as CDPRequestWillBeSentParams, tabId);
     } else if (method === 'Network.responseReceived') {
-      this.onNetworkResponse(params);
+      this.onNetworkResponse(params as unknown as CDPResponseReceivedParams);
     } else if (method === 'Network.loadingFinished') {
-      this.onNetworkLoadingFinished(params);
+      this.onNetworkLoadingFinished(params as unknown as CDPLoadingFinishedParams);
     } else if (method === 'Network.loadingFailed') {
-      this.onNetworkFailed(params);
+      this.onNetworkFailed(params as unknown as CDPLoadingFailedParams);
     }
 
     // Dispatch to subscribers (always — security modules need to see all events)
@@ -354,7 +354,7 @@ export class DevToolsManager {
 
   // ═══ Network (CDP-level, with response bodies) ═══
 
-  private onNetworkRequest(params: any, tabId?: string): void {
+  private onNetworkRequest(params: CDPRequestWillBeSentParams, tabId?: string): void {
     const req: CDPNetworkRequest = {
       id: params.requestId,
       url: params.request.url,
@@ -376,7 +376,7 @@ export class DevToolsManager {
     }
   }
 
-  private onNetworkResponse(params: any): void {
+  private onNetworkResponse(params: CDPResponseReceivedParams): void {
     const entry = this.networkEntries.get(params.requestId);
     if (!entry) return;
 
@@ -396,14 +396,14 @@ export class DevToolsManager {
     }
   }
 
-  private onNetworkLoadingFinished(params: any): void {
+  private onNetworkLoadingFinished(params: CDPLoadingFinishedParams): void {
     const entry = this.networkEntries.get(params.requestId);
     if (entry?.response) {
       entry.response.size = params.encodedDataLength || entry.response.size;
     }
   }
 
-  private onNetworkFailed(params: any): void {
+  private onNetworkFailed(params: CDPLoadingFailedParams): void {
     const entry = this.networkEntries.get(params.requestId);
     if (entry) {
       entry.failed = true;
@@ -466,7 +466,7 @@ export class DevToolsManager {
         };
       }
       return result;
-    } catch (e: any) {
+    } catch {
       // Body may not be available (streamed, evicted from buffer)
       return null;
     }
@@ -497,8 +497,8 @@ export class DevToolsManager {
         if (info) nodes.push(info);
       }
       return nodes;
-    } catch (e: any) {
-      console.warn('DOM query failed:', e.message);
+    } catch (e) {
+      console.warn('DOM query failed:', e instanceof Error ? e.message : e);
       return [];
     }
   }
@@ -532,7 +532,7 @@ export class DevToolsManager {
       });
 
       if (result.result?.value) {
-        return result.result.value.map((n: any, i: number) => ({
+        return result.result.value.map((n: { nodeName: string; attrs: Record<string, string>; text: string; html: string }) => ({
           nodeId: -1,
           backendNodeId: -1,
           nodeType: 1,
@@ -545,8 +545,8 @@ export class DevToolsManager {
         }));
       }
       return [];
-    } catch (e: any) {
-      console.warn('XPath query failed:', e.message);
+    } catch (e) {
+      console.warn('XPath query failed:', e instanceof Error ? e.message : e);
       return [];
     }
   }
@@ -610,8 +610,8 @@ export class DevToolsManager {
         outerHTML,
         boundingBox,
       };
-    } catch (e: any) {
-      console.warn('getNodeInfo failed for nodeId', nodeId, ':', e.message);
+    } catch (e) {
+      console.warn('getNodeInfo failed for nodeId', nodeId, ':', e instanceof Error ? e.message : e);
       return null;
     }
   }
@@ -627,7 +627,7 @@ export class DevToolsManager {
     try {
       // Cookies via CDP
       const cookieResult = await wc.debugger.sendCommand('Network.getCookies');
-      const cookies = (cookieResult.cookies || []).map((c: any) => ({
+      const cookies = (cookieResult.cookies || []).map((c: CDPCookie) => ({
         name: c.name,
         value: c.value,
         domain: c.domain,
@@ -667,8 +667,8 @@ export class DevToolsManager {
         localStorage: storageResult.result?.value?.localStorage || {},
         sessionStorage: storageResult.result?.value?.sessionStorage || {},
       };
-    } catch (e: any) {
-      console.warn('Storage fetch failed:', e.message);
+    } catch (e) {
+      console.warn('Storage fetch failed:', e instanceof Error ? e.message : e);
       return empty;
     }
   }
@@ -687,8 +687,8 @@ export class DevToolsManager {
         metrics[m.name] = m.value;
       }
       return { timestamp: Date.now(), metrics };
-    } catch (e: any) {
-      console.warn('Performance metrics failed:', e.message);
+    } catch (e) {
+      console.warn('Performance metrics failed:', e instanceof Error ? e.message : e);
       return null;
     }
   }
@@ -725,8 +725,8 @@ export class DevToolsManager {
       });
 
       return Buffer.from(screenshot.data, 'base64');
-    } catch (e: any) {
-      console.warn('Element screenshot failed:', e.message);
+    } catch (e) {
+      console.warn('Element screenshot failed:', e instanceof Error ? e.message : e);
       return null;
     }
   }

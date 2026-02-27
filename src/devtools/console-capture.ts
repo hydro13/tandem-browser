@@ -1,5 +1,5 @@
 import { WebContents } from 'electron';
-import { ConsoleEntry } from './types';
+import { ConsoleEntry, CDPConsoleAPICalledParams, CDPExceptionThrownParams, CDPRemoteObject, CDPCallFrame } from './types';
 
 const MAX_CONSOLE_ENTRIES = 500;
 const MAX_ARG_LENGTH = 1000;
@@ -36,27 +36,27 @@ export class ConsoleCapture {
    * Handle a CDP event. Called by DevToolsManager's message router.
    * Returns true if this capture handled the event.
    */
-  handleEvent(method: string, params: any, tabId?: string): boolean {
+  handleEvent(method: string, params: Record<string, unknown>, tabId?: string): boolean {
     if (method === 'Runtime.consoleAPICalled') {
-      this.onConsoleAPI(params, tabId);
+      this.onConsoleAPI(params as unknown as CDPConsoleAPICalledParams, tabId);
       return true;
     }
     if (method === 'Runtime.exceptionThrown') {
-      this.onException(params, tabId);
+      this.onException(params as unknown as CDPExceptionThrownParams, tabId);
       return true;
     }
     return false;
   }
 
-  private onConsoleAPI(params: any, tabId?: string): void {
+  private onConsoleAPI(params: CDPConsoleAPICalledParams, tabId?: string): void {
     const levelMap: Record<string, ConsoleEntry['level']> = {
       log: 'log', info: 'info', warning: 'warn', error: 'error',
       debug: 'debug', dir: 'log', dirxml: 'log', table: 'log',
       trace: 'debug', assert: 'error',
     };
 
-    const args = (params.args || []).map((arg: any) => {
-      if (arg.type === 'string') return arg.value || '';
+    const args = (params.args || []).map((arg: CDPRemoteObject) => {
+      if (arg.type === 'string') return String(arg.value ?? '');
       if (arg.type === 'number' || arg.type === 'boolean') return String(arg.value);
       if (arg.type === 'undefined') return 'undefined';
       if (arg.subtype === 'null') return 'null';
@@ -64,7 +64,7 @@ export class ConsoleCapture {
         // Use preview if available, else description
         if (arg.preview?.properties) {
           const props = arg.preview.properties
-            .map((p: any) => `${p.name}: ${p.value}`)
+            .map((p) => `${p.name}: ${p.value}`)
             .join(', ');
           return `{${props}}${arg.preview.overflow ? ', ...' : ''}`;
         }
@@ -72,13 +72,13 @@ export class ConsoleCapture {
       }
       if (arg.type === 'function') return arg.description?.substring(0, 100) || '[function]';
       return arg.description || String(arg.value ?? arg.type);
-    }).map((s: string) => s.length > MAX_ARG_LENGTH ? s.substring(0, MAX_ARG_LENGTH) + '...' : s);
+    }).map((s) => s.length > MAX_ARG_LENGTH ? s.substring(0, MAX_ARG_LENGTH) + '...' : s);
 
     const text = args.join(' ');
     const stackTrace = params.stackTrace?.callFrames?.length
       ? params.stackTrace.callFrames
           .slice(0, 5)
-          .map((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
+          .map((f: CDPCallFrame) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
           .join('\n')
       : undefined;
 
@@ -98,7 +98,7 @@ export class ConsoleCapture {
     });
   }
 
-  private onException(params: any, tabId?: string): void {
+  private onException(params: CDPExceptionThrownParams, tabId?: string): void {
     const ex = params.exceptionDetails;
     if (!ex) return;
 
@@ -110,7 +110,7 @@ export class ConsoleCapture {
     const stackTrace = ex.stackTrace?.callFrames?.length
       ? ex.stackTrace.callFrames
           .slice(0, 10)
-          .map((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
+          .map((f: CDPCallFrame) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
           .join('\n')
       : undefined;
 

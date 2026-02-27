@@ -96,3 +96,135 @@ export interface PerformanceMetrics {
   timestamp: number;
   metrics: Record<string, number>;  // JSHeapUsedSize, Documents, Nodes, etc.
 }
+
+// ═══════════════════════════════════════════════
+// CDP Event Parameter Types
+// ═══════════════════════════════════════════════
+
+/** CDP Runtime.RemoteObject — represents a JS value in the debuggee */
+export interface CDPRemoteObject {
+  type: string;
+  subtype?: string;
+  className?: string;
+  value?: unknown;
+  description?: string;
+  objectId?: string;
+  preview?: {
+    type: string;
+    overflow: boolean;
+    properties: Array<{ name: string; type: string; value: string }>;
+  };
+}
+
+/** CDP Runtime.CallFrame — a single stack frame */
+export interface CDPCallFrame {
+  functionName: string;
+  scriptId: string;
+  url: string;
+  lineNumber: number;
+  columnNumber: number;
+}
+
+/** CDP Runtime.StackTrace */
+export interface CDPStackTrace {
+  description?: string;
+  callFrames: CDPCallFrame[];
+  parent?: CDPStackTrace;
+}
+
+/** CDP Runtime.consoleAPICalled event params */
+export interface CDPConsoleAPICalledParams {
+  type: string;
+  args: CDPRemoteObject[];
+  executionContextId: number;
+  timestamp: number;
+  stackTrace?: CDPStackTrace;
+}
+
+/** CDP Runtime.exceptionThrown event params */
+export interface CDPExceptionThrownParams {
+  timestamp: number;
+  exceptionDetails: {
+    exceptionId: number;
+    text: string;
+    lineNumber: number;
+    columnNumber: number;
+    url?: string;
+    stackTrace?: CDPStackTrace;
+    exception?: CDPRemoteObject;
+  };
+}
+
+/** CDP Runtime.bindingCalled event params */
+export interface CDPBindingCalledParams {
+  name: string;
+  payload: string;
+  executionContextId: number;
+}
+
+/** CDP Network.requestWillBeSent event params */
+export interface CDPRequestWillBeSentParams {
+  requestId: string;
+  request: {
+    url: string;
+    method: string;
+    headers: Record<string, string>;
+    postData?: string;
+  };
+  type?: string;
+  documentURL?: string;
+  timestamp: number;
+  initiator?: { type: string; url?: string };
+}
+
+/** CDP Network.responseReceived event params */
+export interface CDPResponseReceivedParams {
+  requestId: string;
+  response: {
+    url: string;
+    status: number;
+    statusText: string;
+    headers: Record<string, string>;
+    mimeType: string;
+    encodedDataLength?: number;
+  };
+  type?: string;
+  timestamp: number;
+}
+
+/** CDP Network.loadingFinished event params */
+export interface CDPLoadingFinishedParams {
+  requestId: string;
+  timestamp: number;
+  encodedDataLength?: number;
+}
+
+/** CDP Network.loadingFailed event params */
+export interface CDPLoadingFailedParams {
+  requestId: string;
+  timestamp: number;
+  errorText: string;
+  canceled?: boolean;
+  type?: string;
+}
+
+/** CDP Network cookie (from Network.getCookies) */
+export interface CDPCookie {
+  name: string;
+  value: string;
+  domain: string;
+  path: string;
+  expires: number;
+  size: number;
+  httpOnly: boolean;
+  secure: boolean;
+  session: boolean;
+  sameSite?: string;
+}
+
+/** CDP subscriber — used by security modules to receive CDP events */
+export interface CDPSubscriber {
+  name: string;
+  events: string[];  // CDP event names to subscribe to, or ['*'] for all
+  handler: (method: string, params: Record<string, unknown>) => void;
+}

@@ -11,7 +11,7 @@ export class NetworkMocker {
     this.devtools.subscribe({
       name: 'NetworkMocker',
       events: ['Fetch.requestPaused'],
-      handler: (_method: string, params: any) => this.handleRequestPaused(params),
+      handler: (_method: string, params: Record<string, unknown>) => this.handleRequestPaused(params),
     });
   }
 

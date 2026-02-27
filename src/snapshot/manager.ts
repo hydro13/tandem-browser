@@ -37,9 +37,10 @@ export class SnapshotManager {
     this.devtools.subscribe({
       name: 'snapshot-nav-reset',
       events: ['Page.frameNavigated'],
-      handler: (_method: string, params: Record<string, any>) => {
+      handler: (_method: string, params: Record<string, unknown>) => {
         // Only reset on top-level navigation (not iframes)
-        if (!params.frame?.parentId) {
+        const frame = params.frame as Record<string, unknown> | undefined;
+        if (!frame?.parentId) {
           this.refMap = {};
           this.refBackendNodeMap.clear();
           this.refCounter = 0;

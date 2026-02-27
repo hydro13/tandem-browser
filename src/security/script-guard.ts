@@ -786,7 +786,7 @@ export class ScriptGuard {
         handler: (_method, params) => {
           if (params.name === '__tandemSecurityAlert') {
             try {
-              this.handleSecurityAlert(JSON.parse(params.payload));
+              this.handleSecurityAlert(JSON.parse(params.payload as string));
             } catch { /* invalid JSON */ }
           }
         }
