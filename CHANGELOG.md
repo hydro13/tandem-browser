@@ -4,6 +4,14 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.12.0] — 2026-02-27
+
+### Code Quality — Item 17
+
+- **API route integration tests**: added supertest-based integration tests for all 13 route files (12 standard + security routes). 739 new tests covering ~200 endpoints with happy path, error handling, and validation cases. Shared test helper (`helpers.ts`) with `createMockContext()` factory stubbing all 34 managers. Total project tests: 941 (from 202)
+
+---
+
 ## [0.11.4] — 2026-02-27
 
 ### Code Quality — Item 12

@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Version:** 0.11.4
-**Last completed item:** #12
-**Overall:** 16/19 done
+**Version:** 0.12.0
+**Last completed item:** #17
+**Overall:** 17/19 done
 
 ---
 
@@ -41,7 +41,7 @@
 
 | # | Description | Status | Session | Commit |
 |---|-------------|--------|---------|--------|
-| 17 | **API route tests** — Add integration tests for all 12 route files (~3000 lines total). Needs Express mocking setup | TODO | | |
+| 17 | **API route tests** — Add integration tests for all 12 route files (~3000 lines total). Needs Express mocking setup | DONE | 2026-02-27 | 20ffdf3 |
 | 18 | **Split security-db.ts** — Split 958-line file by table group into `db-events.ts`, `db-baselines.ts`, `db-blocklist.ts` | TODO | | |
 | 19 | **Split devtools/manager.ts** — Split 863-line file into CDP lifecycle manager + storage/DOM/performance inspector | TODO | | |
 
@@ -50,6 +50,13 @@
 ## Session Log
 
 <!-- Add an entry after each session -->
+
+### 2026-02-27 — Session 4: Item 17 (API route tests)
+
+- **Items completed:** #17
+- **Version bumped to:** 0.12.0
+- **Commit(s):** `20ffdf3`
+- **Notes:** Added supertest-based integration tests for all 13 route files (12 standard + security). 739 new tests: tabs (20), snapshots (35), network (32), sessions (36), devtools (37), content (41), agents (41), data (50), extensions (57), media (62), browser (50), misc (162), security (116). Shared test helper with `createMockContext()` factory stubbing all 34 managers. Total: 941 tests (up from 202), 0 TS errors. ~9500 lines of test code.
 
 ### 2026-02-27 — Session 3: Item 12 (ESLint setup)
 
