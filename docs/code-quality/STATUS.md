@@ -5,9 +5,9 @@
 
 ## Current State
 
-**Version:** 0.12.0
-**Last completed item:** #17
-**Overall:** 17/19 done
+**Version:** 0.13.0
+**Last completed item:** #18
+**Overall:** 18/19 done
 
 ---
 
@@ -42,7 +42,7 @@
 | # | Description | Status | Session | Commit |
 |---|-------------|--------|---------|--------|
 | 17 | **API route tests** — Add integration tests for all 12 route files (~3000 lines total). Needs Express mocking setup | DONE | 2026-02-27 | 20ffdf3 |
-| 18 | **Split security-db.ts** — Split 958-line file by table group into `db-events.ts`, `db-baselines.ts`, `db-blocklist.ts` | TODO | | |
+| 18 | **Split security-db.ts** — Split 958-line file by table group into `db-events.ts`, `db-baselines.ts`, `db-blocklist.ts` | DONE | 2026-02-27 | 351f7e2 |
 | 19 | **Split devtools/manager.ts** — Split 863-line file into CDP lifecycle manager + storage/DOM/performance inspector | TODO | | |
 
 ---
@@ -50,6 +50,13 @@
 ## Session Log
 
 <!-- Add an entry after each session -->
+
+### 2026-02-27 — Session 5: Item 18 (Split security-db.ts)
+
+- **Items completed:** #18
+- **Version bumped to:** 0.13.0
+- **Commit(s):** `351f7e2`
+- **Notes:** Split 958-line `SecurityDB` class into 3 sub-modules using composition + delegation pattern. `db-events.ts` (169 lines: events + analytics), `db-baselines.ts` (122 lines: baselines + zero-day candidates), `db-blocklist.ts` (83 lines: blocklist + metadata). `security-db.ts` reduced to 672 lines (facade with domains, scripts, whitelist, core). Zero changes to 11 consumer files. 941 tests passing, 0 TS errors.
 
 ### 2026-02-27 — Session 4: Item 17 (API route tests)
 

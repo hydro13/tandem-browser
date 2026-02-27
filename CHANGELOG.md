@@ -4,6 +4,14 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.13.0] — 2026-02-27
+
+### Code Quality — Item 18
+
+- **Split security-db.ts**: split 958-line monolithic `SecurityDB` class by table group into 3 new modules — `db-events.ts` (169 lines: events + analytics), `db-baselines.ts` (122 lines: baselines + zero-day candidates), `db-blocklist.ts` (83 lines: blocklist + metadata). `SecurityDB` remains as facade (672 lines) with composition + delegation pattern. Zero changes to 11 consumer files
+
+---
+
 ## [0.12.0] — 2026-02-27
 
 ### Code Quality — Item 17
