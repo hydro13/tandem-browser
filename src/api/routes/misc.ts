@@ -1,9 +1,10 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
 import { RouteContext, getActiveWC } from '../context';
 import { passwordManager } from '../../passwords/manager';
+import { tandemDir } from '../../utils/paths';
+import { handleRouteError } from '../../utils/errors';
 
 // Module-level live mode state (was a closure variable in server.ts)
 let liveMode = false;
@@ -130,8 +131,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const events = ctx.eventStream.getRecent(limit);
       res.json({ events });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -199,8 +200,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       entries = entries.slice(-limit);
 
       res.json({ entries, count: entries.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -212,14 +213,14 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const stats = ctx.behaviorObserver.getStats();
       res.json(stats);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
   router.post('/behavior/clear', (_req: Request, res: Response) => {
     try {
-      const rawDir = path.join(os.homedir(), '.tandem', 'behavior', 'raw');
+      const rawDir = tandemDir('behavior', 'raw');
       if (fs.existsSync(rawDir)) {
         const files = fs.readdirSync(rawDir).filter(f => f.endsWith('.jsonl'));
         for (const file of files) {
@@ -227,8 +228,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         }
       }
       res.json({ ok: true, cleared: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -240,8 +241,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const sites = ctx.siteMemory.listSites();
       res.json({ sites });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -250,8 +251,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const data = ctx.siteMemory.getSite(req.params.domain as string);
       if (!data) { res.status(404).json({ error: 'Site not found' }); return; }
       res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -259,8 +260,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const diffs = ctx.siteMemory.getDiffs(req.params.domain as string);
       res.json({ diffs });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -270,8 +271,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       if (!q) { res.status(400).json({ error: 'q parameter required' }); return; }
       const results = ctx.siteMemory.search(q);
       res.json({ results });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -286,8 +287,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const result = ctx.watchManager.addWatch(url, intervalMinutes);
       if ('error' in result) { res.status(400).json(result); return; }
       res.json({ ok: true, watch: result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -295,8 +296,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const watches = ctx.watchManager.listWatches();
       res.json({ watches });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -305,8 +306,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const { url, id } = req.body;
       const removed = ctx.watchManager.removeWatch(id || url);
       res.json({ ok: removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -315,8 +316,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const { url, id } = req.body;
       const results = await ctx.watchManager.forceCheck(id || url);
       res.json(results);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -330,8 +331,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       if (!url) { res.status(400).json({ error: 'url required' }); return; }
       const result = await ctx.headlessManager.open(url);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -339,16 +340,16 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = await ctx.headlessManager.getContent();
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
   router.get('/headless/status', (_req: Request, res: Response) => {
     try {
       res.json(ctx.headlessManager.getStatus());
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -356,8 +357,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const shown = ctx.headlessManager.show();
       res.json({ ok: shown });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -365,8 +366,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const hidden = ctx.headlessManager.hide();
       res.json({ ok: hidden });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -374,8 +375,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.headlessManager.close();
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -387,8 +388,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const domains = ctx.formMemory.listAll();
       res.json({ domains });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -397,8 +398,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const data = ctx.formMemory.getForDomain(req.params.domain as string);
       if (!data) { res.status(404).json({ error: 'No form data for this domain' }); return; }
       res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -409,8 +410,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const fields = ctx.formMemory.getFillData(domain);
       if (!fields) { res.status(404).json({ error: 'No form data for this domain' }); return; }
       res.json({ domain, fields });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -418,8 +419,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const deleted = ctx.formMemory.deleteDomain(req.params.domain as string);
       res.json({ ok: deleted });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -432,16 +433,16 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const { open } = req.body;
       const visible = ctx.pipManager.toggle(open);
       res.json({ ok: true, visible });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
   router.get('/pip/status', (_req: Request, res: Response) => {
     try {
       res.json(ctx.pipManager.getStatus());
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -463,8 +464,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(401).json({ success: false, error: result.error });
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -472,8 +473,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       await ctx.claroNoteManager.logout();
       res.json({ success: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -494,8 +495,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         user: auth?.user || null,
         recording: ctx.claroNoteManager.getRecordingStatus()
       });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -508,8 +509,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -521,8 +522,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -556,8 +557,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const audioBuffer = Buffer.from(audioBase64, 'base64');
       const noteId = await ctx.claroNoteManager.uploadRecording(audioBuffer, duration || 0);
       res.json({ ok: true, noteId });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -567,18 +568,18 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
   router.post('/data/wipe', (_req: Request, res: Response) => {
     try {
-      const tandemDir = path.join(os.homedir(), '.tandem');
+      const baseDir = tandemDir();
 
       // Wipe chat history
-      const chatPath = path.join(tandemDir, 'chat-history.json');
+      const chatPath = path.join(baseDir, 'chat-history.json');
       if (fs.existsSync(chatPath)) fs.unlinkSync(chatPath);
 
       // Wipe config
-      const configPath = path.join(tandemDir, 'config.json');
+      const configPath = path.join(baseDir, 'config.json');
       if (fs.existsSync(configPath)) fs.unlinkSync(configPath);
 
       // Wipe behavior data
-      const rawDir = path.join(tandemDir, 'behavior', 'raw');
+      const rawDir = path.join(baseDir, 'behavior', 'raw');
       if (fs.existsSync(rawDir)) {
         const files = fs.readdirSync(rawDir).filter(f => f.endsWith('.jsonl'));
         for (const file of files) {
@@ -587,8 +588,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       }
 
       res.json({ ok: true, wiped: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -600,8 +601,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const workflows = await ctx.workflowEngine.getWorkflows();
       res.json({ workflows });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -621,8 +622,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       });
 
       res.json({ id });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -631,8 +632,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const id = req.params.id as string;
       await ctx.workflowEngine.deleteWorkflow(id);
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -657,8 +658,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       );
 
       res.json({ executionId });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -677,8 +678,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       }
 
       res.json(status);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -692,8 +693,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
       await ctx.workflowEngine.stopWorkflow(executionId);
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -701,8 +702,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const executions = await ctx.workflowEngine.getRunningExecutions();
       res.json({ executions });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -714,8 +715,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const states = await ctx.loginManager.getAllStates();
       res.json({ states });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -724,8 +725,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const domain = req.params.domain as string;
       const state = await ctx.loginManager.getLoginState(domain);
       res.json(state);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -739,8 +740,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
       const state = await ctx.loginManager.checkCurrentPage(ctx.win);
       res.json(state);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -754,8 +755,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
       const isLoginPage = await ctx.loginManager.isLoginPage(ctx.win);
       res.json({ isLoginPage });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -769,8 +770,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
       await ctx.loginManager.updateLoginState(domain, status, username);
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -779,8 +780,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
       const domain = req.params.domain as string;
       await ctx.loginManager.clearLoginState(domain);
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

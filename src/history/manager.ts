@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 /**
  * HistoryEntry — A single browsing history entry.
@@ -31,11 +31,11 @@ export class HistoryManager {
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
+    const baseDir = tandemDir();
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir, { recursive: true });
     }
-    this.storePath = path.join(tandemDir, 'history.json');
+    this.storePath = path.join(baseDir, 'history.json');
     this.store = this.load();
   }
 

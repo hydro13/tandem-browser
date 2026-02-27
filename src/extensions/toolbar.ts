@@ -1,8 +1,8 @@
 import { Session, BrowserWindow, ipcMain, Menu, MenuItem } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { ExtensionManager } from './manager';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ export class ExtensionToolbar {
 
   constructor(extensionManager: ExtensionManager) {
     this.extensionManager = extensionManager;
-    this.stateFilePath = path.join(os.homedir(), '.tandem', 'extensions', 'toolbar-state.json');
+    this.stateFilePath = tandemDir('extensions', 'toolbar-state.json');
     this.loadState();
   }
 

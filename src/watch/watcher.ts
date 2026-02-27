@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import crypto from 'crypto';
+import { tandemDir } from '../utils/paths';
 import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { copilotAlert } from '../notifications/alert';
@@ -39,10 +39,10 @@ export class WatchManager {
   private readonly MAX_WATCHES = 20;
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    if (!fs.existsSync(tandemDir)) fs.mkdirSync(tandemDir, { recursive: true });
+    const baseDir = tandemDir();
+    if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
 
-    this.watchFile = path.join(tandemDir, 'watches.json');
+    this.watchFile = path.join(baseDir, 'watches.json');
     this.state = this.load();
     this.startAllTimers();
   }

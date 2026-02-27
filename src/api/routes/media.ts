@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import fs from 'fs';
 import { RouteContext } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -12,8 +13,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const { open } = req.body;
       const isOpen = ctx.panelManager.togglePanel(open);
       res.json({ ok: true, open: isOpen });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -33,8 +34,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
         const messages = ctx.panelManager.getChatMessages(limit);
         res.json({ messages });
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -50,8 +51,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       }
       const msg = ctx.panelManager.addChatMessage(sender, text || '', savedImage);
       res.json({ ok: true, message: msg });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -77,8 +78,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const { typing = true } = req.body;
       ctx.panelManager.setCopilotTyping(typing);
       res.json({ ok: true, typing });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -114,8 +115,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.voiceManager.start();
       res.json({ ok: true, listening: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -123,8 +124,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.voiceManager.stop();
       res.json({ ok: true, listening: false });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -132,8 +133,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     try {
       const status = ctx.voiceManager.getStatus();
       res.json(status);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -147,8 +148,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       if (!activeTab) { res.status(400).json({ error: 'No active tab' }); return; }
       const result = await ctx.audioCaptureManager.startRecording(activeTab.webContentsId);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -156,16 +157,16 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = ctx.audioCaptureManager.stopRecording();
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
   router.get('/audio/status', (_req: Request, res: Response) => {
     try {
       res.json(ctx.audioCaptureManager.getStatus());
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -174,8 +175,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const recordings = ctx.audioCaptureManager.listRecordings(limit);
       res.json({ recordings });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -191,8 +192,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
       res.type('png').send(png);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -206,8 +207,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(500).json(result);
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -216,8 +217,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const { enabled } = req.body;
       const isEnabled = ctx.drawManager.toggleDrawMode(enabled);
       res.json({ ok: true, drawMode: isEnabled });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -226,8 +227,8 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       const limit = parseInt(req.query.limit as string) || 10;
       const screenshots = ctx.drawManager.listScreenshots(limit);
       res.json({ screenshots });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 

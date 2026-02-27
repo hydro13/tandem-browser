@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext, getActiveWC, getSessionWC } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerContentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -16,8 +17,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
 
       const content = await ctx.contentExtractor.extractCurrentPage(ctx.win);
       res.json(content);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -31,8 +32,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
 
       const content = await ctx.contentExtractor.extractFromURL(url, ctx.headlessManager);
       res.json(content);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -45,8 +46,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const limit = parseInt(req.query.limit as string) || 50;
       const pages = ctx.contextBridge.getRecent(limit);
       res.json({ pages });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -56,8 +57,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       if (!q) { res.status(400).json({ error: 'q parameter required' }); return; }
       const results = ctx.contextBridge.search(q);
       res.json({ results });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -68,8 +69,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const page = ctx.contextBridge.getPage(url);
       if (!page) { res.status(404).json({ error: 'Page not found in context' }); return; }
       res.json(page);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -77,8 +78,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const summary = ctx.contextBridge.getContextSummary();
       res.json(summary);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -88,8 +89,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       if (!url || !note) { res.status(400).json({ error: 'url and note required' }); return; }
       const page = ctx.contextBridge.addNote(url, note);
       res.json({ ok: true, page });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -106,8 +107,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
         addedAt: s.addedAt,
       }));
       res.json({ scripts });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -117,8 +118,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const entry = ctx.scriptInjector.addScript(name, code);
       res.json({ ok: true, name: entry.name, active: entry.enabled });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -128,8 +129,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const removed = ctx.scriptInjector.removeScript(name);
       res.json({ ok: true, removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -140,8 +141,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const ok = ctx.scriptInjector.enableScript(name);
       if (!ok) { res.status(404).json({ error: `script "${name}" not found` }); return; }
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -152,8 +153,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const ok = ctx.scriptInjector.disableScript(name);
       if (!ok) { res.status(404).json({ error: `script "${name}" not found` }); return; }
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -170,8 +171,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
         addedAt: s.addedAt,
       }));
       res.json({ styles });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -184,8 +185,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const wc = await getSessionWC(ctx, req);
       if (wc && !wc.isDestroyed()) await wc.insertCSS(css);
       res.json({ ok: true, name });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -195,8 +196,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const removed = ctx.scriptInjector.removeStyle(name);
       res.json({ ok: true, removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -207,8 +208,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const ok = ctx.scriptInjector.enableStyle(name);
       if (!ok) { res.status(404).json({ error: `style "${name}" not found` }); return; }
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -219,8 +220,8 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
       const ok = ctx.scriptInjector.disableStyle(name);
       if (!ok) { res.status(404).json({ error: `style "${name}" not found` }); return; }
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

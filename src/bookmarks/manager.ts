@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir, ensureDir } from '../utils/paths';
 
 /**
  * Bookmark — A single bookmark or folder.
@@ -31,11 +31,8 @@ export class BookmarkManager {
   private store: BookmarkStore;
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
-    }
-    this.storePath = path.join(tandemDir, 'bookmarks.json');
+    const dir = ensureDir(tandemDir());
+    this.storePath = path.join(dir, 'bookmarks.json');
     this.store = this.load();
   }
 

@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 /**
  * TandemConfig — All configurable settings for Tandem Browser.
@@ -156,11 +157,11 @@ export class ConfigManager {
   private changeListeners: Array<(config: TandemConfig, changed: Partial<TandemConfig>) => void> = [];
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
+    const baseDir = tandemDir();
+    if (!fs.existsSync(baseDir)) {
+      fs.mkdirSync(baseDir, { recursive: true });
     }
-    this.configPath = path.join(tandemDir, 'config.json');
+    this.configPath = path.join(baseDir, 'config.json');
     this.config = this.load();
   }
 

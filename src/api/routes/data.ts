@@ -3,6 +3,8 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { RouteContext } from '../context';
+import { tandemDir } from '../../utils/paths';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -14,8 +16,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       const bookmarks = ctx.bookmarkManager.list();
       const bar = ctx.bookmarkManager.getBarItems();
       res.json({ bookmarks, bar });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -25,8 +27,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!name || !url) { res.status(400).json({ error: 'name and url required' }); return; }
       const bookmark = ctx.bookmarkManager.add(name, url, parentId);
       res.json({ ok: true, bookmark });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -36,8 +38,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!id) { res.status(400).json({ error: 'id required' }); return; }
       const removed = ctx.bookmarkManager.remove(id);
       res.json({ ok: removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -48,8 +50,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       const updated = ctx.bookmarkManager.update(id, { name, url });
       if (!updated) { res.status(404).json({ error: 'Bookmark not found' }); return; }
       res.json({ ok: true, bookmark: updated });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -59,8 +61,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!name) { res.status(400).json({ error: 'name required' }); return; }
       const folder = ctx.bookmarkManager.addFolder(name, parentId);
       res.json({ ok: true, folder });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -70,8 +72,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!id) { res.status(400).json({ error: 'id required' }); return; }
       const moved = ctx.bookmarkManager.move(id, parentId);
       res.json({ ok: moved });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -81,8 +83,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!q) { res.status(400).json({ error: 'q parameter required' }); return; }
       const results = ctx.bookmarkManager.search(q);
       res.json({ results });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -93,8 +95,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       const bookmarked = ctx.bookmarkManager.isBookmarked(url);
       const bookmark = ctx.bookmarkManager.findByUrl(url);
       res.json({ bookmarked, bookmark });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -108,8 +110,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       const offset = parseInt(req.query.offset as string) || 0;
       const entries = ctx.historyManager.getHistory(limit, offset);
       res.json({ entries, total: ctx.historyManager.count });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -119,8 +121,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       if (!q) { res.status(400).json({ error: 'q parameter required' }); return; }
       const results = ctx.historyManager.search(q);
       res.json({ results });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -128,8 +130,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.historyManager.clear();
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -141,8 +143,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const downloads = ctx.downloadManager.list();
       res.json({ downloads });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -150,8 +152,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const downloads = ctx.downloadManager.listActive();
       res.json({ downloads });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -162,8 +164,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   router.get('/config', (_req: Request, res: Response) => {
     try {
       res.json(ctx.configManager.getConfig());
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -171,8 +173,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const updated = ctx.configManager.updateConfig(req.body);
       res.json(updated);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -190,8 +192,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
       res.json({ token });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -201,7 +203,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
 
   router.get('/data/export', (_req: Request, res: Response) => {
     try {
-      const tandemDir = path.join(os.homedir(), '.tandem');
+      const baseDir = tandemDir();
       const data: Record<string, unknown> = {
         exportDate: new Date().toISOString(),
         version: '0.1.0',
@@ -211,7 +213,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       data.config = ctx.configManager.getConfig();
 
       // Chat history
-      const chatPath = path.join(tandemDir, 'chat-history.json');
+      const chatPath = path.join(baseDir, 'chat-history.json');
       if (fs.existsSync(chatPath)) {
         try { data.chatHistory = JSON.parse(fs.readFileSync(chatPath, 'utf-8')); } catch (e: any) { console.warn('Chat history load failed:', e.message); }
       }
@@ -220,8 +222,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       data.behaviorStats = ctx.behaviorObserver.getStats();
 
       res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -232,12 +234,12 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
         ctx.configManager.updateConfig(data.config);
       }
       if (data.chatHistory) {
-        const chatPath = path.join(os.homedir(), '.tandem', 'chat-history.json');
+        const chatPath = tandemDir('chat-history.json');
         fs.writeFileSync(chatPath, JSON.stringify(data.chatHistory, null, 2));
       }
       res.json({ ok: true, imported: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -248,8 +250,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   router.get('/import/chrome/status', (_req: Request, res: Response) => {
     try {
       res.json(ctx.chromeImporter.getStatus());
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -259,8 +261,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       // Reload BookmarkManager so it picks up the imported data
       ctx.bookmarkManager.reload();
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -268,8 +270,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = ctx.chromeImporter.importHistory();
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -277,8 +279,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = await ctx.chromeImporter.importCookies(ctx.win.webContents.session);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -286,8 +288,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       const profiles = ctx.chromeImporter.listProfiles();
       res.json({ profiles });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -298,8 +300,8 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
       }
       const started = ctx.chromeImporter.startSync();
       res.json({ ok: started, syncing: ctx.chromeImporter.isSyncing() });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -307,16 +309,16 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.chromeImporter.stopSync();
       res.json({ ok: true, syncing: false });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
   router.get('/import/chrome/sync/status', (_req: Request, res: Response) => {
     try {
       res.json({ syncing: ctx.chromeImporter.isSyncing() });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

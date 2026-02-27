@@ -1,13 +1,13 @@
 import { Session } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { ExtensionLoader } from './loader';
 import { CrxDownloader, InstallResult } from './crx-downloader';
 import { NativeMessagingSetup, NativeMessagingStatus } from './native-messaging';
 import { IdentityPolyfill } from './identity-polyfill';
 import { UpdateChecker, UpdateCheckResult, UpdateResult, UpdateState, InstalledExtension } from './update-checker';
 import { ConflictDetector, ExtensionConflict } from './conflict-detector';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -150,7 +150,7 @@ export class ExtensionManager {
     }
 
     // Remove from disk
-    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const extensionsDir = tandemDir('extensions');
     const extPath = path.join(extensionsDir, extensionId);
     if (fs.existsSync(extPath)) {
       try {
@@ -171,7 +171,7 @@ export class ExtensionManager {
    * Reads manifest.json and extracts permissions, content scripts, API usage.
    */
   getExtensionMetadata(extensionId: string): ExtensionMetadata | null {
-    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const extensionsDir = tandemDir('extensions');
     const manifestPath = path.join(extensionsDir, extensionId, 'manifest.json');
 
     if (!fs.existsSync(manifestPath)) {
@@ -295,7 +295,7 @@ export class ExtensionManager {
 
   /** Analyze a single extension's manifest for conflicts */
   getConflictsForExtension(extensionId: string): ExtensionConflict[] {
-    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const extensionsDir = tandemDir('extensions');
     const manifestPath = path.join(extensionsDir, extensionId, 'manifest.json');
     return this.conflictDetector.analyzeManifest(manifestPath);
   }
@@ -326,7 +326,7 @@ export class ExtensionManager {
    * @returns Array of loaded extension names
    */
   async loadInSession(session: Session): Promise<string[]> {
-    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const extensionsDir = tandemDir('extensions');
     const loaded: string[] = [];
 
     try {

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext, getSessionPartition, getSessionWC } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -36,8 +37,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(400).json({ error: '"device" or "width"+"height" required' });
       }
-    } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -47,8 +48,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
       await ctx.deviceEmulator.reset(wc);
       res.json({ ok: true });
-    } catch (e: unknown) {
-      res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -63,8 +64,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
         tabs: ctx.tabManager.listTabs().filter(t => t.partition === s.partition).length,
       }));
       res.json({ ok: true, sessions, active: ctx.sessionManager.getActive() });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -119,8 +120,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       const partition = getSessionPartition(ctx, req);
       const filePath = await ctx.stateManager.save(name, partition);
       res.json({ ok: true, path: filePath });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -131,8 +132,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
       const partition = getSessionPartition(ctx, req);
       const result = await ctx.stateManager.load(name, partition);
       res.json({ ok: true, cookiesRestored: result.cookiesRestored });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -140,8 +141,8 @@ export function registerSessionRoutes(router: Router, ctx: RouteContext): void {
     try {
       const states = ctx.stateManager.list();
       res.json({ ok: true, states });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

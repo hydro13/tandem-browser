@@ -1,11 +1,10 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { tandemDir } from '../utils/paths';
 
 const API_BASE = 'http://localhost:8765';
 
 function getToken(): string {
-  const tokenPath = path.join(os.homedir(), '.tandem', 'api-token');
+  const tokenPath = tandemDir('api-token');
   return fs.readFileSync(tokenPath, 'utf-8').trim();
 }
 

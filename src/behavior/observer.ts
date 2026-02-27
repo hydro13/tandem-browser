@@ -1,7 +1,7 @@
 import { BrowserWindow, app } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 /**
  * BehaviorObserver — Passive observation layer for behavioral learning.
@@ -32,10 +32,9 @@ export class BehaviorObserver {
 
   constructor(win: BrowserWindow) {
     this.win = win;
-    const tandemDir = path.join(os.homedir(), '.tandem', 'behavior', 'raw');
-    this.rawDir = tandemDir;
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
+    this.rawDir = tandemDir('behavior', 'raw');
+    if (!fs.existsSync(this.rawDir)) {
+      fs.mkdirSync(this.rawDir, { recursive: true });
     }
     this.setupTracking();
   }

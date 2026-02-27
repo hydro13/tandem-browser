@@ -1,7 +1,7 @@
 import { desktopCapturer, webContents } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 interface Recording {
   id: string;
@@ -31,7 +31,7 @@ export class AudioCaptureManager {
   private mediaRecorderCleanup: (() => void) | null = null;
 
   constructor() {
-    this.recordingsDir = path.join(os.homedir(), '.tandem', 'recordings');
+    this.recordingsDir = tandemDir('recordings');
     if (!fs.existsSync(this.recordingsDir)) {
       fs.mkdirSync(this.recordingsDir, { recursive: true });
     }

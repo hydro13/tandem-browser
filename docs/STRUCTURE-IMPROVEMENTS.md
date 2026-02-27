@@ -9,14 +9,14 @@
 |---|-------------|--------|--------|----------|
 | 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 regels. 12 route files + context.ts |
 | 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 regels. 3 modules: ipc/, menu/, notifications/ |
-| 3 | Shared utilities (`paths`, `url`, `errors`) | TODO | — | Quick win. src/utils/ aanmaken |
+| 3 | Shared utilities (`paths`, `url`, `errors`) | DONE | 2026-02-27 | `tandemDir()` in 40 files, `handleRouteError()` in 12 routes. URL utils overgeslagen (te divers). |
 | 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
 | 5 | Unified `npm test` + meer tests | TODO | — | TabManager, API routes, activity handler |
 | 6 | Type safety: CDP types + minder `any` | TODO | — | Begin bij devtools/types.ts |
 | 7 | Split `shell/index.html` | TODO | — | JS naar shell/js/, CSS naar shell/css/ |
 | 8 | Manager registry / DI pattern | TODO | — | Vervangt 35-param TandemAPIOptions |
 | 9 | Expliciete initialisatie volgorde | TODO | — | SecurityManager builder/init pattern |
-| 10 | Naming consistency | TODO | — | destroy/cleanup, ChatMessage, ActivityEntry |
+| 10 | Naming consistency | DONE | 2026-02-27 | `SessionManager.cleanup()` → `destroy()`. ChatMessage/ActivityEntry later. |
 
 ## Hoe te gebruiken
 
@@ -63,6 +63,16 @@ Of voor meerdere quick wins:
   - `src/headless/manager.ts` — import copilotAlert van notifications/alert
 - **Tests:** passing (86 passed, 38 skipped)
 - **Openstaand:** geen
+
+### 2026-02-27 — Punt 3+10: Shared utilities + naming consistency
+- **Wat gedaan:** `src/utils/paths.ts` (tandemDir, ensureDir) + `src/utils/errors.ts` (handleRouteError) aangemaakt. 40 bestanden gerefactored naar tandemDir(). 184 catch blocks in 12 route files vervangen door handleRouteError(). SessionManager.cleanup() hernoemd naar destroy().
+- **Bestanden aangemaakt:**
+  - `src/utils/paths.ts` — tandemDir() + ensureDir()
+  - `src/utils/errors.ts` — handleRouteError()
+  - `docs/plans/2026-02-27-shared-utils-design.md` — Design doc
+- **Bestanden gewijzigd:** 40 src/ files + 1 cli/ file (tandemDir), 12 route files (handleRouteError), sessions/manager.ts + main.ts (cleanup→destroy)
+- **Tests:** passing (86 passed, 38 skipped)
+- **Openstaand:** URL utilities overgeslagen (patronen te divers). ChatMessage/ActivityEntry type renames later.
 
 ### Template
 ```

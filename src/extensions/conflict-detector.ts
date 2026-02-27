@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -224,7 +224,7 @@ export class ConflictDetector {
    * @returns Map of extension ID → conflicts
    */
   analyzeAll(extensionsDir?: string): Map<string, ExtensionConflict[]> {
-    const dir = extensionsDir || path.join(os.homedir(), '.tandem', 'extensions');
+    const dir = extensionsDir || tandemDir('extensions');
     const result = new Map<string, ExtensionConflict[]>();
 
     try {

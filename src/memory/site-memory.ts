@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { WebContents } from 'electron';
+import { tandemDir } from '../utils/paths';
 
 export interface SiteVisit {
   url: string;
@@ -48,7 +48,7 @@ export class SiteMemoryManager {
   private visitStartTimes: Map<string, number> = new Map();
 
   constructor() {
-    this.memoryDir = path.join(os.homedir(), '.tandem', 'site-memory');
+    this.memoryDir = tandemDir('site-memory');
     if (!fs.existsSync(this.memoryDir)) {
       fs.mkdirSync(this.memoryDir, { recursive: true });
     }

@@ -1,8 +1,8 @@
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import AdmZip from 'adm-zip';
+import { tandemDir, ensureDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -50,10 +50,7 @@ export class CrxDownloader {
   private extensionsDir: string;
 
   constructor() {
-    this.extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
-    if (!fs.existsSync(this.extensionsDir)) {
-      fs.mkdirSync(this.extensionsDir, { recursive: true });
-    }
+    this.extensionsDir = ensureDir(tandemDir('extensions'));
   }
 
   /**

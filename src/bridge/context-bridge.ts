@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { EventStreamManager, BrowserEvent, BrowserEventType } from '../events/stream';
+import { tandemDir } from '../utils/paths';
 
 export interface ContextSnapshot {
   url: string;
@@ -43,7 +43,7 @@ export class ContextBridge {
   private contextChangeListeners = new Set<() => void>();
 
   constructor() {
-    this.contextDir = path.join(os.homedir(), '.tandem', 'context');
+    this.contextDir = tandemDir('context');
     this.indexPath = path.join(this.contextDir, '_index.json');
 
     if (!fs.existsSync(this.contextDir)) {

@@ -1,6 +1,7 @@
 import path from 'path';
 import fs from 'fs';
 import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -53,7 +54,7 @@ export class ChromeExtensionImporter {
 
   constructor(profile: string = 'Default') {
     this.profile = profile;
-    this.tandemExtensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    this.tandemExtensionsDir = tandemDir('extensions');
   }
 
   /**

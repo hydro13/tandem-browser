@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 import { SecurityEvent, DomainInfo, BlocklistEntry, GuardianMode, WhitelistEntry, BaselineEntry, ZeroDayCandidate, TrustChange } from './types';
 
 export class SecurityDB {
@@ -78,7 +78,7 @@ export class SecurityDB {
   private stmtUpsertBlocklistMeta!: Database.Statement;
 
   constructor() {
-    const dbDir = path.join(os.homedir(), '.tandem', 'security');
+    const dbDir = tandemDir('security');
     fs.mkdirSync(dbDir, { recursive: true });
     this.db = new Database(path.join(dbDir, 'shield.db'));
     this.db.pragma('journal_mode = WAL');

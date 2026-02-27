@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -12,8 +13,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
       const domain = req.query.domain as string | undefined;
       const entries = ctx.networkInspector.getLog(limit, domain);
       res.json({ entries, count: entries.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -21,8 +22,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
     try {
       const apis = ctx.networkInspector.getApis();
       res.json({ apis });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -30,8 +31,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
     try {
       const domains = ctx.networkInspector.getDomains();
       res.json({ domains });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -39,8 +40,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
     try {
       ctx.networkInspector.clear();
       res.json({ ok: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -54,8 +55,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
       if (!pattern) { res.status(400).json({ error: 'pattern required' }); return; }
       const rule = await ctx.networkMocker.addRule({ pattern, abort, status, body, headers, delay });
       res.json({ ok: true, id: rule.id, pattern: rule.pattern });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -66,8 +67,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
       if (!pattern) { res.status(400).json({ error: 'pattern required' }); return; }
       const rule = await ctx.networkMocker.addRule({ pattern, abort, status, body, headers, delay });
       res.json({ ok: true, id: rule.id, pattern: rule.pattern });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -82,8 +83,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
         createdAt: r.createdAt,
       }));
       res.json({ ok: true, mocks, count: mocks.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -98,8 +99,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
         removed = await ctx.networkMocker.removeRule(pattern);
       }
       res.json({ ok: true, removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -115,8 +116,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
         removed = await ctx.networkMocker.removeRule(pattern);
       }
       res.json({ ok: true, removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -124,8 +125,8 @@ export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
     try {
       const removed = await ctx.networkMocker.clearRules();
       res.json({ ok: true, removed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

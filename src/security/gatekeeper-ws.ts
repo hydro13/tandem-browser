@@ -3,8 +3,8 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import crypto from 'crypto';
+import { tandemDir } from '../utils/paths';
 import { Guardian } from './guardian';
 import { SecurityDB } from './security-db';
 import {
@@ -342,7 +342,7 @@ export class GatekeeperWebSocket {
   }
 
   private getOrCreateSecret(): string {
-    const secretDir = path.join(os.homedir(), '.tandem', 'security');
+    const secretDir = tandemDir('security');
     const secretPath = path.join(secretDir, 'gatekeeper.secret');
 
     try {

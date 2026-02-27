@@ -1,7 +1,7 @@
 import { session as electronSession, Session, BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -114,7 +114,7 @@ export class IdentityPolyfill {
    * @returns List of extension IDs that were patched
    */
   injectPolyfills(): string[] {
-    const extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    const extensionsDir = tandemDir('extensions');
     if (!fs.existsSync(extensionsDir)) return [];
 
     const patched: string[] = [];

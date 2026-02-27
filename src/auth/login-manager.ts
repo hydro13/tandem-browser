@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { tandemDir } from '../utils/paths';
 
 interface LoginState {
   domain: string;
@@ -35,13 +35,13 @@ export class LoginManager {
   private domainConfigs: Map<string, DomainConfig> = new Map();
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem', 'auth');
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
+    const authDir = tandemDir('auth');
+    if (!fs.existsSync(authDir)) {
+      fs.mkdirSync(authDir, { recursive: true });
     }
 
-    this.statesFile = path.join(tandemDir, 'login-states.json');
-    this.configFile = path.join(tandemDir, 'domain-configs.json');
+    this.statesFile = path.join(authDir, 'login-states.json');
+    this.configFile = path.join(authDir, 'domain-configs.json');
     
     this.loadStates();
     this.loadDomainConfigs();

@@ -558,7 +558,7 @@ app.on('will-quit', () => {
   if (securityManager) securityManager.destroy();
   if (snapshotManager) snapshotManager.destroy();
   if (networkMocker) networkMocker.destroy();
-  if (sessionManager) sessionManager.cleanup();
+  if (sessionManager) sessionManager.destroy();
   if (extensionToolbar) extensionToolbar.destroy();
   if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
   if (extensionManager) extensionManager.destroyUpdateChecker();

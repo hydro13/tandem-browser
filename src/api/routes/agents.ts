@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext, getActiveWC } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -11,8 +12,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       const status = req.query.status as string | undefined;
       const tasks = ctx.taskManager.listTasks(status as any);
       res.json(tasks);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -36,8 +37,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
         steps
       );
       res.json(task);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -47,8 +48,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       const { stepId } = req.body;
       ctx.taskManager.respondToApproval(taskId, stepId, true);
       res.json({ ok: true, approved: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -58,8 +59,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       const { stepId } = req.body;
       ctx.taskManager.respondToApproval(taskId, stepId, false);
       res.json({ ok: true, approved: false });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -75,8 +76,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       }
       const task = ctx.taskManager.getTask(taskId);
       res.json(task || { error: 'Task not found' });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -87,8 +88,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
         ctx.panelManager.addChatMessage('copilot', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
       }
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -135,8 +136,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       }
       const result = await wc.executeJavaScript(code);
       res.json({ ok: true, result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -148,8 +149,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
         targetUrl as string
       );
       res.json({ needsApproval: needs });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -165,8 +166,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const updated = ctx.taskManager.updateAutonomySettings(req.body);
       res.json(updated);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -178,8 +179,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
     try {
       const limit = parseInt(req.query.limit as string) || 50;
       res.json(ctx.taskManager.getActivityLog(limit));
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -190,8 +191,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
   router.get('/tab-locks', (_req: Request, res: Response) => {
     try {
       res.json({ locks: ctx.tabLockManager.getAllLocks() });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -203,8 +204,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       }
       const result = ctx.tabLockManager.acquire(tabId, agentId);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -216,8 +217,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       }
       const released = ctx.tabLockManager.release(tabId, agentId);
       res.json({ ok: released });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -226,8 +227,8 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
       const tabId = req.params.tabId as string;
       const owner = ctx.tabLockManager.getOwner(tabId);
       res.json({ tabId, locked: owner !== null, owner });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

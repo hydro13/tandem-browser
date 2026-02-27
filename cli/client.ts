@@ -1,9 +1,8 @@
 import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import { tandemDir } from '../src/utils/paths';
 
 const API_BASE = process.env.TANDEM_API || 'http://localhost:8765';
-const TOKEN_PATH = path.join(os.homedir(), '.tandem', 'api-token');
+const TOKEN_PATH = tandemDir('api-token');
 
 function getToken(): string {
   try {

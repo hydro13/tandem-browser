@@ -13,8 +13,8 @@
 
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { EventEmitter } from 'events';
+import { tandemDir, ensureDir } from '../utils/paths';
 
 // ═══════════════════════════════════════════════
 // Interfaces
@@ -121,10 +121,7 @@ export class TaskManager extends EventEmitter {
 
   constructor() {
     super();
-    this.tasksDir = path.join(os.homedir(), '.tandem', 'tasks');
-    if (!fs.existsSync(this.tasksDir)) {
-      fs.mkdirSync(this.tasksDir, { recursive: true });
-    }
+    this.tasksDir = ensureDir(tandemDir('tasks'));
     this.autonomy = this.loadAutonomySettings();
     this.activityLog = this.loadActivityLog();
   }
@@ -132,7 +129,7 @@ export class TaskManager extends EventEmitter {
   // ── Autonomy Settings ──
 
   private loadAutonomySettings(): AutonomySettings {
-    const settingsPath = path.join(os.homedir(), '.tandem', 'autonomy-settings.json');
+    const settingsPath = tandemDir('autonomy-settings.json');
     try {
       if (fs.existsSync(settingsPath)) {
         const raw = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
@@ -143,7 +140,7 @@ export class TaskManager extends EventEmitter {
   }
 
   private saveAutonomySettings(): void {
-    const settingsPath = path.join(os.homedir(), '.tandem', 'autonomy-settings.json');
+    const settingsPath = tandemDir('autonomy-settings.json');
     try {
       fs.writeFileSync(settingsPath, JSON.stringify(this.autonomy, null, 2));
     } catch { /* silent */ }
@@ -434,7 +431,7 @@ export class TaskManager extends EventEmitter {
   // ── Activity Log ──
 
   private loadActivityLog(): ActivityEntry[] {
-    const logPath = path.join(os.homedir(), '.tandem', 'activity-log.json');
+    const logPath = tandemDir('activity-log.json');
     try {
       if (fs.existsSync(logPath)) {
         const entries = JSON.parse(fs.readFileSync(logPath, 'utf-8'));
@@ -446,7 +443,7 @@ export class TaskManager extends EventEmitter {
   }
 
   private saveActivityLog(): void {
-    const logPath = path.join(os.homedir(), '.tandem', 'activity-log.json');
+    const logPath = tandemDir('activity-log.json');
     try {
       // Keep last 500 entries
       const trimmed = this.activityLog.slice(-500);

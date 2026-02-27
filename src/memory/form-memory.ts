@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import crypto from 'crypto';
+import { tandemDir } from '../utils/paths';
 
 export interface FormField {
   name: string;
@@ -39,9 +39,9 @@ export class FormMemoryManager {
   private configPath: string;
 
   constructor() {
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    this.formsDir = path.join(tandemDir, 'forms');
-    this.configPath = path.join(tandemDir, 'config.json');
+    const baseDir = tandemDir();
+    this.formsDir = path.join(baseDir, 'forms');
+    this.configPath = path.join(baseDir, 'config.json');
 
     if (!fs.existsSync(this.formsDir)) {
       fs.mkdirSync(this.formsDir, { recursive: true });
@@ -64,9 +64,9 @@ export class FormMemoryManager {
         // Generate new 256-bit key
         this.encryptionKey = crypto.randomBytes(32);
         config.formEncryptionKey = this.encryptionKey.toString('hex');
-        const tandemDir = path.dirname(this.configPath);
-        if (!fs.existsSync(tandemDir)) {
-          fs.mkdirSync(tandemDir, { recursive: true });
+        const configDir = path.dirname(this.configPath);
+        if (!fs.existsSync(configDir)) {
+          fs.mkdirSync(configDir, { recursive: true });
         }
         fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
       }

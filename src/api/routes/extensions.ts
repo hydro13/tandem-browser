@@ -1,10 +1,11 @@
 import { Router, Request, Response } from 'express';
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
 import { RouteContext } from '../context';
+import { tandemDir } from '../../utils/paths';
 import { ChromeExtensionImporter } from '../../extensions/chrome-importer';
 import { GalleryLoader } from '../../extensions/gallery-loader';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerExtensionRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -28,8 +29,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         available,
         count: { loaded: loaded.length, available: available.length },
       });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -40,8 +41,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       const ses = ctx.win.webContents.session;
       const result = await ctx.extensionLoader.loadExtension(ses, extPath);
       res.json({ ok: true, extension: result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -122,7 +123,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
 
       // Remove from disk using CWS/disk ID (the folder name)
       if (diskId) {
-        const extPath = path.join(os.homedir(), '.tandem', 'extensions', diskId);
+        const extPath = tandemDir('extensions', diskId);
         if (fs.existsSync(extPath)) {
           try {
             fs.rmSync(extPath, { recursive: true, force: true });
@@ -164,8 +165,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       }));
 
       res.json({ chromeDir, extensions });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -218,8 +219,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
 
       const result = gallery.getGalleryResponse(installedIds, { category, featured });
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -228,8 +229,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
     try {
       const status = ctx.extensionManager.getNativeMessagingStatus();
       res.json(status);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -261,9 +262,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         extensionId,
       });
       res.json(result);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -279,9 +279,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         results,
         lastCheck: state.lastCheckTimestamp,
       });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -307,9 +306,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         checkIntervalMs: state.checkIntervalMs,
         extensions,
       });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -335,9 +333,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       }
 
       res.json({ results });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -346,9 +343,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
     try {
       const usage = ctx.extensionManager.getDiskUsage();
       res.json(usage);
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -357,9 +353,8 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
     try {
       const { conflicts, summary } = ctx.extensionManager.getAllConflicts();
       res.json({ conflicts, summary });
-    } catch (e: unknown) {
-      const message = e instanceof Error ? e.message : String(e);
-      res.status(500).json({ error: message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

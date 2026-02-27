@@ -1,6 +1,5 @@
 import * as fs from 'fs';
-import * as path from 'path';
-import * as os from 'os';
+import { tandemDir } from '../utils/paths';
 
 /**
  * Basic Types for Behavioral Data
@@ -38,8 +37,8 @@ export class BehaviorCompiler {
     private profileDir: string;
 
     constructor() {
-        this.rawDir = path.join(os.homedir(), '.tandem', 'behavior', 'raw');
-        this.profileDir = path.join(os.homedir(), '.tandem', 'behavior', 'profile.json');
+        this.rawDir = tandemDir('behavior', 'raw');
+        this.profileDir = tandemDir('behavior', 'profile.json');
 
         if (!fs.existsSync(this.rawDir)) {
             fs.mkdirSync(this.rawDir, { recursive: true });

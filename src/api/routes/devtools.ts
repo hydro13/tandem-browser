@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -11,8 +12,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
     try {
       const status = ctx.devToolsManager.getStatus();
       res.json(status);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -26,8 +27,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       const entries = ctx.devToolsManager.getConsoleEntries({ level, sinceId, limit, search });
       const counts = ctx.devToolsManager.getConsoleCounts();
       res.json({ entries, counts, total: entries.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -37,8 +38,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const errors = ctx.devToolsManager.getConsoleErrors(limit);
       res.json({ errors, total: errors.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -60,8 +61,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       const statusMax = req.query.status_max ? parseInt(req.query.status_max as string) : undefined;
       const entries = ctx.devToolsManager.getNetworkEntries({ limit, domain, type, failed, search, statusMin, statusMax });
       res.json({ entries, total: entries.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -74,8 +75,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
         return;
       }
       res.json(body);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -92,8 +93,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       if (!selector) { res.status(400).json({ error: 'selector required' }); return; }
       const nodes = await ctx.devToolsManager.queryDOM(selector, maxResults);
       res.json({ nodes, total: nodes.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -104,8 +105,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       if (!expression) { res.status(400).json({ error: 'expression required' }); return; }
       const nodes = await ctx.devToolsManager.queryXPath(expression, maxResults);
       res.json({ nodes, total: nodes.length });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -114,8 +115,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
     try {
       const data = await ctx.devToolsManager.getStorage();
       res.json(data);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -128,8 +129,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
         return;
       }
       res.json(metrics);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -140,8 +141,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       if (!expression) { res.status(400).json({ error: 'expression required' }); return; }
       const result = await ctx.devToolsManager.evaluate(expression, { returnByValue, awaitPromise });
       res.json({ ok: true, result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -152,8 +153,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       if (!method) { res.status(400).json({ error: 'method required' }); return; }
       const result = await ctx.devToolsManager.sendCommand(method, params);
       res.json({ ok: true, result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -169,8 +170,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       }
       res.set('Content-Type', 'image/png');
       res.send(png);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -190,8 +191,8 @@ export function registerDevtoolsRoutes(router: Router, ctx: RouteContext): void 
       } else {
         res.status(404).json({ error: 'No active tab' });
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

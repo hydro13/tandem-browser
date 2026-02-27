@@ -1,10 +1,10 @@
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { Session } from 'electron';
 import { CrxDownloader } from './crx-downloader';
 import { ExtensionLoader } from './loader';
+import { tandemDir } from '../utils/paths';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ export class UpdateChecker {
     private downloader: CrxDownloader,
     private loader: ExtensionLoader,
   ) {
-    this.extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    this.extensionsDir = tandemDir('extensions');
     this.stateFilePath = path.join(this.extensionsDir, 'update-state.json');
     this.state = this.loadState();
   }

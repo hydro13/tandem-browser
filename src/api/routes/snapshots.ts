@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { RouteContext } from '../context';
 import { LocatorQuery } from '../../locators/finder';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -16,8 +17,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
       const depth = depthStr ? parseInt(depthStr, 10) : undefined;
       const result = await ctx.snapshotManager.getSnapshot({ interactive, compact, selector, depth });
       res.json({ ok: true, snapshot: result.text, count: result.count, url: result.url });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -27,8 +28,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     try {
       await ctx.snapshotManager.clickRef(ref);
       res.json({ ok: true, ref });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -38,8 +39,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     try {
       await ctx.snapshotManager.fillRef(ref, value);
       res.json({ ok: true, ref });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -49,8 +50,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     try {
       const text = await ctx.snapshotManager.getTextRef(ref);
       res.json({ ok: true, ref, text });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -66,8 +67,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     try {
       const result = await ctx.locatorFinder.find(query);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -83,8 +84,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
       }
       await ctx.snapshotManager.clickRef(result.ref);
       res.json({ ok: true, ref: result.ref, clicked: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -101,8 +102,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
       }
       await ctx.snapshotManager.fillRef(result.ref, fillValue);
       res.json({ ok: true, ref: result.ref, filled: true });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -114,8 +115,8 @@ export function registerSnapshotRoutes(router: Router, ctx: RouteContext): void 
     try {
       const results = await ctx.locatorFinder.findAll(query);
       res.json({ found: results.length > 0, count: results.length, results });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

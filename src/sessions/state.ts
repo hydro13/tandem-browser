@@ -1,14 +1,14 @@
 import { session } from 'electron';
-import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
+import { tandemDir } from '../utils/paths';
 
 export class StateManager {
   private stateDir: string;
 
   constructor() {
-    this.stateDir = path.join(os.homedir(), '.tandem', 'sessions');
+    this.stateDir = tandemDir('sessions');
     if (!fs.existsSync(this.stateDir)) {
       fs.mkdirSync(this.stateDir, { recursive: true });
     }

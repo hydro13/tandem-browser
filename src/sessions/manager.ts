@@ -59,8 +59,12 @@ export class SessionManager {
     this.activeSession = name;
   }
 
-  /** Destroy a session (cannot destroy default) */
-  destroy(name: string): void {
+  /** Destroy a single session by name, or all sessions when called with no arguments */
+  destroy(name?: string): void {
+    if (name === undefined) {
+      this.sessions.clear();
+      return;
+    }
     if (name === 'default') {
       throw new Error('Cannot destroy the default session');
     }
@@ -83,8 +87,4 @@ export class SessionManager {
     return sess.partition;
   }
 
-  /** Cleanup — called from will-quit handler */
-  cleanup(): void {
-    this.sessions.clear();
-  }
 }

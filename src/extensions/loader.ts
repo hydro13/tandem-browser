@@ -1,7 +1,7 @@
 import { Session } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
+import { tandemDir, ensureDir } from '../utils/paths';
 
 interface LoadedExtension {
   id: string;
@@ -25,10 +25,7 @@ export class ExtensionLoader {
   private loaded: LoadedExtension[] = [];
 
   constructor() {
-    this.extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
-    if (!fs.existsSync(this.extensionsDir)) {
-      fs.mkdirSync(this.extensionsDir, { recursive: true });
-    }
+    this.extensionsDir = ensureDir(tandemDir('extensions'));
   }
 
   /**

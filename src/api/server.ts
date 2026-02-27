@@ -3,8 +3,8 @@ import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import crypto from 'crypto';
+import { tandemDir } from '../utils/paths';
 import { BrowserWindow } from 'electron';
 import { RouteContext } from './context';
 import { registerBrowserRoutes } from './routes/browser';
@@ -60,10 +60,10 @@ import { DeviceEmulator } from '../device/emulator';
 
 /** Generate or load API auth token from ~/.tandem/api-token */
 function getOrCreateAuthToken(): string {
-  const tandemDir = path.join(os.homedir(), '.tandem');
-  if (!fs.existsSync(tandemDir)) fs.mkdirSync(tandemDir, { recursive: true });
+  const baseDir = tandemDir();
+  if (!fs.existsSync(baseDir)) fs.mkdirSync(baseDir, { recursive: true });
 
-  const tokenPath = path.join(tandemDir, 'api-token');
+  const tokenPath = path.join(baseDir, 'api-token');
   try {
     if (fs.existsSync(tokenPath)) {
       const existing = fs.readFileSync(tokenPath, 'utf-8').trim();

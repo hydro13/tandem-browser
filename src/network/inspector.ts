@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { RequestDispatcher } from './dispatcher';
+import { tandemDir } from '../utils/paths';
 
 export interface NetworkRequest {
   id: number;
@@ -37,7 +37,7 @@ export class NetworkInspector {
   private domainStats: Map<string, DomainData> = new Map();
 
   constructor() {
-    this.networkDir = path.join(os.homedir(), '.tandem', 'network');
+    this.networkDir = tandemDir('network');
     if (!fs.existsSync(this.networkDir)) {
       fs.mkdirSync(this.networkDir, { recursive: true });
     }

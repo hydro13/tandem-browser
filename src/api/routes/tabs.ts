@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import { webContents } from 'electron';
 import { RouteContext } from '../context';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerTabRoutes(router: Router, ctx: RouteContext): void {
   router.post('/tabs/open', async (req: Request, res: Response) => {
@@ -11,8 +12,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       const tab = await ctx.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
       ctx.panelManager.logActivity('tab-open', { url, source: tabSource });
       res.json({ ok: true, tab });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -22,8 +23,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     try {
       const closed = await ctx.tabManager.closeTab(tabId);
       res.json({ ok: closed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -32,8 +33,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       const tabs = ctx.tabManager.listTabs();
       const groups = ctx.tabManager.listGroups();
       res.json({ tabs, groups });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -43,8 +44,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     try {
       const focused = await ctx.tabManager.focusTab(tabId);
       res.json({ ok: focused });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -57,8 +58,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     try {
       const group = ctx.tabManager.setGroup(groupId, name, color, tabIds);
       res.json({ ok: true, group });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -71,8 +72,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       }
       const ok = ctx.tabManager.setTabSource(tabId, source);
       res.json({ ok });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -96,8 +97,8 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
         destroyed++;
       }
       res.json({ ok: true, destroyed });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }

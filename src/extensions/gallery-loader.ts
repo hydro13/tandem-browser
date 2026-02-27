@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
 import { GALLERY_DEFAULTS, GalleryExtension, ExtensionCategory } from './gallery-defaults';
+import { tandemDir } from '../utils/paths';
 
 // ─── User Gallery JSON format ───────────────────────────────────────────────
 
@@ -42,7 +42,7 @@ export class GalleryLoader {
   private extensionsDir: string;
 
   constructor() {
-    this.extensionsDir = path.join(os.homedir(), '.tandem', 'extensions');
+    this.extensionsDir = tandemDir('extensions');
   }
 
   /**

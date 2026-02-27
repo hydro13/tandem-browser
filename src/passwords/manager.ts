@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import os from 'os';
 import fs from 'fs';
+import { tandemDir } from '../utils/paths';
 import { PasswordCrypto } from '../security/crypto';
 
 export interface VaultItem {
@@ -19,7 +19,7 @@ export class PasswordManager {
     private isUnlocked: boolean = false;
 
     constructor() {
-        const dir = path.join(os.homedir(), '.tandem', 'security');
+        const dir = tandemDir('security');
         fs.mkdirSync(dir, { recursive: true });
 
         this.db = new Database(path.join(dir, 'vault.db'));

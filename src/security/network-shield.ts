@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { SecurityDB } from './security-db';
+import { tandemDir } from '../utils/paths';
 import { URL_LIST_SAFE_DOMAINS } from './types';
 
 export class NetworkShield {
@@ -12,7 +12,7 @@ export class NetworkShield {
 
   constructor(db: SecurityDB) {
     this.db = db;
-    this.blocklistDir = path.join(os.homedir(), '.tandem', 'security', 'blocklists');
+    this.blocklistDir = tandemDir('security', 'blocklists');
     fs.mkdirSync(this.blocklistDir, { recursive: true });
     this.loadBlocklists();
   }

@@ -1,8 +1,8 @@
 import { BrowserWindow } from 'electron';
 import path from 'path';
 import fs from 'fs';
-import os from 'os';
 import { ConfigManager } from '../config/manager';
+import { tandemDir, ensureDir } from '../utils/paths';
 
 export interface ActivityEvent {
   id: number;
@@ -42,15 +42,9 @@ export class PanelManager {
   constructor(win: BrowserWindow, configManager?: ConfigManager) {
     this.win = win;
     this.configManager = configManager;
-    const tandemDir = path.join(os.homedir(), '.tandem');
-    if (!fs.existsSync(tandemDir)) {
-      fs.mkdirSync(tandemDir, { recursive: true });
-    }
-    this.chatHistoryPath = path.join(tandemDir, 'chat-history.json');
-    this.chatImagesDir = path.join(tandemDir, 'chat-images');
-    if (!fs.existsSync(this.chatImagesDir)) {
-      fs.mkdirSync(this.chatImagesDir, { recursive: true });
-    }
+    ensureDir(tandemDir());
+    this.chatHistoryPath = tandemDir('chat-history.json');
+    this.chatImagesDir = ensureDir(tandemDir('chat-images'));
     this.loadChatHistory();
   }
 

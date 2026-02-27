@@ -1,7 +1,7 @@
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
-import os from 'os';
+import { tandemDir } from '../../utils/paths';
 import { SecurityDB } from '../security-db';
 import { NetworkShield } from '../network-shield';
 import { UpdateResult, URL_LIST_SAFE_DOMAINS } from '../types';
@@ -48,7 +48,7 @@ export class BlocklistUpdater {
   constructor(db: SecurityDB, shield: NetworkShield) {
     this.db = db;
     this.shield = shield;
-    this.dataDir = path.join(os.homedir(), '.tandem', 'security', 'blocklists');
+    this.dataDir = tandemDir('security', 'blocklists');
     fs.mkdirSync(this.dataDir, { recursive: true });
   }
 

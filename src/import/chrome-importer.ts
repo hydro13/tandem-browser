@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import os from 'os';
 import { ConfigManager } from '../config/manager';
+import { tandemDir } from '../utils/paths';
 
 /**
  * ChromeImporter — Import and sync bookmarks, history, and cookies from Google Chrome.
@@ -62,7 +63,7 @@ export class ChromeImporter {
     }
     const profile = this.configManager?.getConfig().sync.chromeProfile ?? 'Default';
     this.chromeProfilePath = path.join(this.chromeBasePath, profile);
-    this.tandemDir = path.join(os.homedir(), '.tandem');
+    this.tandemDir = tandemDir();
     if (!fs.existsSync(this.tandemDir)) {
       fs.mkdirSync(this.tandemDir, { recursive: true });
     }

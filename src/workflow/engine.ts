@@ -1,7 +1,7 @@
 import { BrowserWindow } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { tandemDir } from '../utils/paths';
 import { humanizedClick, humanizedType } from '../input/humanized';
 
 interface WorkflowStep {
@@ -126,7 +126,7 @@ export class WorkflowEngine {
   private executions: Map<string, WorkflowExecution> = new Map();
 
   constructor() {
-    this.workflowsDir = path.join(os.homedir(), '.tandem', 'workflows');
+    this.workflowsDir = tandemDir('workflows');
     this.ensureDirectories();
     this.loadWorkflows();
   }
@@ -494,7 +494,7 @@ export class WorkflowEngine {
     const buffer = image.toPNG();
     
     const filename = step.params.filename || `workflow-${Date.now()}.png`;
-    const screenshotsDir = path.join(os.homedir(), '.tandem', 'screenshots');
+    const screenshotsDir = tandemDir('screenshots');
     
     if (!fs.existsSync(screenshotsDir)) {
       fs.mkdirSync(screenshotsDir, { recursive: true });

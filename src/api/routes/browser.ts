@@ -2,8 +2,10 @@ import { Router, Request, Response } from 'express';
 import path from 'path';
 import os from 'os';
 import { RouteContext, getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
+import { tandemDir } from '../../utils/paths';
 import { copilotAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
+import { handleRouteError } from '../../utils/errors';
 
 export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -42,8 +44,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       }
       ctx.panelManager.logActivity('navigate', { url, source: 'copilot' });
       res.json({ ok: true, url });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -127,8 +129,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         })
       `);
       res.json(content);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -136,8 +138,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
     try {
       const html = await execInActiveTab(ctx, 'document.documentElement.outerHTML');
       res.type('html').send(html);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -154,8 +156,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const result = await humanizedClick(wc, selector);
       ctx.panelManager.logActivity('click', { selector });
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -175,8 +177,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const result = await humanizedType(wc, selector, text, !!clear);
       ctx.panelManager.logActivity('input', { selector, textLength: text.length });
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -190,8 +192,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
     try {
       const result = await execInActiveTab(ctx, script);
       res.json({ ok: true, result });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -213,7 +215,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         const allowedDirs = [
           path.join(os.homedir(), 'Desktop'),
           path.join(os.homedir(), 'Downloads'),
-          path.join(os.homedir(), '.tandem'),
+          tandemDir(),
         ];
         const isAllowed = allowedDirs.some(dir => filePath.startsWith(dir + path.sep) || filePath === dir);
 
@@ -227,8 +229,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.type('png').send(png);
       }
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -243,8 +245,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         url ? { url } : {}
       );
       res.json({ cookies });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -262,8 +264,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         removed++;
       }
       res.json({ ok: true, removed, domain });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -320,8 +322,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       ctx.panelManager.logActivity('scroll', { direction, amount, target, selector });
       ctx.behaviorObserver.recordScroll(target === 'up' ? -amount : amount);
       res.json({ ok: true, scroll });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -361,8 +363,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       `;
       const result = await execInActiveTab(ctx, code);
       res.json(result);
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -380,8 +382,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         })).filter(l => l.href && !l.href.startsWith('javascript:'))
       `);
       res.json({ links });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 
@@ -407,8 +409,8 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         }))
       `);
       res.json({ forms });
-    } catch (e: any) {
-      res.status(500).json({ error: e.message });
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 }
