@@ -13,7 +13,7 @@
 | 4 | Fix circulaire deps (`copilotAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
 | 5 | Unified `npm test` + meer tests | DONE | 2026-02-27 | 152 tests (was 86). TabManager, TaskManager, utils tests. |
 | 6 | Type safety: CDP types + minder `any` | DONE | 2026-02-27 | 12 CDP types, catch blocks, subscriber handlers |
-| 7 | Split `shell/index.html` | TODO | — | JS naar shell/js/, CSS naar shell/css/ |
+| 7 | Split `shell/index.html` | DONE | 2026-02-27 | 6572→451 regels. 4 bestanden: css/main.css, css/shortcuts.css, js/main.js, js/shortcuts.js |
 | 8 | Manager registry / DI pattern | TODO | — | Vervangt 35-param TandemAPIOptions |
 | 9 | Expliciete initialisatie volgorde | TODO | — | SecurityManager builder/init pattern |
 | 10 | Naming consistency | DONE | 2026-02-27 | `SessionManager.cleanup()` → `destroy()`. ChatMessage/ActivityEntry later. |

@@ -1,0 +1,2029 @@
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* === Liquid Glass Lite Design Tokens === */
+
+    /* LGL Base Tokens */
+    :root {
+      /* Lensing Parameters */
+      --lgl-refraction-strength: 0.15;
+      --lgl-displacement-max: 15px;
+
+      /* Blur */
+      --lgl-blur-radius: 20px;
+      --lgl-blur-radius-subtle: 12px;
+      --lgl-blur-radius-strong: 30px;
+
+      /* Saturation Boost */
+      --lgl-saturation: 1.4;
+      --lgl-saturation-subtle: 1.2;
+      --lgl-saturation-strong: 1.6;
+
+      /* Shadow */
+      --lgl-shadow-opacity: 0.08;
+      --lgl-shadow-opacity-text: 0.18;
+      --lgl-shadow-opacity-image: 0.12;
+      --lgl-shadow-spread: 8px;
+      --lgl-shadow-spread-text: 12px;
+
+      /* Base Shadow */
+      --lgl-shadow-contact: 0 1px 3px rgba(0, 0, 0, 0.05);
+      --lgl-shadow-depth: 0 8px var(--lgl-shadow-spread) rgba(0, 0, 0, var(--lgl-shadow-opacity));
+      --lgl-shadow: var(--lgl-shadow-contact), var(--lgl-shadow-depth);
+
+      /* Border Radius */
+      --lgl-radius-none: 0;
+      --lgl-radius-small: 8px;
+      --lgl-radius-medium: 12px;
+      --lgl-radius-large: 16px;
+      --lgl-radius-xlarge: 20px;
+      --lgl-radius-pill: 9999px;
+
+      /* Spacing */
+      --lgl-space-xs: 4px;
+      --lgl-space-sm: 8px;
+      --lgl-space-md: 12px;
+      --lgl-space-lg: 16px;
+      --lgl-space-xl: 24px;
+      --lgl-space-2xl: 32px;
+
+      /* Transitions */
+      --lgl-transition-fast: 150ms ease-out;
+      --lgl-transition-normal: 300ms ease-out;
+      --lgl-transition-slow: 400ms ease-out;
+      --lgl-transition-spring: 400ms cubic-bezier(0.5, 0.9, 0.1, 1.0);
+
+      /* Z-index layers */
+      --lgl-z-background: 0;
+      --lgl-z-content: 1;
+      --lgl-z-glass: 10;
+      --lgl-z-overlay: 100;
+      --lgl-z-modal: 1000;
+
+      /* LGL Light Mode Tokens */
+      --lgl-tint-light: rgba(255, 255, 255, 0.45);
+      --lgl-tint: var(--lgl-tint-light);
+      --lgl-solid-bg: rgba(255, 255, 255, 0.95);
+      --lgl-text-primary: rgba(0, 0, 0, 0.9);
+      --lgl-text-secondary: rgba(0, 0, 0, 0.6);
+      --lgl-text-tertiary: rgba(0, 0, 0, 0.4);
+      --lgl-border: rgba(0, 0, 0, 0.1);
+      --lgl-border-subtle: rgba(0, 0, 0, 0.05);
+      --lgl-contrast-border: rgba(0, 0, 0, 0.2);
+      --lgl-edge-color: rgba(0, 0, 0, 0.15);
+      --lgl-focus-ring: rgba(0, 122, 255, 0.6);
+
+      /* Tandem-specific variables */
+      --bg: #1a1a2e;
+      --surface: #16213e;
+      --accent: #e94560;
+      --text: #eee;
+      --text-dim: #888;
+      --input-bg: #0f3460;
+      --success: #4ecca3;
+      --warning: #f0a500;
+      --tab-bg: #111a30;
+      --tab-active: #16213e;
+      --tab-hover: #1a2744;
+    }
+
+    /* LGL Dark Mode Tokens */
+    [data-theme="dark"],
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --lgl-tint-dark: rgba(30, 30, 30, 0.55);
+        --lgl-tint: var(--lgl-tint-dark);
+        --lgl-solid-bg: rgba(30, 30, 30, 0.95);
+        --lgl-text-primary: rgba(255, 255, 255, 0.9);
+        --lgl-text-secondary: rgba(255, 255, 255, 0.6);
+        --lgl-text-tertiary: rgba(255, 255, 255, 0.4);
+        --lgl-border: rgba(255, 255, 255, 0.1);
+        --lgl-border-subtle: rgba(255, 255, 255, 0.05);
+        --lgl-contrast-border: rgba(255, 255, 255, 0.2);
+        --lgl-edge-color: rgba(255, 255, 255, 0.10);
+        --lgl-focus-ring: rgba(10, 132, 255, 0.6);
+        --lgl-shadow-opacity: 0.18;
+        --lgl-shadow-opacity-text: 0.25;
+      }
+    }
+
+    /* Light theme */
+    [data-theme="light"] {
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --accent: #e94560;
+      --text: #1e293b;
+      --text-dim: #64748b;
+      --input-bg: #f1f5f9;
+      --success: #059669;
+      --warning: #d97706;
+      --tab-bg: #e2e8f0;
+      --tab-active: #ffffff;
+      --tab-hover: #f1f5f9;
+    }
+
+    /* System preference detection */
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --accent: #e94560;
+        --text: #1e293b;
+        --text-dim: #64748b;
+        --input-bg: #f1f5f9;
+        --success: #059669;
+        --warning: #d97706;
+        --tab-bg: #e2e8f0;
+        --tab-active: #ffffff;
+        --tab-hover: #f1f5f9;
+      }
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ═══ Tab bar (Chrome-style compact title bar) ═══ */
+    .tab-bar {
+      display: flex;
+      align-items: center;
+      background: var(--tab-bg);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      height: 36px;
+      -webkit-app-region: drag;
+      overflow-x: auto;
+      overflow-y: hidden;
+      position: relative;
+    }
+
+    /* Platform-specific padding for native controls */
+    body.platform-darwin .tab-bar {
+      padding-left: 80px;
+      /* macOS traffic lights */
+    }
+
+    body.platform-linux .tab-bar,
+    body.platform-win32 .tab-bar {
+      padding-right: 140px;
+      /* Space for custom window controls */
+    }
+
+    /* ═══ macOS native glass chrome ═══
+     * Window background is transparent (#00000000) so macOS vibrancy shows through.
+     * Tab bar + toolbar use semi-transparent backgrounds + backdrop-filter.
+     * Webviews render normally (opaque web content is unaffected).
+     */
+    body.platform-darwin {
+      background: transparent !important;
+    }
+
+    body.platform-darwin .tab-bar {
+      background: rgba(18, 18, 32, 0.52) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07) !important;
+    }
+
+    body.platform-darwin .toolbar {
+      background: rgba(16, 16, 28, 0.48) !important;
+      -webkit-backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      backdrop-filter: blur(40px) saturate(180%) brightness(0.88);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    }
+
+    body.platform-darwin .bookmarks-bar {
+      background: rgba(14, 14, 24, 0.42) !important;
+      -webkit-backdrop-filter: blur(30px) saturate(160%);
+      backdrop-filter: blur(30px) saturate(160%);
+    }
+
+    .tab-bar::-webkit-scrollbar {
+      height: 0;
+    }
+
+    .tab {
+      -webkit-app-region: no-drag;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 0 12px;
+      height: 100%;
+      min-width: 120px;
+      max-width: 220px;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      border-right: 1px solid rgba(255, 255, 255, 0.04);
+      position: relative;
+      transition: background 0.15s, color 0.15s;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .tab:hover {
+      background: var(--tab-hover);
+      color: var(--text);
+    }
+
+    .tab.active {
+      background: var(--tab-active);
+      color: var(--text);
+      border-bottom: 2px solid var(--accent);
+    }
+
+    .tab .group-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .tab .tab-favicon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      border-radius: 2px;
+    }
+
+    .tab .tab-title {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .tab .tab-close {
+      opacity: 0;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .tab:hover .tab-close {
+      opacity: 1;
+    }
+
+    .tab .tab-close:hover {
+      background: rgba(233, 69, 96, 0.3);
+      color: var(--accent);
+    }
+
+    .tab-new-btn {
+      -webkit-app-region: no-drag;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 10px;
+      height: 100%;
+      transition: color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .tab-new-btn:hover {
+      color: var(--text);
+    }
+
+    /* Hamburger menu button */
+    .menu-btn {
+      -webkit-app-region: no-drag;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 0 14px;
+      height: 100%;
+      transition: color 0.15s, background 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .menu-btn:hover {
+      color: var(--text);
+      background: var(--tab-hover);
+    }
+
+    /* Hide menu button on macOS (uses native menu bar) */
+    body.platform-darwin .menu-btn {
+      display: none;
+    }
+
+    /* Tab bar spacer (for window controls) */
+    .tab-bar-spacer {
+      flex: 1;
+      min-width: 20px;
+      -webkit-app-region: drag;
+    }
+
+    /* Window controls (Linux/Windows only) */
+    .window-controls {
+      -webkit-app-region: no-drag;
+      display: none;
+      /* Hidden by default */
+      align-items: center;
+      height: 100%;
+      position: absolute;
+      right: 0;
+      top: 0;
+    }
+
+    body.platform-linux .window-controls,
+    body.platform-win32 .window-controls {
+      display: flex;
+    }
+
+    .window-control-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      width: 46px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s, color 0.15s;
+      font-size: 12px;
+    }
+
+    .window-control-btn:hover {
+      background: var(--tab-hover);
+      color: var(--text);
+    }
+
+    .window-control-btn.close:hover {
+      background: #e81123;
+      color: white;
+    }
+
+    /* Window control icons */
+    .window-control-btn svg {
+      width: 10px;
+      height: 10px;
+      fill: currentColor;
+    }
+
+    /* ═══ Toolbar ═══ */
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .toolbar button {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .toolbar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .url-bar {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 7px 16px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .url-bar:focus {
+      border-color: var(--accent);
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--success);
+      transition: background 0.3s;
+    }
+
+    .status-dot.loading {
+      background: var(--warning);
+      animation: pulse 1s infinite;
+    }
+
+    .status-dot.error {
+      background: var(--accent);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.4;
+      }
+    }
+
+    .copilot-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: rgba(233, 69, 96, 0.2);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      color: var(--accent);
+      cursor: default;
+    }
+
+    /* ═══ Extension toolbar ═══ */
+    .ext-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin: 0 4px;
+      position: relative;
+    }
+
+    .ext-toolbar-btn {
+      position: relative;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+    }
+
+    .ext-toolbar-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .ext-toolbar-btn img {
+      width: 18px;
+      height: 18px;
+      border-radius: 2px;
+      pointer-events: none;
+    }
+
+    .ext-toolbar-btn .ext-badge {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: #fff;
+      background: #4688F1;
+      pointer-events: none;
+      min-width: 10px;
+      text-align: center;
+    }
+
+    .ext-overflow-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      color: var(--text-dim);
+      font-size: 16px;
+    }
+
+    .ext-overflow-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .ext-overflow-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 4px;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 4px;
+      z-index: 1000;
+      min-width: 200px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    }
+
+    .ext-overflow-dropdown.visible {
+      display: block;
+    }
+
+    .ext-overflow-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      width: 100%;
+      text-align: left;
+      color: var(--text);
+      font-size: 12px;
+      transition: background 0.15s;
+    }
+
+    .ext-overflow-item:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .ext-overflow-item img {
+      width: 16px;
+      height: 16px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .ext-overflow-item .ext-badge {
+      font-size: 8px;
+      font-weight: 700;
+      line-height: 1;
+      padding: 1px 3px;
+      border-radius: 3px;
+      color: #fff;
+      background: #4688F1;
+      margin-left: auto;
+      min-width: 10px;
+      text-align: center;
+    }
+
+    /* ═══ Bookmark star ═══ */
+    .bookmark-star {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
+      line-height: 1;
+    }
+
+    .bookmark-star:hover {
+      color: var(--warning);
+    }
+
+    .bookmark-star.bookmarked {
+      color: var(--warning);
+    }
+
+    /* ═══ Bookmarks bar ═══ */
+    .bookmarks-bar {
+      display: none;
+      align-items: center;
+      gap: 2px;
+      padding: 3px 12px;
+      background: var(--surface);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      overflow: visible;
+      white-space: nowrap;
+      height: 28px;
+      position: relative;
+      z-index: 500;
+      flex-wrap: nowrap;
+    }
+
+    .bookmarks-bar.visible {
+      display: flex;
+    }
+
+    .bookmarks-bar::-webkit-scrollbar {
+      height: 0;
+    }
+
+    .bookmarks-bar a {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.15s;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .bookmarks-bar a:hover,
+    .bookmarks-bar .bm-folder:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bookmarks-bar a img {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+    }
+
+    /* Bookmark folder items */
+    .bookmarks-bar .bm-folder {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+      user-select: none;
+    }
+
+    .bm-folder-icon {
+      font-size: 12px;
+    }
+
+    /* Overflow chevron button */
+    .bm-overflow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+      user-select: none;
+    }
+
+    .bm-overflow:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bm-overflow .bm-dropdown {
+      right: 0;
+      left: auto;
+    }
+
+    /* Folder dropdown */
+    .bm-dropdown {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      min-width: 220px;
+      max-width: 350px;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 2000;
+      padding: 4px 0;
+    }
+
+    .bm-dropdown.open {
+      display: block;
+    }
+
+    .bm-dropdown a {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      text-decoration: none;
+      cursor: pointer;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bm-dropdown .bm-subfolder {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      font-size: 12px;
+      color: var(--text-dim);
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .bm-dropdown a:hover,
+    .bm-dropdown .bm-subfolder:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .bm-dropdown a img {
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .bm-dropdown .bm-subfolder {
+      position: relative;
+    }
+
+    .bm-dropdown .bm-subfolder::after {
+      content: '▸';
+      margin-left: auto;
+      font-size: 10px;
+      opacity: 0.5;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown {
+      left: 100%;
+      top: -4px;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-left {
+      left: auto;
+      right: 100%;
+    }
+
+    .bm-dropdown .bm-subfolder .bm-dropdown.flip-top {
+      top: auto;
+      bottom: 0;
+    }
+
+    /* ═══ Find in page bar ═══ */
+    .find-bar {
+      display: none;
+      position: absolute;
+      top: 0;
+      right: 20px;
+      z-index: 150;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-top: none;
+      border-radius: 0 0 10px 10px;
+      padding: 8px 12px;
+      gap: 6px;
+      align-items: center;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+
+    .find-bar.visible {
+      display: flex;
+    }
+
+    .find-bar input {
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      padding: 5px 10px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+      width: 220px;
+    }
+
+    .find-bar input:focus {
+      border-color: var(--accent);
+    }
+
+    .find-bar .find-count {
+      font-size: 11px;
+      color: var(--text-dim);
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .find-bar button {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 14px;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .find-bar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* ═══ Main layout (browser + panel) ═══ */
+    .main-layout {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ═══ Browser content ═══ */
+    .browser-content {
+      flex: 1;
+      position: relative;
+      min-width: 200px;
+    }
+
+    .browser-content webview {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: none;
+    }
+
+    .browser-content webview.active {
+      display: flex;
+    }
+
+    /* ═══ Draw overlay canvas ═══ */
+    .draw-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      pointer-events: none;
+      /* Allow page interaction */
+      cursor: default;
+      display: none;
+    }
+
+    .draw-overlay.active {
+      display: block;
+      /* Visible when draw mode on */
+      pointer-events: none;
+      /* STILL allow page interaction */
+    }
+
+    .draw-overlay.drawing {
+      pointer-events: auto;
+      /* ONLY block during actual drawing */
+      cursor: crosshair;
+    }
+
+    /* ═══ Draw toolbar ═══ */
+    .draw-toolbar {
+      display: none;
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 101;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 6px 10px;
+      gap: 6px;
+      align-items: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    .draw-toolbar.visible {
+      display: flex;
+    }
+
+    .draw-toolbar button {
+      background: none;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.15s;
+    }
+
+    .draw-toolbar button:hover {
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .draw-toolbar button.active {
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .draw-toolbar .color-btn {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .draw-toolbar .color-btn.active {
+      border-color: #fff;
+    }
+
+    .draw-toolbar .separator {
+      width: 1px;
+      height: 20px;
+      background: rgba(255, 255, 255, 0.15);
+      margin: 0 4px;
+    }
+
+    /* ═══ Copilot Panel ═══ */
+    .copilot-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 360px;
+      background: var(--surface);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transform: translateX(100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+      will-change: transform;
+    }
+
+    .copilot-panel.open {
+      transform: translateX(0);
+    }
+
+    /* Toggle button on the panel edge */
+    .copilot-panel-toggle {
+      position: absolute;
+      top: 50%;
+      right: 0;
+      transform: translateY(-50%);
+      width: 20px;
+      height: 48px;
+      background: var(--surface);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-right: none;
+      border-radius: 6px 0 0 6px;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      z-index: 101;
+      transition: background 0.15s, color 0.15s, right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .copilot-panel-toggle:hover {
+      background: var(--tab-bg);
+      color: var(--text);
+    }
+
+    .panel-resize-handle {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      cursor: col-resize;
+      z-index: 201;
+      background: transparent;
+      display: none;
+      transition: background 0.15s;
+    }
+
+    .panel-resize-handle:hover,
+    .panel-resize-handle.dragging {
+      background: rgba(233, 69, 96, 0.4);
+    }
+
+    .copilot-panel.open~.panel-resize-handle,
+    .panel-resize-handle.visible {
+      display: block;
+    }
+
+    .copilot-badge.panel-open {
+      background: rgba(233, 69, 96, 0.4);
+      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.3);
+    }
+
+    .panel-header {
+      padding: 12px 14px;
+      background: var(--tab-bg);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .panel-header h2 {
+      font-size: 14px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .panel-header .panel-tab {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .panel-header .panel-tab:hover {
+      color: var(--text);
+    }
+
+    .panel-header .panel-tab.active {
+      color: var(--accent);
+      background: rgba(233, 69, 96, 0.15);
+    }
+
+    .panel-body {
+      flex: 1;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* Activity log */
+    .activity-item {
+      padding: 6px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+
+    .activity-item .a-icon {
+      flex-shrink: 0;
+    }
+
+    .activity-item .a-source {
+      flex-shrink: 0;
+      font-size: 10px;
+    }
+
+    .activity-item .a-source.robin {
+      color: var(--success);
+    }
+
+    .activity-item .a-source.copilot {
+      color: var(--accent);
+    }
+
+    .activity-item .a-text {
+      flex: 1;
+      word-break: break-word;
+    }
+
+    .activity-item .a-time {
+      flex-shrink: 0;
+      opacity: 0.5;
+      font-size: 10px;
+    }
+
+    /* Tab source indicator */
+    .tab .tab-source {
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-right: 2px;
+    }
+
+    /* Chat */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-bottom: 8px;
+      min-width: 0;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+
+    .chat-msg {
+      padding: 8px 10px;
+      border-radius: 10px;
+      font-size: 12px;
+      line-height: 1.4;
+      max-width: 85%;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      min-width: 0;
+    }
+
+    .chat-msg.robin {
+      background: rgba(78, 204, 163, 0.2);
+      border: 1px solid rgba(78, 204, 163, 0.3);
+      align-self: flex-end;
+      color: var(--text);
+    }
+
+    .chat-msg.copilot {
+      background: rgba(233, 69, 96, 0.15);
+      border: 1px solid rgba(233, 69, 96, 0.2);
+      align-self: flex-start;
+      color: var(--text);
+      overflow-wrap: break-word;
+    }
+
+    .chat-msg .msg-from {
+      font-size: 10px;
+      opacity: 0.5;
+      margin-bottom: 2px;
+    }
+
+    .chat-msg .msg-time {
+      font-size: 9px;
+      opacity: 0.35;
+      margin-top: 3px;
+      text-align: right;
+    }
+
+    .chat-input-wrap {
+      display: flex;
+      gap: 6px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      flex-shrink: 0;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: var(--input-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 12px;
+      outline: none;
+      resize: none;
+      min-height: 36px;
+      max-height: 80px;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent);
+    }
+
+    .chat-send-btn {
+      background: var(--accent);
+      border: none;
+      color: #fff;
+      border-radius: 8px;
+      padding: 0 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.15s;
+    }
+
+    .chat-send-btn:hover {
+      opacity: 0.85;
+    }
+
+    .chat-image-preview {
+      position: relative;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .chat-image-preview img {
+      max-width: 200px;
+      max-height: 150px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .chat-image-preview .remove-preview {
+      position: absolute;
+      top: 2px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      border: none;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      font-size: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chat-image-preview .remove-preview:hover {
+      background: rgba(255, 0, 0, 0.6);
+    }
+
+    .chat-msg img.chat-msg-image {
+      max-width: 250px;
+      max-height: 200px;
+      border-radius: 6px;
+      margin-top: 4px;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      display: block;
+    }
+
+    .chat-msg img.chat-msg-image:hover {
+      border-color: var(--accent);
+    }
+
+    /* Backend selector (Phase 3) */
+    .chat-backend-selector {
+      display: flex;
+      gap: 4px;
+      padding: 4px 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      flex-shrink: 0;
+    }
+
+    .backend-option {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 10px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .backend-option:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .backend-option.active {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.15);
+      color: var(--text);
+    }
+
+    .backend-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      flex-shrink: 0;
+    }
+
+    .backend-dot.connected {
+      background: var(--success);
+    }
+
+    /* Noodrem button — emergency stop */
+    .noodrem-btn {
+      margin-left: auto;
+      padding: 2px 8px;
+      background: transparent;
+      border: 1px solid rgba(233, 69, 96, 0.3);
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.15s;
+      opacity: 0.6;
+    }
+
+    .noodrem-btn:hover {
+      background: rgba(233, 69, 96, 0.2);
+      opacity: 1;
+    }
+
+    .noodrem-btn.active {
+      background: rgba(233, 69, 96, 0.3);
+      opacity: 1;
+      animation: noodrem-pulse 1s infinite;
+    }
+
+    @keyframes noodrem-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(233, 69, 96, 0.4);
+      }
+
+      50% {
+        box-shadow: 0 0 8px 2px rgba(233, 69, 96, 0.4);
+      }
+    }
+
+    /* Approval request cards */
+    .approval-container {
+      flex-shrink: 0;
+    }
+
+    .approval-card {
+      margin: 6px 8px;
+      padding: 10px 12px;
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-radius: 8px;
+      font-size: 12px;
+    }
+
+    .approval-card .approval-title {
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+
+    .approval-card .approval-desc {
+      color: var(--text-dim);
+      margin-bottom: 4px;
+      line-height: 1.4;
+    }
+
+    .approval-card .approval-site {
+      color: var(--text-dim);
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+
+    .approval-card .approval-risk {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      margin-bottom: 8px;
+    }
+
+    .approval-card .approval-risk.risk-medium {
+      background: rgba(251, 191, 36, 0.2);
+      color: #fbbf24;
+    }
+
+    .approval-card .approval-risk.risk-high {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .approval-card .approval-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .approval-card .approval-actions button {
+      flex: 1;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .approval-card .btn-approve {
+      background: rgba(16, 185, 129, 0.2);
+      color: #10b981;
+    }
+
+    .approval-card .btn-approve:hover {
+      background: rgba(16, 185, 129, 0.35);
+    }
+
+    .approval-card .btn-reject {
+      background: rgba(239, 68, 68, 0.2);
+      color: #ef4444;
+    }
+
+    .approval-card .btn-reject:hover {
+      background: rgba(239, 68, 68, 0.35);
+    }
+
+    /* Tab source indicator — AI controlled tabs */
+    .tab-header .tab-source-indicator {
+      font-size: 10px;
+      margin-right: 3px;
+      opacity: 0.8;
+    }
+
+    .tab-header.ai-controlled {
+      border-bottom: 2px solid #7c3aed;
+    }
+
+    /* Source styling — visual distinction per origin */
+    .chat-msg.source-openclaw {
+      border-left: 3px solid #ff6b35;
+    }
+
+    .chat-msg.source-claude {
+      border-left: 3px solid #7c3aed;
+    }
+
+    .chat-msg.source-robin {
+      border-left: 3px solid #10b981;
+    }
+
+    .chat-msg.claude {
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      align-self: flex-start;
+      color: var(--text);
+    }
+
+    /* Voice indicator — large, prominent */
+    .voice-indicator {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: rgba(233, 69, 96, 0.25);
+      border: 2px solid var(--accent);
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-weight: 600;
+    }
+
+    .voice-indicator.active {
+      display: flex;
+    }
+
+    .voice-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: voicePulse 0.8s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes voicePulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.4);
+        opacity: 0.5;
+      }
+    }
+
+    .voice-label {
+      white-space: nowrap;
+    }
+
+    .voice-transcript-live {
+      flex: 1;
+      font-style: italic;
+      opacity: 0.8;
+      font-weight: 400;
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    .typing-indicator.active {
+      display: flex;
+    }
+
+    .typing-dots span {
+      display: inline-block;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin: 0 1px;
+      animation: typingBounce 1.2s infinite;
+    }
+
+    .typing-dots span:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .typing-dots span:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes typingBounce {
+
+      0%,
+      80%,
+      100% {
+        transform: translateY(0);
+      }
+
+      40% {
+        transform: translateY(-4px);
+      }
+    }
+
+    /* Voice Input Indicator */
+    .voice-indicator-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 30px 40px;
+      border-radius: 16px;
+      display: none;
+      align-items: center;
+      gap: 20px;
+      z-index: 10000;
+      pointer-events: none;
+    }
+
+    .voice-indicator-overlay.active {
+      display: flex;
+    }
+
+    .voice-pulse {
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: voicePulse 1.5s infinite;
+    }
+
+    @keyframes voicePulse {
+
+      0%,
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+
+      50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+      }
+    }
+
+    .voice-text {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .voice-status {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .voice-live-text {
+      font-size: 14px;
+      color: var(--text-dim);
+      min-width: 200px;
+    }
+
+    /* Onboarding Overlay */
+    .onboarding-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(20px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+    }
+
+    .onboarding-overlay.visible {
+      display: flex;
+    }
+
+    .onboarding-content {
+      background: var(--surface);
+      border-radius: 20px;
+      padding: 50px 60px;
+      max-width: 600px;
+      text-align: center;
+    }
+
+    .onboarding-step h2 {
+      font-size: 28px;
+      margin-bottom: 15px;
+      color: var(--text);
+    }
+
+    .onboarding-step p {
+      font-size: 16px;
+      color: var(--text-dim);
+      margin-bottom: 30px;
+      line-height: 1.6;
+    }
+
+    .onboarding-feature {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+      margin: 15px 0;
+      font-size: 15px;
+      color: var(--text);
+    }
+
+    .onboarding-icon {
+      background: var(--accent);
+      color: white;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .onboarding-nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 40px;
+      gap: 15px;
+    }
+
+    .onboarding-nav button {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: opacity 0.2s;
+    }
+
+    .onboarding-nav button:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+
+    .onboarding-nav button:hover:not(:disabled) {
+      opacity: 0.8;
+    }
+
+    .onboarding-nav #onboarding-skip {
+      background: transparent;
+      color: var(--text-dim);
+    }
+
+    .onboarding-dots {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .onboarding-dots .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      opacity: 0.3;
+    }
+
+    .onboarding-dots .dot.active {
+      background: var(--accent);
+      opacity: 1;
+    }
+
+    /* Screenshots section — grid layout */
+    .screenshot-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .screenshot-preview .ss-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .screenshot-preview img {
+      width: 100%;
+      aspect-ratio: 16/10;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .screenshot-preview img:hover {
+      border-color: var(--accent);
+    }
+
+    .screenshot-preview .ss-label {
+      font-size: 9px;
+      color: var(--text-dim);
+      text-align: center;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* ═══ Copilot overlay ═══ */
+    .copilot-overlay {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-radius: 12px;
+      padding: 16px 20px;
+      max-width: 360px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      animation: slideIn 0.3s ease;
+    }
+
+    .copilot-overlay.visible {
+      display: block;
+    }
+
+    .copilot-overlay h3 {
+      color: var(--accent);
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .copilot-overlay p {
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .copilot-overlay .dismiss {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════
+       LIQUID GLASS LITE (LGL) — CSS-First Glass Effects (T1)
+       ══════════════════════════════════════════════════════════ */
+
+    /* Core glass effect */
+    /* ═══ Liquid Glass Lite Effects ═══ */
+
+    /* Glass base — only used on elements that OVERLAP content (copilot panel, overlays) */
+    .lgl-glass {
+      backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
+      -webkit-backdrop-filter: blur(var(--lgl-element-blur, var(--lgl-blur-radius))) saturate(var(--lgl-saturation));
+      transition: background var(--lgl-transition),
+        box-shadow var(--lgl-transition);
+    }
+
+    /* Tab bar — gradient background with subtle depth (no backdrop-filter needed) */
+    .lgl-glass-navbar {
+      background: linear-gradient(180deg, rgba(15, 18, 35, 0.98) 0%, rgba(20, 25, 48, 0.95) 100%) !important;
+      box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06),
+        0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .lgl-glass-navbar .tab.active {
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15),
+        0 0 12px rgba(233, 69, 96, 0.15);
+    }
+
+    /* Toolbar — sleek gradient with specular highlight */
+    .lgl-glass-toolbar {
+      background: linear-gradient(180deg, rgba(18, 22, 42, 0.97) 0%, rgba(22, 33, 62, 0.98) 100%) !important;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    /* URL bar — glass-on-glass look */
+    .lgl-glass-toolbar .url-bar {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2),
+        0 1px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .lgl-glass-toolbar .url-bar:focus {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--accent);
+      box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.15),
+        0 0 8px rgba(233, 69, 96, 0.2);
+    }
+
+    /* Copilot panel — TRUE glass effect (overlaps webview, backdrop-filter works!) */
+    .lgl-glass-sidebar {
+      background: rgba(16, 20, 38, 0.78) !important;
+      backdrop-filter: blur(20px) saturate(1.3);
+      -webkit-backdrop-filter: blur(20px) saturate(1.3);
+      box-shadow: -4px 0 24px rgba(0, 0, 0, 0.4),
+        inset 1px 0 0 rgba(255, 255, 255, 0.06);
+    }
+
+    /* Floating glass (draw toolbar) — overlaps webview, glass works */
+    .lgl-glass-floating {
+      background: rgba(20, 24, 44, 0.82) !important;
+      backdrop-filter: blur(16px) saturate(1.3);
+      -webkit-backdrop-filter: blur(16px) saturate(1.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* Overlay glass (modals) */
+    .lgl-glass-overlay {
+      background: rgba(0, 0, 0, 0.8) !important;
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+    }
+
+    /* Light theme overrides */
+    [data-theme="light"] .lgl-glass-navbar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-navbar {
+        background: linear-gradient(180deg, rgba(240, 243, 250, 0.98) 0%, rgba(235, 238, 248, 0.96) 100%) !important;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.06), 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+    }
+
+    [data-theme="light"] .lgl-glass-toolbar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-toolbar {
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.98) 0%, rgba(241, 245, 249, 0.97) 100%) !important;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 4px rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    [data-theme="light"] .lgl-glass-sidebar,
+    @media (prefers-color-scheme: light) {
+      [data-theme="system"] .lgl-glass-sidebar {
+        background: rgba(248, 250, 252, 0.82) !important;
+        box-shadow: -2px 0 12px rgba(0, 0, 0, 0.08), inset 1px 0 0 rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    /* Materialization animation */
+    @media (prefers-reduced-motion: no-preference) {
+      .lgl-materialize {
+        animation: lgl-materialize 400ms cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      @keyframes lgl-materialize {
+        from {
+          opacity: 0;
+          transform: scale(0.98);
+        }
+
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    }
+
+    /* Gel press animation */
+    .lgl-pressable {
+      transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1.2);
+    }
+
+    .lgl-pressable:active {
+      transform: scale(0.97);
+      transition: transform 120ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .lgl-pressable {
+        transition: none;
+      }
+
+      .lgl-pressable:active {
+        transform: none;
+      }
+    }
+
+    /* Inner glow on hover */
+    .lgl-glow {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lgl-glow::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      background: transparent;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 200ms ease;
+    }
+
+    .lgl-glow:hover::after {
+      opacity: 1;
+      background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+          rgba(255, 255, 255, 0.12) 0%,
+          rgba(255, 255, 255, 0.04) 30%,
+          transparent 60%);
+    }
+
+    /* Disable glass on reduced motion preference */
+    @media (prefers-reduced-motion: reduce) {
+      .lgl-glass {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+    }
+
+    /* END LGL STYLES */
