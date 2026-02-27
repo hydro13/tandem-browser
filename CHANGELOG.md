@@ -4,6 +4,14 @@ All notable changes to Tandem Browser are documented here.
 
 ---
 
+## [0.14.0] — 2026-02-27
+
+### Code Quality — Item 19
+
+- **Split devtools/manager.ts**: split 867-line `DevToolsManager` into 3 modules — `network-capture.ts` (165 lines: network request/response ring buffer + filtering), `page-inspector.ts` (250 lines: DOM/storage/performance/screenshot queries). `manager.ts` remains as CDP lifecycle coordinator (525 lines) with composition + delegation. Zero changes to 10 consumer files
+
+---
+
 ## [0.13.0] — 2026-02-27
 
 ### Code Quality — Item 18

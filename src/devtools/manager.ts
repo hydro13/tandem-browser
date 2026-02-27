@@ -1,28 +1,26 @@
-import type { WebContents} from 'electron';
+import type { WebContents } from 'electron';
 import { webContents } from 'electron';
 import type { TabManager } from '../tabs/manager';
 import { ConsoleCapture } from './console-capture';
+import { NetworkCapture } from './network-capture';
+import { PageInspector } from './page-inspector';
 import type { CopilotStream } from '../activity/copilot-stream';
 import type { ActivityTracker } from '../activity/tracker';
 import type {
-  ConsoleEntry, CDPNetworkEntry, CDPNetworkRequest, DOMNodeInfo, StorageData, PerformanceMetrics,
-  CDPSubscriber, CDPRequestWillBeSentParams, CDPResponseReceivedParams, CDPLoadingFinishedParams, CDPLoadingFailedParams,
-  CDPBindingCalledParams, CDPCookie} from './types';
+  ConsoleEntry, CDPNetworkEntry, DOMNodeInfo, StorageData, PerformanceMetrics,
+  CDPSubscriber, CDPBindingCalledParams} from './types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('CDP');
 
 export type { CDPSubscriber };
 
-const MAX_NETWORK_ENTRIES = 300;
-const MAX_RESPONSE_BODY_SIZE = 1_000_000; // 1MB
-
 /**
  * DevToolsManager — Provides CDP (Chrome DevTools Protocol) access to webview tabs.
  *
  * Manages the debugger lifecycle (attach/detach), routes CDP events to
  * sub-captures (console, network), and provides high-level query methods
- * for DOM, storage, and performance.
+ * for DOM, storage, and performance via PageInspector.
  *
  * LIFECYCLE:
  * - Attaches to the active tab's webContents on first use (lazy)
@@ -36,9 +34,13 @@ const MAX_RESPONSE_BODY_SIZE = 1_000_000; // 1MB
  */
 export class DevToolsManager {
   private tabManager: TabManager;
-  private consoleCapture: ConsoleCapture;
   private copilotStream?: CopilotStream;
   private activityTracker?: ActivityTracker;
+
+  // Sub-modules (composition)
+  private consoleCapture: ConsoleCapture;
+  private networkCapture: NetworkCapture;
+  private pageInspector: PageInspector;
 
   // CDP state
   private attachedWcId: number | null = null;
@@ -47,13 +49,11 @@ export class DevToolsManager {
   // CDP subscriber system (Phase 3: security modules subscribe to events)
   private subscribers: CDPSubscriber[] = [];
 
-  // Network capture (inline — simpler than separate class for MVP)
-  private networkEntries: Map<string, CDPNetworkEntry> = new Map();
-  private networkOrder: string[] = []; // insertion order for ring buffer
-
   constructor(tabManager: TabManager) {
     this.tabManager = tabManager;
     this.consoleCapture = new ConsoleCapture();
+    this.networkCapture = new NetworkCapture(() => this.ensureAttached());
+    this.pageInspector = new PageInspector(() => this.ensureAttached());
   }
 
   setCopilotStream(stream: CopilotStream): void {
@@ -315,15 +315,7 @@ export class DevToolsManager {
     }
 
     // Network events
-    if (method === 'Network.requestWillBeSent') {
-      this.onNetworkRequest(params as unknown as CDPRequestWillBeSentParams, tabId);
-    } else if (method === 'Network.responseReceived') {
-      this.onNetworkResponse(params as unknown as CDPResponseReceivedParams);
-    } else if (method === 'Network.loadingFinished') {
-      this.onNetworkLoadingFinished(params as unknown as CDPLoadingFinishedParams);
-    } else if (method === 'Network.loadingFailed') {
-      this.onNetworkFailed(params as unknown as CDPLoadingFailedParams);
-    }
+    this.networkCapture.handleEvent(method, params, tabId);
 
     // Dispatch to subscribers (always — security modules need to see all events)
     for (const sub of this.subscribers) {
@@ -337,7 +329,7 @@ export class DevToolsManager {
     }
   }
 
-  // ═══ Console ═══
+  // === Delegated: Console (→ ConsoleCapture) ===
 
   getConsoleEntries(opts?: { level?: string; sinceId?: number; limit?: number; search?: string }): ConsoleEntry[] {
     return this.consoleCapture.getEntries(opts);
@@ -355,66 +347,8 @@ export class DevToolsManager {
     this.consoleCapture.clear();
   }
 
-  // ═══ Network (CDP-level, with response bodies) ═══
+  // === Delegated: Network (→ NetworkCapture) ===
 
-  private onNetworkRequest(params: CDPRequestWillBeSentParams, tabId?: string): void {
-    const req: CDPNetworkRequest = {
-      id: params.requestId,
-      url: params.request.url,
-      method: params.request.method,
-      headers: params.request.headers || {},
-      postData: params.request.postData,
-      resourceType: params.type || 'Other',
-      timestamp: Date.now(),
-      tabId,
-    };
-
-    this.networkEntries.set(params.requestId, { request: req });
-    this.networkOrder.push(params.requestId);
-
-    // Ring buffer
-    while (this.networkOrder.length > MAX_NETWORK_ENTRIES) {
-      const oldId = this.networkOrder.shift()!;
-      this.networkEntries.delete(oldId);
-    }
-  }
-
-  private onNetworkResponse(params: CDPResponseReceivedParams): void {
-    const entry = this.networkEntries.get(params.requestId);
-    if (!entry) return;
-
-    entry.response = {
-      requestId: params.requestId,
-      url: params.response.url,
-      status: params.response.status,
-      statusText: params.response.statusText || '',
-      headers: params.response.headers || {},
-      mimeType: params.response.mimeType || '',
-      size: params.response.encodedDataLength || 0,
-      timestamp: Date.now(),
-    };
-
-    if (entry.request) {
-      entry.duration = entry.response.timestamp - entry.request.timestamp;
-    }
-  }
-
-  private onNetworkLoadingFinished(params: CDPLoadingFinishedParams): void {
-    const entry = this.networkEntries.get(params.requestId);
-    if (entry?.response) {
-      entry.response.size = params.encodedDataLength || entry.response.size;
-    }
-  }
-
-  private onNetworkFailed(params: CDPLoadingFailedParams): void {
-    const entry = this.networkEntries.get(params.requestId);
-    if (entry) {
-      entry.failed = true;
-      entry.errorText = params.errorText || 'Unknown error';
-    }
-  }
-
-  /** Get network entries, optionally filtered */
   getNetworkEntries(opts?: {
     limit?: number;
     domain?: string;
@@ -424,314 +358,37 @@ export class DevToolsManager {
     failed?: boolean;
     search?: string;
   }): CDPNetworkEntry[] {
-    let entries = Array.from(this.networkEntries.values());
-
-    if (opts?.domain) {
-      const d = opts.domain.toLowerCase();
-      entries = entries.filter(e => {
-        try { return new URL(e.request.url).hostname.includes(d); } catch { return false; }
-      });
-    }
-    if (opts?.type) {
-      const t = opts.type.toLowerCase();
-      entries = entries.filter(e => e.request.resourceType.toLowerCase() === t);
-    }
-    if (opts?.statusMin) {
-      entries = entries.filter(e => e.response && e.response.status >= opts.statusMin!);
-    }
-    if (opts?.statusMax) {
-      entries = entries.filter(e => e.response && e.response.status <= opts.statusMax!);
-    }
-    if (opts?.failed !== undefined) {
-      entries = entries.filter(e => !!e.failed === opts.failed);
-    }
-    if (opts?.search) {
-      const q = opts.search.toLowerCase();
-      entries = entries.filter(e => e.request.url.toLowerCase().includes(q));
-    }
-
-    const limit = opts?.limit ?? 100;
-    return entries.slice(-limit);
+    return this.networkCapture.getEntries(opts);
   }
 
-  /** Get response body for a specific request (fetches from CDP on demand) */
   async getResponseBody(requestId: string): Promise<{ body: string; base64Encoded: boolean } | null> {
-    const wc = await this.ensureAttached();
-    if (!wc) return null;
-
-    try {
-      const result = await wc.debugger.sendCommand('Network.getResponseBody', { requestId });
-      // Truncate large bodies
-      if (result.body && result.body.length > MAX_RESPONSE_BODY_SIZE) {
-        return {
-          body: result.body.substring(0, MAX_RESPONSE_BODY_SIZE),
-          base64Encoded: result.base64Encoded,
-        };
-      }
-      return result;
-    } catch {
-      // Body may not be available (streamed, evicted from buffer)
-      return null;
-    }
+    return this.networkCapture.getResponseBody(requestId);
   }
 
   clearNetwork(): void {
-    this.networkEntries.clear();
-    this.networkOrder = [];
+    this.networkCapture.clear();
   }
 
-  // ═══ DOM ═══
+  // === Delegated: Page Inspection (→ PageInspector) ===
 
-  /** Query DOM by CSS selector, return matching nodes */
   async queryDOM(selector: string, maxResults = 10): Promise<DOMNodeInfo[]> {
-    const wc = await this.ensureAttached();
-    if (!wc) return [];
-
-    try {
-      const doc = await wc.debugger.sendCommand('DOM.getDocument', { depth: 0 });
-      const result = await wc.debugger.sendCommand('DOM.querySelectorAll', {
-        nodeId: doc.root.nodeId,
-        selector,
-      });
-
-      const nodes: DOMNodeInfo[] = [];
-      for (const nodeId of (result.nodeIds || []).slice(0, maxResults)) {
-        const info = await this.getNodeInfo(wc, nodeId);
-        if (info) nodes.push(info);
-      }
-      return nodes;
-    } catch (e) {
-      log.warn('DOM query failed:', e instanceof Error ? e.message : e);
-      return [];
-    }
+    return this.pageInspector.queryDOM(selector, maxResults);
   }
 
-  /** Query DOM by XPath */
   async queryXPath(expression: string, maxResults = 10): Promise<DOMNodeInfo[]> {
-    const wc = await this.ensureAttached();
-    if (!wc) return [];
-
-    try {
-      // Use Runtime.evaluate with document.evaluate
-      const result = await wc.debugger.sendCommand('Runtime.evaluate', {
-        expression: `
-          (() => {
-            const result = document.evaluate(${JSON.stringify(expression)}, document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
-            const nodeIds = [];
-            for (let i = 0; i < Math.min(result.snapshotLength, ${maxResults}); i++) {
-              const node = result.snapshotItem(i);
-              // Return outerHTML snippets since we can't get nodeIds from JS
-              nodeIds.push({
-                nodeName: node.nodeName,
-                text: node.textContent?.substring(0, 200) || '',
-                html: node.outerHTML?.substring(0, 500) || '',
-                attrs: node.attributes ? Array.from(node.attributes).reduce((o, a) => ({...o, [a.name]: a.value}), {}) : {},
-              });
-            }
-            return nodeIds;
-          })()
-        `,
-        returnByValue: true,
-      });
-
-      if (result.result?.value) {
-        return result.result.value.map((n: { nodeName: string; attrs: Record<string, string>; text: string; html: string }) => ({
-          nodeId: -1,
-          backendNodeId: -1,
-          nodeType: 1,
-          nodeName: n.nodeName,
-          localName: n.nodeName.toLowerCase(),
-          attributes: n.attrs || {},
-          childCount: 0,
-          innerText: n.text,
-          outerHTML: n.html,
-        }));
-      }
-      return [];
-    } catch (e) {
-      log.warn('XPath query failed:', e instanceof Error ? e.message : e);
-      return [];
-    }
+    return this.pageInspector.queryXPath(expression, maxResults);
   }
 
-  private async getNodeInfo(wc: WebContents, nodeId: number): Promise<DOMNodeInfo | null> {
-    try {
-      const desc = await wc.debugger.sendCommand('DOM.describeNode', {
-        nodeId,
-        depth: 0,
-      });
-      const node = desc.node;
-
-      // Get outer HTML (truncated)
-      let outerHTML = '';
-      try {
-        const htmlResult = await wc.debugger.sendCommand('DOM.getOuterHTML', { nodeId });
-        outerHTML = htmlResult.outerHTML?.substring(0, 2000) || '';
-      } catch { /* node may have been removed from DOM */ }
-
-      // Get bounding box via CSS
-      let boundingBox: DOMNodeInfo['boundingBox'];
-      try {
-        const box = await wc.debugger.sendCommand('DOM.getBoxModel', { nodeId });
-        if (box.model?.content) {
-          const c = box.model.content;
-          boundingBox = { x: c[0], y: c[1], width: c[2] - c[0], height: c[5] - c[1] };
-        }
-      } catch { /* box model unavailable for hidden/detached nodes */ }
-
-      // Get inner text via Runtime
-      let innerText = '';
-      try {
-        const resolved = await wc.debugger.sendCommand('DOM.resolveNode', { nodeId });
-        if (resolved.object?.objectId) {
-          const textResult = await wc.debugger.sendCommand('Runtime.callFunctionOn', {
-            objectId: resolved.object.objectId,
-            functionDeclaration: 'function() { return this.innerText?.substring(0, 500) || ""; }',
-            returnByValue: true,
-          });
-          innerText = textResult.result?.value || '';
-        }
-      } catch { /* node may not be resolvable */ }
-
-      // Parse attributes into map
-      const attrs: Record<string, string> = {};
-      if (node.attributes) {
-        for (let i = 0; i < node.attributes.length; i += 2) {
-          attrs[node.attributes[i]] = node.attributes[i + 1];
-        }
-      }
-
-      return {
-        nodeId,
-        backendNodeId: node.backendNodeId,
-        nodeType: node.nodeType,
-        nodeName: node.nodeName,
-        localName: node.localName || node.nodeName.toLowerCase(),
-        attributes: attrs,
-        childCount: node.childNodeCount ?? 0,
-        innerText,
-        outerHTML,
-        boundingBox,
-      };
-    } catch (e) {
-      log.warn('getNodeInfo failed for nodeId', nodeId, ':', e instanceof Error ? e.message : e);
-      return null;
-    }
-  }
-
-  // ═══ Storage ═══
-
-  /** Get cookies, localStorage, sessionStorage for current page */
   async getStorage(): Promise<StorageData> {
-    const wc = await this.ensureAttached();
-    const empty: StorageData = { cookies: [], localStorage: {}, sessionStorage: {} };
-    if (!wc) return empty;
-
-    try {
-      // Cookies via CDP
-      const cookieResult = await wc.debugger.sendCommand('Network.getCookies');
-      const cookies = (cookieResult.cookies || []).map((c: CDPCookie) => ({
-        name: c.name,
-        value: c.value,
-        domain: c.domain,
-        path: c.path,
-        httpOnly: c.httpOnly,
-        secure: c.secure,
-        sameSite: c.sameSite || 'None',
-        expires: c.expires,
-      }));
-
-      // localStorage + sessionStorage via Runtime
-      const storageResult = await wc.debugger.sendCommand('Runtime.evaluate', {
-        expression: `
-          (() => {
-            const ls = {};
-            const ss = {};
-            try {
-              for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                ls[key] = localStorage.getItem(key)?.substring(0, 1000) || '';
-              }
-            } catch(e) {}
-            try {
-              for (let i = 0; i < sessionStorage.length; i++) {
-                const key = sessionStorage.key(i);
-                ss[key] = sessionStorage.getItem(key)?.substring(0, 1000) || '';
-              }
-            } catch(e) {}
-            return { localStorage: ls, sessionStorage: ss };
-          })()
-        `,
-        returnByValue: true,
-      });
-
-      return {
-        cookies,
-        localStorage: storageResult.result?.value?.localStorage || {},
-        sessionStorage: storageResult.result?.value?.sessionStorage || {},
-      };
-    } catch (e) {
-      log.warn('Storage fetch failed:', e instanceof Error ? e.message : e);
-      return empty;
-    }
+    return this.pageInspector.getStorage();
   }
-
-  // ═══ Performance ═══
 
   async getPerformanceMetrics(): Promise<PerformanceMetrics | null> {
-    const wc = await this.ensureAttached();
-    if (!wc) return null;
-
-    try {
-      await wc.debugger.sendCommand('Performance.enable');
-      const result = await wc.debugger.sendCommand('Performance.getMetrics');
-      const metrics: Record<string, number> = {};
-      for (const m of result.metrics || []) {
-        metrics[m.name] = m.value;
-      }
-      return { timestamp: Date.now(), metrics };
-    } catch (e) {
-      log.warn('Performance metrics failed:', e instanceof Error ? e.message : e);
-      return null;
-    }
+    return this.pageInspector.getPerformanceMetrics();
   }
 
-  // ═══ Element Screenshot ═══
-
   async screenshotElement(selector: string): Promise<Buffer | null> {
-    const wc = await this.ensureAttached();
-    if (!wc) return null;
-
-    try {
-      const doc = await wc.debugger.sendCommand('DOM.getDocument', { depth: 0 });
-      const result = await wc.debugger.sendCommand('DOM.querySelector', {
-        nodeId: doc.root.nodeId,
-        selector,
-      });
-      if (!result.nodeId) return null;
-
-      const box = await wc.debugger.sendCommand('DOM.getBoxModel', { nodeId: result.nodeId });
-      if (!box.model?.content) return null;
-
-      const c = box.model.content;
-      const clip = {
-        x: c[0],
-        y: c[1],
-        width: c[2] - c[0],
-        height: c[5] - c[1],
-        scale: 1,
-      };
-
-      const screenshot = await wc.debugger.sendCommand('Page.captureScreenshot', {
-        format: 'png',
-        clip,
-      });
-
-      return Buffer.from(screenshot.data, 'base64');
-    } catch (e) {
-      log.warn('Element screenshot failed:', e instanceof Error ? e.message : e);
-      return null;
-    }
+    return this.pageInspector.screenshotElement(selector);
   }
 
   // ═══ Raw CDP ═══
@@ -785,7 +442,7 @@ export class DevToolsManager {
         lastId: this.consoleCapture.lastEntryId,
       },
       network: {
-        entries: this.networkEntries.size,
+        entries: this.networkCapture.entryCount,
       },
     };
   }
@@ -861,7 +518,6 @@ export class DevToolsManager {
   destroy(): void {
     this.detach();
     this.consoleCapture.clear();
-    this.networkEntries.clear();
-    this.networkOrder = [];
+    this.networkCapture.clear();
   }
 }
