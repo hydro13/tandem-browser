@@ -30,7 +30,7 @@
 
 | # | Description | Status | Session | Commit |
 |---|-------------|--------|---------|--------|
-| 11 | **Logger utility** — Create `src/utils/logger.ts` with levels (debug/info/warn/error) + config-driven min level. Replace 207 `console.log` calls across 48 files | DONE | 2026-02-27 | |
+| 11 | **Logger utility** — Create `src/utils/logger.ts` with levels (debug/info/warn/error) + config-driven min level. Replace 207 `console.log` calls across 48 files | DONE | 2026-02-27 | 688d812 |
 | 12 | **ESLint setup** — Add `eslint.config.mjs` with `@typescript-eslint/recommended`, `no-floating-promises`, `no-console: warn`, `no-unused-vars`, `consistent-type-imports`. Add `npm run lint` script | TODO | | |
 | 13 | **Split security-manager routes** — 34 routes → `src/security/routes.ts` (978→414 lines) | DONE | 2026-02-27 | 4179a09 |
 | 14 | **Lazy passwordManager** — `getPasswordManager()` lazy init, DB opens on first access | DONE | 2026-02-27 | 4179a09 |
@@ -55,7 +55,7 @@
 
 - **Items completed:** #11
 - **Version bumped to:** 0.11.3
-- **Commit(s):** TBD
+- **Commit(s):** `688d812`
 - **Notes:** Created `src/utils/logger.ts` (`createLogger` factory, 5 levels, `TANDEM_LOG_LEVEL` env var). Replaced all 355 console.log/warn/error calls across 51 source files. 2 intentional exceptions: bootstrap process handlers in main.ts (before import block) and injected browser JS in identity-polyfill.ts. 9 new logger tests (202 total). 0 new TS errors.
 
 ### 2026-02-27 — Session 1 (continued): Items 13-16 (medium items)
