@@ -248,7 +248,7 @@ export class ContextMenuBuilder {
               // For a simple editable context menu, we can just insert the password text where the cursor is,
               // or send an IPC message to fill the whole form if we detect username/password fields.
               // For now, we paste the password.
-              if (id.payload && id.payload.password) {
+              if (id.payload && typeof id.payload.password === 'string') {
                 clipboard.writeText(id.payload.password);
                 wc.paste();
               }
