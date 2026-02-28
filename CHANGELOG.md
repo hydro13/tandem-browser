@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.21.1] - 2026-02-28
+
+- fix: panel resize — drag cover blocks webview, handle inside bounds, max 900px
+
 ## [v0.21.0] - 2026-02-28
 
 - feat: resizable sidebar panel with per-module width persistence
