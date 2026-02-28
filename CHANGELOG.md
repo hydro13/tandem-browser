@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.21.3] - 2026-02-28
+
+- fix: clear inline panel width on close so panel actually collapses
+
 ## [v0.21.2] - 2026-02-28
 
 - fix: panel resize max width = window width — no arbitrary limit
