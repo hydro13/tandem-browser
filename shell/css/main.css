@@ -889,7 +889,7 @@
 
     /* Narrow state (standaard) */
     .sidebar[data-state="narrow"] .sidebar-strip {
-      width: 54px;
+      width: 48px;
     }
     .sidebar[data-state="narrow"] .sidebar-item-label { display: none; }
 
@@ -913,7 +913,7 @@
       display: flex;
       flex-direction: column;
       padding: 10px 0;
-      gap: 4px;
+      gap: 8px;
     }
 
     /* Sidebar item knop */
@@ -932,8 +932,8 @@
       text-align: left;
       transition: background 0.15s, color 0.15s;
       position: relative;
-      width: 42px;
-      height: 42px;
+      width: 38px;
+      height: 38px;
     }
     .sidebar-item:hover {
       background: rgba(255,255,255,0.1);
@@ -958,9 +958,9 @@
       padding: 0;
     }
     .sidebar-item.messenger-item .messenger-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -970,8 +970,8 @@
       transform: scale(1.1);
     }
     .sidebar-item.messenger-item svg {
-      width: 20px;
-      height: 20px;
+      width: 16px;
+      height: 16px;
       flex-shrink: 0;
     }
     .sidebar-item.messenger-item.active {
