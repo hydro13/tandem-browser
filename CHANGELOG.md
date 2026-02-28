@@ -2,6 +2,15 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.15.1] - 2026-02-28
+
+- fix: About window now shows correct version
+
+- Removed broken preload-about approach
+- Version now hardcoded in shell/about.html (v0.15.0)
+- Post-commit hook updated to auto-update about.html on version bump
+- Cleaner and more reliable than runtime injection
+
 ## [v0.15.0] - 2026-02-28
 
 - feat: add auto-versioning git hook + setup script
