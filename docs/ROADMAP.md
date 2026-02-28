@@ -44,7 +44,7 @@ Claude Code werkt dit bij na elke fase. Kees kopieert de commit naar ROADMAP.md.
 
 | Feature | Effort | Design doc | Impl docs | Fase status |
 |---------|--------|-----------|-----------|-------------|
-| **Sidebar Infrastructuur** | Medium (3-5d) | ⏳ schrijven | ⏳ schrijven | ⏳ niet gestart — **EERST** |
+| **Sidebar Infrastructuur** | Medium (3-5d) | ✅ plans/sidebar-infra-design.md | ⏳ schrijven | ⏳ wacht op Robin go |
 | Workspaces UI | Medium (3-5d) | ✅ plans/workspaces-ui-design.md | ✅ 2 fases | ⏳ wacht op sidebar infra |
 | Sidebar Chat (Messengers) | Hard (1-2 wk) | ✅ plans/sidebar-chat-design.md | ✅ 3 fases | ⏳ wacht op sidebar infra |
 | Personal News | Medium (3-5d) | ⏳ schrijven | ⏳ schrijven | ⏳ wacht op sidebar infra |
