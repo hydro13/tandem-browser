@@ -409,6 +409,7 @@
       const r = await fetch('http://localhost:8765/sidebar/config', { headers: { Authorization: `Bearer ${TOKEN}` } });
       const data = await r.json();
       config = data.config;
+      config.activeItemId = null; // always start with panel closed
       applyPinState(config.panelPinned || false);
       render();
     }
