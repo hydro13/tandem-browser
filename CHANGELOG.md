@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.18.0] - 2026-02-28
+
+- feat: sidebar setup panel met per-item toggles
+
 ## [v0.17.2] - 2026-02-28
 
 - fix: sidebar icon sizing — smaller icons, more breathing room
