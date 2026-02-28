@@ -68,17 +68,34 @@ Met open sidebar panel (bijv. Bookmarks):
 
 ## Sidebar Items (definitieve lijst, besloten 2026-02-28)
 
-| # | Item | Type | SVG icon (Heroicons/Lucide) | Panel inhoud |
-|---|------|------|---------------------------|-------------|
-| 1 | Workspaces | Panel | `squares-2x2` (grid) | Lijst van workspaces, switch/create/delete |
-| 2 | Messengers | Webview | `chat-bubble-left-right` | WhatsApp/Telegram/Discord/Slack/Instagram/X (sub-iconen) |
-| 3 | Personal News | Panel | `newspaper` | RSS/Atom feeds, geconfigureerde bronnen |
-| 4 | Pinboards | Panel | `squares-plus` (of `view-boards`) | Pinboard manager (borden + items) |
-| 5 | Bookmarks | Panel | `bookmark` | Bookmark tree, quick access |
-| 6 | History | Panel | `clock` | Zoekbare browse history |
-| 7 | Downloads | Panel | `arrow-down-tray` | Download manager lijst |
+> **Besluit 2026-02-28 (na Opera screenshot review):**
+> Elke messenger krijgt een **eigen slot** in de icon strip — niet één "Messengers" knop met sub-panel.
+> **Twee icon stijlen** (exact zoals Opera): gekleurde brand SVG voor messengers, outline grijs voor utility.
+> **Active indicator**: gekleurde afgeronde vierkant achter het icoon (niet border-left).
 
-> Icons: Heroicons outline set (MIT licentie, consistent met Tandem stijl). Inline SVG in HTML.
+### Utility items (outline Heroicons, lichtgrijs)
+
+| # | Item | Type | SVG icon | Panel inhoud |
+|---|------|------|----------|-------------|
+| 1 | Workspaces | Panel | `squares-2x2` (grid) | Workspaces switch/create/delete |
+| 2 | Personal News | Panel | `newspaper` | RSS/Atom feeds |
+| 3 | Pinboards | Panel | `squares-plus` | Pinboard manager |
+| 4 | Bookmarks | Panel | `bookmark` | Bookmark tree |
+| 5 | History | Panel | `clock` | Browse history |
+| 6 | Downloads | Panel | `arrow-down-tray` | Download manager |
+
+### Messenger items (gekleurde brand SVG, eigen webview per app)
+
+| # | App | Icon kleur | Webview partition |
+|---|-----|-----------|------------------|
+| 7 | WhatsApp | #25D366 (groen) | `persist:whatsapp` |
+| 8 | Telegram | #2AABEE (blauw) | `persist:telegram` |
+| 9 | Discord | #5865F2 (paars) | `persist:discord` |
+| 10 | Slack | #4A154B (paars/rood) | `persist:slack` |
+| 11 | Instagram | gradient #E1306C→#F77737 | `persist:instagram` |
+| 12 | X (Twitter) | #000000 (zwart) | `persist:x` |
+
+> Icon stijl: Heroicons outline (MIT) voor utility. Brand SVG logos voor messengers (simpele herkenbare shapes, eigen kleuren).
 
 **Niet in sidebar:** Copilot AI Panel (blijft rechts, eigen toggle knop)
 
@@ -148,12 +165,21 @@ interface SidebarConfig {
 ### Icon strip — 3 standen
 
 **Hidden (0px):** volledig verborgen, toggle via ⌘⇧B
-**Narrow (48px, standaard):** alleen SVG icoon, tooltip on hover, toggle knop onderaan
-**Wide (~180px):** SVG icoon + label naast elkaar, uitklappen via pijl ▶ onderaan of hover
+**Narrow (48px, standaard):** alleen icoon, geen labels, tooltip on hover — exact zoals Opera
+**Wide (~180px):** icoon + label naast elkaar
 
-- Active item: gemarkeerd met accent kleur links border + lichte achtergrond
-- Klikken = toggle panel open/dicht
-- Onderaan: ▶/◀ knop voor narrow↔wide, ⚙️ voor customization (drag-to-reorder, enable/disable)
+**Active indicator (zoals Opera):**
+- Gekleurde afgeronde vierkant (rounded square) als achtergrond achter het actieve icoon
+- Kleur: accent kleur van Tandem (#4ecca3) of icon-eigen kleur voor messengers
+- NIET border-left — dat is te subtiel
+
+**Icon stijlen (zoals Opera):**
+- **Utility items:** outline Heroicons, lichtgrijs (#aaa) — wordt wit bij hover
+- **Messenger items:** gekleurde brand icons op ronde/vierkante background (zoals Opera WhatsApp groen, Telegram blauw)
+
+- Klikken utility item = toggle panel open/dicht (rechts van strip)
+- Klikken messenger item = toggle webview panel open (rechts van strip)
+- Onderaan: ▶/◀ knop voor narrow↔wide, ⚙️ voor customization
 
 ### Panel container (uitschuifbaar, 240px)
 

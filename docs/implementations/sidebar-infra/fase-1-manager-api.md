@@ -60,17 +60,24 @@ import * as path from 'path';
 import { tandemDir, ensureDir } from '../utils/paths';
 import type { SidebarConfig, SidebarItem, SidebarState } from './types';
 
+// Elke messenger krijgt eigen slot (zoals Opera) — geen gegroepeerde "Messengers" knop
 const DEFAULT_CONFIG: SidebarConfig = {
   state: 'narrow',
   activeItemId: null,
   items: [
-    { id: 'workspaces',  label: 'Workspaces',     icon: '', type: 'panel',   enabled: true, order: 0 },
-    { id: 'messengers',  label: 'Messengers',      icon: '', type: 'webview', enabled: true, order: 1 },
-    { id: 'news',        label: 'Personal News',   icon: '', type: 'panel',   enabled: true, order: 2 },
-    { id: 'pinboards',   label: 'Pinboards',       icon: '', type: 'panel',   enabled: true, order: 3 },
-    { id: 'bookmarks',   label: 'Bookmarks',       icon: '', type: 'panel',   enabled: true, order: 4 },
-    { id: 'history',     label: 'History',         icon: '', type: 'panel',   enabled: true, order: 5 },
-    { id: 'downloads',   label: 'Downloads',       icon: '', type: 'panel',   enabled: true, order: 6 },
+    { id: 'workspaces', label: 'Workspaces',   icon: '', type: 'panel',   enabled: true, order: 0 },
+    { id: 'news',       label: 'Personal News', icon: '', type: 'panel',   enabled: true, order: 1 },
+    { id: 'pinboards',  label: 'Pinboards',    icon: '', type: 'panel',   enabled: true, order: 2 },
+    { id: 'bookmarks',  label: 'Bookmarks',    icon: '', type: 'panel',   enabled: true, order: 3 },
+    { id: 'history',    label: 'History',      icon: '', type: 'panel',   enabled: true, order: 4 },
+    { id: 'downloads',  label: 'Downloads',    icon: '', type: 'panel',   enabled: true, order: 5 },
+    // Messenger items — elk apart, met eigen webview partition
+    { id: 'whatsapp',   label: 'WhatsApp',     icon: '', type: 'webview', enabled: true, order: 6 },
+    { id: 'telegram',   label: 'Telegram',     icon: '', type: 'webview', enabled: true, order: 7 },
+    { id: 'discord',    label: 'Discord',      icon: '', type: 'webview', enabled: true, order: 8 },
+    { id: 'slack',      label: 'Slack',        icon: '', type: 'webview', enabled: true, order: 9 },
+    { id: 'instagram',  label: 'Instagram',    icon: '', type: 'webview', enabled: true, order: 10 },
+    { id: 'x',          label: 'X (Twitter)',  icon: '', type: 'webview', enabled: true, order: 11 },
   ]
 };
 
