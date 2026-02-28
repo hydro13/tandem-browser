@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.17.1] - 2026-02-28
+
+- fix: sidebar polish + lamp icon + config migration
+
 ## [v0.17.0] - 2026-02-28
 
 - feat: sidebar 3-sectie layout + Google Calendar + Gmail
