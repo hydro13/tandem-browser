@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.20.0] - 2026-02-28
+
+- feat: Telegram (and all messenger) webview panels with persistent sessions
+
 ## [v0.19.1] - 2026-02-28
 
 - fix: group pin and close buttons together in panel header
