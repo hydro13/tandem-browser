@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.33.0] - 2026-03-01
+
+- feat: add 'Add to Pinboard' to tab context menu with board submenu + pin-flash animation
+
 ## [v0.32.1] - 2026-03-01
 
 - fix: pinboards use showPrompt() instead of prompt(), add auth headers to all fetches
