@@ -228,6 +228,13 @@ contextBridge.exposeInMainWorld('tandem', {
     return () => ipcRenderer.removeListener('reload-sidebar-webview', handler);
   },
 
+  // Workspace switching
+  onWorkspaceSwitched: (callback: (workspace: { id: string; name: string; emoji: string; color: string; tabIds: number[] }) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, workspace: { id: string; name: string; emoji: string; color: string; tabIds: number[] }) => callback(workspace);
+    ipcRenderer.on('workspace-switched', handler);
+    return () => ipcRenderer.removeListener('workspace-switched', handler);
+  },
+
   // Chrome-style compact title bar: platform detection and window controls
   getPlatform: () => process.platform,
   showAppMenu: () => ipcRenderer.send('show-app-menu'),

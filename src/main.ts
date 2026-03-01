@@ -56,6 +56,7 @@ import { ScriptInjector } from './scripts/injector';
 import { LocatorFinder } from './locators/finder';
 import { DeviceEmulator } from './device/emulator';
 import { SidebarManager } from './sidebar/manager';
+import { WorkspaceManager } from './workspaces/manager';
 import { ContentExtractor } from './content/extractor';
 import { WorkflowEngine } from './workflow/engine';
 import { LoginManager } from './auth/login-manager';
@@ -110,6 +111,7 @@ let scriptInjector: ScriptInjector | null = null;
 let locatorFinder: LocatorFinder | null = null;
 let deviceEmulator: DeviceEmulator | null = null;
 let sidebarManager: SidebarManager | null = null;
+let workspaceManager: WorkspaceManager | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 /** Queue tab-register IPC when it arrives before tabManager is ready */
@@ -195,6 +197,14 @@ async function createWindow(): Promise<BrowserWindow> {
         contextMenuManager.registerWebContents(contents);
       } else {
         pendingContextMenuWebContents.push(contents);
+      }
+
+      // Workspace: assign new tab webContents to active workspace
+      if (!isSidebarWebview && workspaceManager) {
+        workspaceManager.assignTab(contents.id);
+        contents.on('destroyed', () => {
+          workspaceManager?.removeTab(contents.id);
+        });
       }
 
       // Copilot Vision: text selection + form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
@@ -359,6 +369,8 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   locatorFinder = new LocatorFinder(devToolsManager!, snapshotManager!);
   deviceEmulator = new DeviceEmulator();
   sidebarManager = new SidebarManager();
+  workspaceManager = new WorkspaceManager();
+  workspaceManager.setMainWindow(win);
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
@@ -470,6 +482,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     locatorFinder: locatorFinder!,
     deviceEmulator: deviceEmulator!,
     sidebarManager: sidebarManager!,
+    workspaceManager: workspaceManager!,
   };
 
   api = new TandemAPI({ win, port: API_PORT, registry });
@@ -610,6 +623,7 @@ app.on('will-quit', () => {
   if (extensionManager) extensionManager.destroyUpdateChecker();
   if (historyManager) historyManager.destroy();
   if (sidebarManager) sidebarManager.destroy();
+  if (workspaceManager) workspaceManager.destroy();
 });
 
 app.on('window-all-closed', () => {

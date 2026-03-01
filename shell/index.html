@@ -406,6 +406,10 @@
     let isSetupPanelOpen = false;
     const TOKEN = window.__TANDEM_TOKEN__ || '';
 
+    // === WORKSPACE STATE ===
+    let wsWorkspaces = [];
+    let wsActiveId = null;
+
     async function loadConfig() {
       const r = await fetch('http://localhost:8765/sidebar/config', { headers: { Authorization: `Bearer ${TOKEN}` } });
       const data = await r.json();
@@ -451,6 +455,25 @@
         </button>`;
     }
 
+    function renderWorkspaceIcons() {
+      if (!wsWorkspaces.length) return '';
+      const icons = wsWorkspaces.map(ws => {
+        const isActive = ws.id === wsActiveId;
+        return `
+          <button class="sidebar-item workspace-icon ${isActive ? 'active' : ''}"
+            data-ws-id="${ws.id}" title="${ws.name}">
+            <div class="workspace-icon-inner" style="background:${ws.color}">
+              <span class="workspace-emoji">${ws.emoji}</span>
+            </div>
+          </button>`;
+      }).join('');
+      const addBtn = `
+        <button class="sidebar-item workspace-add-btn" data-ws-action="add" title="Add workspace">
+          <span class="workspace-add-icon">+</span>
+        </button>`;
+      return icons + addBtn;
+    }
+
     function render() {
       if (!config) return;
       const sidebar = document.getElementById('sidebar');
@@ -458,14 +481,15 @@
       sidebar.dataset.state = config.state;
 
       const sorted = config.items.filter(i => i.enabled).sort((a, b) => a.order - b.order);
-      const sec1 = sorted.filter(i => i.order < 10);
+      // Section 1 = workspaces (dynamic icons, not from config items)
       const sec2 = sorted.filter(i => i.order >= 10 && i.order < 20);
       const sec3 = sorted.filter(i => i.order >= 20);
 
-      // 3 secties: Workspaces / Communicatie / Utilities, met separators ertussen
+      // 3 secties: Workspace icons / Communicatie / Utilities, met separators ertussen
+      const wsHtml = renderWorkspaceIcons();
       itemsEl.innerHTML =
-        sec1.map(renderItemHTML).join('') +
-        (sec1.length && sec2.length ? '<div class="sidebar-separator"></div>' : '') +
+        wsHtml +
+        (wsHtml && sec2.length ? '<div class="sidebar-separator"></div>' : '') +
         sec2.map(renderItemHTML).join('') +
         (sec2.length && sec3.length ? '<div class="sidebar-separator"></div>' : '') +
         sec3.map(renderItemHTML).join('');
@@ -904,12 +928,166 @@
       }
     });
 
+    // === WORKSPACE FUNCTIONS ===
+    async function loadWorkspaces() {
+      try {
+        const r = await fetch('http://localhost:8765/workspaces', { headers: { Authorization: `Bearer ${TOKEN}` } });
+        const data = await r.json();
+        if (data.ok) {
+          wsWorkspaces = data.workspaces;
+          wsActiveId = data.activeId;
+          render();
+          filterTabBar();
+        }
+      } catch (e) { /* workspace API not yet available during startup */ }
+    }
+
+    async function switchWorkspace(id) {
+      try {
+        const r = await fetch(`http://localhost:8765/workspaces/${id}/switch`, {
+          method: 'POST', headers: { Authorization: `Bearer ${TOKEN}` }
+        });
+        const data = await r.json();
+        if (data.ok) {
+          wsActiveId = data.workspace.id;
+          // Update the local workspace's tabIds
+          const ws = wsWorkspaces.find(w => w.id === id);
+          if (ws) Object.assign(ws, data.workspace);
+          render();
+          filterTabBar();
+        }
+      } catch (e) { console.error('switchWorkspace failed:', e); }
+    }
+
+    async function addWorkspace() {
+      const name = prompt('Workspace name:');
+      if (!name) return;
+      const emoji = prompt('Emoji (e.g. 💼, 🚀):', '📁') || '📁';
+      try {
+        const r = await fetch('http://localhost:8765/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+          body: JSON.stringify({ name, emoji })
+        });
+        const data = await r.json();
+        if (data.ok) {
+          wsWorkspaces.push(data.workspace);
+          render();
+        }
+      } catch (e) { console.error('addWorkspace failed:', e); }
+    }
+
+    function filterTabBar() {
+      // Find active workspace
+      const ws = wsWorkspaces.find(w => w.id === wsActiveId);
+      if (!ws) return;
+      const allowedTabIds = new Set(ws.tabIds);
+      // If workspace has no tabs yet, show all tabs (first-run experience)
+      if (allowedTabIds.size === 0 && ws.isDefault) return;
+
+      // Get all tab elements from the tab bar
+      const tabEls = document.querySelectorAll('#tab-bar .tab[data-tab-id]');
+      tabEls.forEach(el => {
+        const tabId = el.dataset.tabId;
+        // Get webContentsId for this tab from the webview
+        const wv = document.querySelector(`webview[data-tab-id="${tabId}"]`);
+        if (!wv) return;
+        const wcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
+        if (wcId !== null && allowedTabIds.size > 0) {
+          const visible = allowedTabIds.has(wcId);
+          el.style.display = visible ? '' : 'none';
+          // Also hide/show the webview if tab is hidden and currently active
+          if (!visible && wv.classList.contains('active')) {
+            // Find a visible tab to focus
+            const visibleTab = Array.from(tabEls).find(t => {
+              const tv = document.querySelector(`webview[data-tab-id="${t.dataset.tabId}"]`);
+              if (!tv || !tv.getWebContentsId) return false;
+              return allowedTabIds.has(tv.getWebContentsId());
+            });
+            if (visibleTab && window.tandem) {
+              window.tandem.focusTab(visibleTab.dataset.tabId);
+            }
+          }
+        }
+      });
+    }
+
+    async function openWorkspacePanel() {
+      isSetupPanelOpen = false;
+      config.activeItemId = '__workspaces';
+      const panel = document.getElementById('sidebar-panel');
+      const titleEl = document.getElementById('sidebar-panel-title');
+      const content = document.getElementById('sidebar-panel-content');
+
+      titleEl.textContent = 'Workspaces';
+      panel.classList.add('open');
+      setPanelWidth(getPanelWidth('__workspaces'));
+
+      // Hide webviews
+      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      content.classList.remove('webview-mode');
+
+      // Refresh workspace data
+      await loadWorkspaces();
+
+      const rows = wsWorkspaces.map(ws => {
+        const isActive = ws.id === wsActiveId;
+        return `
+          <div class="ws-panel-item ${isActive ? 'active' : ''}" data-ws-panel-id="${ws.id}">
+            <div class="ws-panel-icon" style="background:${ws.color}">${ws.emoji}</div>
+            <span class="ws-panel-name">${ws.name}</span>
+            ${isActive ? '<span class="ws-panel-check">✓</span>' : ''}
+            ${!ws.isDefault ? `<button class="ws-panel-delete" data-ws-delete="${ws.id}" title="Delete">✕</button>` : ''}
+          </div>`;
+      }).join('');
+
+      content.innerHTML = `
+        <div class="ws-panel">
+          <button class="ws-panel-add" id="ws-panel-add-btn">+ Add workspace</button>
+          ${rows}
+        </div>`;
+
+      // Event handlers
+      content.querySelector('#ws-panel-add-btn')?.addEventListener('click', async () => {
+        await addWorkspace();
+        await openWorkspacePanel(); // re-render
+      });
+      content.querySelectorAll('.ws-panel-item').forEach(el => {
+        el.addEventListener('click', async (e) => {
+          if (e.target.closest('.ws-panel-delete')) return;
+          await switchWorkspace(el.dataset.wsPanelId);
+          await openWorkspacePanel(); // re-render
+        });
+      });
+      content.querySelectorAll('.ws-panel-delete').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.wsDelete;
+          if (!confirm('Delete this workspace? Tabs will move to Default.')) return;
+          await fetch(`http://localhost:8765/workspaces/${id}`, {
+            method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` }
+          });
+          await loadWorkspaces();
+          await openWorkspacePanel();
+        });
+      });
+    }
+
     function init() {
       loadConfig();
+      // Load workspaces after a short delay to ensure API is ready
+      setTimeout(loadWorkspaces, 500);
 
       document.getElementById('sidebar-items').addEventListener('click', e => {
-        const btn = e.target.closest('.sidebar-item');
-        if (btn) activateItem(btn.dataset.id);
+        // Handle workspace icon clicks
+        const wsBtn = e.target.closest('[data-ws-id]');
+        if (wsBtn) { switchWorkspace(wsBtn.dataset.wsId); return; }
+        // Handle workspace add button
+        const wsAdd = e.target.closest('[data-ws-action="add"]');
+        if (wsAdd) { openWorkspacePanel(); return; }
+        // Handle regular sidebar items
+        const btn = e.target.closest('.sidebar-item:not([data-ws-id]):not([data-ws-action])');
+        if (btn && btn.dataset.id) activateItem(btn.dataset.id);
       });
       document.getElementById('sidebar-toggle-width').addEventListener('click', toggleState);
 
@@ -973,6 +1151,18 @@
             const calendarWv = webviewCache.get('calendar');
             if (calendarWv) calendarWv.reload();
           }
+        });
+      }
+
+      // Listen for workspace switch events from main process
+      if (window.tandem && window.tandem.onWorkspaceSwitched) {
+        window.tandem.onWorkspaceSwitched((workspace) => {
+          wsActiveId = workspace.id;
+          // Update local workspace data
+          const idx = wsWorkspaces.findIndex(w => w.id === workspace.id);
+          if (idx >= 0) wsWorkspaces[idx] = workspace;
+          render();
+          filterTabBar();
         });
       }
     }

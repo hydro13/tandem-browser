@@ -431,6 +431,22 @@ export function createMockContext(): RouteContext {
       setActiveItem: vi.fn(),
       destroy: vi.fn(),
     } as any,
+
+    // ── workspaceManager ────────────────────────
+    workspaceManager: {
+      list: vi.fn().mockReturnValue([]),
+      create: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      remove: vi.fn(),
+      switch: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      getActive: vi.fn().mockReturnValue({ id: 'ws-default', name: 'Default', emoji: '🏠', color: '#4285f4', order: 0, isDefault: true, tabIds: [] }),
+      getActiveId: vi.fn().mockReturnValue('ws-default'),
+      get: vi.fn().mockReturnValue(null),
+      update: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', emoji: '📁', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
+      assignTab: vi.fn(),
+      removeTab: vi.fn(),
+      moveTab: vi.fn(),
+      destroy: vi.fn(),
+    } as any,
   };
 
   return ctx;
