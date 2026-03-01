@@ -469,7 +469,7 @@ export function createMockContext(): RouteContext {
       updateBoard: vi.fn().mockReturnValue({ id: 'pb-1', name: 'Updated', emoji: '📌', createdAt: '', updatedAt: '', items: [] }),
       deleteBoard: vi.fn().mockReturnValue(true),
       getItems: vi.fn().mockReturnValue([]),
-      addItem: vi.fn().mockReturnValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
+      addItem: vi.fn().mockResolvedValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
       updateItem: vi.fn().mockReturnValue({ id: 'item-1', type: 'link', createdAt: '', position: 0 }),
       deleteItem: vi.fn().mockReturnValue(true),
       reorderItems: vi.fn().mockReturnValue(true),

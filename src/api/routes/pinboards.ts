@@ -78,14 +78,14 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
   });
 
   // POST /pinboards/:id/items — add item to board
-  router.post('/pinboards/:id/items', (req: Request<IdParams>, res: Response) => {
+  router.post('/pinboards/:id/items', async (req: Request<IdParams>, res: Response) => {
     try {
       const { type, url, title, content, thumbnail, note, sourceUrl } = req.body;
       if (!type) { res.status(400).json({ error: 'type required' }); return; }
       if (!['link', 'image', 'text', 'quote'].includes(type)) {
         res.status(400).json({ error: 'type must be link, image, text, or quote' }); return;
       }
-      const item = ctx.pinboardManager.addItem(req.params.id, {
+      const item = await ctx.pinboardManager.addItem(req.params.id, {
         type, url, title, content, thumbnail, note, sourceUrl
       });
       if (!item) { res.status(404).json({ error: 'Board not found' }); return; }

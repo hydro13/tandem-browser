@@ -1121,6 +1121,7 @@
             <div class="pb-card-preview">${preview}</div>
             <div class="pb-card-info">
               <div class="pb-card-title">${title}</div>
+              ${item.description ? `<div class="pb-card-desc">${pbEscape(item.description.substring(0, 120))}</div>` : ''}
               ${item.note ? `<div class="pb-card-note">${pbEscape(item.note)}</div>` : ''}
               <div class="pb-card-meta">
                 <span class="pb-card-type">${typeIcons[item.type] || ''} ${item.type}</span>

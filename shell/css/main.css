@@ -3147,12 +3147,17 @@
 
 /* Card Grid */
 .pb-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 12px;
-  padding: 12px;
+  columns: 2;
+  column-gap: 8px;
+  padding: 10px;
   overflow-y: auto;
   flex: 1;
+  align-content: start;
+}
+.pb-grid .pb-card {
+  break-inside: avoid;
+  margin-bottom: 8px;
+  display: block;
 }
 .pb-items-empty {
   display: flex;
@@ -3186,7 +3191,7 @@
 /* Card preview area */
 .pb-card-preview {
   width: 100%;
-  height: 100px;
+  height: 130px;
   overflow: hidden;
   background: rgba(0, 0, 0, 0.2);
   display: flex;
@@ -3222,6 +3227,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.pb-card-desc {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 3px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .pb-card-note {
   font-size: 10px;

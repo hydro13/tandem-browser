@@ -20,12 +20,19 @@ export interface PinboardItem {
   type: 'link' | 'image' | 'text' | 'quote';
   url?: string;
   title?: string;
+  description?: string;
   content?: string;
   thumbnail?: string;
   note?: string;
   sourceUrl?: string;
   createdAt: string;
   position: number;
+}
+
+interface OGMeta {
+  title?: string;
+  description?: string;
+  image?: string;
 }
 
 interface PinboardStore {
@@ -70,6 +77,25 @@ export class PinboardManager {
 
   private generateId(): string {
     return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+
+  private async fetchOGMeta(url: string): Promise<OGMeta> {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Tandem/1.0)' },
+        signal: AbortSignal.timeout(5000),
+      });
+      const html = await res.text();
+      const og = (prop: string): string | undefined => {
+        const m = html.match(new RegExp(`<meta[^>]*property=["']og:${prop}["'][^>]*content=["']([^"']+)["']`, 'i'))
+               || html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:${prop}["']`, 'i'));
+        return m?.[1];
+      };
+      const title = og('title') || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
+      return { title, description: og('description'), image: og('image') };
+    } catch {
+      return {};
+    }
   }
 
   // --- Board CRUD ---
@@ -130,7 +156,7 @@ export class PinboardManager {
     return [...board.items].sort((a, b) => a.position - b.position);
   }
 
-  addItem(boardId: string, item: Omit<PinboardItem, 'id' | 'createdAt' | 'position'>): PinboardItem | null {
+  async addItem(boardId: string, item: Omit<PinboardItem, 'id' | 'createdAt' | 'position'>): Promise<PinboardItem | null> {
     const board = this.store.boards.find(b => b.id === boardId);
     if (!board) return null;
     const newItem: PinboardItem = {
@@ -139,6 +165,13 @@ export class PinboardManager {
       createdAt: new Date().toISOString(),
       position: board.items.length,
     };
+    // Auto-enrich link items with OG metadata
+    if (newItem.type === 'link' && newItem.url) {
+      const meta = await this.fetchOGMeta(newItem.url);
+      if (!newItem.title && meta.title) newItem.title = meta.title;
+      if (!newItem.thumbnail && meta.image) newItem.thumbnail = meta.image;
+      if (!newItem.description && meta.description) newItem.description = meta.description;
+    }
     board.items.push(newItem);
     board.updatedAt = new Date().toISOString();
     this.save();
