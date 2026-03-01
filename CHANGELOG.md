@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.28.0] - 2026-03-01
+
+- feat: move tab to workspace via drag-and-drop and right-click context menu
+
 ## [v0.27.0] - 2026-03-01
 
 - feat: Opera-style workspace icon picker, SVG strip icons, edit/delete UI
