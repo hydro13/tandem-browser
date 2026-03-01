@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.40.0] - 2026-03-02
+
+- feat: crash-safe session restore — continuous tab state persistence
+
 ## [v0.38.0] - 2026-03-01
 
 - feat: pinboard appearance panel + masonry layout + inline editing
