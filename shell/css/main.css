@@ -3330,25 +3330,148 @@
 }
 
 /* Delete button overlay */
-.pb-card-delete {
+/* Pin card hover actions (Opera-style) */
+.pb-card-actions {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  background: rgba(0, 0, 0, 0.7);
-  border: none;
-  color: #fff;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  cursor: pointer;
-  font-size: 12px;
+  top: 6px;
+  right: 6px;
   display: none;
+  gap: 3px;
+  background: rgba(15, 18, 30, 0.95);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 6px;
+  padding: 3px;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+.pb-card:hover .pb-card-actions { display: flex; }
+.pb-card-action-btn {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  padding: 3px 7px;
+  border-radius: 4px;
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  transition: background 0.1s;
+}
+.pb-card-action-btn:hover { background: rgba(255,255,255,0.1); }
+.pb-card-action-btn.danger:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
+
+/* Pin edit modal */
+.pb-edit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.65);
+  z-index: 9999;
+  display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
 }
-.pb-card:hover .pb-card-delete { display: flex; }
-.pb-card-delete:hover { background: #f44; }
+.pb-edit-modal {
+  background: #1a1f2e;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 12px;
+  width: 500px;
+  max-width: 92vw;
+  max-height: 85vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.pb-edit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  font-weight: 500;
+  font-size: 14px;
+}
+.pb-edit-close {
+  background: none;
+  border: none;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.pb-edit-close:hover { background: rgba(255,255,255,0.08); }
+.pb-edit-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+.pb-edit-title-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  padding: 9px 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.pb-edit-content-input {
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 10px 12px;
+  resize: vertical;
+  min-height: 110px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.pb-edit-title-input:focus,
+.pb-edit-content-input:focus { outline: none; border-color: var(--accent); }
+.pb-edit-preview-img {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.pb-edit-footer {
+  padding: 10px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.pb-edit-save-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 7px 20px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.pb-edit-save-btn:hover { opacity: 0.85; }
+.pb-edit-cancel-btn {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-dim);
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.pb-edit-cancel-btn:hover { background: rgba(255,255,255,0.12); }
 
 /* Clickable link cards */
 .pb-card[data-has-url="true"] { cursor: pointer; }

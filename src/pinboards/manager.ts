@@ -178,7 +178,7 @@ export class PinboardManager {
     return newItem;
   }
 
-  updateItem(boardId: string, itemId: string, updates: { title?: string; note?: string; content?: string }): PinboardItem | null {
+  updateItem(boardId: string, itemId: string, updates: { title?: string; note?: string; content?: string; description?: string; thumbnail?: string }): PinboardItem | null {
     const board = this.store.boards.find(b => b.id === boardId);
     if (!board) return null;
     const item = board.items.find(i => i.id === itemId);
@@ -186,6 +186,8 @@ export class PinboardManager {
     if (updates.title !== undefined) item.title = updates.title;
     if (updates.note !== undefined) item.note = updates.note;
     if (updates.content !== undefined) item.content = updates.content;
+    if (updates.description !== undefined) item.description = updates.description;
+    if (updates.thumbnail !== undefined) item.thumbnail = updates.thumbnail;
     board.updatedAt = new Date().toISOString();
     this.save();
     return item;

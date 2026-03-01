@@ -1089,6 +1089,51 @@
       }
     }
 
+    async function pbOpenEditModal(item, boardId) {
+      const existing = document.getElementById('pb-edit-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.id = 'pb-edit-overlay';
+      overlay.className = 'pb-edit-overlay';
+      overlay.innerHTML = `
+        <div class="pb-edit-modal">
+          <div class="pb-edit-header">
+            <span>Edit pin</span>
+            <button class="pb-edit-close">×</button>
+          </div>
+          <div class="pb-edit-body">
+            <input class="pb-edit-title-input" type="text" placeholder="Headline" value="${pbEscape(item.title || '')}">
+            <textarea class="pb-edit-content-input" placeholder="Type something...">${pbEscape(item.content || item.note || '')}</textarea>
+            ${item.thumbnail ? `<img src="${pbEscape(item.thumbnail)}" class="pb-edit-preview-img" alt="">` : ''}
+          </div>
+          <div class="pb-edit-footer">
+            <button class="pb-edit-save-btn">Save</button>
+            <button class="pb-edit-cancel-btn">Cancel</button>
+          </div>
+        </div>`;
+
+      document.body.appendChild(overlay);
+      overlay.querySelector('.pb-edit-title-input').focus();
+
+      const close = () => overlay.remove();
+      overlay.querySelector('.pb-edit-close').addEventListener('click', close);
+      overlay.querySelector('.pb-edit-cancel-btn').addEventListener('click', close);
+      overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+      overlay.querySelector('.pb-edit-save-btn').addEventListener('click', async () => {
+        const title = overlay.querySelector('.pb-edit-title-input').value.trim();
+        const content = overlay.querySelector('.pb-edit-content-input').value.trim();
+        await fetch(`http://localhost:8765/pinboards/${boardId}/items/${item.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+          body: JSON.stringify({ title, content, note: content })
+        });
+        close();
+        await pbRefreshItems(boardId);
+      });
+    }
+
     async function pbRefreshItems(boardId) {
       if (!boardId || !document.getElementById('pb-item-list')) return;
       try {
@@ -1166,7 +1211,10 @@
 
         return `
           <div class="pb-card" draggable="true" data-item-id="${item.id}" ${item.url ? 'data-has-url="true"' : ''} data-url="${pbEscape(item.url || '')}">
-            <button class="pb-card-delete" data-item-id="${item.id}" title="Delete">&times;</button>
+            <div class="pb-card-actions">
+              <button class="pb-card-action-btn pb-edit-btn" data-item-id="${item.id}">✏️ Edit</button>
+              <button class="pb-card-action-btn danger pb-remove-btn" data-item-id="${item.id}">🗑️</button>
+            </div>
             <div class="pb-card-preview${(item.type === 'quote' || item.type === 'text') ? ' pb-card-preview--text' : ''}">${preview}</div>
             <div class="pb-card-info">
               <div class="pb-card-title">${title}</div>
@@ -1180,14 +1228,14 @@
           </div>`;
       }).join('');
 
-      // Delete handler with fade-out
+      // Remove handler with fade-out
       container.addEventListener('click', async (e) => {
-        const deleteBtn = e.target.closest('.pb-card-delete');
-        if (!deleteBtn) return;
+        const removeBtn = e.target.closest('.pb-remove-btn');
+        if (!removeBtn) return;
         e.stopPropagation();
-        const itemId = deleteBtn.dataset.itemId;
+        const itemId = removeBtn.dataset.itemId;
         if (!itemId || !pbState.currentBoardId) return;
-        const card = deleteBtn.closest('.pb-card');
+        const card = removeBtn.closest('.pb-card');
         if (card) {
           card.style.transition = 'opacity 0.2s, transform 0.2s';
           card.style.opacity = '0';
@@ -1203,10 +1251,20 @@
         }, 250);
       });
 
+      // Edit handler
+      container.addEventListener('click', (e) => {
+        const editBtn = e.target.closest('.pb-edit-btn');
+        if (!editBtn) return;
+        e.stopPropagation();
+        const itemId = editBtn.dataset.itemId;
+        const item = items.find(i => i.id === itemId);
+        if (item && pbState.currentBoardId) pbOpenEditModal(item, pbState.currentBoardId);
+      });
+
       // Click on link/image cards opens URL in new tab
       container.querySelectorAll('.pb-card[data-has-url="true"]').forEach(card => {
         card.addEventListener('click', (e) => {
-          if (e.target.closest('.pb-card-delete')) return;
+          if (e.target.closest('.pb-card-actions')) return;
           const url = card.dataset.url;
           if (url && window.tandem) window.tandem.newTab(url);
         });
