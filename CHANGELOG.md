@@ -2,6 +2,14 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.25.0] - 2026-03-01
+
+- feat: workspace manager + sidebar UI with tab filtering
+
+Workspaces are named tab groups with emoji + color. Users can create,
+switch, and delete workspaces from the sidebar. Tab bar filters to show
+only the active workspace's tabs. Persisted to ~/.tandem/workspaces.json.
+
 ## [v0.24.0] - 2026-03-01
 
 - feat: bookmarks sidebar panel with search and folder navigation
