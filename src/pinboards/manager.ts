@@ -10,6 +10,8 @@ export interface Pinboard {
   id: string;
   name: string;
   emoji: string;
+  layout?: 'default' | 'spacious' | 'dense';
+  background?: 'dark' | 'light';
   createdAt: string;
   updatedAt: string;
   items: PinboardItem[];
@@ -146,6 +148,16 @@ export class PinboardManager {
     this.store.boards.splice(idx, 1);
     this.save();
     return true;
+  }
+
+  updateBoardSettings(boardId: string, settings: { layout?: 'default' | 'spacious' | 'dense'; background?: 'dark' | 'light' }): Pinboard | null {
+    const board = this.store.boards.find(b => b.id === boardId);
+    if (!board) return null;
+    if (settings.layout !== undefined) board.layout = settings.layout;
+    if (settings.background !== undefined) board.background = settings.background;
+    board.updatedAt = new Date().toISOString();
+    this.save();
+    return board;
   }
 
   // --- Item CRUD ---

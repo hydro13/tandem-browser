@@ -942,7 +942,7 @@
     }
 
     // === PINBOARD PANEL MODULE ===
-    const pbState = { currentBoardId: null, currentBoardName: '', currentBoardEmoji: '' };
+    const pbState = { currentBoardId: null, currentBoardName: '', currentBoardEmoji: '', currentLayout: 'default', currentBackground: 'dark' };
 
     function pbEscape(text) {
       const d = document.createElement('div');
@@ -1018,10 +1018,11 @@
 
       content.innerHTML = `
         <div class="pb-panel">
-          <div class="pb-items-header">
+          <div class="pb-items-header" style="position:relative;">
             <button class="pb-back-btn" id="pb-back-btn">&larr;</button>
             <select class="pb-board-switcher" id="pb-board-switcher"></select>
             <button class="pb-note-btn" id="pb-note-btn" title="Add text note">✏️</button>
+            <button class="pb-appearance-btn" id="pb-appearance-btn" title="Appearance">✨</button>
           </div>
           <div class="pb-note-editor" id="pb-note-editor" style="display:none;">
             <textarea class="pb-note-textarea" id="pb-note-textarea" placeholder="Type your note here…" rows="4"></textarea>
@@ -1037,6 +1038,16 @@
 
       await pbUpdateBoardSwitcher(boardId);
 
+      // Fetch board data to apply saved layout/background
+      try {
+        const boardRes = await fetch(`http://localhost:8765/pinboards/${boardId}`, { headers: { Authorization: `Bearer ${TOKEN}` } });
+        const boardData = await boardRes.json();
+        if (boardData.ok && boardData.board) {
+          pbState.currentLayout = boardData.board.layout || 'default';
+          pbState.currentBackground = boardData.board.background || 'dark';
+        }
+      } catch { /* ignore */ }
+
       document.getElementById('pb-back-btn')?.addEventListener('click', () => {
         loadPinboardPanel();
       });
@@ -1051,6 +1062,74 @@
           editor.style.display = 'none';
           textarea.value = '';
         }
+      });
+
+      // Appearance panel
+      document.getElementById('pb-appearance-btn')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        let panel = document.getElementById('pb-appearance-panel');
+        if (panel) { panel.remove(); return; }
+        const header = document.querySelector('.pb-items-header');
+        panel = document.createElement('div');
+        panel.id = 'pb-appearance-panel';
+        panel.className = 'pb-appearance-panel';
+        const curLayout = pbState.currentLayout || 'default';
+        const curBg = pbState.currentBackground || 'dark';
+        panel.innerHTML = `
+          <div class="pb-appearance-section">
+            <div class="pb-appearance-label">Layout</div>
+            <div class="pb-appearance-options">
+              <div class="pb-appearance-opt${curLayout === 'dense' ? ' active' : ''}" data-layout="dense">Dense</div>
+              <div class="pb-appearance-opt${curLayout === 'default' ? ' active' : ''}" data-layout="default">Default</div>
+              <div class="pb-appearance-opt${curLayout === 'spacious' ? ' active' : ''}" data-layout="spacious">Spacious</div>
+            </div>
+          </div>
+          <div class="pb-appearance-section">
+            <div class="pb-appearance-label">Background</div>
+            <div class="pb-appearance-options">
+              <div class="pb-appearance-opt${curBg === 'dark' ? ' active' : ''}" data-bg="dark">Dark</div>
+              <div class="pb-appearance-opt${curBg === 'light' ? ' active' : ''}" data-bg="light">Light</div>
+            </div>
+          </div>`;
+        header.appendChild(panel);
+
+        panel.querySelectorAll('[data-layout]').forEach(opt => {
+          opt.addEventListener('click', async () => {
+            const layout = opt.dataset.layout;
+            pbState.currentLayout = layout;
+            pbApplyGridClasses();
+            panel.querySelectorAll('[data-layout]').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+              body: JSON.stringify({ layout })
+            });
+          });
+        });
+        panel.querySelectorAll('[data-bg]').forEach(opt => {
+          opt.addEventListener('click', async () => {
+            const bg = opt.dataset.bg;
+            pbState.currentBackground = bg;
+            pbApplyGridClasses();
+            panel.querySelectorAll('[data-bg]').forEach(o => o.classList.remove('active'));
+            opt.classList.add('active');
+            await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+              body: JSON.stringify({ background: bg })
+            });
+          });
+        });
+
+        // Close panel when clicking outside
+        const closePanel = (ev) => {
+          if (!panel.contains(ev.target) && ev.target !== document.getElementById('pb-appearance-btn')) {
+            panel.remove();
+            document.removeEventListener('click', closePanel);
+          }
+        };
+        setTimeout(() => document.addEventListener('click', closePanel), 0);
       });
 
       document.getElementById('pb-note-save')?.addEventListener('click', async () => {
@@ -1087,6 +1166,16 @@
       } catch {
         document.getElementById('pb-item-list').innerHTML = '<div class="bm-empty">Failed to load items</div>';
       }
+    }
+
+    function pbApplyGridClasses() {
+      const container = document.getElementById('pb-item-list');
+      if (!container) return;
+      container.classList.remove('pb-grid--dense', 'pb-grid--spacious', 'pb-board--light');
+      const layout = pbState.currentLayout || 'default';
+      if (layout === 'dense') container.classList.add('pb-grid--dense');
+      else if (layout === 'spacious') container.classList.add('pb-grid--spacious');
+      if (pbState.currentBackground === 'light') container.classList.add('pb-board--light');
     }
 
     async function pbOpenEditModal(item, boardId) {
@@ -1165,6 +1254,7 @@
       const container = document.getElementById('pb-item-list');
       if (!container) return;
       container.className = 'pb-grid';
+      pbApplyGridClasses();
 
       if (items.length === 0) {
         container.className = 'pb-items-empty';
@@ -1272,6 +1362,78 @@
 
       // Drag-and-drop reorder
       pbSetupDragAndDrop(container);
+
+      // Inline editing: double-click on text/quote card body or link card title
+      container.querySelectorAll('.pb-card').forEach(card => {
+        const itemId = card.dataset.itemId;
+        const item = items.find(i => i.id === itemId);
+        if (!item) return;
+
+        if (item.type === 'text' || item.type === 'quote') {
+          const body = card.querySelector('.pb-card-text-preview');
+          if (body) {
+            body.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              if (body.contentEditable === 'true') return;
+              const originalText = body.textContent;
+              body.contentEditable = 'true';
+              body.focus();
+              body.addEventListener('blur', async function onBlur() {
+                body.removeEventListener('blur', onBlur);
+                body.contentEditable = 'false';
+                const newText = body.textContent.trim();
+                if (newText && newText !== originalText) {
+                  await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+                    body: JSON.stringify({ content: newText })
+                  });
+                }
+              });
+              body.addEventListener('keydown', (ke) => {
+                if (ke.key === 'Escape') {
+                  body.textContent = originalText;
+                  body.contentEditable = 'false';
+                }
+              });
+            });
+          }
+        }
+
+        if (item.type === 'link') {
+          const titleEl = card.querySelector('.pb-card-title');
+          if (titleEl) {
+            titleEl.addEventListener('dblclick', (e) => {
+              e.stopPropagation();
+              if (titleEl.contentEditable === 'true') return;
+              const originalText = titleEl.textContent;
+              titleEl.contentEditable = 'true';
+              titleEl.style.whiteSpace = 'normal';
+              titleEl.focus();
+              titleEl.addEventListener('blur', async function onBlur() {
+                titleEl.removeEventListener('blur', onBlur);
+                titleEl.contentEditable = 'false';
+                titleEl.style.whiteSpace = '';
+                const newText = titleEl.textContent.trim();
+                if (newText && newText !== originalText) {
+                  await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+                    body: JSON.stringify({ title: newText })
+                  });
+                }
+              });
+              titleEl.addEventListener('keydown', (ke) => {
+                if (ke.key === 'Escape') {
+                  titleEl.textContent = originalText;
+                  titleEl.contentEditable = 'false';
+                  titleEl.style.whiteSpace = '';
+                }
+              });
+            });
+          }
+        }
+      });
     }
 
     function pbSetupDragAndDrop(container) {

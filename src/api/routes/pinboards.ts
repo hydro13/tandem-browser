@@ -55,6 +55,18 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
+  // PUT /pinboards/:id/settings — update board appearance settings
+  router.put('/pinboards/:id/settings', (req: Request<IdParams>, res: Response) => {
+    try {
+      const { layout, background } = req.body;
+      const board = ctx.pinboardManager.updateBoardSettings(req.params.id, { layout, background });
+      if (!board) { res.status(404).json({ error: 'Board not found' }); return; }
+      res.json({ ok: true, board });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   // DELETE /pinboards/:id — delete board
   router.delete('/pinboards/:id', (req: Request<IdParams>, res: Response) => {
     try {
@@ -98,9 +110,9 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
   // PUT /pinboards/:id/items/:itemId — update item
   router.put('/pinboards/:id/items/:itemId', (req: Request<ItemParams>, res: Response) => {
     try {
-      const { title, note, content } = req.body;
+      const { title, note, content, description, thumbnail } = req.body;
       const item = ctx.pinboardManager.updateItem(req.params.id, req.params.itemId, {
-        title, note, content
+        title, note, content, description, thumbnail
       });
       if (!item) { res.status(404).json({ error: 'Board or item not found' }); return; }
       res.json({ ok: true, item });
