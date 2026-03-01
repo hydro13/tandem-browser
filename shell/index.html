@@ -960,9 +960,16 @@
     }
 
     async function addWorkspace() {
-      const name = prompt('Workspace name:');
+      const result = await _modalShow('New workspace', null,
+        [{ placeholder: 'Name (e.g. Work, Personal…)', defaultValue: '' },
+         { placeholder: 'Emoji (💼 🚀 📁 🏠…)', defaultValue: '📁' }],
+        [{ label: 'Cancel', className: 'tandem-modal-btn-cancel', isCancel: true, value: null },
+         { label: 'Create', className: 'tandem-modal-btn-ok', isOk: true }]
+      );
+      if (!result) return;
+      const name  = result[0]?.trim();
+      const emoji = result[1]?.trim() || '📁';
       if (!name) return;
-      const emoji = prompt('Emoji (e.g. 💼, 🚀):', '📁') || '📁';
       try {
         const r = await fetch('http://localhost:8765/workspaces', {
           method: 'POST',
@@ -1063,7 +1070,7 @@
         btn.addEventListener('click', async (e) => {
           e.stopPropagation();
           const id = btn.dataset.wsDelete;
-          if (!confirm('Delete this workspace? Tabs will move to Default.')) return;
+          if (!await showConfirm('Delete workspace?', 'Tabs will move to Default.')) return;
           await fetch(`http://localhost:8765/workspaces/${id}`, {
             method: 'DELETE', headers: { Authorization: `Bearer ${TOKEN}` }
           });
@@ -1282,6 +1289,96 @@
   <link rel="stylesheet" href="css/shortcuts.css">
 
   <script src="js/shortcuts.js"></script>
+
+<!-- Custom modal (Electron blocks native prompt/confirm/alert) -->
+<div id="tandem-modal-overlay" class="tandem-modal-overlay hidden">
+  <div class="tandem-modal" id="tandem-modal-box">
+    <h3 id="tandem-modal-title"></h3>
+    <p id="tandem-modal-message" style="display:none"></p>
+    <div id="tandem-modal-inputs"></div>
+    <div class="tandem-modal-buttons" id="tandem-modal-buttons"></div>
+  </div>
+</div>
+
+<script>
+// ── Modal helpers (replaces native prompt/confirm in Electron) ──────────────
+function _modalShow(title, message, inputs, buttons) {
+  return new Promise(resolve => {
+    const overlay = document.getElementById('tandem-modal-overlay');
+    const titleEl = document.getElementById('tandem-modal-title');
+    const msgEl   = document.getElementById('tandem-modal-message');
+    const inpEl   = document.getElementById('tandem-modal-inputs');
+    const btnEl   = document.getElementById('tandem-modal-buttons');
+
+    titleEl.textContent = title;
+    if (message) { msgEl.textContent = message; msgEl.style.display = 'block'; }
+    else          { msgEl.style.display = 'none'; }
+
+    inpEl.innerHTML = '';
+    const fields = inputs.map(inp => {
+      const el = document.createElement('input');
+      el.type = 'text'; el.placeholder = inp.placeholder || '';
+      el.value = inp.defaultValue || '';
+      inpEl.appendChild(el);
+      return el;
+    });
+
+    btnEl.innerHTML = '';
+    buttons.forEach(btn => {
+      const b = document.createElement('button');
+      b.textContent = btn.label;
+      b.className = btn.className || 'tandem-modal-btn-ok';
+      b.onclick = () => {
+        overlay.classList.add('hidden');
+        resolve(btn.value !== undefined ? btn.value : fields.map(f => f.value));
+      };
+      btnEl.appendChild(b);
+    });
+
+    overlay.classList.remove('hidden');
+    if (fields.length) fields[0].focus();
+
+    // Enter key submits first OK button
+    const handler = e => {
+      if (e.key === 'Enter') {
+        overlay.classList.add('hidden');
+        overlay.removeEventListener('keydown', handler);
+        const okBtn = buttons.find(b => b.isOk);
+        resolve(okBtn?.value !== undefined ? okBtn.value : fields.map(f => f.value));
+      } else if (e.key === 'Escape') {
+        overlay.classList.add('hidden');
+        overlay.removeEventListener('keydown', handler);
+        const cancelBtn = buttons.find(b => b.isCancel);
+        resolve(cancelBtn?.value !== undefined ? cancelBtn.value : null);
+      }
+    };
+    overlay.addEventListener('keydown', handler);
+  });
+}
+
+async function showPrompt(title, placeholder, defaultValue = '') {
+  const result = await _modalShow(title, null,
+    [{ placeholder, defaultValue }],
+    [
+      { label: 'Cancel', className: 'tandem-modal-btn-cancel', isCancel: true, value: null },
+      { label: 'OK',     className: 'tandem-modal-btn-ok',     isOk:    true }
+    ]
+  );
+  if (result === null) return null;
+  const val = Array.isArray(result) ? result[0] : result;
+  return val?.trim() || null;
+}
+
+async function showConfirm(title, message) {
+  const result = await _modalShow(title, message, [],
+    [
+      { label: 'Cancel', className: 'tandem-modal-btn-cancel', isCancel: true, value: false },
+      { label: 'Delete', className: 'tandem-modal-btn-danger', isOk:    true, value: true }
+    ]
+  );
+  return result === true;
+}
+</script>
 </body>
 
 </html>

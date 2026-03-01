@@ -2624,3 +2624,71 @@
       text-align: center;
       padding: 24px 0;
     }
+
+/* ── Custom Modal (replaces native prompt/confirm — Electron blocks those) ── */
+.tandem-modal-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+}
+.tandem-modal-overlay.hidden { display: none; }
+.tandem-modal {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 320px;
+  max-width: 420px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+}
+.tandem-modal h3 {
+  margin: 0 0 16px;
+  font-size: 15px;
+  color: #eee;
+  font-weight: 600;
+}
+.tandem-modal input[type="text"] {
+  width: 100%;
+  box-sizing: border-box;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 8px;
+  color: #eee;
+  font-size: 14px;
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  outline: none;
+}
+.tandem-modal input[type="text"]:focus { border-color: #555; }
+.tandem-modal p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: #bbb;
+  line-height: 1.5;
+}
+.tandem-modal-buttons {
+  display: flex; gap: 8px; justify-content: flex-end;
+}
+.tandem-modal-buttons button {
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 500;
+}
+.tandem-modal-btn-cancel {
+  background: #2a2a2a;
+  color: #aaa;
+}
+.tandem-modal-btn-cancel:hover { background: #333; }
+.tandem-modal-btn-ok {
+  background: #3a7bd5;
+  color: #fff;
+}
+.tandem-modal-btn-ok:hover { background: #4a8be5; }
+.tandem-modal-btn-danger {
+  background: #c0392b;
+  color: #fff;
+}
+.tandem-modal-btn-danger:hover { background: #e74c3c; }
