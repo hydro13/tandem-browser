@@ -222,7 +222,10 @@ npx vitest run
 | Fase | Titel | Status | Commit |
 |------|-------|--------|--------|
 | 1 | PinboardManager + REST API | ✅ klaar | v0.32.0 |
-| 2 | Sidebar panel + context menu | ✅ klaar | v0.32.0 |
-| 3 | Visuele card grid view | ✅ klaar | v0.32.0 |
+| 2 | Sidebar panel + card grid UI | ✅ klaar | v0.32.0 |
+| 3 | Bug fixes (prompt→modal, auth headers) | ✅ klaar | v0.32.1 |
+| 4 | Tab context menu "Add to Pinboard" | ⏳ niet gestart | — |
+| 5 | OG metadata auto-fetch (echte thumbnails) | ⏳ niet gestart | — |
+| 6 | Card layout: masonry + auto-height | ⏳ niet gestart | — |
 
 > Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.

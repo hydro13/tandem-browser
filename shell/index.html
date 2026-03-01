@@ -1739,13 +1739,21 @@
       if (ctxMenuEl) { ctxMenuEl.remove(); ctxMenuEl = null; }
     }
 
-    function showTabContextMenu(domTabId, x, y) {
+    async function showTabContextMenu(domTabId, x, y) {
       closeCtxMenu();
 
       const wv = document.querySelector('webview[data-tab-id="'+domTabId+'"]');
       const isMuted = wv ? wv.audioMuted : false;
       const currentWsId = getTabWorkspaceId(domTabId);
       const targets = wsWorkspaces.filter(ws => ws.id !== currentWsId);
+
+      // Pre-fetch pinboards (fast — same-machine API call)
+      let pbBoards = [];
+      try {
+        const pbRes = await fetch('http://localhost:8765/pinboards', { headers: { Authorization: `Bearer ${TOKEN}` } });
+        const pbData = await pbRes.json();
+        pbBoards = pbData.boards || [];
+      } catch { /* Tandem not running or no boards */ }
 
       const menu = document.createElement('div');
       menu.className = 'tandem-ctx-menu';
@@ -1811,6 +1819,52 @@
         wsItem.appendChild(sub);
         menu.appendChild(wsItem);
 
+        addSep();
+      }
+
+      // — Add to Pinboard (submenu)
+      {
+        const pbItem = document.createElement('div');
+        pbItem.className = 'tandem-ctx-menu-item';
+        pbItem.innerHTML = '<span>📌 Add to Pinboard</span><span class="ctx-arrow">▶</span>';
+
+        const pbSub = document.createElement('div');
+        pbSub.className = 'tandem-ctx-submenu';
+
+        if (pbBoards.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'tandem-ctx-submenu-item';
+          empty.style.opacity = '0.5';
+          empty.style.cursor = 'default';
+          empty.textContent = 'No boards yet';
+          pbSub.appendChild(empty);
+        } else {
+          pbBoards.forEach(board => {
+            const si = document.createElement('div');
+            si.className = 'tandem-ctx-submenu-item';
+            si.innerHTML = '<span>' + board.emoji + ' ' + board.name + '</span>';
+            si.addEventListener('click', async () => {
+              closeCtxMenu();
+              const tabUrl = wv ? wv.src : '';
+              const tabTitle = wv ? wv.getTitle() : '';
+              await fetch('http://localhost:8765/pinboards/' + board.id + '/items', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${TOKEN}` },
+                body: JSON.stringify({ type: 'link', url: tabUrl, title: tabTitle })
+              });
+              // Visual flash feedback on the tab
+              const tabEl = document.querySelector('.tab[data-tab-id="' + domTabId + '"]');
+              if (tabEl) {
+                tabEl.classList.add('pin-flash');
+                setTimeout(() => tabEl.classList.remove('pin-flash'), 700);
+              }
+            });
+            pbSub.appendChild(si);
+          });
+        }
+
+        pbItem.appendChild(pbSub);
+        menu.appendChild(pbItem);
         addSep();
       }
 

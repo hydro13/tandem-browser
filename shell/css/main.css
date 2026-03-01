@@ -242,6 +242,15 @@
       border-bottom: 2px solid var(--accent);
     }
 
+    .tab.pin-flash {
+      animation: pinFlash 0.7s ease;
+    }
+    @keyframes pinFlash {
+      0%   { background: transparent; }
+      25%  { background: rgba(99, 102, 241, 0.45); }
+      100% { background: transparent; }
+    }
+
     .tab .group-dot {
       width: 6px;
       height: 6px;
