@@ -57,6 +57,7 @@ import { LocatorFinder } from './locators/finder';
 import { DeviceEmulator } from './device/emulator';
 import { SidebarManager } from './sidebar/manager';
 import { WorkspaceManager } from './workspaces/manager';
+import { SyncManager } from './sync/manager';
 import { ContentExtractor } from './content/extractor';
 import { WorkflowEngine } from './workflow/engine';
 import { LoginManager } from './auth/login-manager';
@@ -112,6 +113,7 @@ let locatorFinder: LocatorFinder | null = null;
 let deviceEmulator: DeviceEmulator | null = null;
 let sidebarManager: SidebarManager | null = null;
 let workspaceManager: WorkspaceManager | null = null;
+let syncManager: SyncManager | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 /** Queue tab-register IPC when it arrives before tabManager is ready */
@@ -371,6 +373,14 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   sidebarManager = new SidebarManager();
   workspaceManager = new WorkspaceManager();
   workspaceManager.setMainWindow(win);
+  syncManager = new SyncManager();
+  const deviceSyncConfig = configManager.getConfig().deviceSync;
+  if (deviceSyncConfig.enabled && deviceSyncConfig.syncRoot) {
+    syncManager.init(deviceSyncConfig);
+  }
+  tabManager.setSyncManager(syncManager);
+  historyManager.setSyncManager(syncManager);
+  workspaceManager.setSyncManager(syncManager);
   devToolsManager.setCopilotStream(copilotStream!);
   devToolsManager.setActivityTracker(activityTracker!);
 
@@ -483,6 +493,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     deviceEmulator: deviceEmulator!,
     sidebarManager: sidebarManager!,
     workspaceManager: workspaceManager!,
+    syncManager: syncManager!,
   };
 
   api = new TandemAPI({ win, port: API_PORT, registry });
@@ -624,6 +635,7 @@ app.on('will-quit', () => {
   if (historyManager) historyManager.destroy();
   if (sidebarManager) sidebarManager.destroy();
   if (workspaceManager) workspaceManager.destroy();
+  if (syncManager) syncManager.destroy();
 });
 
 app.on('window-all-closed', () => {

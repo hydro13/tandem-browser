@@ -1,5 +1,6 @@
 import type { BrowserWindow, WebContents} from 'electron';
 import { webContents } from 'electron';
+import type { SyncManager } from '../sync/manager';
 
 export type TabSource = 'robin' | 'kees' | 'copilot';
 
@@ -37,9 +38,31 @@ export class TabManager {
   private activeTabId: string | null = null;
   private counter = 0;
   private closedTabs: { url: string; title: string }[] = [];
+  private syncManager: SyncManager | null = null;
+  private syncTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(win: BrowserWindow) {
     this.win = win;
+  }
+
+  setSyncManager(sm: SyncManager): void {
+    this.syncManager = sm;
+  }
+
+  /** Debounced publish of tabs to sync folder (2 second delay) */
+  private scheduleSyncPublish(): void {
+    if (!this.syncManager || !this.syncManager.isConfigured()) return;
+    if (this.syncTimer) clearTimeout(this.syncTimer);
+    this.syncTimer = setTimeout(() => {
+      this.syncTimer = null;
+      if (!this.syncManager?.isConfigured()) return;
+      this.syncManager.publishTabs(this.listTabs().map(t => ({
+        tabId: t.id,
+        url: t.url,
+        title: t.title,
+        favicon: t.favicon,
+      })));
+    }, 2000);
   }
 
   /** Generate unique tab ID */
@@ -108,6 +131,7 @@ export class TabManager {
     // Now notify renderer of source indicator (after focus is done)
     this.win.webContents.send('tab-source-changed', { tabId: id, source });
 
+    this.scheduleSyncPublish();
     return tab;
   }
 
@@ -151,6 +175,7 @@ export class TabManager {
       }
     }
 
+    this.scheduleSyncPublish();
     return true;
   }
 
@@ -198,6 +223,7 @@ export class TabManager {
     if (updates.title !== undefined) tab.title = updates.title;
     if (updates.url !== undefined) tab.url = updates.url;
     if (updates.favicon !== undefined) tab.favicon = updates.favicon;
+    this.scheduleSyncPublish();
   }
 
   /** List all tabs — pinned tabs first */

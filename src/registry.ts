@@ -44,6 +44,7 @@ import type { LocatorFinder } from './locators/finder';
 import type { DeviceEmulator } from './device/emulator';
 import type { SidebarManager } from './sidebar/manager';
 import type { WorkspaceManager } from './workspaces/manager';
+import type { SyncManager } from './sync/manager';
 
 export interface ManagerRegistry {
   tabManager: TabManager;
@@ -86,4 +87,5 @@ export interface ManagerRegistry {
   deviceEmulator: DeviceEmulator;
   sidebarManager: SidebarManager;
   workspaceManager: WorkspaceManager;
+  syncManager: SyncManager;
 }

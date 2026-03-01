@@ -447,6 +447,19 @@ export function createMockContext(): RouteContext {
       moveTab: vi.fn(),
       destroy: vi.fn(),
     } as any,
+
+    // ── syncManager ──────────────────────────────
+    syncManager: {
+      init: vi.fn(),
+      isConfigured: vi.fn().mockReturnValue(false),
+      publishTabs: vi.fn(),
+      publishHistory: vi.fn(),
+      getRemoteDevices: vi.fn().mockReturnValue([]),
+      writeShared: vi.fn(),
+      readShared: vi.fn().mockReturnValue(null),
+      getConfig: vi.fn().mockReturnValue(null),
+      destroy: vi.fn(),
+    } as any,
   };
 
   return ctx;

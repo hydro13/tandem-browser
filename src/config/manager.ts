@@ -51,10 +51,18 @@ export interface TandemConfig {
     customAcceptLanguage: string;
   };
 
-  // Sync
+  // Sync (Chrome bookmarks import)
   sync: {
     chromeBookmarks: boolean;
     chromeProfile: string; // 'Default', 'Profile 1', etc.
+  };
+
+  // Device Sync — cross-device sync via shared folder (Google Drive, iCloud, etc.)
+  // Configure via POST /sync/config API. Settings UI is future work.
+  deviceSync: {
+    enabled: boolean;
+    syncRoot: string;      // e.g. "/Users/robin/Google Drive/My Drive/Tandem"
+    deviceName: string;    // e.g. "macbook-air" (default: os.hostname())
   };
 
   // Behavioral Learning
@@ -124,6 +132,11 @@ const DEFAULT_CONFIG: TandemConfig = {
   sync: {
     chromeBookmarks: false,
     chromeProfile: 'Default',
+  },
+  deviceSync: {
+    enabled: false,
+    syncRoot: '',
+    deviceName: os.hostname().toLowerCase().replace(/\s+/g, '-'),
   },
   behavior: {
     trackingEnabled: true,

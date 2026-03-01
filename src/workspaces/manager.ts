@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 import type { BrowserWindow } from 'electron';
+import type { SyncManager } from '../sync/manager';
 
 const log = createLogger('WorkspaceManager');
 
@@ -29,6 +30,7 @@ export class WorkspaceManager {
   private workspaces: Map<string, Workspace> = new Map();
   private activeId: string = '';
   private mainWindow: BrowserWindow | null = null;
+  private syncManager: SyncManager | null = null;
 
   constructor() {
     this.loadFromDisk();
@@ -36,6 +38,10 @@ export class WorkspaceManager {
 
   setMainWindow(win: BrowserWindow): void {
     this.mainWindow = win;
+  }
+
+  setSyncManager(sm: SyncManager): void {
+    this.syncManager = sm;
   }
 
   private loadFromDisk(): void {
@@ -91,6 +97,9 @@ export class WorkspaceManager {
         workspaces: this.list(),
       };
       fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
+      if (this.syncManager?.isConfigured()) {
+        this.syncManager.writeShared('workspaces.json', data);
+      }
     } catch (e) {
       log.warn('Failed to save workspaces to disk:', e instanceof Error ? e.message : e);
     }

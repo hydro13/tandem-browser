@@ -24,6 +24,7 @@ import { registerMediaRoutes } from './routes/media';
 import { registerMiscRoutes } from './routes/misc';
 import { registerSidebarRoutes } from './routes/sidebar';
 import { registerWorkspaceRoutes } from './routes/workspaces';
+import { registerSyncRoutes } from './routes/sync';
 import { registerSecurityRoutes } from '../security/routes';
 import { createLogger } from '../utils/logger';
 
@@ -162,6 +163,7 @@ export class TandemAPI {
     registerMiscRoutes(router, ctx);
     registerSidebarRoutes(router, ctx);
     registerWorkspaceRoutes(router, ctx);
+    registerSyncRoutes(router, ctx);
   }
 
   async start(): Promise<void> {

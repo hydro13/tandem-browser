@@ -99,6 +99,7 @@ Lucid Mode • Facebook Messenger • VK • Crypto Wallet • Cashback • Flow
 | Opera research + gap analyse | 2026-02-28 | 488029e |
 | Project management setup | 2026-02-28 | 488029e |
 | Alle design + impl docs (10 features) | 2026-02-28 | cfa0e1b |
+| Cross-device Sync (SyncManager) — fase 1 | 2026-03-01 | ✅ |
 
 ---
 

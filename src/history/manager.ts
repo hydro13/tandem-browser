@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import type { SyncManager } from '../sync/manager';
 
 const log = createLogger('HistoryManager');
 
@@ -32,6 +33,7 @@ export class HistoryManager {
   private storePath: string;
   private store: HistoryStore;
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private syncManager: SyncManager | null = null;
 
   constructor() {
     const baseDir = tandemDir();
@@ -40,6 +42,10 @@ export class HistoryManager {
     }
     this.storePath = path.join(baseDir, 'history.json');
     this.store = this.load();
+  }
+
+  setSyncManager(sm: SyncManager): void {
+    this.syncManager = sm;
   }
 
   private load(): HistoryStore {
@@ -59,6 +65,9 @@ export class HistoryManager {
         fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
       } catch (e) {
         log.warn('Failed to save:', e instanceof Error ? e.message : String(e));
+      }
+      if (this.syncManager?.isConfigured()) {
+        this.syncManager.publishHistory(this.store.entries);
       }
     }, 2000);
   }

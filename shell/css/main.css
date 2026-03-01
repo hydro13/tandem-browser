@@ -2787,6 +2787,93 @@
       padding: 24px 0;
     }
 
+    /* ── History Panel ── */
+    .history-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+      gap: 6px;
+    }
+    .history-search-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .history-search-wrap svg {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: #888;
+      pointer-events: none;
+    }
+    .history-search {
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.10);
+      border-radius: 8px;
+      padding: 7px 10px 7px 28px;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .history-search:focus { border-color: rgba(255,255,255,0.25); }
+    .history-search::placeholder { color: #666; }
+    .history-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+    .history-list::-webkit-scrollbar { width: 4px; }
+    .history-list::-webkit-scrollbar-track { background: transparent; }
+    .history-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+    /* ── Your Devices (Sync) ── */
+    .history-section-header {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      padding: 8px 12px 4px;
+      letter-spacing: 0.05em;
+    }
+    .sync-device-name {
+      font-size: 12px;
+      color: #888;
+      padding: 4px 12px;
+      font-weight: 600;
+    }
+    .sync-tab-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 12px;
+      cursor: pointer;
+      border-radius: 6px;
+      transition: background 0.12s;
+    }
+    .sync-tab-item:hover { background: rgba(255,255,255,0.05); }
+    .sync-tab-favicon {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      border-radius: 2px;
+      object-fit: contain;
+    }
+    .sync-tab-title {
+      font-size: 13px;
+      color: #ddd;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
 /* ── Custom Modal (replaces native prompt/confirm — Electron blocks those) ── */
 .tandem-modal-overlay {
   position: fixed; inset: 0; z-index: 99999;
