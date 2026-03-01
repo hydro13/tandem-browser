@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.27.0] - 2026-03-01
+
+- feat: Opera-style workspace icon picker, SVG strip icons, edit/delete UI
+
+- Replace emoji text inputs with 24 inline SVG icons (Heroicons outline style)
+- Inline create/edit sheet with 6-column icon grid picker (not floating modal)
+- Edit workspace: rename, change icon, delete with inline confirmation
+- Sidebar strip: SVG icons with indigo active / gray inactive styling
+- Data model: emoji field migrated to icon slug with graceful migration
+- Version bump to v0.26.0
+
 ## [v0.25.1] - 2026-03-01
 
 - fix: replace native prompt/confirm with custom modal (Electron blocks native dialogs)
