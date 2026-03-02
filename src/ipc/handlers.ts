@@ -399,23 +399,23 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // Window controls (frameless window on Linux)
   ipcMain.on('window-minimize', () => {
-    win.minimize();
+    _win.minimize();
   });
 
   ipcMain.on('window-maximize', () => {
-    if (win.isMaximized()) {
-      win.unmaximize();
+    if (_win.isMaximized()) {
+      _win.unmaximize();
     } else {
-      win.maximize();
+      _win.maximize();
     }
   });
 
   ipcMain.on('window-close', () => {
-    win.close();
+    _win.close();
   });
 
   ipcMain.handle('is-window-maximized', () => {
-    return win.isMaximized();
+    return _win.isMaximized();
   });
 
 
