@@ -3258,7 +3258,7 @@ function renderAboutPanel() {
       <div class="about-title"><span class="about-t">T</span><span class="about-rest">andem</span></div>
       <div class="about-subtitle">Wingman Browser</div>
       <div class="about-quote">"Jij bent mij en ik ben jou, samen zijn we 1"</div>
-      <div class="about-version">v0.44.0</div>
+      <div class="about-version">v0.44.1</div>
       <div class="about-info">
         AI-Human symbiotic browser<br>
         Built for browsing together — human eyes, AI mind
