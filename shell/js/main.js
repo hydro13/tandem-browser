@@ -456,7 +456,9 @@
         } else if (action === 'open-bookmarks') {
           const shellPath = window.location.href.replace(/\/[^/]*$/, '');
           window.tandem.newTab(shellPath + '/bookmarks.html');
-        } else if (action === 'show-shortcuts') {
+        } else if (action === 'show-about') {
+          showAboutOverlay();
+         } else if (action === 'show-shortcuts') {
           showShortcutsOverlay();
         } else if (action === 'zoom-in') {
           changeZoom('in');
@@ -3235,3 +3237,49 @@
         renderExtToolbar(exts);
       }).catch(() => { });
     }
+
+// ═══ About Overlay ═══
+function showAboutOverlay() {
+  const overlay = document.getElementById('about-overlay');
+  if (overlay) {
+    overlay.style.display = 'flex';
+  }
+}
+
+function hideAboutOverlay() {
+  const overlay = document.getElementById('about-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+  }
+}
+
+// Initialize About overlay event listeners
+document.addEventListener('DOMContentLoaded', () => {
+  const aboutClose = document.getElementById('about-close');
+  const aboutOverlay = document.getElementById('about-overlay');
+  const aboutGithubLink = document.getElementById('about-github-link');
+  
+  if (aboutClose) {
+    aboutClose.addEventListener('click', hideAboutOverlay);
+  }
+  
+  if (aboutOverlay) {
+    aboutOverlay.addEventListener('click', (e) => {
+      if (e.target === aboutOverlay) hideAboutOverlay();
+    });
+  }
+  
+  if (aboutGithubLink) {
+    aboutGithubLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (window.tandem) window.tandem.newTab('https://github.com/hydro13');
+      hideAboutOverlay();
+    });
+  }
+  
+  // Listen for show-about event from main process
+  if (window.tandem && window.tandem.onShortcut) {
+    const originalHandler = window.tandem.onShortcut;
+    // Add show-about to shortcuts
+  }
+});

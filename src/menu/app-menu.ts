@@ -32,33 +32,7 @@ export function buildAppMenu(deps: MenuDeps): void {
       submenu: [
         {
           label: 'About Tandem Browser',
-          click: () => {
-            const aboutWindow = new BW({
-              width: 600,
-              height: 650,
-              modal: true,
-              parent: deps.mainWindow || undefined,
-              frame: process.platform === 'linux' ? false : true,
-              transparent: true,
-              backgroundColor: '#00000000',
-              resizable: false,
-              maximizable: false,
-              minimizable: false,
-              webPreferences: {
-                nodeIntegration: false,
-                contextIsolation: true,
-              },
-            });
-            aboutWindow.setMenu(null);
-            // Open external links in new Tandem tab
-            aboutWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
-              if (deps.mainWindow) {
-                deps.mainWindow.webContents.send('open-url-in-new-tab', url);
-              }
-              return { action: 'deny' };
-            });
-            void aboutWindow.loadFile(path.join(__dirname, '..', '..', 'shell', 'about.html'));
-          },
+          click: () => send('show-about'),
         },
         { type: 'separator' },
         { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => send('open-settings') },
