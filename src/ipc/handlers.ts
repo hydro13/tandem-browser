@@ -424,9 +424,9 @@ export function registerIpcHandlers(deps: IpcDeps): void {
                 },
               });
               aboutWindow.setMenu(null);
-              // Open external links in system browser
+              // Open external links in new Tandem tab
               aboutWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
-                shell.openExternal(url);
+                _win.webContents.send('open-url-in-new-tab', url);
                 return { action: 'deny' };
               });
               void aboutWindow.loadFile(path.join(__dirname, '..', '..', 'shell', 'about.html'));

@@ -48,9 +48,11 @@ export function buildAppMenu(deps: MenuDeps): void {
               },
             });
             aboutWindow.setMenu(null);
-            // Open external links in system browser
+            // Open external links in new Tandem tab
             aboutWindow.webContents.setWindowOpenHandler(({ url }: { url: string }) => {
-              shell.openExternal(url);
+              if (deps.mainWindow) {
+                deps.mainWindow.webContents.send('open-url-in-new-tab', url);
+              }
               return { action: 'deny' };
             });
             void aboutWindow.loadFile(path.join(__dirname, '..', '..', 'shell', 'about.html'));

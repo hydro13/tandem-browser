@@ -46,7 +46,12 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('shortcut', handler);
     return () => ipcRenderer.removeListener('shortcut', handler);
   },
-  onTabRegistered: (callback: (data: { tabId: string }) => void) => {
+  onOpenUrlInNewTab: (callback: (url: string) => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
+    ipcRenderer.on('open-url-in-new-tab', handler);
+    return () => ipcRenderer.removeListener('open-url-in-new-tab', handler);
+  },
+    onTabRegistered: (callback: (data: { tabId: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { tabId: string }) => callback(data);
     ipcRenderer.on('tab-registered', handler);
     return () => ipcRenderer.removeListener('tab-registered', handler);
