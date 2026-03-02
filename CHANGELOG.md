@@ -2,6 +2,20 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.43.1] - 2026-03-02
+
+- fix: use EXACT onboarding overlay pattern for About
+
+Copied exact structure from onboarding overlay instead of
+inventing my own:
+
+- .about-overlay with .visible class toggle
+- background: var(--surface) with backdrop-filter: blur(20px)
+- Same CSS variables and styling
+- Click outside to close
+
+Now matches existing overlay pattern in codebase!
+
 ## [v0.43.0] - 2026-03-02
 
 - feat: About as overlay with true frosted glass effect
