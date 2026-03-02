@@ -1,4 +1,4 @@
-import type { BrowserWindow } from 'electron';
+
 import { ipcMain, Menu, BrowserWindow, shell } from 'electron';
 import path from 'path';
 import type { TabManager } from '../tabs/manager';
