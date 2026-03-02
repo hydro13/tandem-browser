@@ -243,7 +243,7 @@ contextBridge.exposeInMainWorld('tandem', {
 
   // Chrome-style compact title bar: platform detection and window controls
   getPlatform: () => process.platform,
-  showAppMenu: () => ipcRenderer.send('show-app-menu'),
+  showAppMenu: (x: number, y: number) => ipcRenderer.send('show-app-menu', { x, y }),
   minimizeWindow: () => ipcRenderer.send('window-minimize'),
   maximizeWindow: () => ipcRenderer.send('window-maximize'),
   closeWindow: () => ipcRenderer.send('window-close'),

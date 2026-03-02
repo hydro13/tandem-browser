@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron';
-import { ipcMain } from 'electron';
+import { ipcMain, Menu } from 'electron';
 import path from 'path';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
@@ -397,7 +397,52 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  // Window controls (frameless window on Linux)
+  // App menu popup (frameless window on Linux)
+  ipcMain.on('show-app-menu', (_event, data: { x: number; y: number }) => {
+    const send = (action: string) => _win.webContents.send('shortcut', action);
+    
+    const template: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: 'File',
+        submenu: [
+          { label: 'New Tab', accelerator: 'CmdOrCtrl+T', click: () => send('new-tab') },
+          { type: 'separator' },
+          { label: 'Close Tab', accelerator: 'CmdOrCtrl+W', click: () => send('close-tab') },
+          { type: 'separator' },
+          { label: 'Quit', role: 'quit' },
+        ],
+      },
+      {
+        label: 'View',
+        submenu: [
+          { label: 'Reload', accelerator: 'CmdOrCtrl+R', click: () => send('reload') },
+          { type: 'separator' },
+          { label: 'Zoom In', accelerator: 'CmdOrCtrl+=', click: () => send('zoom-in') },
+          { label: 'Zoom Out', accelerator: 'CmdOrCtrl+-', click: () => send('zoom-out') },
+          { label: 'Reset Zoom', accelerator: 'CmdOrCtrl+0', click: () => send('zoom-reset') },
+        ],
+      },
+      {
+        label: 'Tools',
+        submenu: [
+          { label: 'Wingman Panel', accelerator: 'CmdOrCtrl+K', click: () => send('toggle-panel') },
+          { label: 'Draw Mode', accelerator: 'CmdOrCtrl+Shift+D', click: () => send('toggle-draw') },
+          { label: 'Screenshot', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('screenshot') },
+        ],
+      },
+      {
+        label: 'Help',
+        submenu: [
+          { label: 'Keyboard Shortcuts', accelerator: 'CmdOrCtrl+?', click: () => send('show-shortcuts') },
+        ],
+      },
+    ];
+
+    const menu = Menu.buildFromTemplate(template);
+    menu.popup({ window: _win, x: data.x, y: data.y });
+  });
+
+    // Window controls (frameless window on Linux)
   ipcMain.on('window-minimize', () => {
     _win.minimize();
   });

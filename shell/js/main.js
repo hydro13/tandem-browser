@@ -15,9 +15,10 @@
     // Hamburger menu button
     const btnAppMenu = document.getElementById('btn-app-menu');
     if (btnAppMenu) {
-      btnAppMenu.addEventListener('click', () => {
+      btnAppMenu.addEventListener('click', (e) => {
         if (window.tandem) {
-          window.tandem.showAppMenu();
+          const rect = btnAppMenu.getBoundingClientRect();
+          window.tandem.showAppMenu(Math.round(rect.left), Math.round(rect.bottom));
         }
       });
     }
