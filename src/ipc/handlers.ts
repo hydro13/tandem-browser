@@ -415,6 +415,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
                 modal: true,
                 parent: _win,
                 frame: process.platform === 'linux' ? false : true,
+                transparent: true,
+                backgroundColor: '#00000000',
                 resizable: false,
                 maximizable: false,
                 minimizable: false,

@@ -39,6 +39,8 @@ export function buildAppMenu(deps: MenuDeps): void {
               modal: true,
               parent: deps.mainWindow || undefined,
               frame: process.platform === 'linux' ? false : true,
+              transparent: true,
+              backgroundColor: '#00000000',
               resizable: false,
               maximizable: false,
               minimizable: false,
