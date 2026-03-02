@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.1] - 2026-03-02
+
+- fix: pinboard sync not loading on fresh device
+
+When no local boards.json exists, load() creates an empty store with
+lastModified set to now. mergeFromSync() then skips the shared file
+because sharedTime < localTime (shared was written in the past).
+
+Fix: if local has zero boards, always prefer the shared version
+regardless of timestamp. This ensures new devices pick up existing
+pinboards on first launch.
+
 ## [v0.41.0] - 2026-03-02
 
 - feat: two-way sync — read shared data from Google Drive on startup
