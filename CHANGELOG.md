@@ -2,6 +2,15 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.41.7] - 2026-03-02
+
+- fix: About window links open in new Tandem tab
+
+Instead of opening in system browser (Chrome), links from the
+About window now open in a new tab within Tandem.
+
+Added new IPC event 'open-url-in-new-tab' that triggers tab creation.
+
 ## [v0.41.6] - 2026-03-02
 
 - fix: remove duplicate BrowserWindow import
