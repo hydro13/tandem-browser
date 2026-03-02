@@ -2,6 +2,21 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.43.0] - 2026-03-02
+
+- feat: About as overlay with true frosted glass effect
+
+Changed About from separate BrowserWindow to in-window overlay,
+matching bookmarks panel style:
+
+- Overlay div in main window (not separate BrowserWindow)
+- backdrop-filter now blurs actual page content behind it
+- Same visual effect as bookmarks/history panels
+- Click outside or X button to close
+- GitHub link opens new tab in Tandem
+
+True frosted glass effect finally achieved!
+
 ## [v0.42.0] - 2026-03-02
 
 - feat: frosted glass effect for About window
