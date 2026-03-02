@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.0] - 2026-03-02
+
+- feat: About as SIDEBAR PANEL with real frosted glass!
+
+Finally! About now opens in the sidebar panel like
+Bookmarks/History/etc instead of as center overlay.
+
+Changes:
+- Added 'about' item to sidebar config (order 19)
+- Added info-circle icon for About
+- renderAboutPanel() function renders content in sidebar-panel-content
+- activateItem('about') triggers panel open
+- Same frosted glass effect as ALL sidebar panels
+- Removed center overlay code completely
+
+Now backdrop-filter WORKS because About is part of main window!
+
 ## [v0.43.1] - 2026-03-02
 
 - fix: use EXACT onboarding overlay pattern for About
