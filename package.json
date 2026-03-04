@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.44.35",
+  "version": "0.44.36",
   "description": "AI-Human symbiotic browser — Kees & Robin browse as one",
   "main": "dist/main.js",
   "author": "Robin Waslander <keesbeest78@proton.me>",

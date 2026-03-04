@@ -227,6 +227,32 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
     }
   });
 
+  // GET /extensions/active-tab — Active tab info for extension polyfill (tabs.query fallback).
+  // Returns webContentsId as the Chrome tab id so that chrome.tabs.sendMessage() routes
+  // correctly to the content script running in the active Tandem webview.
+  // No auth required — called from extension service workers via polyfill fetch().
+  router.get('/extensions/active-tab', (_req: Request, res: Response) => {
+    try {
+      const tab = ctx.tabManager.getActiveTab();
+      if (!tab) {
+        res.json({ tab: null });
+        return;
+      }
+      // Chrome tab shape expected by 1Password: {id, url, title, active, windowId}
+      res.json({
+        tab: {
+          id: tab.webContentsId,
+          url: tab.url ?? '',
+          title: tab.title ?? '',
+          active: true,
+          windowId: 1,
+        },
+      });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   // GET /extensions/native-messaging/status — Native messaging host detection status
   router.get('/extensions/native-messaging/status', (_req: Request, res: Response) => {
     try {

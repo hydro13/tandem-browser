@@ -275,6 +275,58 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
       })
     : undefined;
 
+  /*
+   * tabs.query fallback: when Electron returns no active tab (webviews are not
+   * surfaced to the extension API as Chrome tabs), fall back to the Tandem API.
+   * GET http://127.0.0.1:${API_PORT}/extensions/active-tab returns the active
+   * webview as a Chrome tab using its webContentsId as the tab id — the same id
+   * Electron uses for chrome.tabs.sendMessage routing to content scripts.
+   */
+  var _tabsQueryOrig = __tc && __tc.tabs && __tc.tabs.query
+    ? __tc.tabs.query.bind(__tc.tabs) : null;
+  var _tabsQueryPatched = function(queryInfo, callback) {
+    var isActiveQuery = queryInfo && queryInfo.active;
+    if (!isActiveQuery) {
+      return _tabsQueryOrig ? _tabsQueryOrig(queryInfo, callback) : (callback ? callback([]) : Promise.resolve([]));
+    }
+    // Try original first; fall back to Tandem API if empty
+    var fromApi = function() {
+      return fetch('http://127.0.0.1:' + API_PORT + '/extensions/active-tab')
+        .then(function(r) { return r.json(); })
+        .then(function(d) { return d && d.tab ? [d.tab] : []; })
+        .catch(function() { return []; });
+    };
+    if (_tabsQueryOrig) {
+      var result = _tabsQueryOrig(queryInfo);
+      // result may be a Promise (browser ns) or void with callback (chrome ns)
+      var asPromise = result && typeof result.then === 'function'
+        ? result
+        : new Promise(function(res) { _tabsQueryOrig(queryInfo, res); });
+      return asPromise.then(function(tabs) {
+        if (tabs && tabs.length > 0) {
+          if (callback) callback(tabs);
+          return tabs;
+        }
+        return fromApi().then(function(tabs2) {
+          if (callback) callback(tabs2);
+          return tabs2;
+        });
+      });
+    }
+    var p = fromApi();
+    if (callback) p.then(callback);
+    return p;
+  };
+  var tabsObj = __tc && __tc.tabs
+    ? new Proxy(__tc.tabs, {
+        get: function(t, k) {
+          if (k === 'query') return _tabsQueryPatched;
+          var v = t[k];
+          return (typeof v === 'function') ? v.bind(t) : v;
+        }
+      })
+    : undefined;
+
   /* Build a proxy that returns stubs for missing APIs, forwards the rest */
   var proxy = new Proxy(__tc, {
     get: function(target, prop) {
@@ -282,11 +334,12 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
       if (prop === 'notifications')  return notificationsObj;
       if (prop === 'runtime' && runtimeProxy) return runtimeProxy;
       if (prop === 'windows' && windowsObj)   return windowsObj;
+      if (prop === 'tabs' && tabsObj)         return tabsObj;
       var val = target[prop];
       return (typeof val === 'function') ? val.bind(target) : val;
     },
     has: function(target, prop) {
-      return prop === 'action' || prop === 'notifications' || prop === 'runtime' || prop === 'windows' || (prop in target);
+      return prop === 'action' || prop === 'notifications' || prop === 'runtime' || prop === 'windows' || prop === 'tabs' || (prop in target);
     }
   });
 
