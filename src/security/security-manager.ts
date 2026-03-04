@@ -93,7 +93,9 @@ export class SecurityManager {
       this.eventCounter++;
       if (this.eventCounter >= 100) {
         this.eventCounter = 0;
-        this.runCorrelation();
+        // Defer correlation off the hot path — correlateEvents() is CPU-heavy and can take
+        // 2-3 seconds, which blocks onBeforeRequest callbacks and stalls network requests.
+        setImmediate(() => this.runCorrelation());
       }
 
       // Phase 5-C: Confidence-based Gatekeeper routing
