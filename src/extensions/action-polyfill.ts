@@ -66,12 +66,10 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     };
   }
 
-  function notifyToolbar(endpoint, body) {
-    fetch('http://127.0.0.1:' + API_PORT + endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    }).catch(function() {});
+  function notifyToolbar(_endpoint, _body) {
+    // No-op: fetch to Tandem API is blocked by extension CSP (connect-src does not
+    // include http://127.0.0.1:8765). Generating a CSP violation error in console.
+    // Icon/badge state from 1Password is not critical for Tandem functionality.
   }
 
   var ba = (__tc.browserAction) || null;
@@ -336,7 +334,25 @@ export class ActionPolyfill {
           log.info(`🩹 Patched browser.commands.onCommand for ${manifest.name || cwsId}`);
         }
 
-        // Patch 5: chrome.contextMenus.onClicked — class constructor called at module-level
+        // Patch 5: chrome.windows.onFocusChanged — class constructor called during async SW
+        // initialization. chrome.windows is entirely absent in Electron.
+        // Also patches chrome.windows.getCurrent in Uce() which uses chrome.windows.WINDOW_ID_NONE
+        // directly (not via the already-patched Hce var).
+        const winFocusPattern = 'chrome.windows.onFocusChanged.addListener(this.onBrowserWindowFocusChange.bind(this))';
+        const winFocusPatch   = 'chrome.windows?.onFocusChanged?.addListener(this.onBrowserWindowFocusChange.bind(this))';
+        if (existing.includes(winFocusPattern) && !existing.includes(winFocusPatch)) {
+          existing = existing.replace(winFocusPattern, winFocusPatch);
+          log.info(`🩹 Patched chrome.windows.onFocusChanged for ${manifest.name || cwsId}`);
+        }
+
+        const winGetCurrentPattern = 'chrome.windows.getCurrent(A=>Lce(A.id??chrome.windows.WINDOW_ID_NONE))';
+        const winGetCurrentPatch   = 'chrome.windows?.getCurrent?.(A=>Lce(A.id??-1))';
+        if (existing.includes(winGetCurrentPattern) && !existing.includes(winGetCurrentPatch)) {
+          existing = existing.replace(winGetCurrentPattern, winGetCurrentPatch);
+          log.info(`🩹 Patched chrome.windows.getCurrent for ${manifest.name || cwsId}`);
+        }
+
+        // Patch 6: chrome.contextMenus.onClicked — class constructor called at module-level
         // instantiation. chrome.contextMenus is undefined in Electron.
         // Anchored to the unique single occurrence of contextMenus.onClicked in background.js.
         const ctxMenuPattern = 'chrome.contextMenus.onClicked.addListener(this.onClick)';
