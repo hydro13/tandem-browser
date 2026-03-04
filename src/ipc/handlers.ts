@@ -262,7 +262,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   ipcMain.handle('tab-new', async (_event, url?: string) => {
-    const targetUrl = url || `file://${path.join(__dirname, '..', 'shell', 'newtab.html')}`;
+    const targetUrl = url || `file://${path.join(__dirname, '..', '..', 'shell', 'newtab.html')}`;
     const tab = await tabManager.openTab(targetUrl);
     if (tab) {
       eventStream.handleTabEvent('tab-opened', { tabId: tab.id, url: targetUrl });
