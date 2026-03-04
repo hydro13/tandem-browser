@@ -282,8 +282,11 @@ export class ActionPolyfill {
         // Patch 1: chrome.notifications.onClicked — crashes at SW startup because
         //   Fj()||(chrome.notifications.onClicked.addListener(...))
         // runs unconditionally (Fj()=false in Chrome/Electron context).
-        const notifPattern = 'Fj()||(chrome.notifications.onClicked.addListener(';
-        const notifGuard   = 'Fj()||!chrome.notifications||(chrome.notifications.onClicked.addListener(';
+        //
+        // IMPORTANT: Use the 1Password-specific callback signature (A=>mre() / mre("click"))
+        // as part of the pattern so we never match the polyfill's own JSDoc comments.
+        const notifPattern = 'Fj()||(chrome.notifications.onClicked.addListener(A=>mre(';
+        const notifGuard   = 'Fj()||!chrome.notifications||(chrome.notifications.onClicked.addListener(A=>mre(';
         if (existing.includes(notifPattern) && !existing.includes(notifGuard)) {
           existing = existing.replace(notifPattern, notifGuard);
           log.info(`🩹 Patched chrome.notifications guard for ${manifest.name || cwsId}`);
