@@ -305,6 +305,19 @@ export class ActionPolyfill {
           log.info(`🩹 Patched browser.action.onClicked guard for ${manifest.name || cwsId}`);
         }
 
+        // Patch 3: chrome.webNavigation — module-level event listener registration at SW
+        // startup crashes because chrome.webNavigation is undefined in Electron (the
+        // 'webNavigation' permission is listed as unknown at extension load time).
+        // Only the two module-init calls are patched; all other webNavigation uses are inside
+        // async function bodies and only execute on demand, so they are safe for now.
+        // Anchored to the 1Password-specific callback names Qxj / Zxj.
+        const webNavPattern = 'chrome.webNavigation.onDOMContentLoaded.addListener(Qxj),chrome.webNavigation.onBeforeNavigate.addListener(Zxj)';
+        const webNavPatch   = 'chrome.webNavigation?.onDOMContentLoaded?.addListener(Qxj),chrome.webNavigation?.onBeforeNavigate?.addListener(Zxj)';
+        if (existing.includes(webNavPattern) && !existing.includes(webNavPatch)) {
+          existing = existing.replace(webNavPattern, webNavPatch);
+          log.info(`🩹 Patched chrome.webNavigation guard for ${manifest.name || cwsId}`);
+        }
+
         fs.writeFileSync(swPath, existing, 'utf-8');
         patched.push(cwsId);
       } catch (err: unknown) {
