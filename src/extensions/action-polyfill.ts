@@ -247,6 +247,20 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     : undefined;
 
   /*
+   * webNavigation stub: chrome.webNavigation is undefined in Electron (unknown permission).
+   * The extension calls getAllFrames(), getFrame(), etc. for autofill frame detection.
+   * Provide a no-op stub so all calls silently return empty results instead of throwing.
+   */
+  var webNavStub = __tc.webNavigation || {
+    getAllFrames: function(opts, cb) { if (cb) cb([]); return Promise.resolve([]); },
+    getFrame: function(opts, cb) { if (cb) cb(null); return Promise.resolve(null); },
+    onCommitted: { addListener: function() {}, removeListener: function() {}, hasListener: function() { return false; } },
+    onDOMContentLoaded: { addListener: function() {}, removeListener: function() {}, hasListener: function() { return false; } },
+    onCompleted: { addListener: function() {}, removeListener: function() {}, hasListener: function() { return false; } },
+    onHistoryStateUpdated: { addListener: function() {}, removeListener: function() {}, hasListener: function() { return false; } }
+  };
+
+  /*
    * windows.create intercept: redirect type:'popup' windows to tabs.
    * Electron does not keep chrome.windows.create({type:'popup'}) open —
    * the window flashes and immediately closes. Opening as a tab works.
@@ -335,6 +349,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
       if (prop === 'runtime' && runtimeProxy) return runtimeProxy;
       if (prop === 'windows' && windowsObj)   return windowsObj;
       if (prop === 'tabs' && tabsObj)         return tabsObj;
+      if (prop === 'webNavigation')            return webNavStub;
       var val = target[prop];
       return (typeof val === 'function') ? val.bind(target) : val;
     },
