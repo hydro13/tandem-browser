@@ -49,6 +49,50 @@ try {
     // No process on port — good
 }
 
+// Clear stale Service Worker ScriptCache when extension source files are newer.
+// Electron caches compiled V8 bytecode; if the cache is stale, source patches
+// are silently ignored and old (pre-patch) bytecode runs instead.
+try {
+    const fs = require('fs');
+    const os = require('os');
+    const swCacheDir = path.join(
+        os.homedir(),
+        'Library', 'Application Support', 'tandem-browser',
+        'Partitions', 'tandem', 'Service Worker', 'ScriptCache'
+    );
+    const extDir = path.join(os.homedir(), '.tandem', 'extensions');
+    if (fs.existsSync(swCacheDir) && fs.existsSync(extDir)) {
+        // Find the newest mtime among cache files
+        const cacheFiles = fs.readdirSync(swCacheDir).filter(f => f !== 'index-dir');
+        const cacheMtime = cacheFiles.reduce((max, f) => {
+            try { return Math.max(max, fs.statSync(path.join(swCacheDir, f)).mtimeMs); } catch { return max; }
+        }, 0);
+        // Find the newest mtime among extension source files (bg.js, manifest, etc.)
+        let extMtime = 0;
+        const walkDir = (dir) => {
+            try {
+                for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+                    const full = path.join(dir, entry.name);
+                    if (entry.isDirectory()) { walkDir(full); }
+                    else { try { extMtime = Math.max(extMtime, fs.statSync(full).mtimeMs); } catch {} }
+                }
+            } catch {}
+        };
+        walkDir(extDir);
+        if (extMtime > cacheMtime) {
+            let cleared = 0;
+            for (const f of cacheFiles) {
+                try { fs.unlinkSync(path.join(swCacheDir, f)); cleared++; } catch {}
+            }
+            if (cleared > 0) {
+                console.log(`[run-electron] Cleared ${cleared} stale SW bytecode cache file(s) (ext files newer by ${Math.round((extMtime - cacheMtime)/1000)}s)`);
+            }
+        }
+    }
+} catch (e) {
+    // Non-fatal — cache will just be used as-is
+}
+
 console.log('[run-electron] Starting Tandem Browser...');
 
 const child = spawn(electronPath, ['.'], {
