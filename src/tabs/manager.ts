@@ -119,10 +119,24 @@ export class TabManager {
   async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem', focus: boolean = true): Promise<Tab> {
     const id = this.nextId();
 
-    // Tell renderer to create a webview and return its webContentsId
-    const webContentsId: number = await this.win.webContents.executeJavaScript(`
-      window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)}, ${JSON.stringify(partition)})
-    `);
+    // Tell renderer to create a webview and return its webContentsId.
+    // If createTab() fails (e.g. dom-ready timeout), the renderer may have already
+    // added a partial entry (webview + tabEl + tabs Map entry). We clean it up here
+    // to prevent it from becoming an uncloseable zombie in the renderer's tab strip.
+    let webContentsId: number;
+    try {
+      webContentsId = await this.win.webContents.executeJavaScript(`
+        window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)}, ${JSON.stringify(partition)})
+      `);
+    } catch (e) {
+      // Best-effort renderer cleanup — ignore secondary errors.
+      try {
+        await this.win.webContents.executeJavaScript(
+          `window.__tandemTabs.cleanupOrphan(${JSON.stringify(id)})`
+        );
+      } catch { /* renderer may be in bad state; nothing more we can do */ }
+      throw e;
+    }
 
     const tab: Tab = {
       id,
@@ -185,10 +199,17 @@ export class TabManager {
       }
     }
 
-    // Remove from renderer
-    await this.win.webContents.executeJavaScript(`
-      window.__tandemTabs.removeTab(${JSON.stringify(tabId)})
-    `);
+    // Remove from renderer. If the IPC call fails for any reason (e.g. renderer
+    // is busy or the webview entry is already gone), we still proceed with
+    // main-process cleanup so the tab doesn't become permanently uncloseable.
+    try {
+      await this.win.webContents.executeJavaScript(`
+        window.__tandemTabs.removeTab(${JSON.stringify(tabId)})
+      `);
+    } catch (e) {
+      // Log but don't abort — main-process state must still be cleaned up.
+      console.warn(`[TabManager] removeTab IPC failed for ${tabId}:`, e instanceof Error ? e.message : String(e));
+    }
 
     this.tabs.delete(tabId);
 
@@ -352,6 +373,50 @@ export class TabManager {
   /** Get a tab by ID */
   getTab(tabId: string): Tab | null {
     return this.tabs.get(tabId) || null;
+  }
+
+  /**
+   * Reconcile main-process tab state with the renderer's tab strip.
+   *
+   * The renderer maintains its own `tabs` Map that can drift out of sync with the
+   * main-process `this.tabs` Map when `openTab()` fails after the renderer has
+   * already created the DOM elements.  Any tab ID known to the renderer but
+   * unknown to the main process is an orphan — it shows in the UI but cannot be
+   * interacted with or closed through normal means.
+   *
+   * This method queries the renderer for its current tab IDs and removes any
+   * orphans it finds, eliminating the zombie-tab problem at its root.
+   *
+   * Call after session restore (to catch failed restores) or on-demand via the
+   * `/tabs/reconcile` API endpoint.
+   */
+  async reconcileWithRenderer(): Promise<{ removed: string[] }> {
+    let rendererTabIds: string[];
+    try {
+      rendererTabIds = await this.win.webContents.executeJavaScript(
+        `window.__tandemTabs.getTabIds()`
+      ) as string[];
+    } catch {
+      // Renderer not ready or getTabIds not yet exposed — nothing to reconcile.
+      return { removed: [] };
+    }
+
+    const mainTabIds = new Set(this.tabs.keys());
+    const removed: string[] = [];
+
+    for (const rtabId of rendererTabIds) {
+      if (!mainTabIds.has(rtabId)) {
+        // Renderer has this tab but main process doesn't → orphan → clean up.
+        try {
+          await this.win.webContents.executeJavaScript(
+            `window.__tandemTabs.cleanupOrphan(${JSON.stringify(rtabId)})`
+          );
+          removed.push(rtabId);
+        } catch { /* best-effort */ }
+      }
+    }
+
+    return { removed };
   }
 
   /** Register an existing webview (for the initial tab) */

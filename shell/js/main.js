@@ -174,9 +174,35 @@
           if (tabId === activeTabId) statusDot.classList.remove('loading');
         });
 
-        // Return webContentsId (available after dom-ready)
-        return new Promise((resolve) => {
+        // Return webContentsId (available after dom-ready).
+        // A 15-second timeout guards against the Electron edge-case where dom-ready
+        // never fires (e.g. renderer overload, webview creation failure). On timeout
+        // the partial renderer state (webview + tabEl + tabs Map entry) is cleaned up
+        // so it doesn't become an uncloseable zombie.
+        const TAB_INIT_TIMEOUT_MS = 15000;
+        return new Promise((resolve, reject) => {
+          let settled = false;
+
+          const cleanupPartial = () => {
+            const e = tabs.get(tabId);
+            if (e) {
+              try { e.webview.remove(); } catch { /* best-effort */ }
+              try { e.tabEl.remove(); } catch { /* best-effort */ }
+            }
+            tabs.delete(tabId);
+          };
+
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            cleanupPartial();
+            reject(new Error(`Tab init timeout (${TAB_INIT_TIMEOUT_MS}ms): ${url}`));
+          }, TAB_INIT_TIMEOUT_MS);
+
           wv.addEventListener('dom-ready', () => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
             resolve(wv.getWebContentsId());
           }, { once: true });
         });
@@ -189,6 +215,29 @@
         entry.webview.remove();
         entry.tabEl.remove();
         tabs.delete(tabId);
+      },
+
+      /**
+       * Return all tab IDs currently tracked by the renderer.
+       * Used by the main process for reconciliation (orphan detection).
+       */
+      getTabIds() {
+        return Array.from(tabs.keys());
+      },
+
+      /**
+       * Force-remove a tab from renderer state without going through normal close flow.
+       * Used by the main process to clean up orphaned renderer tabs that it has lost
+       * track of (e.g. after a failed openTab() or an unexpected renderer state reset).
+       * Returns true if the tab was found and removed, false if it was unknown.
+       */
+      cleanupOrphan(tabId) {
+        const entry = tabs.get(tabId);
+        if (!entry) return false;
+        try { entry.webview.remove(); } catch { /* best-effort */ }
+        try { entry.tabEl.remove(); } catch { /* best-effort */ }
+        tabs.delete(tabId);
+        return true;
       },
 
       /** Focus/show a tab */

@@ -600,8 +600,18 @@ async function startAPI(win: BrowserWindow): Promise<void> {
         await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
         securityManager?.onTabAttached().catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
       }, CDP_ATTACH_DELAY_MS);
-      // Restore saved session tabs (replaces the default new tab)
-      restoreSessionTabs(tab.id).catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
+      // Restore saved session tabs (replaces the default new tab), then reconcile
+      // to remove any renderer orphans that result from failed tab restorations.
+      restoreSessionTabs(tab.id)
+        .then(() => tabManager?.reconcileWithRenderer()
+          .then(r => {
+            if (r.removed.length > 0) {
+              log.info(`Post-restore reconcile: removed ${r.removed.length} renderer orphan(s): ${r.removed.join(', ')}`);
+            }
+          })
+          .catch(e => log.warn('Post-restore reconcile failed:', e instanceof Error ? e.message : String(e)))
+        )
+        .catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
     }
   });
 
@@ -617,8 +627,17 @@ async function startAPI(win: BrowserWindow): Promise<void> {
       await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
       securityManager?.onTabAttached().catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
     }, CDP_ATTACH_DELAY_MS);
-    // Restore saved session tabs (replaces the default new tab)
-    restoreSessionTabs(tab.id).catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
+    // Restore saved session tabs (replaces the default new tab), then reconcile.
+    restoreSessionTabs(tab.id)
+      .then(() => tabManager?.reconcileWithRenderer()
+        .then(r => {
+          if (r.removed.length > 0) {
+            log.info(`Post-restore reconcile: removed ${r.removed.length} renderer orphan(s): ${r.removed.join(', ')}`);
+          }
+        })
+        .catch(e => log.warn('Post-restore reconcile failed:', e instanceof Error ? e.message : String(e)))
+      )
+      .catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
   }
 }
 

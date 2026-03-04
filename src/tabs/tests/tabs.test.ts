@@ -22,11 +22,41 @@ import { TabManager } from '../manager';
 
 function createMockWindow() {
   let wcIdCounter = 100;
+  // Simulate the renderer's tabs Map for reconcile/orphan tests.
+  const rendererTabs = new Map<string, boolean>();
+
+  const mockExecuteJavaScript = vi.fn().mockImplementation((code: string) => {
+    // Route calls to the right mock behaviour based on the JS expression.
+    if (code.includes('createTab(')) {
+      const tabIdMatch = code.match(/createTab\("(tab-\d+)"/);
+      if (tabIdMatch) rendererTabs.set(tabIdMatch[1], true);
+      return Promise.resolve(wcIdCounter++);
+    }
+    if (code.includes('removeTab(')) {
+      const tabIdMatch = code.match(/removeTab\("(tab-\d+)"/);
+      if (tabIdMatch) rendererTabs.delete(tabIdMatch[1]);
+      return Promise.resolve(undefined);
+    }
+    if (code.includes('cleanupOrphan(')) {
+      const tabIdMatch = code.match(/cleanupOrphan\("(tab-\d+)"/);
+      if (tabIdMatch) rendererTabs.delete(tabIdMatch[1]);
+      return Promise.resolve(rendererTabs.has(tabIdMatch?.[1] ?? ''));
+    }
+    if (code.includes('getTabIds()')) {
+      return Promise.resolve(Array.from(rendererTabs.keys()));
+    }
+    if (code.includes('focusTab(')) {
+      return Promise.resolve(undefined);
+    }
+    return Promise.resolve(wcIdCounter++);
+  });
+
   return {
     webContents: {
-      executeJavaScript: vi.fn().mockImplementation(() => Promise.resolve(wcIdCounter++)),
+      executeJavaScript: mockExecuteJavaScript,
       send: vi.fn(),
     },
+    _rendererTabs: rendererTabs,
   } as any;
 }
 
@@ -281,6 +311,95 @@ describe('TabManager', () => {
     it('returns null when no closed tabs', async () => {
       const result = await tm.reopenClosedTab();
       expect(result).toBe(null);
+    });
+  });
+
+  describe('zombie tab prevention', () => {
+    describe('openTab() — renderer cleanup on failure', () => {
+      it('calls cleanupOrphan when createTab throws', async () => {
+        // Make createTab fail on next call
+        win.webContents.executeJavaScript
+          .mockImplementationOnce((code: string) => {
+            if (code.includes('createTab(')) return Promise.reject(new Error('dom-ready timeout'));
+            return Promise.resolve(undefined);
+          })
+          .mockImplementationOnce((code: string) => {
+            // cleanupOrphan call — should be invoked after failure
+            expect(code).toContain('cleanupOrphan(');
+            return Promise.resolve(false);
+          });
+
+        await expect(tm.openTab('https://broken.com')).rejects.toThrow('dom-ready timeout');
+        // Tab must NOT be registered in main process after failure
+        expect(tm.count).toBe(0);
+      });
+
+      it('does not add the tab to main-process state when createTab fails', async () => {
+        win.webContents.executeJavaScript
+          .mockImplementationOnce(() => Promise.reject(new Error('timeout')))
+          .mockImplementationOnce(() => Promise.resolve(false)); // cleanupOrphan
+
+        await expect(tm.openTab('https://broken.com')).rejects.toThrow();
+        expect(tm.listTabs()).toHaveLength(0);
+      });
+    });
+
+    describe('closeTab() — robust against IPC failure', () => {
+      it('still removes the tab from main-process state when removeTab IPC throws', async () => {
+        const tab = await tm.openTab('https://test.com');
+        expect(tm.count).toBe(1);
+
+        // Make the removeTab IPC call fail
+        win.webContents.executeJavaScript.mockImplementationOnce((code: string) => {
+          if (code.includes('removeTab(')) return Promise.reject(new Error('renderer busy'));
+          return Promise.resolve(undefined);
+        });
+
+        // closeTab should still succeed from the caller's perspective
+        const result = await tm.closeTab(tab.id);
+        expect(result).toBe(true);
+        // Main-process state cleaned up even though IPC failed
+        expect(tm.count).toBe(0);
+        expect(tm.getTab(tab.id)).toBeNull();
+      });
+    });
+
+    describe('reconcileWithRenderer()', () => {
+      it('removes renderer orphans not known to main process', async () => {
+        // Open two tabs normally
+        const t1 = await tm.openTab('https://one.com');
+        const t2 = await tm.openTab('https://two.com');
+
+        // Simulate renderer having an extra orphan tab that main process lost track of.
+        // Inject directly into the mock renderer state.
+        win._rendererTabs.set('tab-orphan', true);
+
+        const { removed } = await tm.reconcileWithRenderer();
+        expect(removed).toContain('tab-orphan');
+        // Known tabs must not be touched
+        expect(removed).not.toContain(t1.id);
+        expect(removed).not.toContain(t2.id);
+        // Main-process Map still intact
+        expect(tm.count).toBe(2);
+      });
+
+      it('returns empty array when renderer and main process are in sync', async () => {
+        await tm.openTab('https://one.com');
+        await tm.openTab('https://two.com');
+
+        const { removed } = await tm.reconcileWithRenderer();
+        expect(removed).toHaveLength(0);
+      });
+
+      it('returns empty array when getTabIds() fails', async () => {
+        win.webContents.executeJavaScript.mockImplementationOnce((code: string) => {
+          if (code.includes('getTabIds()')) return Promise.reject(new Error('renderer crash'));
+          return Promise.resolve([]);
+        });
+
+        const { removed } = await tm.reconcileWithRenderer();
+        expect(removed).toHaveLength(0);
+      });
     });
   });
 });

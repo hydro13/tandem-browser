@@ -275,9 +275,16 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle('tab-close', async (_event, tabId: string) => {
     // Capture tab info before closing
     const closingTab = tabManager.getTab(tabId);
-    eventStream.handleTabEvent('tab-closed', { tabId });
-    activityTracker.onWebviewEvent({ type: 'tab-close', tabId, url: closingTab?.url, title: closingTab?.title });
     const result = await tabManager.closeTab(tabId);
+    if (result) {
+      // Normal close — emit events only for tabs that were actually tracked.
+      eventStream.handleTabEvent('tab-closed', { tabId });
+      activityTracker.onWebviewEvent({ type: 'tab-close', tabId, url: closingTab?.url, title: closingTab?.title });
+    } else {
+      // Tab not in main-process Map → possible renderer orphan.
+      // Attempt reconciliation so the zombie is removed from the tab strip.
+      await tabManager.reconcileWithRenderer().catch(() => { /* best-effort */ });
+    }
     syncTabsToContext(tabManager, contextBridge);
     return result;
   });

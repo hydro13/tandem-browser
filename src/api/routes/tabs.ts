@@ -76,6 +76,17 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
+  // Reconcile renderer tab strip with main-process state.
+  // Removes renderer-side orphans (tabs visible in UI but unknown to main process).
+  router.post('/tabs/reconcile', async (_req: Request, res: Response) => {
+    try {
+      const result = await ctx.tabManager.reconcileWithRenderer();
+      res.json({ ok: true, ...result });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
   // Cleanup zombie tabs (unmanaged webContents)
   router.post('/tabs/cleanup', (_req: Request, res: Response) => {
     try {
