@@ -41,7 +41,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   //   3. Rest of the module runs with chrome/browser = our proxy
   //   4. proxy.get('action') → returns our polyfill object
   return `
-/* Tandem chrome.action polyfill v3 — module-scope var shadow */
+/* Tandem chrome.action polyfill v4 — module-scope var shadow */
 ;(function() {
   var __tc = (typeof globalThis !== 'undefined' && globalThis.chrome) || (typeof self !== 'undefined' && self.chrome) || {};
   var CWS_ID = '${cwsId}';
@@ -150,14 +150,33 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     }
   };
 
-  /* Build a proxy that returns actionObj for .action and forwards everything else */
+  /*
+   * chrome.notifications stub — Electron does not implement this API.
+   * Required because 1Password's background.js calls:
+   *   Fj()||(chrome.notifications.onClicked.addListener(...), ...)
+   * at module init, crashing immediately if chrome.notifications is undefined.
+   */
+  var notificationsObj = (typeof __tc.notifications === 'object' && __tc.notifications !== null)
+    ? __tc.notifications
+    : {
+        onClicked:       makeEvent(),
+        onButtonClicked: makeEvent(),
+        onClosed:        makeEvent(),
+        create:  function(id, opts, cb) { if (typeof id === 'object') { cb = opts; } if (typeof cb === 'function') cb(id || ''); return Promise.resolve(id || ''); },
+        getAll:  function(cb) { if (typeof cb === 'function') cb({}); return Promise.resolve({}); },
+        clear:   function(id, cb) { if (typeof cb === 'function') cb(true); return Promise.resolve(true); },
+        update:  function(id, opts, cb) { if (typeof cb === 'function') cb(false); return Promise.resolve(false); }
+      };
+
+  /* Build a proxy that returns stubs for missing APIs, forwards the rest */
   var proxy = new Proxy(__tc, {
     get: function(target, prop) {
       if (prop === 'action') return actionObj;
+      if (prop === 'notifications') return notificationsObj;
       var val = target[prop];
       return (typeof val === 'function') ? val.bind(target) : val;
     },
-    has: function(target, prop) { return prop === 'action' || (prop in target); }
+    has: function(target, prop) { return prop === 'action' || prop === 'notifications' || (prop in target); }
   });
 
   /*
@@ -243,7 +262,7 @@ export class ActionPolyfill {
 
         const cwsId = dir.name;
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
-        const marker = '/* Tandem chrome.action polyfill v3';
+        const marker = '/* Tandem chrome.action polyfill v4';
 
         const existing = fs.readFileSync(swPath, 'utf-8');
 

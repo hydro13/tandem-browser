@@ -71,7 +71,7 @@ describe('ActionPolyfill', () => {
 
       // Verify the polyfill logic by simulating what injectPolyfills does
       const swPath = path.join(extPath, 'background.js');
-      const marker = '/* Tandem chrome.action polyfill v3';
+      const marker = '/* Tandem chrome.action polyfill v4';
 
       // Simulate what injectPolyfills does
       const polyfillCode = `\n${marker} — injected at load time */\n(function() { if(chrome.action) return; chrome.action = {}; })();\n`;
@@ -90,7 +90,7 @@ describe('ActionPolyfill', () => {
       const extPath = path.join(extDir, extId);
       fs.mkdirSync(extPath);
 
-      const marker = '/* Tandem chrome.action polyfill v3';
+      const marker = '/* Tandem chrome.action polyfill v4';
       const alreadyPatched = `${marker} — injected at load time */\n(function(){})()\nconsole.log("sw");`;
 
       fs.writeFileSync(path.join(extPath, 'manifest.json'), JSON.stringify({
@@ -216,8 +216,8 @@ describe('ActionPolyfill', () => {
         path.join(__dirname, '../action-polyfill.ts'),
         'utf-8'
       );
-      expect(src).toContain('/* Tandem chrome.action polyfill v3');
-      expect(src).toContain("const marker = '/* Tandem chrome.action polyfill v3'");
+      expect(src).toContain('/* Tandem chrome.action polyfill v4');
+      expect(src).toContain("const marker = '/* Tandem chrome.action polyfill v4'");
     });
   });
 
