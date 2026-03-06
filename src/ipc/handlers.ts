@@ -67,11 +67,44 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   } = deps;
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
-  const ipcChannels = ['tab-update', 'chat-send', 'voice-transcript', 'voice-status-update', 'activity-webview-event', 'form-submitted'];
+  const ipcChannels = [
+    'tab-update',
+    'chat-send',
+    'voice-transcript',
+    'voice-status-update',
+    'activity-webview-event',
+    'form-submitted',
+    'show-app-menu',
+    'window-minimize',
+    'window-maximize',
+    'window-close',
+  ];
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
-  const ipcHandlers = ['snap-for-wingman', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
+  const ipcHandlers = [
+    'snap-for-wingman',
+    'quick-screenshot',
+    'bookmark-page',
+    'unbookmark-page',
+    'is-bookmarked',
+    'tab-new',
+    'tab-close',
+    'tab-focus',
+    'tab-focus-index',
+    'tab-list',
+    'emergency-stop',
+    'show-tab-context-menu',
+    'chat-send-image',
+    'navigate',
+    'go-back',
+    'go-forward',
+    'reload',
+    'get-page-content',
+    'get-page-status',
+    'execute-js',
+    'is-window-maximized',
+  ];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }

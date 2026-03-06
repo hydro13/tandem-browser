@@ -118,10 +118,129 @@ let workspaceManager: WorkspaceManager | null = null;
 let syncManager: SyncManager | null = null;
 let pinboardManager: PinboardManager | null = null;
 let sessionRestoreManager: SessionRestoreManager | null = null;
+let cookieFlushTimer: ReturnType<typeof setInterval> | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 /** Queue tab-register IPC when it arrives before tabManager is ready */
 let pendingTabRegister: { webContentsId: number; url: string } | null = null;
+
+function canUseWindow(win: BrowserWindow | null): win is BrowserWindow {
+  return !!win && !win.isDestroyed() && !win.webContents.isDestroyed();
+}
+
+function clearCookieFlushTimer(): void {
+  if (cookieFlushTimer) {
+    clearInterval(cookieFlushTimer);
+    cookieFlushTimer = null;
+  }
+}
+
+function clearStartApiIpcListeners(): void {
+  ipcMain.removeAllListeners('tab-register');
+}
+
+function teardown(): void {
+  clearCookieFlushTimer();
+  clearStartApiIpcListeners();
+  pendingTabRegister = null;
+  pendingContextMenuWebContents.length = 0;
+
+  if (api) api.stop();
+  api = null;
+
+  if (behaviorObserver) behaviorObserver.destroy();
+  behaviorObserver = null;
+
+  if (watchManager) watchManager.destroy();
+  watchManager = null;
+
+  if (headlessManager) headlessManager.destroy();
+  headlessManager = null;
+
+  if (pipManager) pipManager.destroy();
+  pipManager = null;
+
+  if (networkInspector) networkInspector.destroy();
+  networkInspector = null;
+
+  if (voiceManager && canUseWindow(mainWindow)) {
+    voiceManager.stop();
+  }
+  voiceManager = null;
+
+  if (audioCaptureManager) audioCaptureManager.stopRecording();
+  audioCaptureManager = null;
+
+  if (chromeImporter) chromeImporter.destroy();
+  chromeImporter = null;
+
+  if (taskManager) taskManager.destroy();
+  taskManager = null;
+
+  if (tabLockManager) tabLockManager.destroy();
+  tabLockManager = null;
+
+  if (contextMenuManager) contextMenuManager.destroy();
+  contextMenuManager = null;
+
+  if (devToolsManager) devToolsManager.destroy();
+  devToolsManager = null;
+
+  if (wingmanStream) wingmanStream.destroy();
+  wingmanStream = null;
+
+  if (securityManager) securityManager.destroy();
+  securityManager = null;
+
+  if (snapshotManager) snapshotManager.destroy();
+  snapshotManager = null;
+
+  if (networkMocker) networkMocker.destroy();
+  networkMocker = null;
+
+  if (sessionManager) sessionManager.destroy();
+  sessionManager = null;
+
+  if (extensionToolbar) extensionToolbar.destroy();
+  extensionToolbar = null;
+
+  if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
+  if (extensionManager) extensionManager.destroyUpdateChecker();
+  extensionManager = null;
+  extensionLoader = null;
+
+  if (historyManager) historyManager.destroy();
+  historyManager = null;
+
+  if (sidebarManager) sidebarManager.destroy();
+  sidebarManager = null;
+
+  if (workspaceManager) workspaceManager.destroy();
+  workspaceManager = null;
+
+  if (pinboardManager) pinboardManager.destroy();
+  pinboardManager = null;
+
+  if (syncManager) syncManager.destroy();
+  syncManager = null;
+
+  panelManager = null;
+  drawManager = null;
+  configManager = null;
+  siteMemory = null;
+  formMemory = null;
+  contextBridge = null;
+  downloadManager = null;
+  claroNoteManager = null;
+  eventStream = null;
+  dispatcher = null;
+  stateManager = null;
+  scriptInjector = null;
+  locatorFinder = null;
+  deviceEmulator = null;
+  sessionRestoreManager = null;
+  tabManager = null;
+}
 
 async function createWindow(): Promise<BrowserWindow> {
   const partition = DEFAULT_PARTITION;
@@ -172,7 +291,10 @@ async function createWindow(): Promise<BrowserWindow> {
   dispatcher.attach();
 
   // Flush cookies to disk periodically for reliability
-  setInterval(() => { ses.cookies.flushStore().catch(e => log.warn('cookie flush failed:', e instanceof Error ? e.message : e)); }, COOKIE_FLUSH_INTERVAL_MS);
+  clearCookieFlushTimer();
+  cookieFlushTimer = setInterval(() => {
+    ses.cookies.flushStore().catch(e => log.warn('cookie flush failed:', e instanceof Error ? e.message : e));
+  }, COOKIE_FLUSH_INTERVAL_MS);
 
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
@@ -348,19 +470,18 @@ async function createWindow(): Promise<BrowserWindow> {
   }
 
   mainWindow.on('closed', () => {
+    clearCookieFlushTimer();
     setMainWindow(null);
     mainWindow = null;
-    tabManager = null;
-    if (behaviorObserver) {
-      behaviorObserver.destroy();
-      behaviorObserver = null;
-    }
+    teardown();
   });
 
   return mainWindow;
 }
 
 async function startAPI(win: BrowserWindow): Promise<void> {
+  clearStartApiIpcListeners();
+
   configManager = new ConfigManager();
   tabManager = new TabManager(win);
   panelManager = new PanelManager(win, configManager);
@@ -441,13 +562,19 @@ async function startAPI(win: BrowserWindow): Promise<void> {
 
   // Wire TaskManager events to renderer (Phase 4)
   taskManager.on('approval-request', (data: Record<string, unknown>) => {
-    win.webContents.send('approval-request', data);
+    if (canUseWindow(win)) {
+      win.webContents.send('approval-request', data);
+    }
   });
   taskManager.on('task-updated', (task: Record<string, unknown>) => {
-    win.webContents.send('task-updated', task);
+    if (canUseWindow(win)) {
+      win.webContents.send('task-updated', task);
+    }
   });
   taskManager.on('emergency-stop', (data: Record<string, unknown>) => {
-    win.webContents.send('emergency-stop', data);
+    if (canUseWindow(win)) {
+      win.webContents.send('emergency-stop', data);
+    }
   });
 
   // Hook download manager into session
@@ -640,7 +767,9 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     if (tabManager.count === 0) {
       const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
       // Notify renderer of the tab ID
-      win.webContents.send('tab-registered', { tabId: tab.id });
+      if (canUseWindow(win)) {
+        win.webContents.send('tab-registered', { tabId: tab.id });
+      }
       eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
       syncTabsToContext(tabManager!, contextBridge!);
       // Auto-attach CDP for Wingman Vision + Security on startup
@@ -669,7 +798,9 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     const data = pendingTabRegister;
     pendingTabRegister = null;
     const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
-    win.webContents.send('tab-registered', { tabId: tab.id });
+    if (canUseWindow(win)) {
+      win.webContents.send('tab-registered', { tabId: tab.id });
+    }
     eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
     syncTabsToContext(tabManager!, contextBridge!);
     setTimeout(async () => {
@@ -710,6 +841,7 @@ void app.whenReady().then(async () => {
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
+      teardown();
       createWindow().then(async (w) => {
         await startAPI(w);
         buildAppMenu({
@@ -730,33 +862,7 @@ void app.whenReady().then(async () => {
 });
 
 app.on('will-quit', () => {
-  // Cleanup all managers and resources
-  if (api) api.stop();
-  if (behaviorObserver) behaviorObserver.destroy();
-  if (watchManager) watchManager.destroy();
-  if (headlessManager) headlessManager.destroy();
-  if (pipManager) pipManager.destroy();
-  if (networkInspector) networkInspector.destroy();
-  if (voiceManager) voiceManager.stop();
-  if (audioCaptureManager) audioCaptureManager.stopRecording();
-  if (chromeImporter) chromeImporter.destroy();
-  if (taskManager) taskManager.destroy();
-  if (tabLockManager) tabLockManager.destroy();
-  if (contextMenuManager) contextMenuManager.destroy();
-  if (devToolsManager) devToolsManager.destroy();
-  if (wingmanStream) wingmanStream.destroy();
-  if (securityManager) securityManager.destroy();
-  if (snapshotManager) snapshotManager.destroy();
-  if (networkMocker) networkMocker.destroy();
-  if (sessionManager) sessionManager.destroy();
-  if (extensionToolbar) extensionToolbar.destroy();
-  if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
-  if (extensionManager) extensionManager.destroyUpdateChecker();
-  if (historyManager) historyManager.destroy();
-  if (sidebarManager) sidebarManager.destroy();
-  if (workspaceManager) workspaceManager.destroy();
-  if (pinboardManager) pinboardManager.destroy();
-  if (syncManager) syncManager.destroy();
+  teardown();
 });
 
 app.on('window-all-closed', () => {

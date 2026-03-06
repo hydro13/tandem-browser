@@ -20,10 +20,16 @@ export class VoiceManager {
     this.panelManager = panelManager;
   }
 
+  private canSendToRenderer(): boolean {
+    return !this.win.isDestroyed() && !this.win.webContents.isDestroyed();
+  }
+
   /** Toggle voice on/off — tells renderer to start/stop SpeechRecognition */
   toggleVoice(): boolean {
     this.listening = !this.listening;
-    this.win.webContents.send('voice-toggle', { listening: this.listening });
+    if (this.canSendToRenderer()) {
+      this.win.webContents.send('voice-toggle', { listening: this.listening });
+    }
     if (this.listening) {
       // Ensure panel is open and on chat tab
       this.panelManager.togglePanel(true);
@@ -35,7 +41,9 @@ export class VoiceManager {
   start(): void {
     if (!this.listening) {
       this.listening = true;
-      this.win.webContents.send('voice-toggle', { listening: true });
+      if (this.canSendToRenderer()) {
+        this.win.webContents.send('voice-toggle', { listening: true });
+      }
       this.panelManager.togglePanel(true);
     }
   }
@@ -44,7 +52,9 @@ export class VoiceManager {
   stop(): void {
     if (this.listening) {
       this.listening = false;
-      this.win.webContents.send('voice-toggle', { listening: false });
+      if (this.canSendToRenderer()) {
+        this.win.webContents.send('voice-toggle', { listening: false });
+      }
     }
   }
 
@@ -55,7 +65,9 @@ export class VoiceManager {
       this.panelManager.addChatMessage('robin', `🎙️ ${text.trim()}`);
     }
     // Send live transcript to renderer for display
-    this.win.webContents.send('voice-transcript-display', { text, isFinal });
+    if (this.canSendToRenderer()) {
+      this.win.webContents.send('voice-transcript-display', { text, isFinal });
+    }
   }
 
   /** Update listening state (called from renderer) */

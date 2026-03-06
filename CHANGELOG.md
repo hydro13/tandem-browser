@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.47] - 2026-03-06
+
+- fix(lifecycle): teardown managers and IPC listeners on window close
+
+Added a central teardown path in `src/main.ts` that destroys all live
+managers, stops the API, clears the cookie flush interval, removes the
+`tab-register` IPC listener, and resets retained startup state when the
+main window closes or the app reactivates on macOS.
+
+`src/ipc/handlers.ts` now removes every IPC channel and handler it
+re-registers, including window controls and `is-window-maximized`, so
+reactivation no longer stacks stale handlers bound to destroyed windows.
+
+Guarded renderer sends for TaskManager event forwarding in `src/main.ts`
+and all renderer sends in `src/voice/recognition.ts`, preventing
+`Object has been destroyed` crashes during shutdown and reactivation.
+
 ## [v0.44.46] - 2026-03-06
 
 - feat(tabs): shrink tabs dynamically when many are open, like Chrome
