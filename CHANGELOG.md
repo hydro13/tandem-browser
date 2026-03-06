@@ -2,6 +2,21 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.51] - 2026-03-07
+
+- fix(extensions): retry 1Password USO tab messages without frame targeting
+
+Adjusted `/extensions/web-navigation/frames` so the top-level frame is exposed as
+Chrome-style `frameId: 0` instead of Electron's raw routing id. This makes the
+frame tree look like a normal Chrome tab to extensions that reason about the
+main frame separately from subframes.
+
+Updated the extension action polyfill to intercept `chrome.tabs.sendMessage()`
+and strip unsupported `documentId` targeting. For 1Password's `uso-*` messages,
+the polyfill now retries once without `frameId` / `documentId` when Electron
+rejects the targeted delivery, so inline autofill UI can still talk to the
+top-frame content script on normal login forms.
+
 ## [v0.44.50] - 2026-03-07
 
 - fix(extensions): bridge webNavigation frame data for 1Password autofill

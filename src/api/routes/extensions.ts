@@ -25,12 +25,15 @@ function getExtensionFramesForWebContents(tabId: number): ExtensionFrameInfo[] {
     return [];
   }
 
-  const frames = wc.mainFrame.framesInSubtree;
+  const mainFrame = wc.mainFrame;
+  const frames = mainFrame.framesInSubtree;
   return frames
     .filter(frame => !frame.isDestroyed() && !frame.detached)
     .map(frame => ({
-      frameId: frame.routingId,
-      parentFrameId: frame.parent ? frame.parent.routingId : -1,
+      // Chrome reports the top-level frame as frameId 0; match that shape so
+      // extensions like 1Password don't treat the main frame as an arbitrary subframe.
+      frameId: frame === mainFrame ? 0 : frame.routingId,
+      parentFrameId: !frame.parent ? -1 : frame.parent === mainFrame ? 0 : frame.parent.routingId,
       processId: frame.processId,
       url: frame.url || '',
       errorOccurred: false,

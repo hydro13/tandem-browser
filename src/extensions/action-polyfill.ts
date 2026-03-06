@@ -41,7 +41,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   //   3. Rest of the module runs with chrome/browser = our proxy
   //   4. proxy.get('action') → returns our polyfill object
   return `
-/* Tandem chrome.action polyfill v7 — module-scope var shadow */
+/* Tandem chrome.action polyfill v8 — module-scope var shadow */
 ;(function() {
   var __tc = (typeof globalThis !== 'undefined' && globalThis.chrome) || (typeof self !== 'undefined' && self.chrome) || {};
   var CWS_ID = '${cwsId}';
@@ -326,6 +326,77 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
    */
   var _tabsQueryOrig = __tc && __tc.tabs && __tc.tabs.query
     ? __tc.tabs.query.bind(__tc.tabs) : null;
+  var _tabsSendMessageOrig = __tc && __tc.tabs && __tc.tabs.sendMessage
+    ? __tc.tabs.sendMessage.bind(__tc.tabs) : null;
+  function __tandemCopyMessageOptions(options, stripFrameTarget) {
+    if (!options || typeof options !== 'object') return undefined;
+    var next = {};
+    for (var key in options) {
+      if (!Object.prototype.hasOwnProperty.call(options, key)) continue;
+      if (key === 'documentId') continue;
+      if (stripFrameTarget && (key === 'frameId' || key === 'documentId')) continue;
+      next[key] = options[key];
+    }
+    return Object.keys(next).length > 0 ? next : undefined;
+  }
+  function __tandemShouldRetryUsoMessage(message, options, errorMessage) {
+    if (!errorMessage) return false;
+    if (!message || typeof message !== 'object' || typeof message.name !== 'string') return false;
+    if (message.name.indexOf('uso-') !== 0) return false;
+    return !!(options && typeof options === 'object' && (options.frameId !== undefined || options.documentId !== undefined));
+  }
+  function __tandemSendMessageCall(tabId, message, options, callback) {
+    if (!_tabsSendMessageOrig) {
+      if (typeof callback === 'function') callback(undefined);
+      return Promise.resolve(undefined);
+    }
+    if (options === undefined) {
+      return typeof callback === 'function'
+        ? _tabsSendMessageOrig(tabId, message, callback)
+        : _tabsSendMessageOrig(tabId, message);
+    }
+    return typeof callback === 'function'
+      ? _tabsSendMessageOrig(tabId, message, options, callback)
+      : _tabsSendMessageOrig(tabId, message, options);
+  }
+  var _tabsSendMessagePatched = function(tabId, message, options, callback) {
+    if (typeof options === 'function') {
+      callback = options;
+      options = undefined;
+    }
+    var primaryOptions = __tandemCopyMessageOptions(options, false);
+    var retryOptions = __tandemCopyMessageOptions(options, true);
+
+    if (typeof callback === 'function') {
+      return __tandemSendMessageCall(tabId, message, primaryOptions, function(response) {
+        var err = __tc && __tc.runtime && __tc.runtime.lastError ? __tc.runtime.lastError.message : '';
+        if (__tandemShouldRetryUsoMessage(message, options, err)) {
+          return __tandemSendMessageCall(tabId, message, retryOptions, callback);
+        }
+        callback(response);
+      });
+    }
+
+    try {
+      var result = __tandemSendMessageCall(tabId, message, primaryOptions);
+      if (result && typeof result.then === 'function') {
+        return result.catch(function(err) {
+          var errMsg = err && err.message ? err.message : String(err || '');
+          if (__tandemShouldRetryUsoMessage(message, options, errMsg)) {
+            return __tandemSendMessageCall(tabId, message, retryOptions);
+          }
+          throw err;
+        });
+      }
+      return result;
+    } catch (err) {
+      var errMsg = err && err.message ? err.message : String(err || '');
+      if (__tandemShouldRetryUsoMessage(message, options, errMsg)) {
+        return __tandemSendMessageCall(tabId, message, retryOptions);
+      }
+      throw err;
+    }
+  };
   var _tabsQueryPatched = function(queryInfo, callback) {
     var isActiveQuery = queryInfo && queryInfo.active;
     if (!isActiveQuery) {
@@ -363,6 +434,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
     ? new Proxy(__tc.tabs, {
         get: function(t, k) {
           if (k === 'query') return _tabsQueryPatched;
+          if (k === 'sendMessage') return _tabsSendMessagePatched;
           var v = t[k];
           return (typeof v === 'function') ? v.bind(t) : v;
         }
@@ -393,7 +465,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
    */
   chrome = proxy;
   try { browser = proxy; } catch(e) {}
-  console.log('[Tandem] chrome.action polyfill v7 active for ${cwsId}');
+  console.log('[Tandem] chrome.action polyfill v8 active for ${cwsId}');
 })();
 /* Module-scope declarations — hoisted above the IIFE, shadow the globals */
 /* eslint-disable no-var */
@@ -473,7 +545,7 @@ export class ActionPolyfill {
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
         const POLYFILL_START_PREFIX = '/* Tandem chrome.action polyfill v';
         const POLYFILL_END_MARKER  = '/* Tandem:polyfill:end */';
-        const marker = '/* Tandem chrome.action polyfill v7';
+        const marker = '/* Tandem chrome.action polyfill v8';
 
         let existing = fs.readFileSync(swPath, 'utf-8');
 
