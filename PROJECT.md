@@ -12,7 +12,7 @@ The security layer exists because when an AI has access to your browser, your th
 
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
-**GitHub:** `hydro13/tandem-browser` (private)  
+**GitHub:** `hydro13/tandem-browser`  
 **Current version:** see `package.json` and `CHANGELOG.md`  
 **Started:** February 11, 2026
 
@@ -196,7 +196,7 @@ Route modules:
 - `security.ts` — blocklist status, risk scores, alerts
 - `devtools.ts` — CDP bridge (console, network, DOM, storage)
 - `behavior.ts` — behavior stats and pattern data
-- `chat.ts` — internal chat relay
+- `chat.ts` — local chat relay
 - `snapshots.ts` — accessibility tree + agent interaction refs
 
 ---

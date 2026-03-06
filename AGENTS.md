@@ -11,7 +11,7 @@ Je bent een developer agent die werkt aan **Tandem Browser** — een Electron br
 
 ## Het project
 
-- **Repo:** `hydro13/tandem-browser` (privé, GitHub: hydro13)
+- **Repo:** `hydro13/tandem-browser` (GitHub: hydro13)
 - **Stack:** Electron 40 + TypeScript + Express.js API (localhost:8765)
 - **Doel:** Browser waar een AI (via HTTP API + WebSocket) en een mens (via UI) samen browsen
 - **Filosofie:** Lokaal, privacy-first, geen cloud dependencies
@@ -38,8 +38,8 @@ tandem-browser/
 ├── shell/                        # Browser UI (~10,190 regels HTML/JS)
 ├── cli/                          # tandem CLI (@hydro13/tandem-cli)
 ├── docs/
-│   ├── ROADMAP.md                # ← Sprint planning + feature backlog (Kees beheert)
-│   ├── STATUS.md                 # ← Dagelijkse standup: wat loopt, wat geblokkeerd
+│   ├── internal/ROADMAP.md       # ← Sprint planning + feature backlog (internal)
+│   ├── internal/STATUS.md        # ← Daily standup/progress tracker (internal)
 │   ├── templates/                # Templates voor nieuwe features
 │   │   ├── design-template.md    # Template voor design docs (plans/)
 │   │   ├── LEES-MIJ-EERST-template.md  # Template voor implementatie-trajecten
@@ -239,7 +239,7 @@ Dit moet na elke `npm install` of als Electron opnieuw gedownload wordt. Bouw di
 ## Development Workflow
 
 > Voor nieuwe features: Kees schrijft de docs, Claude Code voert uit.
-> Zie `docs/ROADMAP.md` voor de actuele sprint en backlog.
+> See `docs/internal/ROADMAP.md` for the active sprint backlog.
 
 ```
 1. Lees het fase-bestand voor deze sessie (docs/implementations/{feature}/fase-N.md)

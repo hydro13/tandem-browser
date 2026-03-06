@@ -18,6 +18,15 @@ handling and no cloud dependency in the browser itself.
 - Extension support: Chrome-style extension loading, native messaging compatibility work, and extension update management
 - Local-first data model: sessions, settings, history, workspaces, and browser state stay on the machine
 
+## UI Highlights
+
+The browser surface is broader than a simple tab shell.
+
+- Left sidebar: workspaces, messenger-style panels, bookmarks, history, downloads, and other utility surfaces
+- Main browsing area: Chromium webviews with tab management and session state
+- Right-side collaboration panel: AI chat, activity, screenshots, and related agent tools
+- Overlay tooling: annotations, screenshots, and other shell-level controls that stay out of the page context
+
 ## Current Status
 
 - Primary platform: macOS
@@ -110,6 +119,7 @@ paranoid than a normal desktop browser shell.
 ## Repository Guide
 
 - [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md): product vision and architecture overview
+- [docs/README.md](/Users/robinwaslander/Documents/dev/tandem-browser/docs/README.md): documentation map
 - [CHANGELOG.md](/Users/robinwaslander/Documents/dev/tandem-browser/CHANGELOG.md): release history
 - [CONTRIBUTING.md](/Users/robinwaslander/Documents/dev/tandem-browser/CONTRIBUTING.md): contribution workflow
 - [SECURITY.md](/Users/robinwaslander/Documents/dev/tandem-browser/SECURITY.md): vulnerability reporting

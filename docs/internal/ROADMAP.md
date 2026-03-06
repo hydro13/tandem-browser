@@ -10,7 +10,7 @@
 | Wie | Waar | Wat |
 |-----|------|-----|
 | **Kees** | Dit bestand (ROADMAP.md) | Groot overzicht: welke feature in welk stadium |
-| **Kees** | `docs/STATUS.md` | Dagelijkse voortgang: wat loopt, wat geblokkeerd |
+| **Kees** | `docs/internal/STATUS.md` | Dagelijkse voortgang: wat loopt, wat geblokkeerd |
 | **Claude Code** | `docs/implementations/{feature}/LEES-MIJ-EERST.md` | Per-feature fase-status: welke fases klaar, welke volgende |
 
 ### Fase-status in LEES-MIJ-EERST.md

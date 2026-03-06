@@ -17,12 +17,11 @@ echo "🔍 Checking git author config..."
 GIT_NAME=$(git config user.name)
 GIT_EMAIL=$(git config user.email)
 
-if [ "$GIT_EMAIL" != "r.waslander@gmail.com" ]; then
-  echo "   ⚠️  Git email mismatch: $GIT_EMAIL"
-  echo "   Setting to r.waslander@gmail.com..."
-  git config user.name "Robin Waslander"
-  git config user.email "r.waslander@gmail.com"
-  echo "   ✅ Fixed"
+if [ -z "$GIT_NAME" ] || [ -z "$GIT_EMAIL" ]; then
+  echo "   ⚠️  Git author identity is incomplete"
+  echo "   Set it manually before committing:"
+  echo "   git config user.name \"Your Name\""
+  echo "   git config user.email \"you@example.com\""
 else
   echo "   ✅ Git config correct: $GIT_NAME <$GIT_EMAIL>"
 fi

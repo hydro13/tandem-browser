@@ -5,9 +5,9 @@ issue with exploit details.
 
 ## Reporting
 
-Send a report to:
-
-- `keesbeest78@proton.me`
+Use GitHub private vulnerability reporting when it is enabled for the repository.
+If that is not available yet, open a minimal issue without exploit details and
+request a private contact channel from the maintainers.
 
 Include:
 

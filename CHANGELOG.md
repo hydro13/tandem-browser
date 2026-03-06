@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.55] - 2026-03-07
+
+- docs(repo): add GitHub community files and separate internal planning docs
+
+Added GitHub issue templates and `CODEOWNERS`, introduced `docs/README.md` plus
+`docs/internal/README.md`, and moved the top-level roadmap/status planning files
+under `docs/internal/` to keep the public docs surface cleaner.
+
+Updated the README with a clearer UI summary including the left sidebar
+capabilities, removed personal contact data from package metadata and setup
+scripts, and revised the security reporting doc away from direct personal email.
+
 ## [v0.44.54] - 2026-03-07
 
 - docs(repo): add public-facing repo docs and improve release metadata

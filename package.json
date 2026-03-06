@@ -1,9 +1,9 @@
 {
   "name": "tandem-browser",
-  "version": "0.44.54",
+  "version": "0.44.55",
   "description": "Local-first human-AI collaborative browser with built-in security controls",
   "main": "dist/main.js",
-  "author": "Robin Waslander <keesbeest78@proton.me>",
+  "author": "Tandem Browser contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
