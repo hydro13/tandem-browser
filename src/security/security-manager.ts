@@ -95,6 +95,7 @@ export class SecurityManager {
     this.evolution = new EvolutionEngine(this.db);
     this.threatIntel = new ThreatIntel(this.db, this.evolution);
     this.blocklistUpdater = new BlocklistUpdater(this.db, this.shield);
+    this.shield.startBackgroundHydration();
 
     // Phase 7-A: Create AnalyzerManager with controlled context
     this.analyzerManager = new AnalyzerManager({

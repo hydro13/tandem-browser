@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.82] - 2026-03-07
+
+### Changed
+- **Security blocklist fast-start hydration** (`src/security/network-shield.ts`, `src/security/security-manager.ts`) — replaced synchronous startup blocklist parsing with a snapshot-first load path, queued background hydration, and atomic in-memory swaps so Tandem becomes usable before cached feeds finish rebuilding
+- **Hydration regression coverage** (`src/security/tests/network-shield-hydration.test.ts`) — added focused coverage for snapshot boot, no-clear reload behavior, cached hydrate promotion, and snapshot persistence refresh
+
+### Technical Details
+- `class NetworkShield` now boots from `startup-snapshot.json` when available, keeps DB-backed blocklist checks live during hydration, and rebuilds replacement `Set` instances before swapping them into request checks
+- Background hydration yields between cached sources, serializes overlapping reload requests, and persists a last-known-good snapshot plus blocklist metadata only after the replacement state is complete
+- Verification: `npm run compile` passed; `npx vitest run src/security/tests/` passed; `npm start` reached API/UI readiness before blocklist hydration completed and later logged an atomic hydrate completion with 794198 domains / 1887 IP origins; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
+
 ## [v0.44.81] - 2026-03-07
 
 ### Changed
