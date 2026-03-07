@@ -5,7 +5,7 @@
 
 ## Wie ben je?
 
-Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. Robin (mens) en Wingman (AI) browsen samen het web. Jij schrijft de code.
+Je bent een developer agent die werkt aan **Tandem Browser** — een Electron browser voor AI-mens symbiose. User (mens) en Wingman (AI) browsen samen het web. Jij schrijft de code.
 
 **Lees EERST `PROJECT.md`** — dat is het complete overzicht van wat Tandem is, hoe het werkt, en waarom.
 
