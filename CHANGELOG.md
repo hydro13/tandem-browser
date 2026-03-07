@@ -2,6 +2,21 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.67] - 2026-03-07
+
+- fix: restore shell auth for local API calls
+
+What was built/changed:
+- Modified files: src/preload.ts
+- Exposed the local API token to the shell and wrapped shell-side fetch so requests to the Tandem API automatically include Authorization: Bearer unless an explicit auth header is already present
+
+Why this approach:
+- Keeps the Phase 1 API hardening intact while restoring authenticated shell access for sidebar, chat polling, and other local UI calls that were previously relying on implicit loopback trust
+
+Tested:
+- npm run compile: zero errors
+- Manual runtime still requires restarting the already-running Tandem app so the updated preload script is loaded
+
 ## [v0.44.66] - 2026-03-07
 
 - fix: strengthen outbound containment policy (security-hardening)
