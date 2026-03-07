@@ -214,11 +214,11 @@ instead of depending on chat context.
 
 ### Phase 5 — Extension Trust
 
-- Status: Ready
-- Date: —
-- Commit: —
-- Summary: —
-- Remaining risks for next phase: Outbound containment now distinguishes same-site browsing traffic from cross-site riskier flows, but privileged extension/native-messaging/sidebar actors are still modeled indirectly; Phase 5 must define explicit privileged scopes so those channels neither inherit browsing restrictions nor widen trust for normal tabs.
+- Status: Complete
+- Date: 2026-03-07
+- Commit: PENDING — fill with the implementation commit hash after commit creation
+- Summary: Added explicit `trusted` / `limited` / `unknown` extension trust levels in `class ExtensionManager`, scoped extension helper routes by required permission and privilege level, applied the same decision path to the native messaging HTTP and WebSocket bridges, validated native host manifests against allowed extension IDs, aligned `POST /extensions/identity/auth` with the stable extension identity resolver, and added focused tests for scoped helper auth plus bridge mismatch handling.
+- Remaining risks for next phase: Phase 6 must map containment actions onto these explicit extension trust levels so trusted helper bridges are not quarantined like browsing-tab traffic, while still giving Robin clear shell-side explanations when a limited or unknown extension is paused, blocked, or surfaced for review.
 
 ### Phase 6 — Containment Actions
 

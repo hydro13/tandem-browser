@@ -588,7 +588,7 @@ describe('Extension Routes', () => {
     });
 
     it('returns 403 when extension is not installed', async () => {
-      vi.mocked(ctx.extensionManager.getInstalledExtensions).mockReturnValue([]);
+      vi.mocked(ctx.extensionManager.isInstalledExtension).mockReturnValue(false);
 
       const res = await request(app)
         .post('/extensions/identity/auth')
@@ -600,9 +600,7 @@ describe('Extension Routes', () => {
 
     it('calls handleLaunchWebAuthFlow for installed extension', async () => {
       const mockAuthFlow = vi.fn().mockResolvedValue({ redirectUrl: 'https://done.com' });
-      vi.mocked(ctx.extensionManager.getInstalledExtensions).mockReturnValue([
-        { id: 'ext1' },
-      ] as any);
+      vi.mocked(ctx.extensionManager.isInstalledExtension).mockReturnValue(true);
       vi.mocked(ctx.extensionManager.getIdentityPolyfill).mockReturnValue({
         handleLaunchWebAuthFlow: mockAuthFlow,
       } as any);
@@ -622,9 +620,7 @@ describe('Extension Routes', () => {
 
     it('defaults interactive to true when not provided', async () => {
       const mockAuthFlow = vi.fn().mockResolvedValue({});
-      vi.mocked(ctx.extensionManager.getInstalledExtensions).mockReturnValue([
-        { id: 'ext1' },
-      ] as any);
+      vi.mocked(ctx.extensionManager.isInstalledExtension).mockReturnValue(true);
       vi.mocked(ctx.extensionManager.getIdentityPolyfill).mockReturnValue({
         handleLaunchWebAuthFlow: mockAuthFlow,
       } as any);
@@ -640,9 +636,7 @@ describe('Extension Routes', () => {
 
     it('passes interactive=false when explicitly set', async () => {
       const mockAuthFlow = vi.fn().mockResolvedValue({});
-      vi.mocked(ctx.extensionManager.getInstalledExtensions).mockReturnValue([
-        { id: 'ext1' },
-      ] as any);
+      vi.mocked(ctx.extensionManager.isInstalledExtension).mockReturnValue(true);
       vi.mocked(ctx.extensionManager.getIdentityPolyfill).mockReturnValue({
         handleLaunchWebAuthFlow: mockAuthFlow,
       } as any);

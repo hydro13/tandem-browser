@@ -25,6 +25,13 @@ export interface NativeMessagingStatus {
   missing: string[];
 }
 
+export interface NativeMessagingHostAccessDecision {
+  allowed: boolean;
+  hostName: string;
+  resolvedHostName: string;
+  reason: string;
+}
+
 // Host aliases used by extension variants that expect the same native helper.
 const HOST_ALIASES: Record<string, string> = {
   'com.1password.1password7': 'com.1password.1password',
@@ -290,6 +297,83 @@ export class NativeMessagingSetup {
       hosts: this.hosts,
       configured: this.configuredDirs,
       missing: this.missingHosts,
+    };
+  }
+
+  /**
+   * Check whether a host manifest explicitly allows one of the candidate extension IDs.
+   * Runtime-assigned IDs may differ from the Chrome Web Store ID, so callers can pass both.
+   */
+  evaluateHostAccess(
+    hostName: string,
+    candidateExtensionIds: Array<string | null | undefined>,
+  ): NativeMessagingHostAccessDecision {
+    if (this.hosts.length === 0) {
+      this.detectHosts();
+    }
+
+    const resolvedHostName = resolveHostName(hostName);
+    const host = this.hosts.find((entry) => entry.name === hostName || entry.name === resolvedHostName);
+    if (!host) {
+      return {
+        allowed: false,
+        hostName,
+        resolvedHostName,
+        reason: `native messaging host "${hostName}" is not installed`,
+      };
+    }
+
+    if (!host.binaryExists) {
+      return {
+        allowed: false,
+        hostName,
+        resolvedHostName,
+        reason: `native messaging host "${host.name}" exists but its binary is missing`,
+      };
+    }
+
+    const extensionIds = [...new Set(candidateExtensionIds.filter((id): id is string => typeof id === 'string' && id.length > 0))];
+    if (extensionIds.length === 0) {
+      return {
+        allowed: false,
+        hostName,
+        resolvedHostName,
+        reason: `native messaging host "${host.name}" requires an explicit extension identity`,
+      };
+    }
+
+    const allowedExtensionIds = new Set(host.allowedExtensions);
+    for (const [knownHostName, info] of Object.entries(KNOWN_HOSTS)) {
+      if (knownHostName === host.name || resolveHostName(knownHostName) === resolvedHostName) {
+        for (const extensionId of info.extensionIds) {
+          allowedExtensionIds.add(extensionId);
+        }
+      }
+    }
+
+    if (allowedExtensionIds.size === 0) {
+      return {
+        allowed: false,
+        hostName,
+        resolvedHostName,
+        reason: `native messaging host "${host.name}" does not declare any allowed extensions`,
+      };
+    }
+
+    if (!extensionIds.some((id) => allowedExtensionIds.has(id))) {
+      return {
+        allowed: false,
+        hostName,
+        resolvedHostName,
+        reason: `host "${host.name}" does not allow extension IDs: ${extensionIds.join(', ')}`,
+      };
+    }
+
+    return {
+      allowed: true,
+      hostName,
+      resolvedHostName,
+      reason: `host "${host.name}" explicitly allows the extension`,
     };
   }
 

@@ -369,10 +369,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         res.status(400).json({ error: 'extensionId is required' });
         return;
       }
-      // Validate extensionId is actually installed
-      const installed = ctx.extensionManager.getInstalledExtensions();
-      const isInstalled = installed.some(ext => ext.id === extensionId);
-      if (!isInstalled) {
+      if (!ctx.extensionManager.isInstalledExtension(extensionId)) {
         res.status(403).json({ error: `Extension ${extensionId} is not installed` });
         return;
       }

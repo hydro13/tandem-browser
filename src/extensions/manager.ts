@@ -32,6 +32,75 @@ export interface ExtensionMetadata {
   hasIdentity: boolean;
 }
 
+export type ExtensionTrustLevel = 'trusted' | 'limited' | 'unknown';
+
+export interface ExtensionRouteAccessDecision {
+  allowed: boolean;
+  level: ExtensionTrustLevel;
+  routePath: string;
+  scope: string | null;
+  reason: string;
+  extensionId: string;
+  runtimeId: string | null;
+  storageId: string | null;
+  extensionName: string | null;
+  permissions: string[];
+  auditLabel: string;
+}
+
+interface ExtensionRoutePolicy {
+  scope: string;
+  minimumLevel: Exclude<ExtensionTrustLevel, 'unknown'>;
+  anyPermission?: string[];
+}
+
+interface ResolvedExtensionIdentity {
+  requestedId: string;
+  runtimeId: string | null;
+  storageId: string;
+  extensionPath: string;
+  extensionName: string;
+  metadata: ExtensionMetadata | null;
+}
+
+const EXTENSION_ID_RE = /^[a-p]{32}$/;
+const EXTENSION_ROUTE_POLICIES: Record<string, ExtensionRoutePolicy> = {
+  '/extensions/log': {
+    scope: 'log-bridge',
+    minimumLevel: 'limited',
+  },
+  '/extensions/active-tab': {
+    scope: 'active-tab-read',
+    minimumLevel: 'limited',
+    anyPermission: ['activeTab', 'tabs'],
+  },
+  '/extensions/web-navigation/frames': {
+    scope: 'web-navigation-read',
+    minimumLevel: 'limited',
+    anyPermission: ['webNavigation', 'tabs', 'activeTab'],
+  },
+  '/extensions/web-navigation/frame': {
+    scope: 'web-navigation-read',
+    minimumLevel: 'limited',
+    anyPermission: ['webNavigation', 'tabs', 'activeTab'],
+  },
+  '/extensions/identity/auth': {
+    scope: 'identity-auth',
+    minimumLevel: 'trusted',
+    anyPermission: ['identity'],
+  },
+  '/extensions/native-message': {
+    scope: 'native-messaging',
+    minimumLevel: 'trusted',
+    anyPermission: ['nativeMessaging'],
+  },
+  '/extensions/native-message/ws': {
+    scope: 'native-messaging',
+    minimumLevel: 'trusted',
+    anyPermission: ['nativeMessaging'],
+  },
+};
+
 /**
  * ExtensionManager — Central extension management layer.
  *
@@ -190,51 +259,89 @@ export class ExtensionManager {
    * Reads manifest.json and extracts permissions, content scripts, API usage.
    */
   getExtensionMetadata(extensionId: string): ExtensionMetadata | null {
+    const resolved = this.resolveInstalledExtension(extensionId);
+    if (resolved) {
+      return resolved.metadata;
+    }
+
     const extensionsDir = tandemDir('extensions');
-    const manifestPath = path.join(extensionsDir, extensionId, 'manifest.json');
+    const extensionPath = path.join(extensionsDir, extensionId);
+    return this.readExtensionMetadata(extensionPath, extensionId);
+  }
 
-    if (!fs.existsSync(manifestPath)) {
-      return null;
+  /** Check whether the given runtime/storage extension ID resolves to an installed extension */
+  isInstalledExtension(extensionId: string): boolean {
+    return this.resolveInstalledExtension(extensionId) !== null;
+  }
+
+  /**
+   * Evaluate whether an extension-origin API route should be available to the caller.
+   * This keeps route scoping and native host checks consistent across HTTP and WebSocket paths.
+   */
+  evaluateApiRouteAccess(
+    extensionId: string,
+    routePath: string,
+    requestedHost?: string | null,
+  ): ExtensionRouteAccessDecision {
+    const policy = EXTENSION_ROUTE_POLICIES[routePath];
+    if (!policy) {
+      return this.buildDeniedDecision(extensionId, routePath, null, 'unknown', [], null, null, null,
+        `Denied extension API access because "${routePath}" is not an extension-scoped route`);
     }
 
-    try {
-      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+    const resolved = this.resolveInstalledExtension(extensionId);
+    if (!resolved) {
+      return this.buildDeniedDecision(extensionId, routePath, policy.scope, 'unknown', [], null, null, null,
+        `Denied ${policy.scope} because extension "${extensionId}" is not installed`);
+    }
 
-      // Extract permissions from both MV2 and MV3 formats
-      const permissions: string[] = [
-        ...(Array.isArray(manifest.permissions) ? manifest.permissions : []),
-        ...(Array.isArray(manifest.optional_permissions) ? manifest.optional_permissions : []),
-      ].filter((p): p is string => typeof p === 'string');
+    const permissions = resolved.metadata?.permissions ?? [];
+    const trustLevel = this.getTrustLevelForMetadata(resolved.metadata);
+    const auditLabel = this.formatAuditLabel(resolved, trustLevel);
 
-      // Extract content script patterns
-      const contentScriptPatterns: string[] = [];
-      if (Array.isArray(manifest.content_scripts)) {
-        for (const cs of manifest.content_scripts) {
-          if (cs && typeof cs === 'object' && Array.isArray(cs.matches)) {
-            for (const pattern of cs.matches) {
-              if (typeof pattern === 'string' && !contentScriptPatterns.includes(pattern)) {
-                contentScriptPatterns.push(pattern);
-              }
-            }
-          }
-        }
+    if (trustLevel === 'unknown') {
+      return this.buildDeniedDecision(extensionId, routePath, policy.scope, trustLevel, permissions,
+        resolved.runtimeId, resolved.storageId, resolved.extensionName,
+        `Denied ${policy.scope} for ${auditLabel} because Tandem could not resolve extension metadata`);
+    }
+
+    if (policy.minimumLevel === 'trusted' && trustLevel !== 'trusted') {
+      return this.buildDeniedDecision(extensionId, routePath, policy.scope, trustLevel, permissions,
+        resolved.runtimeId, resolved.storageId, resolved.extensionName,
+        `Denied ${policy.scope} for ${auditLabel} because this route requires a trusted extension`);
+    }
+
+    if (policy.anyPermission && !policy.anyPermission.some((permission) => permissions.includes(permission))) {
+      return this.buildDeniedDecision(extensionId, routePath, policy.scope, trustLevel, permissions,
+        resolved.runtimeId, resolved.storageId, resolved.extensionName,
+        `Denied ${policy.scope} for ${auditLabel} because the extension lacks one of: ${policy.anyPermission.join(', ')}`);
+    }
+
+    if (policy.scope === 'native-messaging' && requestedHost) {
+      const hostDecision = this.nativeMessaging.evaluateHostAccess(requestedHost, [
+        resolved.runtimeId,
+        EXTENSION_ID_RE.test(resolved.storageId) ? resolved.storageId : null,
+      ]);
+      if (!hostDecision.allowed) {
+        return this.buildDeniedDecision(extensionId, routePath, policy.scope, trustLevel, permissions,
+          resolved.runtimeId, resolved.storageId, resolved.extensionName,
+          `Denied ${policy.scope} for ${auditLabel}: ${hostDecision.reason}`);
       }
-
-      return {
-        id: extensionId,
-        name: manifest.name || extensionId,
-        version: manifest.version || '0.0.0',
-        manifestVersion: manifest.manifest_version || 2,
-        permissions,
-        contentScriptPatterns,
-        hasDeclarativeNetRequest: permissions.includes('declarativeNetRequest') ||
-          permissions.includes('declarativeNetRequestWithHostAccess'),
-        hasNativeMessaging: permissions.includes('nativeMessaging'),
-        hasIdentity: permissions.includes('identity'),
-      };
-    } catch {
-      return null;
     }
+
+    return {
+      allowed: true,
+      level: trustLevel,
+      routePath,
+      scope: policy.scope,
+      reason: `Allowed ${policy.scope} for ${auditLabel}`,
+      extensionId,
+      runtimeId: resolved.runtimeId,
+      storageId: resolved.storageId,
+      extensionName: resolved.extensionName,
+      permissions,
+      auditLabel,
+    };
   }
 
   /** Expose the underlying loader for backward compatibility */
@@ -255,6 +362,131 @@ export class ExtensionManager {
   /** Get identity polyfill for API endpoint registration */
   getIdentityPolyfill(): IdentityPolyfill {
     return this.identityPolyfill;
+  }
+
+  private resolveInstalledExtension(extensionId: string): ResolvedExtensionIdentity | null {
+    const { loaded, available } = this.list();
+    const loadedMatch = loaded.find((extension) =>
+      extension.id === extensionId || path.basename(extension.path) === extensionId
+    ) ?? null;
+    const availableMatch = available.find((extension) => path.basename(extension.path) === extensionId) ?? null;
+    const extensionPath = loadedMatch?.path ?? availableMatch?.path;
+
+    if (!extensionPath) {
+      return null;
+    }
+
+    const storageId = path.basename(extensionPath);
+    const runtimeId = loadedMatch?.id ?? (EXTENSION_ID_RE.test(extensionId) ? extensionId : null);
+    const metadata = this.readExtensionMetadata(extensionPath, runtimeId ?? storageId);
+
+    return {
+      requestedId: extensionId,
+      runtimeId,
+      storageId,
+      extensionPath,
+      extensionName: metadata?.name ?? loadedMatch?.name ?? availableMatch?.name ?? storageId,
+      metadata,
+    };
+  }
+
+  private readExtensionMetadata(extensionPath: string, extensionId: string): ExtensionMetadata | null {
+    const manifestPath = path.join(extensionPath, 'manifest.json');
+    if (!fs.existsSync(manifestPath)) {
+      return null;
+    }
+
+    try {
+      const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
+
+      const permissions: string[] = [
+        ...(Array.isArray(manifest.permissions) ? manifest.permissions : []),
+        ...(Array.isArray(manifest.optional_permissions) ? manifest.optional_permissions : []),
+      ].filter((permission): permission is string => typeof permission === 'string');
+
+      const contentScriptPatterns: string[] = [];
+      if (Array.isArray(manifest.content_scripts)) {
+        for (const contentScript of manifest.content_scripts) {
+          if (contentScript && typeof contentScript === 'object' && Array.isArray(contentScript.matches)) {
+            for (const pattern of contentScript.matches) {
+              if (typeof pattern === 'string' && !contentScriptPatterns.includes(pattern)) {
+                contentScriptPatterns.push(pattern);
+              }
+            }
+          }
+        }
+      }
+
+      return {
+        id: extensionId,
+        name: manifest.name || path.basename(extensionPath),
+        version: manifest.version || '0.0.0',
+        manifestVersion: manifest.manifest_version || 2,
+        permissions,
+        contentScriptPatterns,
+        hasDeclarativeNetRequest: permissions.includes('declarativeNetRequest') ||
+          permissions.includes('declarativeNetRequestWithHostAccess'),
+        hasNativeMessaging: permissions.includes('nativeMessaging'),
+        hasIdentity: permissions.includes('identity'),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  private getTrustLevelForMetadata(metadata: ExtensionMetadata | null): ExtensionTrustLevel {
+    if (!metadata) {
+      return 'unknown';
+    }
+
+    if (metadata.hasNativeMessaging || metadata.hasIdentity) {
+      return 'trusted';
+    }
+
+    return 'limited';
+  }
+
+  private formatAuditLabel(
+    resolved: Pick<ResolvedExtensionIdentity, 'runtimeId' | 'storageId' | 'extensionName'>,
+    trustLevel: ExtensionTrustLevel,
+  ): string {
+    const idParts = [
+      resolved.runtimeId ? `runtime=${resolved.runtimeId}` : null,
+      resolved.storageId ? `storage=${resolved.storageId}` : null,
+    ].filter(Boolean);
+    return `${resolved.extensionName} [${trustLevel}${idParts.length > 0 ? `; ${idParts.join(', ')}` : ''}]`;
+  }
+
+  private buildDeniedDecision(
+    extensionId: string,
+    routePath: string,
+    scope: string | null,
+    level: ExtensionTrustLevel,
+    permissions: string[],
+    runtimeId: string | null,
+    storageId: string | null,
+    extensionName: string | null,
+    reason: string,
+  ): ExtensionRouteAccessDecision {
+    const labelBase = extensionName ?? extensionId;
+    const idParts = [
+      runtimeId ? `runtime=${runtimeId}` : null,
+      storageId ? `storage=${storageId}` : null,
+    ].filter(Boolean);
+
+    return {
+      allowed: false,
+      level,
+      routePath,
+      scope,
+      reason,
+      extensionId,
+      runtimeId,
+      storageId,
+      extensionName,
+      permissions,
+      auditLabel: `${labelBase} [${level}${idParts.length > 0 ? `; ${idParts.join(', ')}` : ''}]`,
+    };
   }
 
   // ─── Update Methods (Phase 9) ──────────────────────────────────────────

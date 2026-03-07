@@ -28,6 +28,7 @@ import { registerSyncRoutes } from './routes/sync';
 import { registerPinboardRoutes } from './routes/pinboards';
 import { registerSecurityRoutes } from '../security/routes';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
+import type { ExtensionRouteAccessDecision } from '../extensions/manager';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('TandemAPI');
@@ -41,7 +42,7 @@ type ApiCallerClass =
   | 'public-healthcheck'
   | 'shell-internal'
   | 'local-automation'
-  | 'trusted-extension'
+  | 'extension-origin'
   | 'unknown-local-process';
 
 type ApiAuthMode = 'public' | 'trusted-extension' | 'token';
@@ -52,6 +53,7 @@ interface ApiCallerInfo {
   origin: string | null;
   remoteAddress: string | null;
   extensionId: string | null;
+  extensionAccess?: ExtensionRouteAccessDecision | null;
 }
 
 /** Generate or load API auth token from ~/.tandem/api-token */
@@ -122,11 +124,20 @@ export class TandemAPI {
       if (req.method === 'OPTIONS') return next();
 
       const decision = this.authorizeRequest(req);
+      res.locals.apiCaller = decision.caller;
+      res.locals.extensionAccess = decision.extensionAccess ?? null;
       if (decision.allowed) {
+        if (decision.extensionAccess) {
+          log.info(`Extension API allow ${req.method} ${req.path}: ${decision.extensionAccess.reason}`);
+        }
         return next();
       }
 
-      log.warn(`Blocked API request (${decision.caller.kind}) ${req.method} ${req.path}: ${decision.reason}`);
+      if (decision.extensionAccess) {
+        log.warn(`Extension API block ${req.method} ${req.path}: ${decision.extensionAccess.reason}`);
+      } else {
+        log.warn(`Blocked API request (${decision.caller.kind}) ${req.method} ${req.path}: ${decision.reason}`);
+      }
       res.status(decision.status).json({ error: decision.reason });
     });
 
@@ -159,15 +170,83 @@ export class TandemAPI {
     return true;
   }
 
+  public authorizeExtensionBridgeRequest(opts: {
+    originHeader: string | string[] | undefined | null;
+    requestedExtensionId?: string | null;
+    routePath: string;
+    requestedHost?: string | null;
+  }): ExtensionRouteAccessDecision {
+    const origin = this.normalizeOrigin(opts.originHeader);
+    const originExtensionId = this.parseExtensionOriginId(origin);
+    if (!originExtensionId) {
+      return {
+        allowed: false,
+        level: 'unknown',
+        routePath: opts.routePath,
+        scope: null,
+        reason: 'Denied extension bridge access because the request is missing a valid chrome-extension origin',
+        extensionId: opts.requestedExtensionId ?? 'unknown-extension',
+        runtimeId: null,
+        storageId: null,
+        extensionName: null,
+        permissions: [],
+        auditLabel: 'unknown-extension [unknown]',
+      };
+    }
+
+    if (opts.requestedExtensionId && opts.requestedExtensionId !== originExtensionId) {
+      return {
+        allowed: false,
+        level: 'unknown',
+        routePath: opts.routePath,
+        scope: null,
+        reason: `Denied extension bridge access because origin ${originExtensionId} does not match requested extension ${opts.requestedExtensionId}`,
+        extensionId: originExtensionId,
+        runtimeId: originExtensionId,
+        storageId: null,
+        extensionName: null,
+        permissions: [],
+        auditLabel: `${originExtensionId} [unknown; runtime=${originExtensionId}]`,
+      };
+    }
+
+    return this.registry.extensionManager.evaluateApiRouteAccess(
+      originExtensionId,
+      opts.routePath,
+      opts.requestedHost ?? null,
+    );
+  }
+
   private authorizeRequest(req: Request): {
     allowed: boolean;
     caller: ApiCallerInfo;
     reason: string;
     status: number;
+    extensionAccess: ExtensionRouteAccessDecision | null;
   } {
     const caller = this.classifyCaller(req);
-    if (caller.authMode === 'public' || caller.kind === 'local-automation' || caller.kind === 'trusted-extension') {
-      return { allowed: true, caller, reason: 'authorized', status: 200 };
+    if (caller.authMode === 'public' || caller.kind === 'local-automation') {
+      return { allowed: true, caller, reason: 'authorized', status: 200, extensionAccess: null };
+    }
+
+    if (caller.kind === 'extension-origin' && caller.extensionId) {
+      const extensionAccess = this.registry.extensionManager.evaluateApiRouteAccess(
+        caller.extensionId,
+        req.path,
+        this.getRequestedNativeMessagingHost(req),
+      );
+      caller.extensionAccess = extensionAccess;
+      if (extensionAccess.allowed) {
+        return { allowed: true, caller, reason: 'authorized', status: 200, extensionAccess };
+      }
+
+      return {
+        allowed: false,
+        caller,
+        reason: extensionAccess.reason,
+        status: 403,
+        extensionAccess,
+      };
     }
 
     if (req.query.token) {
@@ -176,6 +255,7 @@ export class TandemAPI {
         caller,
         reason: 'Unauthorized — query-string token auth was removed. Use Authorization: Bearer <token>. Token is in ~/.tandem/api-token',
         status: 401,
+        extensionAccess: null,
       };
     }
 
@@ -190,6 +270,7 @@ export class TandemAPI {
       caller,
       reason,
       status: 401,
+      extensionAccess: null,
     };
   }
 
@@ -214,10 +295,9 @@ export class TandemAPI {
     if (
       authMode === 'trusted-extension'
       && extensionId
-      && this.isInstalledExtensionId(extensionId)
       && this.isRequiredExtensionIdSatisfied(req, extensionId)
     ) {
-      return { kind: 'trusted-extension', authMode, origin: origin ?? referer, remoteAddress, extensionId };
+      return { kind: 'extension-origin', authMode, origin: origin ?? referer, remoteAddress, extensionId };
     }
 
     if (origin?.startsWith('file://') || origin === 'null') {
@@ -267,11 +347,19 @@ export class TandemAPI {
   }
 
   private isRequiredExtensionIdSatisfied(req: Request, extensionId: string): boolean {
-    if (req.path !== '/extensions/identity/auth') {
-      return true;
+    if (req.path === '/extensions/identity/auth' || req.path === '/extensions/native-message') {
+      const body = req.body as { extensionId?: unknown } | undefined;
+      return typeof body?.extensionId === 'string' ? body.extensionId === extensionId : true;
     }
-    const body = req.body as { extensionId?: unknown } | undefined;
-    return typeof body?.extensionId === 'string' ? body.extensionId === extensionId : false;
+    return true;
+  }
+
+  private getRequestedNativeMessagingHost(req: Request): string | null {
+    if (req.path !== '/extensions/native-message') {
+      return null;
+    }
+    const body = req.body as { host?: unknown } | undefined;
+    return typeof body?.host === 'string' && body.host.trim() ? body.host.trim() : null;
   }
 
   private isInstalledExtensionId(extensionId: string): boolean {

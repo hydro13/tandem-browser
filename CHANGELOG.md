@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.77] - 2026-03-07
+
+### Changed
+- **Extension trust scoping** (`src/extensions/manager.ts`, `src/api/server.ts`, `src/api/routes/extensions.ts`) — added explicit `trusted` / `limited` / `unknown` extension trust levels and route-specific helper scopes so extension-origin callers must present the right permissions for `active-tab`, `webNavigation`, `identity`, and native messaging helpers
+- **Native messaging boundary checks** (`src/extensions/native-messaging.ts`, `src/extensions/nm-proxy.ts`, `src/main.ts`) — applied the same trust decision to the native messaging HTTP and WebSocket bridges, validated host manifests against allowed extension IDs, and bound bridge audit logs to the calling extension identity
+- **Tests** (`src/api/tests/server-auth.test.ts`, `src/extensions/tests/trust.test.ts`, `src/api/tests/routes/extensions.test.ts`) — added focused coverage for scoped extension helper auth, bridge identity mismatch rejection, and native messaging host allowlist enforcement
+
+### Technical Details
+- Extension-origin helper routes now evaluate a central `ExtensionManager.evaluateApiRouteAccess()` decision instead of relying on a generic "installed extension" allow path
+- Tandem records extension helper allow/deny decisions with extension identity, trust level, and route scope in the API/NM proxy logs
+- `POST /extensions/identity/auth` now resolves installation status through the same stable extension identity lookup used by the trust model
+
 ## [v0.44.76] - 2026-03-07
 
 - fix: isolate tabs per workspace
