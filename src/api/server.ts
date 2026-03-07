@@ -257,9 +257,17 @@ export class TandemAPI {
   }
 
   private isInstalledExtensionId(extensionId: string): boolean {
-    return this.registry.extensionManager
-      .getInstalledExtensions()
-      .some((extension) => extension.id === extensionId);
+    const installed = this.registry.extensionManager.getInstalledExtensions();
+    if (installed.some((extension) => extension.id === extensionId)) {
+      return true;
+    }
+
+    const { loaded, available } = this.registry.extensionManager.list();
+    if (loaded.some((extension) => extension.id === extensionId || path.basename(extension.path) === extensionId)) {
+      return true;
+    }
+
+    return available.some((extension) => path.basename(extension.path) === extensionId);
   }
 
   private setupRoutes(): void {
