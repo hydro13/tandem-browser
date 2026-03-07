@@ -240,10 +240,14 @@ export class WorkspaceManager {
 
   assignTab(tabId: number): void {
     const active = this.getActive();
-    if (!active.tabIds.includes(tabId)) {
-      active.tabIds.push(tabId);
-      this.saveToDisk();
+    for (const workspace of this.workspaces.values()) {
+      const idx = workspace.tabIds.indexOf(tabId);
+      if (idx !== -1) {
+        workspace.tabIds.splice(idx, 1);
+      }
     }
+    active.tabIds.push(tabId);
+    this.saveToDisk();
   }
 
   removeTab(tabId: number): void {

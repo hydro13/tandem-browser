@@ -2025,7 +2025,7 @@
         const wv = document.querySelector(`webview[data-tab-id="${tabId}"]`);
         if (!wv) return;
         const wcId = wv.getWebContentsId ? wv.getWebContentsId() : null;
-        const visible = ws.isDefault || (wcId !== null && allowedTabIds.has(wcId));
+        const visible = wcId !== null && allowedTabIds.has(wcId);
         el.style.display = visible ? '' : 'none';
         if (visible) {
           visibleTabIds.push(tabId);
