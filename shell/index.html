@@ -383,14 +383,26 @@
 
   <script>
     (() => {
-      const token = window.__TANDEM_TOKEN__ || window.tandem?.getApiToken?.() || '';
-      if (token && !window.__TANDEM_TOKEN__) {
-        window.__TANDEM_TOKEN__ = token;
-      }
-
-      if (!token || typeof window.fetch !== 'function') {
+      if (typeof window.fetch !== 'function') {
         return;
       }
+
+      let tokenPromise = null;
+      const getToken = async () => {
+        if (window.__TANDEM_TOKEN__) {
+          return window.__TANDEM_TOKEN__;
+        }
+        if (!tokenPromise) {
+          tokenPromise = Promise.resolve(window.tandem?.getApiToken?.())
+            .then(token => typeof token === 'string' ? token : '')
+            .catch(() => '');
+        }
+        const token = await tokenPromise;
+        if (token && !window.__TANDEM_TOKEN__) {
+          window.__TANDEM_TOKEN__ = token;
+        }
+        return token;
+      };
 
       const isLocalTandemApiUrl = (input) => {
         const rawUrl = typeof input === 'string'
@@ -408,14 +420,15 @@
       };
 
       const originalFetch = window.fetch.bind(window);
-      window.fetch = (input, init) => {
+      window.fetch = async (input, init) => {
         if (!isLocalTandemApiUrl(input)) {
           return originalFetch(input, init);
         }
 
+        const token = await getToken();
         const headers = new Headers(init?.headers || (input instanceof Request ? input.headers : undefined));
         const auth = headers.get('Authorization')?.trim();
-        if (!auth || /^Bearer$/i.test(auth)) {
+        if (token && (!auth || /^Bearer$/i.test(auth))) {
           headers.set('Authorization', `Bearer ${token}`);
         }
 

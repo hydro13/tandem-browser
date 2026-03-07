@@ -62,7 +62,7 @@ if (shellApiToken && typeof globalThis.fetch === 'function') {
 contextBridge.exposeInMainWorld('__TANDEM_TOKEN__', shellApiToken);
 
 contextBridge.exposeInMainWorld('tandem', {
-  getApiToken: () => shellApiToken,
+  getApiToken: () => ipcRenderer.invoke('get-api-token'),
 
   // Navigation
   navigate: (url: string) => ipcRenderer.invoke('navigate', url),

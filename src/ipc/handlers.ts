@@ -1,5 +1,6 @@
 
 import { ipcMain, Menu, BrowserWindow, shell } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
@@ -22,6 +23,7 @@ import type { ScriptInjector } from '../scripts/injector';
 import type { DeviceEmulator } from '../device/emulator';
 import type { WingmanStream } from '../activity/wingman-stream';
 import type { SnapshotManager } from '../snapshot/manager';
+import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('IpcHandlers');
@@ -103,6 +105,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     'get-page-content',
     'get-page-status',
     'execute-js',
+    'get-api-token',
     'is-window-maximized',
   ];
   for (const handler of ipcHandlers) {
@@ -434,6 +437,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
       return { success: true, result };
     } catch (error) {
       return { success: false, error: String(error) };
+    }
+  });
+
+  ipcMain.handle('get-api-token', async () => {
+    try {
+      return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
+    } catch {
+      return '';
     }
   });
 
