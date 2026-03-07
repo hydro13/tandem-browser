@@ -45,6 +45,56 @@ export interface BlocklistEntry {
   category: string;        // 'phishing', 'malware', 'tracker', 'crypto_miner'
 }
 
+export type BlocklistValueType = 'domain' | 'url';
+
+export interface HostsFileBlocklistParser {
+  type: 'hosts_file';
+}
+
+export interface DomainListBlocklistParser {
+  type: 'domain_list';
+}
+
+export interface UrlListBlocklistParser {
+  type: 'url_list';
+}
+
+export interface JsonBlocklistParser {
+  type: 'json';
+  recordPath?: string;
+  fieldPaths?: string[];
+  valueType?: BlocklistValueType;
+}
+
+export interface CsvBlocklistParser {
+  type: 'csv';
+  column: string | number;
+  delimiter?: string;
+  hasHeader?: boolean;
+  valueType?: BlocklistValueType;
+}
+
+export type BlocklistParserConfig =
+  | HostsFileBlocklistParser
+  | DomainListBlocklistParser
+  | UrlListBlocklistParser
+  | JsonBlocklistParser
+  | CsvBlocklistParser;
+
+export interface BlocklistSourceDefinition {
+  name: string;
+  url: string;
+  parser: BlocklistParserConfig;
+  category: string;
+  cacheFileName: string;
+}
+
+export interface ParsedBlocklistSource {
+  domains: string[];
+  blockedIpOrigins: string[];
+  skipped: number;
+}
+
 export interface GuardianStatus {
   active: boolean;
   defaultMode: GuardianMode;

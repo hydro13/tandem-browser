@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.81] - 2026-03-07
+
+### Changed
+- **Security blocklist parser foundation** (`src/security/types.ts`, `src/security/blocklists/updater.ts`, `src/security/network-shield.ts`) — replaced hardcoded per-file parser branches with a shared source manifest and parser layer that supports legacy text feeds plus declarative JSON and CSV sources without changing the current security feed set
+
+### Technical Details
+- Added typed blocklist parser/source definitions so the updater and `NetworkShield` can use the same parser contract for hosts, domain lists, URL lists, JSON records, and CSV columns
+- Moved cached blocklist loading onto the same `BLOCKLIST_SOURCES` manifest used for downloads, including stable cache filenames for the existing URLhaus, phishing, and Steven Black feeds
+- Shared URL-list safe-domain filtering and IP-origin extraction across both update-time parsing and runtime in-memory loading to keep request checks aligned ahead of the fast-start snapshot phase
+- Verification: `npm run compile` passed; `npm start` plus `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/security/status` succeeded; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
+
 ## [v0.44.80] - 2026-03-07
 
 ### Changed
