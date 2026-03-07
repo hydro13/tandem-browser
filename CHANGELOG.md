@@ -2,6 +2,22 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.56] - 2026-03-07
+
+- docs(repo): clarify OpenClaw positioning and classify maintainer workflow docs
+
+Updated the top-level project docs to position Tandem more clearly as the
+browser environment built for OpenClaw, while keeping Wingman as the user-facing
+name for the right-side collaboration panel and documenting Kees as the default
+OpenClaw persona.
+
+Cleaned up several `docs/` entry points so contributor workflow files such as
+`CLAUDE.md` and historical `LEES-MIJ-EERST.md` packs are clearly treated as
+maintainer artifacts rather than the primary public documentation surface. Also
+modernized electron-builder output naming with an explicit
+`tandem-browser-${version}-${arch}.${ext}` artifact pattern and macOS package
+targets.
+
 ## [v0.44.55] - 2026-03-07
 
 - docs(repo): add GitHub community files and separate internal planning docs

@@ -1,6 +1,7 @@
 # Documentation Guide
 
-This directory contains both public project documentation and internal planning material.
+This directory contains both public project documentation and maintainer-facing
+working material.
 
 ## Public-Facing Docs
 
@@ -9,12 +10,20 @@ This directory contains both public project documentation and internal planning 
 - `implementations/`: implementation guides and completed subsystem notes
 - `archive/`: historical documents retained for context
 
-## Internal Docs
+## Maintainer Workflow Docs
 
-Internal workflow and planning material lives under `internal/`.
+Some documentation sets still include files such as `CLAUDE.md`,
+`LEES-MIJ-EERST.md`, and phase-by-phase execution notes. These are contributor
+workflow artifacts from earlier implementation cycles. They remain in the repo
+because they still capture useful engineering context, but they are not the
+recommended entry point for new public readers.
+
+## Internal Planning Docs
+
+Project-management material lives under `internal/`.
 
 - `internal/ROADMAP.md`
 - `internal/STATUS.md`
 
-These files are kept for local project management and are not intended to be the
-primary public entry point for the repository.
+These files are kept for local planning and are intentionally separated from the
+main public documentation surface.

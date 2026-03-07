@@ -1,8 +1,12 @@
-# Tandem Security Shield — AI-Powered Browser Security
+# Tandem Security Shield — OpenClaw-Focused Browser Security
 
 ## Vision
 
-Tandem is a wingman browser — human and AI browse together. Security should work the same way: an AI Gatekeeper that understands what's happening, prevents threats in real-time, and evolves over time.
+Tandem is a Wingman browser: human and AI browse together. Security should work
+the same way, with an AI Gatekeeper that understands what is happening,
+prevents threats in real time, and evolves over time. The system is designed so
+OpenClaw can operate on the live web with tighter controls than a normal
+automation stack.
 
 **This is not a blocklist. This is an AI Security Wingman.**
 
@@ -39,15 +43,15 @@ Nothing gets in or out without Guardian's approval. Not requests, not responses,
 
 **Each phase = exactly 1 Claude Code session.** No session spans multiple phases.
 
-Every session follows this workflow:
+Every maintainer session follows this workflow:
 1. Read `STATUS.md` to understand current state
 2. Read the phase doc for the current phase
 3. Implement all deliverables
-4. Run verification checklist
+4. Run the verification checklist
 5. Update `STATUS.md` with results
 6. Commit and push
 
-See [CLAUDE.md](CLAUDE.md) for detailed session instructions.
+See [CLAUDE.md](CLAUDE.md) for the detailed maintainer workflow instructions.
 
 ## Existing Infrastructure (already in Tandem)
 

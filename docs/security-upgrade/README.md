@@ -7,16 +7,16 @@
 
 ## How It Works
 
-1. A new Claude Code session automatically reads `CLAUDE.md` (session instructions)
-2. The session reads `STATUS.md` to find the next phase to implement
-3. The session reads `phases/PHASE-{N}.md` for the detailed specification
-4. After completion, the session updates `STATUS.md` with results
+1. The maintainer reads `CLAUDE.md` for workflow instructions
+2. The maintainer reads `STATUS.md` to find the next phase to implement
+3. The maintainer reads `phases/PHASE-{N}.md` for the detailed specification
+4. After completion, the maintainer updates `STATUS.md` with results
 
 ## Documentation
 
 | File | Purpose |
 |------|---------|
-| [CLAUDE.md](CLAUDE.md) | Instructions for Claude Code sessions (auto-loaded) |
+| [CLAUDE.md](CLAUDE.md) | Maintainer workflow instructions for this documentation pack |
 | [STATUS.md](STATUS.md) | Progress tracking per phase (read this FIRST) |
 | [REPORT.md](REPORT.md) | Full analysis of reference repos + recommendations |
 | [ROADMAP.md](ROADMAP.md) | Detailed task checklist with checkboxes per sub-task |

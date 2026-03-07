@@ -1,18 +1,22 @@
 # Tandem Browser
 
-Tandem Browser is a local-first Electron browser built for human-AI collaboration.
-The human browses normally. The AI gets a local API on `127.0.0.1:8765` for
-navigation, extraction, automation, and observability. Websites should only see
-an ordinary Chromium browser on macOS or Linux, not an “AI browser”.
+Tandem Browser is a local-first Electron browser built for human-AI
+collaboration with OpenClaw as a first-class runtime. The human browses
+normally. The AI gets a local API on `127.0.0.1:8765` for navigation,
+extraction, automation, and observability. Websites should only see an
+ordinary Chromium browser on macOS or Linux, not an “AI browser”.
 
 Tandem is opinionated about security. If an AI can read and act on live web
-content, the browser becomes part of the threat model. Tandem puts a layered
+content, the browser becomes part of the threat model. Tandem puts a six-layer
 security system between external content and the agent, with local-only data
-handling and no cloud dependency in the browser itself.
+handling and no cloud dependency in the browser itself. Those layers are built
+so OpenClaw can operate against the live web with tighter guardrails than a
+normal desktop browser shell.
 
 ## What It Does
 
 - Human + AI shared browsing: a normal browser UI for the human, a local HTTP API for the agent
+- OpenClaw-first runtime: Tandem is designed so OpenClaw can browse, inspect, and automate safely on the local machine
 - Local API for automation: navigation, page content, screenshots, tabs, sessions, devtools-style endpoints, and more
 - Security-by-default browsing: blocklists, outbound checks, script analysis, behavior monitoring, and an agent decision layer
 - Extension support: Chrome-style extension loading, native messaging compatibility work, and extension update management
@@ -24,7 +28,7 @@ The browser surface is broader than a simple tab shell.
 
 - Left sidebar: workspaces, messenger-style panels, bookmarks, history, downloads, and other utility surfaces
 - Main browsing area: Chromium webviews with tab management and session state
-- Right-side collaboration panel: AI chat, activity, screenshots, and related agent tools
+- Right-side Wingman panel: AI chat, activity, screenshots, and related agent tools
 - Overlay tooling: annotations, screenshots, and other shell-level controls that stay out of the page context
 
 ## Current Status
@@ -39,10 +43,11 @@ The browser surface is broader than a simple tab shell.
 Tandem runs two layers in parallel:
 
 1. The visible browsing layer: Chromium webviews, tabs, downloads, bookmarks, workspaces, and the human-facing UI.
-2. The invisible control layer: Electron main process services, the local HTTP API, security systems, and the agent tooling.
+2. The invisible control layer: Electron main process services, the local HTTP API, security systems, OpenClaw integration, and the agent tooling.
 
 This split matters because Tandem is designed to keep AI control out of the page
-JavaScript context whenever possible.
+JavaScript context whenever possible while still giving OpenClaw a useful local
+browser surface.
 
 For the broader system overview, see [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md).
 
@@ -118,13 +123,13 @@ paranoid than a normal desktop browser shell.
 
 ## Repository Guide
 
-- [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md): product vision and architecture overview
+- [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md): product vision, OpenClaw positioning, and architecture overview
 - [docs/README.md](/Users/robinwaslander/Documents/dev/tandem-browser/docs/README.md): documentation map
 - [CHANGELOG.md](/Users/robinwaslander/Documents/dev/tandem-browser/CHANGELOG.md): release history
 - [CONTRIBUTING.md](/Users/robinwaslander/Documents/dev/tandem-browser/CONTRIBUTING.md): contribution workflow
 - [SECURITY.md](/Users/robinwaslander/Documents/dev/tandem-browser/SECURITY.md): vulnerability reporting
 
-Internal workflow files such as [AGENTS.md](/Users/robinwaslander/Documents/dev/tandem-browser/AGENTS.md) and [TODO.md](/Users/robinwaslander/Documents/dev/tandem-browser/TODO.md) are kept for local development operations and are not the primary public documentation surface.
+Internal workflow files such as [AGENTS.md](/Users/robinwaslander/Documents/dev/tandem-browser/AGENTS.md) and [TODO.md](/Users/robinwaslander/Documents/dev/tandem-browser/TODO.md) are kept for local development operations and are not the primary public documentation surface. The `docs/` tree also contains historical contributor packs with files such as `CLAUDE.md` and `LEES-MIJ-EERST.md`; those are retained for maintainers, not as end-user documentation.
 
 ## License
 

@@ -1,32 +1,33 @@
 # Agent Tools — Implementation Project
 
-3 features die Kees (de AI) nodig heeft om effectiever met Tandem te werken.
-Gebaseerd op een gap-analyse tussen Tandem (174 endpoints) en agent-browser (~65 endpoints).
+Three features Kees, the default OpenClaw persona in Tandem, needs to work more
+effectively with the browser. This pack is based on a gap analysis between
+Tandem (174 endpoints) and `agent-browser` (~65 endpoints).
 
-## Doel
+## Goal
 
-Niet voor mensen, niet voor demos — puur voor AI-gebruik:
+Not for end-user demos. Purely for agent-facing capability work:
 
-| Feature | Probleem | Oplossing |
+| Feature | Problem | Solution |
 |---|---|---|
-| **Persistent scripts** | `POST /execute-js` vergeet alles na navigatie | `ScriptInjector` — re-inject na elke `did-finish-load` |
-| **Semantic locators** | CSS selectors zijn fragiel en moeilijk te genereren | `POST /find {"by":"role","value":"button"}` — zoek op wat het IS |
-| **Device emulation** | Tandem draait altijd desktop Chromium | iPhone/Galaxy presets via Electron native API |
+| **Persistent scripts** | `POST /execute-js` loses state after navigation | `ScriptInjector` — re-inject on every `did-finish-load` |
+| **Semantic locators** | CSS selectors are fragile and hard to generate | `POST /find {"by":"role","value":"button"}` — query by semantics |
+| **Device emulation** | Tandem always runs desktop Chromium | iPhone/Galaxy presets via the Electron native API |
 
-## Structuur
+## Structure
 
 ```
 docs/agent-tools/
-├── CLAUDE.md          ← Instructies voor Claude Code (lees EERSTE)
-├── README.md          ← Dit bestand
-├── STATUS.md          ← Voortgang bijhouden (bijwerken na elke phase)
+├── CLAUDE.md          ← Maintainer workflow instructions for this pack
+├── README.md          ← This file
+├── STATUS.md          ← Progress tracking (update after each phase)
 └── phases/
     ├── PHASE-1.md     ← Persistent Script & Style Injection
     ├── PHASE-2.md     ← Semantic Locators (Playwright-style)
     └── PHASE-3.md     ← Device Emulation
 ```
 
-## Nieuwe bestanden na voltooiing
+## Files Added After Completion
 
 ```
 src/
@@ -38,7 +39,7 @@ src/
     └── emulator.ts        ← DeviceEmulator
 ```
 
-## Nieuwe endpoints na voltooiing
+## Endpoints Added After Completion
 
 ```
 # Phase 1 — Scripts
@@ -66,17 +67,18 @@ POST   /device/emulate
 POST   /device/reset
 ```
 
-## Volgorde
+## Execution Order
 
-1 phase per Claude Code sessie. In volgorde: 1 → 2 → 3.
-Phase 2 bouwt op Phase 1 (geen harde afhankelijkheid, maar STATUS.md checks het).
-Phase 3 bouwt op Phase 1 (volgt hetzelfde did-finish-load patroon).
+One phase per maintainer session, in order: 1 → 2 → 3.
+Phase 2 builds on Phase 1.
+Phase 3 also builds on Phase 1 because it follows the same `did-finish-load`
+pattern.
 
-## Geen dependencies
+## Dependencies
 
-Alle 3 phases gebruiken alleen wat al aanwezig is:
+All three phases use existing dependencies only:
 - Electron native API (`enableDeviceEmulation`, `insertCSS`, `executeJavaScript`)
-- Bestaande `DevToolsManager` voor CDP
-- Bestaande `SnapshotManager` voor accessibility tree
+- Existing `DevToolsManager` for CDP
+- Existing `SnapshotManager` for the accessibility tree
 
-Geen nieuwe npm packages nodig.
+No new npm packages are required.

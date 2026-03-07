@@ -6,9 +6,9 @@
 
 Tandem is an Electron-based browser built for human-AI collaboration. The name comes from the tandem bicycle: two riders, one machine, each contributing what the other can't do alone.
 
-The browser runs two things in parallel. The human uses it like any other browser — navigating, logging in, handling captchas, making decisions. The AI has access to a full HTTP API on localhost:8765 with ~200 endpoints for navigation, interaction, data extraction, and automation. Websites see a normal Chrome browser on macOS. They don't see the AI.
+The browser runs two things in parallel. The human uses it like any other browser — navigating, logging in, handling captchas, making decisions. The AI has access to a full HTTP API on localhost:8765 with ~200 endpoints for navigation, interaction, data extraction, and automation. OpenClaw is the primary AI runtime Tandem is built around today. Websites see a normal Chrome browser on macOS. They don't see the AI.
 
-The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs a 6-layer security shield before anything reaches the page.
+The security layer exists because when an AI has access to your browser, your threat model changes. Every ad network, tracking pixel, and malicious domain is now in your agent's attack surface. Tandem runs a 6-layer security shield before anything reaches the page so OpenClaw can operate with stricter containment than a conventional browser automation stack.
 
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
@@ -24,6 +24,8 @@ Human-AI symbiosis, not human-AI hierarchy. The goal isn't an AI that does thing
 
 In browser terms: the human handles ambiguity, judgment calls, authentication, and anything that requires a real person. The AI handles speed, memory, data extraction, parallel processing, and anything that would take the human too long. The browser is the shared workspace.
 
+Within the product UI, the right-side assistant surface is called the Wingman panel. Kees is the default OpenClaw persona that operates through that panel today.
+
 ---
 
 ## Architecture
@@ -33,7 +35,7 @@ In browser terms: the human handles ambiguity, judgment calls, authentication, a
 │  Tandem Browser (Electron 40)                                    │
 │                                                                   │
 │  ┌──────────────────────────┐  ┌───────────────────────────┐    │
-│  │  Sidebar (shell)          │  │  Copilot Panel (shell)    │    │
+│  │  Sidebar (shell)          │  │  Wingman Panel (shell)    │    │
 │  │                          │  │                            │    │
 │  │  Workspaces (SVG icons)  │  │  Chat / Activity /         │    │
 │  │  Messengers:             │  │  Screenshots / ClaroNote   │    │

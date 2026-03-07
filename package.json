@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.44.55",
+  "version": "0.44.56",
   "description": "Local-first human-AI collaborative browser with built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
@@ -71,6 +71,7 @@
   "productName": "Tandem Browser",
   "build": {
     "appId": "com.tandem.browser",
+    "artifactName": "tandem-browser-${version}-${arch}.${ext}",
     "files": [
       "dist/**/*",
       "shell/**/*",
@@ -80,7 +81,11 @@
       "output": "release"
     },
     "mac": {
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "linux": {
       "category": "Utility"

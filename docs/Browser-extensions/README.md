@@ -9,7 +9,7 @@
 
 `src/extensions/loader.ts` — `ExtensionLoader` class already exists and works:
 - Loads unpacked extensions from `~/.tandem/extensions/`
-- Uses `session.loadExtension()` (Electron's native Chromium API)
+- Uses `session.extensions.loadExtension()` (Electron's native Chromium API)
 - Called in `main.ts` during app init (line ~281)
 - API routes exist: `GET /extensions/list`, `POST /extensions/load`
 
@@ -19,16 +19,19 @@
 
 ## How It Works
 
-1. A new Claude Code session automatically reads `CLAUDE.md` (session instructions)
-2. The session reads `STATUS.md` to find the next phase to implement
-3. The session reads `phases/PHASE-{N}.md` for the detailed specification
-4. After completion, the session updates `STATUS.md` with results
+This documentation pack was written for maintainers working through the feature
+plan in small implementation phases.
+
+1. The maintainer reads `CLAUDE.md` for workflow instructions
+2. The maintainer reads `STATUS.md` to find the next phase to implement
+3. The maintainer reads `phases/PHASE-{N}.md` for the detailed specification
+4. After completion, the maintainer updates `STATUS.md` with results
 
 ## Documentation
 
 | File | Purpose |
 |------|---------|
-| [CLAUDE.md](CLAUDE.md) | Instructions for Claude Code sessions (auto-loaded) |
+| [CLAUDE.md](CLAUDE.md) | Maintainer workflow instructions for this documentation pack |
 | [STATUS.md](STATUS.md) | Progress tracking per phase (read this FIRST) |
 | [ROADMAP.md](ROADMAP.md) | Detailed task checklist with checkboxes per sub-task |
 | [TOP30-EXTENSIONS.md](TOP30-EXTENSIONS.md) | Compatibility assessment + Electron API matrix for 30 popular extensions |
