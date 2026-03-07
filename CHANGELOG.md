@@ -4,27 +4,6 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## [v0.44.85] - 2026-03-07
 
-- fix: add tiered blocklist refresh scheduling (security)
-
-What was built/changed:
-- Modified files: src/security/security-manager.ts, src/security/blocklists/updater.ts, src/security/security-db.ts, src/security/db-blocklist.ts, src/security/routes.ts, src/security/types.ts, src/api/tests/routes/security.test.ts, package.json, CHANGELOG.md, docs/implementations/security-blocklist-refresh/LEES-MIJ-EERST.md
-- New files: src/security/tests/blocklist-updater.test.ts
-- Added per-source blocklist freshness metadata, hourly/daily/weekly cadence, and non-overlapping scheduled refresh execution
-- Exposed per-source freshness in GET /security/status and GET /security/blocklist/stats
-
-Why this approach:
-- Keeps scheduled refresh policy aligned with the source manifest instead of a single global timer
-- Preserves fast startup by refreshing only due feeds and reloading the shield atomically after successful source updates
-- Makes source freshness inspectable for debugging without adding shell UI noise
-
-Tested:
-- npm run compile: zero errors
-- npx vitest run src/security/tests/blocklist-updater.test.ts src/api/tests/routes/security.test.ts: all pass
-- npx vitest run: existing unrelated failures remain in src/tabs/tests/tabs.test.ts and src/extensions/tests/action-polyfill.test.ts
-- npm start + curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/security/status: succeeded with per-source freshness data
-
-## [v0.44.84] - 2026-03-07
-
 ### Changed
 - **Tiered security blocklist scheduler** (`src/security/security-manager.ts`, `src/security/blocklists/updater.ts`, `src/security/security-db.ts`) — replaced the single 24-hour refresh rule with per-source hourly/daily/weekly cadence, persisted freshness and failure metadata per feed, and prevented overlapping scheduled refresh runs
 - **Security freshness visibility** (`src/security/routes.ts`, `src/security/db-blocklist.ts`) — exposed per-source blocklist freshness through `/security/status` and `/security/blocklist/stats`, and aligned database `lastUpdate` reporting with persisted refresh metadata instead of the request timestamp

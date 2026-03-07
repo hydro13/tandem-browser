@@ -170,7 +170,7 @@ Do not start later phases early.
 
 - Status: Complete
 - Date: 2026-03-07
-- Commit: `pending — recorded in the follow-up docs commit after the implementation commit hash exists`
+- Commit: `528ccabb8fd05d430bbe3a6db91db3c3000bbb73`
 - Summary: Replaced the single 24-hour scheduler with per-source hourly/daily/weekly freshness checks, persisted `lastUpdated` / `lastAttempted` / failure state per feed in blocklist metadata, exposed per-source freshness through the security status routes, and added focused tests for due-source selection plus route visibility.
 - Remaining risks for next phase: Feed expansion must stay curated; large low-signal or ad-focused lists still do not belong in the browser core, and any new structured feeds must avoid reintroducing startup or reload stalls.
 
