@@ -78,8 +78,8 @@ See the active `fase-*.md` document.
 |------|---------|--------|
 | `LEES-MIJ-EERST.md` | execution guide for the full track | Ready |
 | `fase-1-api-auth.md` | API trust boundary and caller model | Complete |
-| `fase-2-gatekeeper-enforcement.md` | fail-closed decision flow | Ready |
-| `fase-3-per-tab-monitoring.md` | broader runtime monitoring coverage | Waiting for phase 2 |
+| `fase-2-gatekeeper-enforcement.md` | fail-closed decision flow | Complete |
+| `fase-3-per-tab-monitoring.md` | broader runtime monitoring coverage | Ready |
 | `fase-4-outbound-containment.md` | stronger outbound and WebSocket control | Waiting for phase 3 |
 | `fase-5-extension-trust.md` | extension trust model and route scopes | Waiting for phase 4 |
 | `fase-6-containment-actions.md` | automatic security response actions | Waiting for phase 5 |
@@ -183,19 +183,19 @@ instead of depending on chat context.
 
 ### Phase 2 — Gatekeeper Enforcement
 
+- Status: Complete
+- Date: 2026-03-07
+- Commit: f345c2a
+- Summary: Added async `onBeforeRequest` support to the dispatcher so Guardian can actually hold selected requests, introduced explicit Gatekeeper decision classes (`allow_immediately`, `hold_for_decision`, `deny_on_timeout`), applied fail-closed handling to strict low-trust scripts and suspicious downloads, held risky first-visit navigations and unknown stricter-mode WebSockets for review, and added focused tests for async holds plus timeout behavior.
+- Remaining risks for next phase: Phase 3 must expand runtime monitoring beyond the currently attached tab without letting long-lived monitors or resets drift across tabs now that request-time enforcement can pause independently of the rest of the security pipeline.
+
+### Phase 3 — Per-Tab Monitoring
+
 - Status: Ready
 - Date: —
 - Commit: —
 - Summary: —
-- Remaining risks for next phase: Existing shell/file callers are now classified but no longer auto-trusted, so Gatekeeper enforcement should assume bearer auth for shell-initiated HTTP calls unless a future internal path is explicitly designed and documented.
-
-### Phase 3 — Per-Tab Monitoring
-
-- Status: Waiting
-- Date: —
-- Commit: —
-- Summary: —
-- Remaining risks for next phase: —
+- Remaining risks for next phase: Request-time holds now work independently of CDP/runtime monitoring, so broader tab coverage must preserve per-tab isolation, cleanup, and attachment sequencing without duplicating listeners or leaking observations between tabs.
 
 ### Phase 4 — Outbound Containment
 

@@ -6,6 +6,21 @@ All notable changes to Tandem Browser will be documented in this file.
 
 - fix: enforce gatekeeper decisions for risky requests (security-hardening)
 
+What was built/changed:
+- Modified files: src/network/dispatcher.ts, src/security/guardian.ts, src/security/gatekeeper-ws.ts, src/security/types.ts, src/security/tests/gatekeeper-enforcement.test.ts
+- Gatekeeper enforcement: async `onBeforeRequest` support in `RequestDispatcher`, explicit Gatekeeper decision classes, request holds for risky first-visit navigations, deny-on-timeout handling for strict low-trust scripts and suspicious downloads, and explicit fallback behavior when Gatekeeper is disconnected or saturated
+- Logging/tests: Gatekeeper queue and resolution logs now record hold/allow/block/timeout states, and focused tests cover async request holds plus timeout policy behavior
+
+Why this approach:
+- Keeps balanced browsing usable by limiting request holds to selected risky cases while making stricter paths fail closed instead of silently defaulting to allow
+
+Tested:
+- npm run compile: zero errors
+- npx vitest run src/security/tests/gatekeeper-enforcement.test.ts: all 4 tests pass
+- npx vitest run: still fails on unrelated pre-existing suites in src/extensions/tests/action-polyfill.test.ts and src/tabs/tests/tabs.test.ts
+- Manual: npm run dev started successfully, initialized the security stack and API on 127.0.0.1:8765
+- Curl: GET /status returned ready state from the running app
+
 ## [v0.44.62] - 2026-03-07
 
 - fix: tighten local API auth boundary (security-hardening)
