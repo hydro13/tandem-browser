@@ -2,6 +2,22 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.71] - 2026-03-07
+
+- fix: restore shell API auth in session layer
+
+What was built/changed:
+- Modified files: src/main.ts
+- Added a RequestDispatcher header hook for internal shell requests to the local Tandem API
+- Kept API hardening intact for non-shell callers
+
+Why this approach:
+- Renderer-side token bootstrapping was still fragile across shell pages and internal webviews
+- Injecting the bearer token in Electron's request layer fixes shell/index.html and file:// webviews without re-trusting localhost broadly
+
+Tested:
+- npm run compile: zero errors
+
 ## [v0.44.70] - 2026-03-07
 
 - fix: bootstrap shell auth across internal pages
