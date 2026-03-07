@@ -1,6 +1,65 @@
 import { contextBridge, ipcRenderer } from 'electron';
+import fs from 'fs';
 import type { ActivityEvent, ChatMessage } from './panel/manager';
 import type { ToolbarExtension } from './extensions/toolbar';
+import { tandemDir } from './utils/paths';
+
+function readShellApiToken(): string {
+  try {
+    return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
+  } catch {
+    return '';
+  }
+}
+
+function isLocalTandemApiRequest(input: string | Request | URL): boolean {
+  const rawUrl = typeof input === 'string'
+    ? input
+    : input instanceof URL
+      ? input.toString()
+      : input.url;
+
+  try {
+    const url = new URL(rawUrl);
+    return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === '8765';
+  } catch {
+    return false;
+  }
+}
+
+const shellApiToken = readShellApiToken();
+
+// Keep shell-only fetches working after the API auth hardening by attaching the
+// local bearer token to Tandem API requests unless a non-empty auth header is
+// already present.
+if (shellApiToken && typeof globalThis.fetch === 'function') {
+  const originalFetch = globalThis.fetch.bind(globalThis);
+  globalThis.fetch = (input: string | Request | URL, init?: RequestInit) => {
+    if (!isLocalTandemApiRequest(input)) {
+      return originalFetch(input, init);
+    }
+
+    const initHeaders = new Headers(init?.headers || undefined);
+    const initAuth = initHeaders.get('Authorization')?.trim();
+    if (!initAuth || /^Bearer$/i.test(initAuth)) {
+      initHeaders.set('Authorization', `Bearer ${shellApiToken}`);
+    }
+
+    if (input instanceof Request) {
+      const requestHeaders = new Headers(input.headers);
+      initHeaders.forEach((value, key) => requestHeaders.set(key, value));
+      const requestAuth = requestHeaders.get('Authorization')?.trim();
+      if (!requestAuth || /^Bearer$/i.test(requestAuth)) {
+        requestHeaders.set('Authorization', `Bearer ${shellApiToken}`);
+      }
+      return originalFetch(new Request(input, { ...init, headers: requestHeaders }));
+    }
+
+    return originalFetch(input, { ...init, headers: initHeaders });
+  };
+}
+
+contextBridge.exposeInMainWorld('__TANDEM_TOKEN__', shellApiToken);
 
 contextBridge.exposeInMainWorld('tandem', {
   // Navigation
