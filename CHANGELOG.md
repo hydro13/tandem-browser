@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.65] - 2026-03-07
+
+- fix: expand per-tab runtime security coverage (security-hardening)
+
+What was built/changed:
+- Modified files: src/devtools/manager.ts, src/ipc/handlers.ts, src/main.ts, src/security/behavior-monitor.ts, src/security/script-guard.ts, src/security/security-manager.ts, package.json, CHANGELOG.md
+- Added multi-tab CDP attachment state in DevToolsManager so security code can target specific webContents without stealing the primary active-tab session
+- Moved ScriptGuard and BehaviorMonitor runtime state to per-tab maps and added explicit tab created/navigated/closed lifecycle handling in SecurityManager and main process wiring
+
+Why this approach:
+- Expands security coverage to live background/restored tabs while preserving the existing active-tab CDP APIs used by the rest of the browser
+
+Tested:
+- npm run compile: zero errors
+- npx vitest run: fails on pre-existing unrelated suites in src/extensions/tests/action-polyfill.test.ts and src/tabs/tests/tabs.test.ts
+- Manual: npm start succeeded and initialized the security stack plus API on 127.0.0.1:8765
+
 ## [v0.44.64] - 2026-03-07
 
 - fix: expand per-tab runtime security coverage (security-hardening)

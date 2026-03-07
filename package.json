@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.44.64",
+  "version": "0.44.65",
   "description": "Local-first human-AI collaborative browser with built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
