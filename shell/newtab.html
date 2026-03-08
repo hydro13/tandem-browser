@@ -100,6 +100,45 @@
       margin-bottom: 48px;
     }
 
+    .quick-links-wrap {
+      width: 100%;
+      max-width: 560px;
+      margin-bottom: 48px;
+    }
+
+    .quick-links-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .quick-links-title {
+      font-size: 12px;
+      color: #6f7692;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+
+    .quick-links-action {
+      border: 1px solid #28416d;
+      background: rgba(22, 33, 62, 0.88);
+      color: #c8cfdf;
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      line-height: 1;
+      cursor: pointer;
+      transition: border-color 0.2s, color 0.2s, transform 0.2s;
+    }
+
+    .quick-links-action:hover {
+      color: #fff;
+      border-color: #e94560;
+      transform: translateY(-1px);
+    }
+
     .quick-link {
       display: flex;
       flex-direction: column;
@@ -223,8 +262,15 @@
     <input type="text" id="search" placeholder="Search or type a URL..." autofocus>
   </div>
 
-  <div class="quick-links" id="quick-links">
-    <div class="quick-links-empty">Loading shortcuts...</div>
+  <div class="quick-links-wrap">
+    <div class="quick-links-header">
+      <div class="quick-links-title">Quick links</div>
+      <button type="button" class="quick-links-action" id="edit-quick-links">Edit Quick Links</button>
+    </div>
+
+    <div class="quick-links" id="quick-links">
+      <div class="quick-links-empty">Loading shortcuts...</div>
+    </div>
   </div>
 
   <div class="recent-section">
@@ -238,6 +284,7 @@
     const API = 'http://localhost:8765';
     const searchInput = document.getElementById('search');
     const quickLinksContainer = document.getElementById('quick-links');
+    const editQuickLinksButton = document.getElementById('edit-quick-links');
     const fallbackQuickLinks = [
       { label: 'DuckDuckGo', url: 'https://duckduckgo.com' },
       { label: 'GitHub', url: 'https://github.com' },
@@ -338,6 +385,10 @@
 
     window.addEventListener('tandem-quick-links-changed', () => {
       void loadQuickLinks();
+    });
+
+    editQuickLinksButton.addEventListener('click', () => {
+      window.location.href = 'settings.html#general';
     });
 
     // Load recent tabs from API

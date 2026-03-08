@@ -25,6 +25,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ## [Unreleased] - 2026-03-08
 
 ### Changed
+- **New-tab quick-link shortcut** (`shell/newtab.html`) — the new tab page now shows an `Edit Quick Links` action above the shortcut grid so you can jump straight into managing them without hunting through the app chrome
 - **Quick-link context menus** (`shell/js/sidebar.js`, `src/context-menu/menu-builder.ts`, `src/config/manager.ts`) — quick links can now be added or removed directly from the tab right-click menu and from the new-tab page link context menu, instead of only through Settings
 - **Configurable new-tab quick links** (`shell/newtab.html`, `shell/settings.html`, `src/config/manager.ts`) — the new tab page now reads quick links from shared config instead of a hardcoded HTML list, and settings now expose a small editor to add, remove, and save those shortcuts
 - **Closed-panel Wingman reply notifications** (`src/panel/manager.ts`, `src/panel/tests/manager.test.ts`) — incoming AI chat replies now trigger the existing Wingman alert path when the side panel is closed, so replies are surfaced even if the user is browsing with the panel hidden
