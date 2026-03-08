@@ -6,6 +6,74 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('ActionPolyfill');
 
+function buildExtensionHeadersLiteral(cwsId: string, includeJsonContentType: boolean = false): string {
+  const headers: Record<string, string> = {};
+  if (includeJsonContentType) {
+    headers['Content-Type'] = 'application/json';
+  }
+  headers['X-Tandem-Extension-Id'] = cwsId;
+  return JSON.stringify(headers);
+}
+
+function stripInjectedPolyfillArtifacts(source: string): {
+  content: string;
+  strippedBlocks: number;
+  strippedArtifacts: number;
+} {
+  let content = source;
+  let strippedBlocks = 0;
+  let strippedArtifacts = 0;
+
+  const blockPatterns = [
+    /\/\* Tandem chrome\.action polyfill v[\s\S]*?\/\* Tandem:polyfill:end \*\/\s*/g,
+    /\/\* Tandem chrome\.action polyfill v[\s\S]*?var chrome; var browser(?:; var TANDEM_PORT = \d+(?:; var __tandemExtensionHeaders)?)?; \/\/ jshint ignore:line\s*/g
+  ];
+
+  for (const pattern of blockPatterns) {
+    const matches = content.match(pattern) || [];
+    if (matches.length > 0) {
+      strippedBlocks += matches.length;
+      content = content.replace(pattern, '');
+    }
+  }
+
+  const orphanPatterns = [
+    /^\s*var chrome; var browser(?:; var TANDEM_PORT = \d+(?:; var __tandemExtensionHeaders)?)?; \/\/ jshint ignore:line\s*$/gm,
+    /^\s*var TANDEM_PORT; TANDEM_PORT = \d+; \/\/ used by P\$\(\) patch below\s*$/gm,
+    /^\s*\/\* Tandem:polyfill:end \*\/\s*$/gm
+  ];
+
+  for (const pattern of orphanPatterns) {
+    const matches = content.match(pattern) || [];
+    if (matches.length > 0) {
+      strippedArtifacts += matches.length;
+      content = content.replace(pattern, '');
+    }
+  }
+
+  content = content.replace(/\n{3,}/g, '\n\n');
+
+  return { content, strippedBlocks, strippedArtifacts };
+}
+
+function replacePatchVariants(existing: string, replacement: string, variants: string[]): {
+  content: string;
+  changed: boolean;
+} {
+  let content = existing;
+  let changed = false;
+
+  for (const variant of variants) {
+    if (variant === replacement || !content.includes(variant)) {
+      continue;
+    }
+    content = content.split(variant).join(replacement);
+    changed = true;
+  }
+
+  return { content, changed };
+}
+
 // ─── Polyfill JavaScript (injected into extension service workers) ────────────
 
 /**
@@ -41,7 +109,7 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
   //   3. Rest of the module runs with chrome/browser = our proxy
   //   4. proxy.get('action') → returns our polyfill object
   return `
-/* Tandem chrome.action polyfill v9 — module-scope var shadow */
+/* Tandem chrome.action polyfill v11 — module-scope var shadow */
 ;(function() {
   var __tc = (typeof globalThis !== 'undefined' && globalThis.chrome) || (typeof self !== 'undefined' && self.chrome) || {};
   var CWS_ID = '${cwsId}';
@@ -612,12 +680,11 @@ function generatePolyfillScript(cwsId: string, apiPort: number): string {
    */
   chrome = proxy;
   try { browser = proxy; } catch(e) {}
-  console.log('[Tandem] chrome.action polyfill v9 active for ${cwsId}');
+  console.log('[Tandem] chrome.action polyfill v11 active for ${cwsId}');
 })();
 /* Module-scope declarations — hoisted above the IIFE, shadow the globals */
 /* eslint-disable no-var */
-var chrome; var browser; // jshint ignore:line
-var TANDEM_PORT; TANDEM_PORT = ${apiPort}; // used by P$() patch below
+var chrome; var browser; var TANDEM_PORT = ${apiPort}; // jshint ignore:line
 /* Tandem:polyfill:end */
 `;
 }
@@ -690,23 +757,16 @@ export class ActionPolyfill {
 
         const cwsId = dir.name;
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
-        const marker = '/* Tandem chrome.action polyfill v9';
+        const marker = '/* Tandem chrome.action polyfill v11';
 
         let existing = fs.readFileSync(swPath, 'utf-8');
 
-        // Strip ALL previous versions of the Tandem polyfill (any version, with or
-        // without end marker). Old copies accumulate when the file is patched across
-        // multiple runs if the end marker was not present in older versions.
-        //
-        // Strategy: use a regex anchored to the unique module-scope var declaration
-        // that appears at the end of EVERY polyfill version:
-        //   var chrome; var browser; // jshint ignore:line
-        // This line does not appear anywhere in the 1Password bundle.
-        const polyfillBlockRe = /\/\* Tandem chrome\.action polyfill v[\s\S]*?var chrome; var browser; \/\/ jshint ignore:line\n(?:\/\* Tandem:polyfill:end \*\/\n)?/g;
-        const strippedCount = (existing.match(polyfillBlockRe) || []).length;
-        if (strippedCount > 0) {
-          existing = existing.replace(polyfillBlockRe, '');
-          log.info(`[ActionPolyfill] Stripped ${strippedCount} old polyfill block(s) from ${manifest.name || cwsId}`);
+        const stripped = stripInjectedPolyfillArtifacts(existing);
+        existing = stripped.content;
+        if (stripped.strippedBlocks > 0 || stripped.strippedArtifacts > 0) {
+          log.info(
+            `[ActionPolyfill] Stripped ${stripped.strippedBlocks} old polyfill block(s) and ${stripped.strippedArtifacts} orphan artifact(s) from ${manifest.name || cwsId}`
+          );
         }
 
         // Prepend new polyfill if current version marker not present
@@ -714,6 +774,9 @@ export class ActionPolyfill {
           existing = polyfillCode + '\n' + existing;
           log.info(`🎯 Action polyfill injected into ${manifest.name || cwsId}`);
         }
+
+        const extensionHeadersLiteral = buildExtensionHeadersLiteral(cwsId);
+        const telemetryHeadersLiteral = buildExtensionHeadersLiteral(cwsId, true);
 
         // --- Direct string patches (independent of var-shadow approach) ---
         // These guard against chrome.* APIs that are undefined in Electron's
@@ -860,9 +923,15 @@ export class ActionPolyfill {
         // TANDEM_PORT is declared at module scope by the polyfill (var TANDEM_PORT = N).
         const pDollarOrig = 'async function P$(){let A=new Promise(e=>{browser.tabs.query({active:!0,currentWindow:!0}).then(j=>{if(j===void 0||j.length===0){e(void 0);return}e(j[0])})});return wt()?Ja.withTimeout(A,500,k`tab-manager:activeNativeTab`):A}';
         const pDollarLegacyPatch = 'async function P$(){try{var _r=await fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/active-tab");var _d=await _r.json();if(_d&&_d.tab)return _d.tab;}catch(_e){console.error("[Tandem] P$ fetch failed:",_e);}return undefined;}';
-        const pDollarPatch = 'async function P$(){try{var _r=await fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/active-tab",{headers:__tandemExtensionHeaders()});var _d=await _r.json();if(_d&&_d.tab)return _d.tab;}catch(_e){console.error("[Tandem] P$ fetch failed:",_e);}return undefined;}';
-        if (!existing.includes(pDollarPatch) && (existing.includes(pDollarOrig) || existing.includes(pDollarLegacyPatch))) {
-          existing = existing.replace(pDollarOrig, pDollarPatch).replace(pDollarLegacyPatch, pDollarPatch);
+        const pDollarHelperPatch = 'async function P$(){try{var _r=await fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/active-tab",{headers:__tandemExtensionHeaders()});var _d=await _r.json();if(_d&&_d.tab)return _d.tab;}catch(_e){console.error("[Tandem] P$ fetch failed:",_e);}return undefined;}';
+        const pDollarPatch = `async function P$(){try{var _r=await fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/active-tab",{headers:${extensionHeadersLiteral}});var _d=await _r.json();if(_d&&_d.tab)return _d.tab;}catch(_e){console.error("[Tandem] P$ fetch failed:",_e);}return undefined;}`;
+        const pDollarResult = replacePatchVariants(existing, pDollarPatch, [
+          pDollarOrig,
+          pDollarLegacyPatch,
+          pDollarHelperPatch
+        ]);
+        if (pDollarResult.changed) {
+          existing = pDollarResult.content;
           log.info(`🩹 Patched P$() active tab query for ${manifest.name || cwsId}`);
         }
 
@@ -901,9 +970,15 @@ export class ActionPolyfill {
         // Dre catch: '...Unable to generate item details')||logger.report(["Unable to generate item details'
         const dreCatchOrig = '}catch{return console.error("[Background]","Unable to generate item details")';
         const dreCatchLegacyPatch = `}catch(_te){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"Dre-catch",msg:_te?.message||String(_te),stack:(_te?.stack||"").slice(0,500)})});}catch{}return console.error("[Background]","Unable to generate item details")`;
-        const dreCatchPatch = `}catch(_te){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:__tandemExtensionHeaders({"Content-Type":"application/json"}),body:JSON.stringify({source:"Dre-catch",msg:_te?.message||String(_te),stack:(_te?.stack||"").slice(0,500)})});}catch{}return console.error("[Background]","Unable to generate item details")`;
-        if (!existing.includes(dreCatchPatch) && (existing.includes(dreCatchOrig) || existing.includes(dreCatchLegacyPatch))) {
-          existing = existing.replaceAll(dreCatchOrig, dreCatchPatch).replaceAll(dreCatchLegacyPatch, dreCatchPatch);
+        const dreCatchHelperPatch = `}catch(_te){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:__tandemExtensionHeaders({"Content-Type":"application/json"}),body:JSON.stringify({source:"Dre-catch",msg:_te?.message||String(_te),stack:(_te?.stack||"").slice(0,500)})});}catch{}return console.error("[Background]","Unable to generate item details")`;
+        const dreCatchPatch = `}catch(_te){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:${telemetryHeadersLiteral},body:JSON.stringify({source:"Dre-catch",msg:_te?.message||String(_te),stack:(_te?.stack||"").slice(0,500)})});}catch{}return console.error("[Background]","Unable to generate item details")`;
+        const dreCatchResult = replacePatchVariants(existing, dreCatchPatch, [
+          dreCatchOrig,
+          dreCatchLegacyPatch,
+          dreCatchHelperPatch
+        ]);
+        if (dreCatchResult.changed) {
+          existing = dreCatchResult.content;
           log.info(`🩹 Patched Dre catch (error telemetry) for ${manifest.name || cwsId}`);
         }
 
@@ -911,9 +986,15 @@ export class ActionPolyfill {
         // Replaces the handler registration so exceptions POST to /extensions/log before rethrowing.
         const bteRegOrig  = 'P("get-settings-configuration",Bte)';
         const bteRegLegacyPatch = 'P("get-settings-configuration",async function(..._bteA){try{return await Bte(..._bteA)}catch(_bte){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({source:"Bte-catch",msg:_bte?.message||String(_bte),stack:(_bte?.stack||"").slice(0,500)})});}catch{}throw _bte;}})';
-        const bteRegPatch = 'P("get-settings-configuration",async function(..._bteA){try{return await Bte(..._bteA)}catch(_bte){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:__tandemExtensionHeaders({"Content-Type":"application/json"}),body:JSON.stringify({source:"Bte-catch",msg:_bte?.message||String(_bte),stack:(_bte?.stack||"").slice(0,500)})});}catch{}throw _bte;}})';
-        if (!existing.includes(bteRegPatch) && (existing.includes(bteRegOrig) || existing.includes(bteRegLegacyPatch))) {
-          existing = existing.replace(bteRegOrig, bteRegPatch).replace(bteRegLegacyPatch, bteRegPatch);
+        const bteRegHelperPatch = 'P("get-settings-configuration",async function(..._bteA){try{return await Bte(..._bteA)}catch(_bte){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:__tandemExtensionHeaders({"Content-Type":"application/json"}),body:JSON.stringify({source:"Bte-catch",msg:_bte?.message||String(_bte),stack:(_bte?.stack||"").slice(0,500)})});}catch{}throw _bte;}})';
+        const bteRegPatch = `P("get-settings-configuration",async function(..._bteA){try{return await Bte(..._bteA)}catch(_bte){try{fetch("http://127.0.0.1:"+TANDEM_PORT+"/extensions/log",{method:"POST",headers:${telemetryHeadersLiteral},body:JSON.stringify({source:"Bte-catch",msg:_bte?.message||String(_bte),stack:(_bte?.stack||"").slice(0,500)})});}catch{}throw _bte;}})`;
+        const bteRegResult = replacePatchVariants(existing, bteRegPatch, [
+          bteRegOrig,
+          bteRegLegacyPatch,
+          bteRegHelperPatch
+        ]);
+        if (bteRegResult.changed) {
+          existing = bteRegResult.content;
           log.info(`🩹 Patched Bte registration (error telemetry) for ${manifest.name || cwsId}`);
         }
 

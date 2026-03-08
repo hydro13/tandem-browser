@@ -14,6 +14,12 @@ interface LoadedExtension {
   loadedAt: number;
 }
 
+interface TandemExtensionMeta {
+  runtimeId?: string;
+  lastLoadedAt?: string;
+  [key: string]: unknown;
+}
+
 /**
  * ExtensionLoader — Loads unpacked Chrome extensions into the browser session.
  * 
@@ -101,6 +107,7 @@ export class ExtensionLoader {
     }
 
     const ext = await ses.extensions.loadExtension(extPath, { allowFileAccess: true });
+    this.writeRuntimeMetadata(extPath, ext.id);
 
     const loaded: LoadedExtension = {
       id: ext.id,
@@ -145,5 +152,29 @@ export class ExtensionLoader {
     } catch (e) { log.warn('Extensions directory listing failed:', e instanceof Error ? e.message : String(e)); }
 
     return results;
+  }
+
+  private getMetaPath(extPath: string): string {
+    return path.join(extPath, '.tandem-meta.json');
+  }
+
+  private writeRuntimeMetadata(extPath: string, runtimeId: string): void {
+    const metaPath = this.getMetaPath(extPath);
+    let meta: TandemExtensionMeta = {};
+
+    if (fs.existsSync(metaPath)) {
+      try {
+        const parsed = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          meta = parsed as TandemExtensionMeta;
+        }
+      } catch {
+        meta = {};
+      }
+    }
+
+    meta.runtimeId = runtimeId;
+    meta.lastLoadedAt = new Date().toISOString();
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf-8');
   }
 }

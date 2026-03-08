@@ -143,6 +143,7 @@ describe('ActionPolyfill', () => {
       expect(src).toContain('setBadgeBackgroundColor');
       expect(src).toContain('enable');
       expect(src).toContain('disable');
+      expect(src).toContain('function __tandemExtensionHeaders(extraHeaders)');
     });
 
     it('polyfill script has idempotency guard', () => {
@@ -187,6 +188,27 @@ describe('ActionPolyfill', () => {
       const markerVersion = src.match(/const marker = '\/\* Tandem chrome\.action polyfill v(\d+)'/);
       expect(markerVersion).not.toBeNull();
       expect(src).toContain(`/* Tandem chrome.action polyfill v${markerVersion![1]}`);
+    });
+
+    it('rewrites direct 1Password patches to use inline extension headers', () => {
+      const src = fs.readFileSync(
+        path.join(__dirname, '../action-polyfill.ts'),
+        'utf-8'
+      );
+      expect(src).toContain('const extensionHeadersLiteral = buildExtensionHeadersLiteral(cwsId);');
+      expect(src).toContain('const telemetryHeadersLiteral = buildExtensionHeadersLiteral(cwsId, true);');
+      expect(src).toContain('headers:${extensionHeadersLiteral}');
+      expect(src).toContain('headers:${telemetryHeadersLiteral}');
+    });
+
+    it('strips legacy polyfill blocks and orphan artifacts before reinjecting', () => {
+      const src = fs.readFileSync(
+        path.join(__dirname, '../action-polyfill.ts'),
+        'utf-8'
+      );
+      expect(src).toContain('function stripInjectedPolyfillArtifacts(source: string)');
+      expect(src).toContain('var TANDEM_PORT; TANDEM_PORT = \\d+; \\/\\/ used by P\\$\\(\\) patch below');
+      expect(src).toContain('/* Tandem:polyfill:end */');
     });
   });
 
