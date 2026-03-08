@@ -47,7 +47,8 @@ Last updated: March 8, 2026
 - [x] Extract browser tools (`bookmarks`, `history`, `find`, `voice`, `settings`, `screenshot`) out of `shell/js/main.js` into `shell/js/browser-tools.js` with the shared renderer bridge as the explicit integration surface
 - [x] Extract tab rendering, navigation, zoom, and shared renderer state out of `shell/js/main.js` into `shell/js/tabs.js`, and keep active-tab coordination explicit through the renderer bridge
 - [x] Extract the draw overlay surface out of `shell/js/main.js` into `shell/js/draw.js` so annotation state, screenshot compositing, and draw-mode lifecycles stop sharing a file with window chrome and shortcuts
-- [ ] Decide whether the remaining shell entrypoint should stay as a slim `main.js` for window chrome + shortcut orchestration or be split one more time into dedicated `window-chrome` and `shortcuts` modules if it grows again
+- [x] Replace the last mixed shell entrypoint with dedicated `shell/js/window-chrome.js` and `shell/js/shortcut-router.js` modules so `main.js` is no longer needed as a catch-all shell loader
+- [ ] Investigate the recurring 1Password extension runtime error about `__tandemExtensionHeaders` in the background context; it still appears during normal startup and shutdown verification
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later
