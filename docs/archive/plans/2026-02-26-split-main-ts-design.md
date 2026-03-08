@@ -35,7 +35,7 @@ src/
 
 ### Module 1: `src/notifications/alert.ts`
 
-Breaks the circular dependency by moving `wingmanAlert` out of `main.ts`.
+Breaks the circular dependency by moving `wingmanAlert` out or `main.ts`.
 
 ```typescript
 import { BrowserWindow, Notification } from 'electron';

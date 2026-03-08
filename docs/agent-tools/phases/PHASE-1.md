@@ -2,17 +2,17 @@
 
 ## Goal
 
-`POST /execute-js` voert code eenmalig uit en vergeet het na navigatie. Dit lost dat op.
-Na deze phase heeft Tandem een `ScriptInjector` die scripts en CSS registreert en
-ze automatisch opnieuw injecteert na elke navigatie — zodat Kees persistente helpers
-kan injecteren die de hele sessie doorleven.
+`POST /execute-js` voert code eenmalig out and vergeet the na navigatie. Dit lost that op.
+Na this phase has Tandem a `ScriptInjector` that scripts and CSS registreert and
+ze automatisch again injecteert na elke navigatie — zodat Kees persistente helpers
+can injecteren that the hele session doorleven.
 
 ## Prerequisites
 
-- Lees `STATUS.md` — Phase 0 en vorige phases moeten COMPLETED zijn
-- Lees `src/api/server.ts` — kijk hoe SnapshotManager en NetworkMocker worden geregistreerd (zoek op `snapshotManager`, `networkMocker` in de constructor)
-- Lees `src/main.ts` — zoek op `activity-webview-event` en `did-finish-load`
-- Lees `src/tabs/manager.ts` — begrijp hoe tabId en webContents worden beheerd
+- Read `STATUS.md` — Phase 0 and vorige phases must COMPLETED are
+- Read `src/api/server.ts` — kijk hoe SnapshotManager and NetworkMocker be geregistreerd (zoek op `snapshotManager`, `networkMocker` in the constructor)
+- Read `src/main.ts` — zoek op `activity-webview-event` and `did-finish-load`
+- Read `src/tabs/manager.ts` — begrijp hoe tabId and webContents be beheerd
 
 ## Deliverables
 
@@ -38,8 +38,8 @@ export interface RegisteredStyle {
 }
 
 export class ScriptInjector {
-  private scripts = new Map<string, RegisteredScript>();
-  private styles = new Map<string, RegisteredStyle>();
+  private scripts = new Folder<string, RegisteredScript>();
+  private styles = new Folder<string, RegisteredStyle>();
 
   // ─── Scripts ──────────────────────────────────
 
@@ -119,7 +119,7 @@ export class ScriptInjector {
    */
   async reloadIntoTab(wc: WebContents): Promise<void> {
     // Scripts
-    for (const script of this.scripts.values()) {
+    for (const script or this.scripts.values()) {
       if (!script.enabled) continue;
       try {
         await wc.executeJavaScript(script.code);
@@ -130,7 +130,7 @@ export class ScriptInjector {
 
     // Styles — insertCSS returns a key, but we don't need to track it
     // (on next navigation, the old CSS is gone anyway; we re-inject fresh)
-    for (const style of this.styles.values()) {
+    for (const style or this.styles.values()) {
       if (!style.enabled) continue;
       try {
         await wc.insertCSS(style.css);
@@ -152,21 +152,21 @@ export class ScriptInjector {
 
 ### 2. `src/main.ts` — Wire ScriptInjector to did-finish-load
 
-Zoek de bestaande `activity-webview-event` IPC handler in `main.ts`.
-Er is al een `did-finish-load` case (of voeg hem toe). Roep daar `scriptInjector.reloadIntoTab()` aan.
+Zoek the existing `activity-webview-event` IPC handler in `main.ts`.
+Er is already a `did-finish-load` case (or voeg hem toe). Roep daar `scriptInjector.reloadIntoTab()` about.
 
 ```typescript
-// In main.ts, na de andere manager initialisaties:
+// In main.ts, na the andere manager initialisaties:
 import { ScriptInjector } from './scripts/injector';
 const scriptInjector = new ScriptInjector();
 
-// Geef mee aan startAPI():
+// Geef mee about startAPI():
 startAPI({
-  // ... bestaande opties
+  // ... existing opties
   scriptInjector,
 });
 
-// In de activity-webview-event IPC handler:
+// In the activity-webview-event IPC handler:
 ipcMain.on('activity-webview-event', (event, data) => {
   // ... bestaand ...
   if (data.type === 'did-finish-load') {
@@ -178,12 +178,12 @@ ipcMain.on('activity-webview-event', (event, data) => {
 });
 ```
 
-**Let op:** Kijk hoe andere managers worden meegegeven aan `startAPI()` / `TandemAPI` constructor.
-Volg exact hetzelfde patroon. Voeg `scriptInjector` toe aan `TandemAPIOptions` in `server.ts`.
+**Let op:** Kijk hoe andere managers be meegegeven about `startAPI()` / `TandemAPI` constructor.
+Volg exact hetzelfde pattern. Voeg `scriptInjector` toe about `TandemAPIOptions` in `server.ts`.
 
 ### 3. `src/api/server.ts` — Routes registreren
 
-Voeg `ScriptInjector` toe aan `TandemAPIOptions` en registreer de routes.
+Voeg `ScriptInjector` toe about `TandemAPIOptions` and registreer the routes.
 
 **Scripts:**
 
@@ -205,7 +205,7 @@ POST   /styles/enable      body: {name}                 → {ok}
 POST   /styles/disable     body: {name}                 → {ok}
 ```
 
-Implementatiepatroon — volg exact hoe NetworkMocker routes zijn geregistreerd:
+Implementatiepatroon — volg exact hoe NetworkMocker routes are geregistreerd:
 
 ```typescript
 // POST /scripts/add
@@ -221,8 +221,8 @@ this.app.post('/scripts/add', (req: Request, res: Response) => {
 });
 ```
 
-**Stijl-specifieke noot voor `/styles/add`:**
-Injecteer de CSS ook meteen in de huidige actieve tab (niet alleen registreren):
+**Stijl-specific noot for `/styles/add`:**
+Injecteer the CSS also meteen in the huidige actieve tab (not only registreren):
 
 ```typescript
 this.app.post('/styles/add', async (req: Request, res: Response) => {
@@ -242,7 +242,7 @@ this.app.post('/styles/add', async (req: Request, res: Response) => {
 
 ## Verificatie Checklist
 
-Test met curl na `npm start`:
+Test with curl na `npm start`:
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
@@ -260,7 +260,7 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
 curl -s -H "$H" http://127.0.0.1:8765/scripts | jq .
 # → {"scripts":[{"name":"hello","code":"window.__tandemHello = 42","enabled":true,...}]}
 
-# Navigeer naar een pagina, check dat script er nog is:
+# Navigeer to a page, check that script er still is:
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}' http://127.0.0.1:8765/navigate
 
@@ -268,7 +268,7 @@ sleep 2
 
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"code":"window.__tandemHello"}' http://127.0.0.1:8765/execute-js | jq .
-# → {"ok":true,"result":42}  ← script overleefde de navigatie!
+# → {"ok":true,"result":42}  ← script overleefde the navigatie!
 
 # Disable test
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
@@ -279,14 +279,14 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
 sleep 2
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"code":"window.__tandemHello"}' http://127.0.0.1:8765/execute-js | jq .
-# → {"ok":true,"result":null}  ← disabled script niet herinjected
+# → {"ok":true,"result":null}  ← disabled script not herinjected
 
 # Styles
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"name":"redbg","css":"body { background: red !important; }"}' \
   http://127.0.0.1:8765/styles/add | jq .
 # → {"ok":true,"name":"redbg"}
-# Browser moet nu rode achtergrond tonen
+# Browser must nu rode achtergrond tonen
 
 curl -s -X DELETE -H "$H" -H "Content-Type: application/json" \
   -d '{"name":"hello"}' http://127.0.0.1:8765/scripts/remove | jq .
@@ -294,7 +294,7 @@ curl -s -X DELETE -H "$H" -H "Content-Type: application/json" \
 
 # TypeScript check
 npx tsc --noEmit
-# → 0 errors (pre-existing errors in test file zijn OK om te negeren)
+# → 0 errors (pre-existing errors in test file are OK to te negeren)
 ```
 
 ## Commit Convention
@@ -313,9 +313,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 git push origin main
 ```
 
-## Scope (1 Claude Code sessie)
+## Scope (1 Claude Code session)
 
-- `src/scripts/injector.ts` — nieuw bestand
+- `src/scripts/injector.ts` — new file
 - `src/main.ts` — minimale aanpassing: ScriptInjector init + did-finish-load hook
 - `src/api/server.ts` — TandemAPIOptions uitbreiden + 10 routes
 - TypeScript check + verificatie + commit

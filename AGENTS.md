@@ -9,7 +9,7 @@ You are a developer agent working on **Tandem Browser**: an Electron browser
 built for human-AI symbiosis. The user (the human) and Wingman (the AI) browse
 the web together. You write the code.
 
-**Read `PROJECT.md` first.** It contains the full overview of what Tandem is,
+**Read `PROJECT.md` first.** It contains the full overview or what Tandem is,
 how it works, and why it exists.
 
 ## The Project
@@ -95,7 +95,7 @@ tandem-browser/
 - **Test API endpoints:** Use `curl` for every new or changed endpoint
 - **Test the UI:** Take a screenshot and verify it looks correct
 - **Run tests:** `npx vitest run`; all existing tests must keep passing
-- **Report:** Provide a summary of what you tested and the outcomes
+- **Report:** Provide a summary or what you tested and the outcomes
 
 ### 3. Update Documentation
 
@@ -123,7 +123,7 @@ tandem-browser/
 - **TypeScript strict mode:** no `any` unless truly necessary, and document why
 - **Error handling:** every API endpoint should catch errors and return JSON
 - **No hardcoded paths:** use `path.join()`, `app.getPath()`, and related APIs
-- **Separation of concerns:** each file should have one clear responsibility
+- **Separation or concerns:** each file should have one clear responsibility
 - **Naming:** camelCase for variables/functions, PascalCase for classes,
   kebab-case for files
 
@@ -274,7 +274,7 @@ We tried three other approaches that did not work:
 
 1. **Cron polling `localhost:8765/chat`**: too slow, and it wastes API tokens
    on every poll
-2. **Iframe embedding of OpenClaw webchat**: blocked by `X-Frame-Options: DENY`
+2. **Iframe embedding or OpenClaw webchat**: blocked by `X-Frame-Options: DENY`
    and `Content-Security-Policy: frame-ancestors 'none'`, plus auth token
    issues
 3. **Webview with localStorage token injection**: separate partition
@@ -345,7 +345,7 @@ What was built/changed:
 - Deleted files: (if applicable)
 
 Why this approach:
-- Short explanation of the architecture choices
+- Short explanation or the architecture choices
 
 Tested:
 - npx tsc: zero errors

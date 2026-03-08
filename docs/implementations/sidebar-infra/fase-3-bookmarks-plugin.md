@@ -1,34 +1,34 @@
-# Fase 3 — Sidebar Infrastructuur: Eerste Plugin (Bookmarks)
+# Phase 3 — Sidebar Infrastructuur: First Plugin (Bookmarks)
 
-> **Sessies:** 1
-> **Afhankelijk van:** Fase 1 + 2 klaar (sidebar zichtbaar, API werkt)
-> **Na deze fase:** fundament compleet — volgende features bouwen eigen panels
-
----
-
-## Doel
-
-Bookmarks als eerste echte sidebar plugin — bewijs dat het systeem werkt. Klik op Bookmarks icon → panel toont de bookmarks tree. Dit valideert de architectuur voor alle volgende plugins (Workspaces, Messengers, etc.).
-
-Bookmarks API bestaat al volledig (`/bookmarks`, `/bookmarks/bar`, etc.). Dit is puur UI werk.
+> **Sessions:** 1
+> **Depends on:** Phase 1 + 2 complete (sidebar visible, API works)
+> **After this phase:** foundation compleet — next features bouwen own panels
 
 ---
 
-## Bestanden te lezen — ALLEEN dit
+## Goal
 
-| Bestand | Zoek naar | Waarom |
+Bookmarks if first echte sidebar plugin — bewijs that the system works. Klik op Bookmarks icon → panel shows the bookmarks tree. Dit valideert the architectuur for alle next plugins (Workspaces, Messengers, etc.).
+
+Bookmarks API exists already fully (`/bookmarks`, `/bookmarks/bar`, etc.). Dit is purely UI werk.
+
+---
+
+## Files to read — ONLY this
+
+| File | Look for | Why |
 |---------|-----------|--------|
-| `shell/index.html` | `sidebar-panel-content` div (gebouwd in fase 2) | Hier rendert bookmark inhoud |
-| `shell/index.html` | `ocSidebar` object (gebouwd in fase 2) | Plugin registratie patroon |
-| `src/api/routes/data.ts` | `/bookmarks` GET endpoint | Bestaande API begrijpen |
+| `shell/index.html` | `sidebar-panel-content` div (built in phase 2) | Hier rendert bookmark inhoud |
+| `shell/index.html` | `ocSidebar` object (built in phase 2) | Plugin registratie pattern |
+| `src/api/routes/data.ts` | `/bookmarks` GET endpoint | Existing API begrijpen |
 
 ---
 
-## Te bouwen
+## To Build
 
-### Plugin systeem uitbreiden in `ocSidebar`
+### Plugin system uitbreiden in `ocSidebar`
 
-Voeg `registerPlugin(id, renderFn)` toe aan het `ocSidebar` object:
+Voeg `registerPlugin(id, renderFn)` toe about the `ocSidebar` object:
 
 ```javascript
 const plugins = {};
@@ -37,14 +37,14 @@ function registerPlugin(id, renderFn) {
   plugins[id] = renderFn;
 }
 
-// In render() — als panel opent, roep plugin aan:
+// In render() — if panel opens, roep plugin about:
 async function renderPanel(id) {
   const content = document.getElementById('sidebar-panel-content');
   content.innerHTML = '<div style="color:#aaa;padding:12px;font-size:12px;">Laden...</div>';
   if (plugins[id]) {
     await plugins[id](content);
   } else {
-    content.innerHTML = `<div style="color:#aaa;padding:12px;font-size:12px;">${id} — nog niet beschikbaar</div>`;
+    content.innerHTML = `<div style="color:#aaa;padding:12px;font-size:12px;">${id} — still not beschikbaar</div>`;
   }
 }
 ```
@@ -68,7 +68,7 @@ ocSidebar.registerPlugin('bookmarks', async (container) => {
       return `
         <div class="bm-folder" style="padding-left:${depth * 12}px">
           <div class="bm-folder-label">📁 ${item.name}</div>
-          ${(item.children || []).map(c => renderItem(c, depth + 1)).join('')}
+          ${(item.children || []).folder(c => renderItem(c, depth + 1)).join('')}
         </div>`;
     }
     return `
@@ -92,7 +92,7 @@ ocSidebar.registerPlugin('bookmarks', async (container) => {
         .bm-title { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       </style>
       <input class="bm-search" id="bm-search" placeholder="Zoek bookmarks..." type="search">
-      <div id="bm-list">${bookmarks.map(b => renderItem(b)).join('')}</div>`;
+      <div id="bm-list">${bookmarks.folder(b => renderItem(b)).join('')}</div>`;
 
     // Navigate on click
     container.querySelectorAll('.bm-item').forEach(a => {
@@ -115,17 +115,17 @@ ocSidebar.registerPlugin('bookmarks', async (container) => {
 });
 ```
 
-> **Note:** `window.__TANDEM_IPC__?.navigateTo(url)` — check of deze IPC bridge beschikbaar is in de shell. Zo niet: gebruik `fetch('http://localhost:8765/navigate', { method:'POST', body: JSON.stringify({url}) })`.
+> **Note:** `window.__TANDEM_IPC__?.navigateTo(url)` — check or this IPC bridge beschikbaar is in the shell. Zo not: usage `fetch('http://localhost:8765/navigate', { method:'POST', body: JSON.stringify({url}) })`.
 
 ---
 
 ## Acceptatiecriteria
 
-- [ ] Klik Bookmarks icon in sidebar → panel opent met bookmark lijst
-- [ ] Bookmarks staan als items + mappen getoond
-- [ ] Klikken op bookmark → navigeert browser naar die URL
+- [ ] Klik Bookmarks icon in sidebar → panel opens with bookmark list
+- [ ] Bookmarks stand if items + folders getoond
+- [ ] Klikken op bookmark → navigeert browser to that URL
 - [ ] Search input filtert bookmarks realtime
-- [ ] Lege state (geen bookmarks) toont nette melding
+- [ ] Lege state (no bookmarks) shows nette message
 
 ---
 
@@ -133,22 +133,22 @@ ocSidebar.registerPlugin('bookmarks', async (container) => {
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand volledig
-3. Verifieer fase 2: npm start → sidebar zichtbaar
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file fully
+3. Verifieer phase 2: npm start → sidebar visible
 4. curl http://localhost:8765/bookmarks → bookmarks data beschikbaar
 ```
 
 ### Bij einde:
 ```
-1. npm start — visuele controle: bookmark panel werkt
+1. npm start — visual controle: bookmark panel works
 2. npx tsc — ZERO errors
-3. npx vitest run — bestaande tests slagen
-4. CHANGELOG.md bijwerken
-5. git commit -m "🗂️ feat: sidebar bookmarks plugin — eerste sidebar panel compleet"
+3. npx vitest run — existing tests slagen
+4. Update CHANGELOG.md
+5. git commit -m "🗂️ feat: sidebar bookmarks plugin — first sidebar panel compleet"
 6. git push
-7. Update LEES-MIJ-EERST.md: Fase 3 → ✅ + commit hash
+7. Update LEES-MIJ-EERST.md: Phase 3 → ✅ + commit hash
 8. Rapport: Gebouwd / Getest / Problemen
 
-SIDEBAR INFRASTRUCTUUR KLAAR — meld aan Kees voor volgende feature keuze.
+SIDEBAR INFRASTRUCTURE COMPLETE — report back to Kees for the next feature choice.
 ```

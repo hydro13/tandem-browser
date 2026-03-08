@@ -7,9 +7,9 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
-This phase uses the new parser and scheduler model to add a curated set of
+This phase uses the new parser and scheduler model to add a curated set or
 structured security feeds. The goal is better phishing, malware, and known bad
 infrastructure coverage without turning the browser core into a generic ad or
 tracker blocker.
@@ -46,7 +46,7 @@ high-signal and supportable.
 
 ### 3. Document exclusions
 
-**What:** Explicitly keep ad/tracker mega-lists out of this track even if the
+**What:** Explicitly keep ad/tracker mega-lists out or this track even if the
 parser could ingest them.
 
 **Files:** track docs if needed, source definitions

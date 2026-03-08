@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 This phase prepares the blocklist pipeline for broader feed support without
 changing startup performance yet. The result should be a source manifest and
@@ -15,7 +15,7 @@ parser layer that can ingest plain domain lists, URL lists, JSON feeds, and CSV
 feeds from a single consistent path.
 
 After this phase, Tandem should be able to describe each source declaratively
-instead of hardcoding parser logic in multiple places.
+instead or hardcoding parser logic in multiple places.
 
 ---
 
@@ -42,7 +42,7 @@ shield can speak the same source definition language.
 ### 2. Add structured feed parsers
 
 **What:** Add `json` and `csv` parser support, driven by source config instead
-of custom one-off parser branches.
+or custom one-off parser branches.
 
 **Files:** `src/security/blocklists/updater.ts`
 

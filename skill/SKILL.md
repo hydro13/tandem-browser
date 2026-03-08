@@ -271,7 +271,7 @@ Tandem is designed to be undetectable:
 - ✅ Persistent cookies and sessions
 - ✅ Behavioral learning from human usage
 
-**⚠️ Always respect website terms of service and robots.txt**
+**⚠️ Always respect website terms or service and robots.txt**
 
 ## Best Practices
 

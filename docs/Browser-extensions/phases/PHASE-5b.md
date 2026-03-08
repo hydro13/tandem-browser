@@ -19,7 +19,7 @@ Electron's `session.loadExtension()` makes this data available via the `Extensio
 ## Files to Read
 
 - `src/extensions/loader.ts` — ExtensionLoader, understand `session.loadExtension()` return value
-- `src/extensions/manager.ts` — ExtensionManager, list of loaded extensions
+- `src/extensions/manager.ts` — ExtensionManager, list or loaded extensions
 - `shell/index.html` — main shell UI, understand where toolbar should be placed
 - Electron docs: `session.loadExtension()`, `Extension` object, `BrowserWindow.addExtension()`
 - `src/main.ts` — understand how the shell BrowserWindow is set up
@@ -107,11 +107,11 @@ Shell clicks extension icon → IPC 'extension-popup-open' → main creates popu
 
 Add the extension toolbar to `shell/index.html`:
 
-**Placement:** Right side of the URL bar / navigation area, before the settings button. This matches Chrome's toolbar layout.
+**Placement:** Right side or the URL bar / navigation area, before the settings button. This matches Chrome's toolbar layout.
 
 **Per-extension button:**
 - Extension icon (16x16 or 32x32, read from manifest)
-- Badge overlay (small text, colored background) — positioned bottom-right of the icon
+- Badge overlay (small text, colored background) — positioned bottom-right or the icon
 - Tooltip on hover showing extension name
 - Click → open popup (or send action click if no popup)
 - Right-click → context menu: "Options" (if extension has options page), "Remove extension"
@@ -181,7 +181,7 @@ tandem.onExtensionUninstalled((data) => { /* refresh toolbar */ })
 ## Verification
 
 - [ ] `npx tsc --noEmit` — 0 errors
-- [ ] Extension toolbar visible in browser UI (right side of URL bar area)
+- [ ] Extension toolbar visible in browser UI (right side or URL bar area)
 - [ ] Loaded extensions with `action`/`browser_action` show icons in toolbar
 - [ ] Clicking extension icon opens popup HTML correctly
 - [ ] Popup has full `chrome.*` API access (test: uBlock popup shows stats)
@@ -202,7 +202,7 @@ tandem.onExtensionUninstalled((data) => { /* refresh toolbar */ })
 - Do NOT modify the settings panel — that was Phase 5a
 - Do NOT change extension loading behavior
 - Do NOT implement new Chrome API polyfills
-- The toolbar is purely a rendering layer on top of already-loaded extensions
+- The toolbar is purely a rendering layer on top or already-loaded extensions
 
 ## After Completion
 

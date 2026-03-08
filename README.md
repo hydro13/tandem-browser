@@ -7,7 +7,7 @@ extraction, automation, and observability. Websites should only see an
 ordinary Chromium browser on macOS or Linux, not an “AI browser”.
 
 Tandem is opinionated about security. If an AI can read and act on live web
-content, the browser becomes part of the threat model. Tandem puts a six-layer
+content, the browser becomes part or the threat model. Tandem puts a six-layer
 security system between external content and the agent, with local-only data
 handling and no cloud dependency in the browser itself. Those layers are built
 so OpenClaw can operate against the live web with tighter guardrails than a
@@ -29,7 +29,7 @@ The browser surface is broader than a simple tab shell.
 - Left sidebar: workspaces, messenger-style panels, bookmarks, history, downloads, and other utility surfaces
 - Main browsing area: Chromium webviews with tab management and session state
 - Right-side Wingman panel: AI chat, activity, screenshots, and related agent tools
-- Overlay tooling: annotations, screenshots, and other shell-level controls that stay out of the page context
+- Overlay tooling: annotations, screenshots, and other shell-level controls that stay out or the page context
 
 ## Current Status
 
@@ -45,7 +45,7 @@ Tandem runs two layers in parallel:
 1. The visible browsing layer: Chromium webviews, tabs, downloads, bookmarks, workspaces, and the human-facing UI.
 2. The invisible control layer: Electron main process services, the local HTTP API, security systems, OpenClaw integration, and the agent tooling.
 
-This split matters because Tandem is designed to keep AI control out of the page
+This split matters because Tandem is designed to keep AI control out or the page
 JavaScript context whenever possible while still giving OpenClaw a useful local
 browser surface.
 
@@ -128,7 +128,7 @@ paranoid than a normal desktop browser shell.
 ## Repository Guide
 
 - [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md): product vision, OpenClaw positioning, and architecture overview
-- [docs/README.md](/Users/robinwaslander/Documents/dev/tandem-browser/docs/README.md): documentation map
+- [docs/README.md](/Users/robinwaslander/Documents/dev/tandem-browser/docs/README.md): documentation folder
 - [CHANGELOG.md](/Users/robinwaslander/Documents/dev/tandem-browser/CHANGELOG.md): release history
 - [CONTRIBUTING.md](/Users/robinwaslander/Documents/dev/tandem-browser/CONTRIBUTING.md): contribution workflow
 - [SECURITY.md](/Users/robinwaslander/Documents/dev/tandem-browser/SECURITY.md): vulnerability reporting

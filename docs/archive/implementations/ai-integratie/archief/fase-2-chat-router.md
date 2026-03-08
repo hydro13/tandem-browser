@@ -1,26 +1,26 @@
-# Fase 2: Chat Router — Sessie Context
+# Phase 2: Chat Router — Sessie Context
 
-## Wat is dit?
+## Wat is this?
 
-Het Kees chat panel kan nu alleen met OpenClaw praten. We maken een router zodat Robin kan kiezen welke AI backend actief is: OpenClaw, Claude, of beide.
+The Kees chat panel can nu only with OpenClaw praten. We maken a router zodat Robin can kiezen welke AI backend actief is: OpenClaw, Claude, or beide.
 
 ## Huidige Chat Implementatie
 
-De chat logica zit inline in `shell/index.html` (regels ~1680-1880). Dit is een groot blok code dat:
+The chat logica zit inline in `shell/index.html` (rules ~1680-1880). Dit is a large blok code that:
 
-1. WebSocket verbinding opent naar `ws://127.0.0.1:18789`
-2. Auth handshake doet met token
+1. WebSocket verbinding opens to `ws://127.0.0.1:18789`
+2. Auth handshake doet with token
 3. Berichten stuurt via `chat.send` RPC method
 4. Streaming responses ontvangt via `chat` events
-5. Reconnect logica heeft met exponential backoff
+5. Reconnect logica has with exponential backoff
 
-### Correcties uit audit (12 feb 2026)
+### Correcties out audit (12 feb 2026)
 
-**Hardcoded token:** Het OpenClaw token (`de07381e...`) op regel 1687 is hardcoded. Bij de refactoring moet dit dynamisch geladen worden uit `~/.openclaw/openclaw.json`.
+**Hardcoded token:** The OpenClaw token (`de07381e...`) op regel 1687 is hardcoded. Bij the refactoring must this dynamisch geladen be out `~/.openclaw/openclaw.json`.
 
-**Claude backend:** In het originele plan was er een "ClaudeBackend" die de Anthropic API aanroept. Dit VERVALT (Max Pro, geen API key). In plaats daarvan komt een **ClaudeActivityBackend** die MCP tool calls toont als berichten in het Kees panel.
+**Claude backend:** In the originele plan was er a "ClaudeBackend" that the Anthropic API aanroept. Dit VERVALT (Max Pro, no API key). In plaats daarvan comes a **ClaudeActivityBackend** that MCP tool calls shows if berichten in the Kees panel.
 
-**Voice:** Voice koppeling wordt meegenomen in deze fase (~30 regels). Geen aparte fase 5 meer.
+**Voice:** Voice koppeling is meegenomen in this phase (~30 rules). No aparte phase 5 meer.
 
 ### WebSocket Protocol (OpenClaw)
 
@@ -43,12 +43,12 @@ De chat logica zit inline in `shell/index.html` (regels ~1680-1880). Dit is een 
 #oc-send             — Send knop
 #oc-typing           — Typing indicator
 #ws-dot              — Connection status dot
-#ws-status-text      — "Connected" / "Disconnected" tekst
+#ws-status-text      — "Connected" / "Disconnected" text
 ```
 
-## Refactoring Aanpak
+## Refactoring Approach
 
-### Stap 1: ChatBackend Interface
+### Step 1: ChatBackend Interface
 
 ```typescript
 interface ChatMessage {
@@ -62,7 +62,7 @@ interface ChatMessage {
 interface ChatBackend {
   id: string;              // 'openclaw' | 'claude'
   name: string;            // 'OpenClaw (Kees)' | 'Claude'
-  icon: string;            // Emoji of icon
+  icon: string;            // Emoji or icon
 
   connect(): Promise<void>;
   disconnect(): Promise<void>;
@@ -76,41 +76,41 @@ interface ChatBackend {
 }
 ```
 
-### Stap 2: OpenClawBackend
+### Step 2: OpenClawBackend
 
-Verplaats ALLE WebSocket logica uit `index.html` naar een class.
-De class implementeert `ChatBackend`.
+Verplaats ALLE WebSocket logica out `index.html` to a class.
+The class implementeert `ChatBackend`.
 
-**Let op:** Dit is de meest risicovolle stap. De bestaande code werkt — breek het niet.
+**Let op:** Dit is the meest risicovolle stap. The existing code works — breek the not.
 
-**Aanpak:**
-1. Kopieer de WebSocket code naar een nieuwe class
-2. Test dat de class werkt
-3. Vervang de inline code door calls naar de class
-4. Test opnieuw dat alles nog werkt
+**Approach:**
+1. Kopieer the WebSocket code to a new class
+2. Test that the class works
+3. Vervang the inline code door calls to the class
+4. Test again that alles still works
 
-### Stap 3: ChatRouter
+### Step 3: ChatRouter
 
 ```typescript
 class ChatRouter {
-  private backends: Map<string, ChatBackend>;
+  private backends: Folder<string, ChatBackend>;
   private activeBackendId: string;
 
   register(backend: ChatBackend): void;
   setActive(backendId: string): void;
   getActive(): ChatBackend;
 
-  // Stuurt naar actieve backend(s)
+  // Stuurt to actieve backend(s)
   sendMessage(text: string): Promise<void>;
 
-  // Merged events van alle backends
+  // Merged events or alle backends
   onMessage(cb: (msg: ChatMessage) => void): void;
 }
 ```
 
-### Stap 4: UI Updates
+### Step 4: UI Updates
 
-Voeg toe boven het chat berichten-venster:
+Voeg toe boven the chat berichten-window:
 
 ```html
 <div class="chat-backend-selector">
@@ -122,24 +122,24 @@ Voeg toe boven het chat berichten-venster:
     <span class="backend-dot disconnected"></span>
     🤖 Claude
   </button>
-  <!-- Later: "Beide" knop -->
+  <!-- Later: "Both" button -->
 </div>
 ```
 
-## Bekende Risico's
+## Bekende Risk's
 
-1. **Inline code refactoring:** De chat code verwijst naar veel DOM elementen. Zorg dat alle referenties intact blijven.
-2. **Reconnect logica:** OpenClaw heeft complexe reconnect. Dit moet exact behouden blijven.
-3. **Chat geschiedenis:** Overweeg: per backend of unified?
-   - **Aanbeveling:** Unified chat, berichten getagged met bron
-4. **Timing:** De refactoring kan meerdere sessies duren. Zorg dat na elke sessie de app stabiel is.
+1. **Inline code refactoring:** The chat code verwijst to veel DOM elementen. Zorg that alle referenties intact blijven.
+2. **Reconnect logica:** OpenClaw has complexe reconnect. Dit must exact behouden blijven.
+3. **Chat geschiedenis:** Overweeg: per backend or unified?
+   - **Aanbeveling:** Unified chat, berichten getagged with bron
+4. **Timing:** The refactoring can multiple sessions duren. Zorg that na elke session the app stabiel is.
 
 ## Chat Geschiedenis Strategie
 
 **Unified approach:**
-- Alle berichten in één lijst
-- Elk bericht heeft een `source` veld
-- UI kan optioneel filteren per bron
+- Alle berichten in één list
+- Elk bericht has a `source` field
+- UI can optional filteren per bron
 - Opgeslagen in `~/.tandem/chat-history.json`
 
 ```typescript
@@ -149,13 +149,13 @@ interface StoredMessage {
   text: string;
   source: 'robin' | 'openclaw' | 'claude';
   timestamp: number;
-  backend: string;   // welke backend het antwoord gaf
+  backend: string;   // welke backend the antwoord gaf
 }
 ```
 
-## Platform Overwegingen
+## Platform Considerations
 
-- Chat router is puur JavaScript — platform-onafhankelijk
-- WebSocket API is standaard in alle browsers/Electron
-- Geen file system operaties in de router zelf
-- Config opslag via bestaande config manager
+- Chat router is purely JavaScript — platform-onafhankelijk
+- WebSocket API is default in alle browsers/Electron
+- No file system operaties in the router zelf
+- Config opslag via existing config manager

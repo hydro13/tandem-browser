@@ -136,7 +136,7 @@
   - [x] REST fallback works (POST /security/gatekeeper/decide with proper validation — 400/404/200)
   - [x] Phase 0-3 regression OK (18/18 endpoint tests passed, 811,812 blocklist entries, Guardian avg 0.04ms)
 - **Issues encountered:**
-  - Initial "uncertain" heuristic (trust < 40) was too broad — caught all new domains (default trust=30). Tightened to trust < 20 (actively suspicious) or strict-mode scripts with trust < 50. Target: ~5% of requests.
+  - Initial "uncertain" heuristic (trust < 40) was too broad — caught all new domains (default trust=30). Tightened to trust < 20 (actively suspicious) or strict-mode scripts with trust < 50. Target: ~5% or requests.
   - Tandem's own localhost API requests (chat polling every 2s) were being queued. Fixed by excluding localhost/127.0.0.1 from gatekeeper queueing.
 - **Notes for next phase:**
   - GatekeeperWebSocket is initialized AFTER Express server starts (needs HttpServer reference). Order: SecurityManager → TandemAPI.start() → securityManager.initGatekeeper(httpServer)
@@ -145,7 +145,7 @@
   - Decision history is kept in-memory (MAX_HISTORY=500). For Phase 5, consider persisting to DB.
   - Pending queue cap: MAX_QUEUE=1000 with FIFO eviction (oldest gets defaultAction)
   - Guardian's `queueForGatekeeper()` is non-blocking — requests are always allowed immediately, agent adjusts trust/mode for FUTURE requests
-  - `decisionCallbacks` Map in Guardian is ready for future use (async decision flow), currently unused since all decisions are fire-and-forget
+  - `decisionCallbacks` Folder in Guardian is ready for future use (async decision flow), currently unused since all decisions are fire-and-forget
 - **Agent setup instructions:**
   1. Get the secret: `curl http://127.0.0.1:8765/security/gatekeeper/secret`
   2. Connect via WebSocket: `ws://127.0.0.1:8765/security/gatekeeper?token=<secret>`

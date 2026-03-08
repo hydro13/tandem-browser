@@ -1,29 +1,29 @@
 # ⚠️ VERVALLEN — NIET IMPLEMENTEREN
 
 > Dit document beschrijft directe Anthropic API integratie.
-> Robin heeft een Max Pro account — geen API key beschikbaar.
-> Claude werkt via Cowork/Claude Code → MCP → Tandem API.
-> Zie `VERFIJND-PLAN.md` voor de correcte architectuur.
-> De "Claude" aanwezigheid in het Kees panel wordt een Activity Feed
-> die MCP tool calls toont, GEEN directe API backend.
+> Robin has a Max Pro account — no API key beschikbaar.
+> Claude works via Cowork/Claude Code → MCP → Tandem API.
+> Zie `VERFIJND-PLAN.md` for the correcte architectuur.
+> The "Claude" aanwezigheid in the Kees panel is a Activity Feed
+> that shows MCP tool calls, NOT a direct API backend.
 
 ---
 
-# Fase 3: Claude Direct Backend — Sessie Context
+# Phase 3: Claude Direct Backend — Sessie Context
 
-## Wat is dit?
+## Wat is this?
 
-Claude API direct integreren als chat backend in Tandem. Geen IDE nodig — Claude praat rechtstreeks in het Kees panel en kan de browser bedienen via tool use.
+Claude API direct integreren if chat backend in Tandem. No IDE nodig — Claude praat rechtstreeks in the Kees panel and can the browser bedienen via tool use.
 
-## Verschil met MCP (Fase 1)
+## Verschil with MCP (Phase 1)
 
-| | MCP Server (Fase 1) | Claude Backend (Fase 3) |
+| | MCP Server (Phase 1) | Claude Backend (Phase 3) |
 |---|---|---|
-| **Waar draait Claude?** | In IDE (Cowork/Code) | In de browser zelf |
+| **Waar draait Claude?** | In IDE (Cowork/Code) | In the browser zelf |
 | **Communicatie** | stdio (MCP protocol) | HTTP (Anthropic API) |
-| **Wie start het?** | Gebruiker start Cowork | Automatisch bij chat |
+| **Wie start the?** | User start Cowork | Automatisch bij chat |
 | **Tools** | MCP tools | Anthropic tool use |
-| **Voordeel** | IDE integratie | Standalone, altijd beschikbaar |
+| **Voordeel** | IDE integratie | Standalone, always beschikbaar |
 
 ## Anthropic Messages API
 
@@ -32,7 +32,7 @@ Claude API direct integreren als chat backend in Tandem. Geen IDE nodig — Clau
 **Basis request:**
 ```typescript
 {
-  model: "claude-sonnet-4-5-20250929",  // of ander model
+  model: "claude-sonnet-4-5-20250929",  // or ander model
   max_tokens: 4096,
   system: "...",
   messages: [
@@ -45,23 +45,23 @@ Claude API direct integreren als chat backend in Tandem. Geen IDE nodig — Clau
 ```
 
 **Tool Use Flow:**
-1. Stuur bericht met tools
-2. Claude antwoordt met `tool_use` content block
-3. Voer tool uit (call Tandem API)
+1. Stuur bericht with tools
+2. Claude antwoordt with `tool_use` content block
+3. Voer tool out (call Tandem API)
 4. Stuur `tool_result` terug
-5. Claude verwerkt result en antwoordt
-6. Herhaal tot Claude klaar is (geen tool_use meer)
+5. Claude verwerkt result and antwoordt
+6. Herhaal tot Claude complete is (no tool_use meer)
 
 ### Tool Definitie Formaat (Anthropic)
 
 ```typescript
 {
   name: "tandem_navigate",
-  description: "Navigeer naar een URL in de actieve browser tab",
+  description: "Navigeer to a URL in the actieve browser tab",
   input_schema: {
     type: "object",
     properties: {
-      url: { type: "string", description: "De URL om naartoe te navigeren" }
+      url: { type: "string", description: "The URL to naartoe te navigeren" }
     },
     required: ["url"]
   }
@@ -71,11 +71,11 @@ Claude API direct integreren als chat backend in Tandem. Geen IDE nodig — Clau
 ### Streaming Response
 
 ```typescript
-// Event types in de stream:
+// Event types in the stream:
 'message_start'      → Bericht begint
-'content_block_start' → Content block begint (text of tool_use)
-'content_block_delta' → Incrementeel tekst ('text_delta') of tool input ('input_json_delta')
-'content_block_stop'  → Block klaar
+'content_block_start' → Content block begint (text or tool_use)
+'content_block_delta' → Incrementeel text ('text_delta') or tool input ('input_json_delta')
+'content_block_stop'  → Block complete
 'message_delta'       → Stop reason update
 'message_stop'        → Bericht compleet
 ```
@@ -93,11 +93,11 @@ class ClaudeBackend implements ChatBackend {
   private tools: Tool[];
 
   async sendMessage(text: string): Promise<void> {
-    // 1. Voeg user message toe aan conversation
-    // 2. Bouw request met system prompt + context
+    // 1. Voeg user message toe about conversation
+    // 2. Bouw request with system prompt + context
     // 3. Stream response
-    // 4. Als tool_use: voer uit, stuur result, herhaal
-    // 5. Als text: toon in chat
+    // 4. If tool_use: voer out, stuur result, herhaal
+    // 5. If text: toon in chat
   }
 }
 ```
@@ -105,28 +105,28 @@ class ClaudeBackend implements ChatBackend {
 ### System Prompt
 
 ```
-Je bent Kees, Robin's AI co-pilot in Tandem Browser.
-Je helpt Robin met browsen, onderzoeken, en taken uitvoeren.
+You bent Kees, Robin's AI co-pilot in Tandem Browser.
+You helpt Robin with browsen, onderzoeken, and taken uitvoeren.
 
 ## Jouw capabilities
-Je kunt de browser bedienen met tools:
-- Navigeren naar URL's
-- Pagina's lezen en analyseren
+You kunt the browser bedienen with tools:
+- Navigeren to URL's
+- Page's read and analyseren
 - Klikken op elementen
-- Tekst typen in velden
+- Text typen in velden
 - Screenshots maken
 - Tabs beheren
 
 ## Context
-Huidige pagina: {url} - {title}
+Huidige page: {url} - {title}
 Open tabs: {tab_list}
 
-## Regels
-- Reageer in het Nederlands tenzij anders gevraagd
-- Vraag toestemming voor ingrijpende acties (formulieren invullen, bestellen, etc.)
+## Rules
+- Reageer in the Nederlands tenzij anders gevraagd
+- Question toestemming for ingrijpende acties (formulieren invullen, bestellen, etc.)
 - Geef korte, duidelijke antwoorden
-- Als je iets niet kunt, zeg dat eerlijk
-- Je bent een co-pilot, niet de piloot. Robin beslist.
+- If you iets not kunt, zeg that eerlijk
+- You bent a co-pilot, not the piloot. Robin beslist.
 ```
 
 ### API Key Management
@@ -144,13 +144,13 @@ Open tabs: {tab_list}
 }
 ```
 
-**BELANGRIJK:** API key NOOIT in de renderer process. Altijd via main process.
+**BELANGRIJK:** API key NOOIT in the renderer process. Altijd via main process.
 
 **Flow:**
-1. Settings UI: invoerveld voor API key
+1. Settings UI: invoerveld for API key
 2. Main process slaat key op in config
 3. ClaudeBackend draait in main process
-4. Chat berichten via IPC naar renderer
+4. Chat berichten via IPC to renderer
 
 ### Tool Execution
 
@@ -179,27 +179,27 @@ async function executeTool(name: string, input: any): Promise<any> {
 ## Token Management / Kosten
 
 **Aandachtspunten:**
-- Grote pagina's = veel tokens. Truncate naar ~2000 woorden
-- Screenshots: stuur als `image` content, niet als base64 text
-- Conversation history: max ~20 berichten, daarna samenvatten
-- Model keuze: Sonnet voor snelheid/kosten, Opus voor complexe taken
-- **Configureerbaar:** Laat Robin het model kiezen in settings
+- Grote page's = veel tokens. Truncate to ~2000 woorden
+- Screenshots: stuur if `image` content, not if base64 text
+- Conversation history: max ~20 berichten, after that samenvatten
+- Model choice: Sonnet for snelheid/kosten, Opus for complexe taken
+- **Configureerbaar:** Laat Robin the model kiezen in settings
 
 **Schatting kosten:**
 - Gemiddeld gesprek: ~5000 input tokens + 1000 output tokens per beurt
-- Met tools: +2000 tokens per tool call
+- With tools: +2000 tokens per tool call
 - ~$0.01-0.05 per beurt (Sonnet), ~$0.10-0.50 per beurt (Opus)
 
 ## Bekende Valkuilen
 
-1. **CORS:** Anthropic API calls moeten vanuit main process (Node.js), niet vanuit renderer (browser). Gebruik IPC bridge.
-2. **Streaming:** SSE parsing is tricky. Gebruik `@anthropic-ai/sdk` die dit afhandelt.
-3. **Tool loops:** Claude kan in een loop raken van tool calls. Stel een maximum in (bijv. 10 tool calls per beurt).
-4. **Rate limits:** Anthropic heeft rate limits. Implementeer retry met backoff.
-5. **Context overflow:** Bij lange gesprekken loopt de context vol. Implementeer message pruning.
+1. **CORS:** Anthropic API calls must vanuit main process (Node.js), not vanuit renderer (browser). Usage IPC bridge.
+2. **Streaming:** SSE parsing is tricky. Usage `@anthropic-ai/sdk` that this afhandelt.
+3. **Tool loops:** Claude can in a loop raken or tool calls. Stel a maximum in (bijv. 10 tool calls per beurt).
+4. **Rate limits:** Anthropic has rate limits. Implementeer retry with backoff.
+5. **Context overflow:** Bij lange gesprekken runs the context vol. Implementeer message pruning.
 
-## Platform Overwegingen
+## Platform Considerations
 
-- `@anthropic-ai/sdk` is puur Node.js — werkt op alle platforms
+- `@anthropic-ai/sdk` is purely Node.js — works op alle platforms
 - API key opslag via cross-platform config manager
-- Geen platform-specifieke code nodig
+- No platform-specific code needed

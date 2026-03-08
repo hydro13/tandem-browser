@@ -1,99 +1,99 @@
-# [FEATURE NAAM] — START HIER
+# [FEATURE NAME] — START HERE
 
-> **Datum:** YYYY-MM-DD
-> **Status:** In progress / Klaar
-> **Doel:** [Één zin: wat gaat deze feature toevoegen aan Tandem]
-> **Volgorde:** Fase 1 → 2 → 3 (elke fase is één sessie)
-
----
-
-## Waarom deze feature?
-
-[2-3 zinnen: waarom wil Robin dit hebben? Welk probleem lost het op?
-Verwijzing naar gap analyse als relevant: docs/research/gap-analysis.md]
+> **Date:** YYYY-MM-DD
+> **Status:** In progress / Done
+> **Goal:** [One sentence: what will this feature add to Tandem]
+> **Order:** Phase 1 → 2 → 3 (each phase is one session)
 
 ---
 
-## Architectuur in 30 seconden
+## Why this feature?
+
+[2-3 sentences: why does Robin want this? What problem does it solve?
+Reference the gap analysis if relevant: docs/research/gap-analysis.md]
+
+---
+
+## Architecture in 30 seconds
 
 ```
-[ASCII diagram van hoe het werkt]
-[Bv: HTTP request → Manager → Electron API → UI]
+[ASCII diagram or how it works]
+[For example: HTTP request → Manager → Electron API → UI]
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to Read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
-| `src/main.ts` | App startup, manager registratie | `startAPI()`, `createWindow()` |
-| `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `TandemAPIOptions` |
+| `AGENTS.md` | Anti-detect rules, code style, commit format | — (read fully) |
+| `src/main.ts` | App startup, manager registration | `startAPI()`, `createWindow()` |
+| `src/api/server.ts` | TandemAPI class, route registration | `class TandemAPI`, `TandemAPIOptions` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **[Specifieke regel 1]** — bv: alle nieuwe UI-elementen gaan in de shell, nooit in de webview
-2. **[Specifieke regel 2]** — bv: geen nieuwe npm packages zonder Robin goedkeuring
-3. **Functienamen > regelnummers** — verwijs altijd naar `function setupRoutes()`, nooit naar "regel 287"
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — hoe nieuwe component registreren
+## Rules for this feature
 
-Elke nieuwe manager moet op **3 plekken** worden aangesloten:
+> These are the HARD rules in addition to the general AGENTS.md rules.
+
+1. **[Specific rule 1]** — for example: all new UI elements go in the shell, never in the webview
+2. **[Specific rule 2]** — for example: no new npm packages without Robin approval
+3. **Function names > line numbers** — always refer to `function setupRoutes()`, never to "line 287"
+
+---
+
+## Manager Wiring — How to Register a New Component
+
+Each new manager must be wired into **3 places**:
 
 ### 1. `src/api/server.ts` — `TandemAPIOptions` interface
 
 ```typescript
 export interface TandemAPIOptions {
-  // ... bestaande managers ...
-  [nieuweManager]: [NieuweManager];  // ← toevoegen
+  // ... existing managers ...
+  [newManager]: [NewManager];  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
-// Na aanmaken van aanverwante manager:
-const [nieuweManager] = new [NieuweManager]([afhankelijkheden]);
+// After creating the related manager:
+const [newManager] = new [NewManager]([dependencies]);
 
 // In new TandemAPI({...}):
-[nieuweManager]: [nieuweManager]!,
+[newManager]: [newManager]!,
 ```
 
 ### 3. `src/main.ts` — `app.on('will-quit')` handler
 
 ```typescript
-if ([nieuweManager]) [nieuweManager].destroy();
+if ([newManager]) [newManager].destroy();
 ```
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
-// Sectie header (verplicht bij nieuwe feature-groep)
+// Section header (required for a new feature group)
 // ═══════════════════════════════════════════════
-// [FEATURE] — [Beschrijving]
+// [FEATURE] — [Description]
 // ═══════════════════════════════════════════════
 
 this.app.get('/[endpoint]', async (req: Request, res: Response) => {
   try {
-    const result = await this.[manager].[methode](req.body);
+    const result = await this.[manager].[method](req.body);
     res.json({ ok: true, ...result });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -101,29 +101,29 @@ this.app.get('/[endpoint]', async (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` around EVERYTHING, catch as `(e: any)`
+- 400 for missing required fields
+- 404 for not-found resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-[naam].md` | [Wat fase 1 doet] | 📋 Klaar om te starten |
-| `fase-2-[naam].md` | [Wat fase 2 doet] | ⏳ Wacht op fase 1 |
-| `fase-3-[naam].md` | [Wat fase 3 doet] | ⏳ Wacht op fase 2 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-[name].md` | [What phase 1 does] | 📋 Ready to start |
+| `fase-2-[name].md` | [What phase 2 does] | ⏳ Waiting for phase 1 |
+| `fase-3-[name].md` | [What phase 3 does] | ⏳ Waiting for phase 2 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
-# App draait?
+# Is the app running?
 curl http://localhost:8765/status
 
 # TypeScript clean?
@@ -132,6 +132,6 @@ npx tsc
 # Git status clean?
 git status
 
-# Tests slagen?
+# Tests passing?
 npx vitest run
 ```

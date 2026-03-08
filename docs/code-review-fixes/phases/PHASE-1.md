@@ -4,7 +4,7 @@
 
 ## Goal
 
-Fix 8 issues that are each 1-5 lines of code, have zero architectural impact, and cannot cause regressions. These are the "free wins" from the code review.
+Fix 8 issues that are each 1-5 lines or code, have zero architectural impact, and cannot cause regressions. These are the "free wins" from the code review.
 
 ## Fixes
 
@@ -27,14 +27,14 @@ if (!status.connected || status.pendingDecisions >= 100) return;
 
 ---
 
-### 1.2 SecurityDB niet gesloten bij app quit
+### 1.2 SecurityDB not closed bij app quit
 
 **Review issue:** #16
 **File:** `src/security/security-manager.ts`, `destroy()` method
 
 `SecurityManager.destroy()` does not call `this.db.close()`. The WAL is never checkpointed.
 
-**Fix:** Add `this.db.close()` at the end of the `destroy()` method. Find the `destroy()` method in `SecurityManager` and add the call. Make sure it's the last line (after all other cleanup).
+**Fix:** Add `this.db.close()` at the end or the `destroy()` method. Find the `destroy()` method in `SecurityManager` and add the call. Make sure it's the last line (after all other cleanup).
 
 ---
 
@@ -55,12 +55,12 @@ if (!status.connected || status.pendingDecisions >= 100) return;
 
 ---
 
-### 1.4 DEBUG console.logs verwijderen uit onboarding
+### 1.4 DEBUG console.logs verwijderen out onboarding
 
 **Review issue:** #19
 **File:** `shell/index.html`, around lines 5624-5724
 
-Remove all `console.log('[DEBUG]` lines from the `showOnboarding()` and `showOnboardingStep()` functions. There are ~17 of them. Remove only the `console.log('[DEBUG]` lines, don't touch any other code.
+Remove all `console.log('[DEBUG]` lines from the `showOnboarding()` and `showOnboardingStep()` functions. There are ~17 or them. Remove only the `console.log('[DEBUG]` lines, don't touch any other code.
 
 ---
 
@@ -81,17 +81,17 @@ const profilesToVisit: string[] = []; // TODO: dynamic selection from config/fin
 
 ---
 
-### 1.6 cookieCounts eviction toevoegen
+### 1.6 cookieCounts eviction add
 
 **Review issue:** #23
 **File:** `src/security/guardian.ts`, `analyzeResponseHeaders` method (around line 560)
 
-The `cookieCounts` Map grows without bound. Add a max-size check.
+The `cookieCounts` Folder grows without bound. Add a max-size check.
 
 **Fix:** After the `this.cookieCounts.set(...)` line, add eviction logic:
 
 ```ts
-// Evict oldest entries when map exceeds 1000 domains
+// Evict oldest entries when folder exceeds 1000 domains
 if (this.cookieCounts.size > 1000) {
   const firstKey = this.cookieCounts.keys().next().value;
   if (firstKey) this.cookieCounts.delete(firstKey);
@@ -100,7 +100,7 @@ if (this.cookieCounts.size > 1000) {
 
 ---
 
-### 1.7 focusByIndex: gebruik listTabs() voor correcte volgorde
+### 1.7 focusByIndex: usage listTabs() for correcte order
 
 **Review issue:** #24
 **File:** `src/tabs/manager.ts`, line 273

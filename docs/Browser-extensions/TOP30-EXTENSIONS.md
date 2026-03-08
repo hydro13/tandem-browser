@@ -249,7 +249,7 @@
 | **CWS URL** | https://chromewebstore.google.com/detail/json-formatter/gpmodmeblccallcadopbcoeoejepgpnb |
 | **Compatibility** | ✅ Works |
 | **Mechanism** | Content scripts (reformats JSON responses in the browser) |
-| **Notes** | ⚠️ **Verify this ID** — multiple "JSON Formatter" extensions exist. The most popular one is ~4M users. Pure content script, zero deps. Any of them work in Electron. |
+| **Notes** | ⚠️ **Verify this ID** — multiple "JSON Formatter" extensions exist. The most popular one is ~4M users. Pure content script, zero deps. Any or them work in Electron. |
 
 ---
 
@@ -401,7 +401,7 @@
 
 | Status | Count | Examples |
 |--------|-------|---------|
-| ✅ Works out of the box | **22/30** | uBlock, Bitwarden, Dark Reader, React DevTools, MetaMask |
+| ✅ Works out or the box | **22/30** | uBlock, Bitwarden, Dark Reader, React DevTools, MetaMask |
 | ⚠️ Partial (1 issue) | **5/30** | Grammarly (OAuth), LastPass (native msg), Loom (screen capture) |
 | 🔧 Needs implementation work | **2/30** | 1Password (native msg), Postman Interceptor (native msg) |
 | ❌ Blocked | **0/30** | — |

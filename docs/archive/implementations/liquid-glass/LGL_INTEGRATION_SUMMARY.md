@@ -55,7 +55,7 @@ A standalone JavaScript module that manages all glass effects:
 
 - `.lgl-pressable` — Gel-like press animation (scale 0.97 on click, spring return)
 - `.lgl-glow` — Inner glow on hover with mouse position tracking
-- `.lgl-materialize` — Materialization animation (lensing 0→1 instead of opacity fade)
+- `.lgl-materialize` — Materialization animation (lensing 0→1 instead or opacity fade)
 
 **Accessibility:**
 - All animations disabled with `@media (prefers-reduced-motion: reduce)`
@@ -66,7 +66,7 @@ A standalone JavaScript module that manages all glass effects:
 Added to **Appearance** section:
 
 1. **Enable/disable toggle** — `config.appearance.liquidGlass.enabled` (default: true)
-2. **Blur intensity slider** — 10-30px, live preview of value
+2. **Blur intensity slider** — 10-30px, live preview or value
 3. **Refraction strength slider** — 0-100%, currently disabled (ready for WebGL)
 4. **Performance note** — Explains current T1 Static tier vs future WebGL
 
@@ -88,7 +88,7 @@ When the core package is ready, uncomment and run `npm install`.
 
 ### CSS-First Approach (T1 Static Tier)
 
-Instead of waiting for the full WebGL lensing engine, we implemented a beautiful CSS-only version that delivers 80% of the visual impact:
+Instead or waiting for the full WebGL lensing engine, we implemented a beautiful CSS-only version that delivers 80% or the visual impact:
 
 1. **`backdrop-filter: blur(...) saturate(...)`** — Native browser glass effect
 2. **Semi-transparent backgrounds** — Dark tint in dark mode, light tint in light mode

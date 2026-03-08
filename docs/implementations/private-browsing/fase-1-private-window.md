@@ -1,44 +1,44 @@
-# Fase 1 — Private Window: Ephemeer venster met in-memory sessie
+# Phase 1 — Private Window: Ephemeer window with in-memory session
 
 > **Feature:** Private Browsing Window
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de volledige Private Browsing feature: Cmd+Shift+N opent een nieuw Electron `BrowserWindow` met een in-memory partition (geen `persist:` prefix). Alle sessiedata wordt automatisch gewist bij sluiten. Visuele indicator: donkerpaarse header in de shell. API endpoint `POST /window/private` als alternatief.
+Bouw the full Private Browsing feature: Cmd+Shift+N opens a new Electron `BrowserWindow` with a in-memory partition (no `persist:` prefix). Alle sessiedata is automatisch gewist bij sluiten. Visual indicator: donkerpaarse header in the shell. API endpoint `POST /window/private` if alternatief.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/main.ts` | `createWindow()`, `app.on('ready')`, keyboard shortcut registratie (zoek naar `globalShortcut` of `Menu`/`accelerator`) | Snap hoe het hoofdvenster wordt aangemaakt — het privé-venster is een variant hiervan |
-| `src/api/routes/browser.ts` | `function registerBrowserRoutes()` | Hier komt het `POST /window/private` endpoint |
-| `shell/index.html` | Shell initialisatie, hoe het de partition/URL parameters leest | Snap hoe de shell weet of het een privé-venster is |
-| `shell/css/main.css` | CSS variabelen (`:root`, `--tab-bg`, `--accent`, etc.) | Snap de huidige kleuren voor de paarse variant |
-| `AGENTS.md` | — (lees volledig) | Anti-detect regels en code stijl |
+| `src/main.ts` | `createWindow()`, `app.on('ready')`, keyboard shortcut registratie (zoek to `globalShortcut` or `Menu`/`accelerator`) | Snap hoe the main window is aangemaakt — the private-window is a variant hiervan |
+| `src/api/routes/browser.ts` | `function registerBrowserRoutes()` | Hier comes the `POST /window/private` endpoint |
+| `shell/index.html` | Shell initialisatie, hoe the the partition/URL parameters leest | Snap hoe the shell weet or the a private-window is |
+| `shell/css/main.css` | CSS variabelen (`:root`, `--tab-bg`, `--accent`, etc.) | Snap the huidige kleuren for the paarse variant |
+| `AGENTS.md` | — (read fully) | Anti-detect rules and code stijl |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: createPrivateWindow() functie
+### Step 1: createPrivateWindow() function
 
-**Wat:** Maak een nieuwe functie in `main.ts` die een `BrowserWindow` aanmaakt met een ephemere (in-memory) partition. Dit is vergelijkbaar met `createWindow()` maar met een paar cruciale verschillen: geen `persist:` prefix op de partition, cleanup bij sluiten, en een query parameter zodat de shell weet dat het privé is.
+**Wat:** Maak a new function in `main.ts` that a `BrowserWindow` aanmaakt with a ephemere (in-memory) partition. Dit is vergelijkbaar with `createWindow()` but with a paar cruciale verschillen: no `persist:` prefix op the partition, cleanup bij sluiten, and a query parameter zodat the shell weet that the private is.
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Toevoegen aan:** Na de bestaande `createWindow()` functie
+**Add about:** Na the existing `createWindow()` function
 
 ```typescript
-import { v4 as uuidv4 } from 'crypto'; // Of gebruik crypto.randomUUID()
+import { v4 as uuidv4 } from 'crypto'; // Or usage crypto.randomUUID()
 
 function createPrivateWindow(): BrowserWindow {
   const partitionName = `private-${crypto.randomUUID()}`;
@@ -46,25 +46,25 @@ function createPrivateWindow(): BrowserWindow {
   const privateWin = new BrowserWindow({
     width: 1280,
     height: 800,
-    // Kopieer relevante opties van createWindow()
+    // Kopieer relevante opties or createWindow()
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
-      partition: partitionName,  // GEEN 'persist:' prefix = in-memory
+      partition: partitionName,  // NO 'persist:' prefix = in-memory
       preload: path.join(__dirname, 'preload.js'),
     },
     titleBarStyle: 'hiddenInset',
-    // Eventueel andere opties van createWindow() kopiëren
+    // Eventueel andere opties or createWindow() kopiëren
   });
 
-  // Laad de shell met private indicator
+  // Laad the shell with private indicator
   const shellPath = path.join(__dirname, '..', 'shell', 'index.html');
   privateWin.loadFile(shellPath, {
     query: { private: 'true', partition: partitionName },
   });
 
-  // Cleanup bij sluiten — extra zekerheid naast in-memory verdwijning
+  // Cleanup bij sluiten — extra zekerheid next to in-memory verdwijning
   privateWin.on('closed', () => {
     try {
       const { session } = require('electron');
@@ -80,53 +80,53 @@ function createPrivateWindow(): BrowserWindow {
 }
 ```
 
-**Let op:** Bekijk de bestaande `createWindow()` functie goed en kopieer de relevante `BrowserWindow` opties (bv. `titleBarStyle`, `vibrancy`, `backgroundColor`, etc.). Het privé-venster moet er hetzelfde uitzien, behalve de paarse kleur.
+**Let op:** Bekijk the existing `createWindow()` function goed and kopieer the relevante `BrowserWindow` opties (bv. `titleBarStyle`, `vibrancy`, `backgroundColor`, etc.). The private-window must er hetzelfde uitzien, behalve the paarse color.
 
-### Stap 2: Keyboard shortcut registreren
+### Step 2: Keyboard shortcut registreren
 
-**Wat:** Registreer Cmd+Shift+N (macOS) / Ctrl+Shift+N (Linux/Windows) om `createPrivateWindow()` aan te roepen.
+**Wat:** Registreer Cmd+Shift+N (macOS) / Ctrl+Shift+N (Linux/Windows) to `createPrivateWindow()` about te roepen.
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Aanpassen in:** De plek waar keyboard shortcuts/menu items geregistreerd worden (zoek naar bestaande `accelerator` of `globalShortcut` patronen)
+**Aanpassen in:** The plek waar keyboard shortcuts/menu items geregistreerd be (zoek to existing `accelerator` or `globalShortcut` patterns)
 
 ```typescript
-// Optie A: Via Electron Menu (als er al een menu is)
-// Voeg toe aan het bestaande menu template:
+// Optie A: Via Electron Menu (if er already a menu is)
+// Voeg toe about the existing menu template:
 {
   label: 'New Private Window',
   accelerator: 'CmdOrCtrl+Shift+N',
   click: () => createPrivateWindow(),
 }
 
-// Optie B: Via globalShortcut (als er geen menu gebruikt wordt)
+// Optie B: Via globalShortcut (if er no menu uses is)
 import { globalShortcut } from 'electron';
 globalShortcut.register('CmdOrCtrl+Shift+N', () => {
   createPrivateWindow();
 });
 ```
 
-**Aanbeveling:** Gebruik de Menu-aanpak als Tandem al een applicatie-menu heeft. Dit is betrouwbaarder dan `globalShortcut` (die kan conflicteren met systeemshortcuts).
+**Aanbeveling:** Usage the Menu-approach if Tandem already a applicatie-menu has. Dit is betrouwbaarder then `globalShortcut` (that can conflicteren with systeemshortcuts).
 
-### Stap 3: API endpoint POST /window/private
+### Step 3: API endpoint POST /window/private
 
-**Wat:** Endpoint om programmatisch een privé-venster te openen (voor Wingman/agents).
+**Wat:** Endpoint to programmatisch a private-window te openen (for Wingman/agents).
 
-**Bestand:** `src/api/routes/browser.ts`
+**File:** `src/api/routes/browser.ts`
 
-**Toevoegen aan:** `function registerBrowserRoutes()`
+**Add about:** `function registerBrowserRoutes()`
 
 ```typescript
 // === PRIVATE BROWSING ===
 
 router.post('/window/private', async (_req: Request, res: Response) => {
   try {
-    // createPrivateWindow() moet beschikbaar zijn via ctx of een geëxporteerde functie
-    // Optie: voeg createPrivateWindow toe aan RouteContext, of gebruik IPC
+    // createPrivateWindow() must beschikbaar are via ctx or a geëxporteerde function
+    // Optie: voeg createPrivateWindow toe about RouteContext, or usage IPC
     const { ipcMain } = require('electron');
 
-    // Stuur IPC event naar main process om privé-venster te openen
-    // (De API server draait in het main process, dus directe aanroep is ook mogelijk)
+    // Stuur IPC event to main process to private-window te openen
+    // (The API server draait in the main process, dus directe aanroep is also mogelijk)
     const win = createPrivateWindow();
     res.json({ ok: true, windowId: win.id });
   } catch (e: any) {
@@ -135,15 +135,15 @@ router.post('/window/private', async (_req: Request, res: Response) => {
 });
 ```
 
-**Let op:** De `createPrivateWindow()` functie moet toegankelijk zijn vanuit de routes. Mogelijke aanpak: exporteer de functie vanuit `main.ts` en maak hem beschikbaar via de `RouteContext`, of via een callback in de `ManagerRegistry`.
+**Let op:** The `createPrivateWindow()` function must toegankelijk are vanuit the routes. Mogelijke approach: exporteer the function vanuit `main.ts` and maak hem beschikbaar via the `RouteContext`, or via a callback in the `ManagerRegistry`.
 
-### Stap 4: Shell detectie — privé-modus styling
+### Step 4: Shell detection — private-modus styling
 
-**Wat:** De shell detecteert via query parameters of het in een privé-venster draait. Zo ja: activeer paarse styling en toon een indicator.
+**Wat:** The shell detecteert via query parameters or the in a private-window draait. Zo ja: activeer paarse styling and toon a indicator.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Toevoegen aan:** Shell initialisatie (begin van de JS)
+**Add about:** Shell initialisatie (begin or the JS)
 
 ```javascript
 // === PRIVATE MODE DETECTION ===
@@ -155,33 +155,33 @@ if (isPrivateMode) {
 }
 ```
 
-### Stap 5: Privé-indicator in tab bar
+### Stap 5: Private-indicator in tab bar
 
-**Wat:** Wanneer de shell in privé-modus draait, toon een "🔒 Private" badge links in de tab bar.
+**Wat:** Wanneer the shell in private-modus draait, toon a "🔒 Private" badge links in the tab bar.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Aanpassen in:** Tab bar HTML sectie
+**Aanpassen in:** Tab bar HTML section
 
 ```html
-<!-- Voeg toe als eerste kind van #tab-bar, na menu-btn: -->
+<!-- Voeg toe if first kind or #tab-bar, na menu-btn: -->
 <span class="private-badge" id="private-badge" style="display:none;">🔒 Private</span>
 ```
 
 ```javascript
-// In de private mode detection:
+// In the private mode detection:
 if (isPrivateMode) {
   document.getElementById('private-badge').style.display = '';
 }
 ```
 
-### Stap 6: CSS variabelen voor privé-modus
+### Stap 6: CSS variabelen for private-modus
 
-**Wat:** Wanneer `.private-mode` class actief is, overschrijf de tab bar kleuren met een donkerpaarse variant.
+**Wat:** Wanneer `.private-mode` class actief is, overschrijf the tab bar kleuren with a donkerpaarse variant.
 
-**Bestand:** `shell/css/main.css`
+**File:** `shell/css/main.css`
 
-**Toevoegen aan:** Na de `:root` variabelen
+**Add about:** Na the `:root` variabelen
 
 ```css
 /* === PRIVATE MODE STYLING === */
@@ -193,7 +193,7 @@ if (isPrivateMode) {
   --accent: #9b59b6;
 }
 
-/* macOS specifiek: paarse achtergrond voor titelbalk */
+/* macOS specifiek: paarse achtergrond for titelbalk */
 .private-mode .tab-bar {
   background: rgba(26, 10, 46, 0.85);
 }
@@ -212,83 +212,83 @@ if (isPrivateMode) {
 }
 ```
 
-### Stap 7: Webview partition in privé-modus
+### Stap 7: Webview partition in private-modus
 
-**Wat:** Wanneer de shell in privé-modus draait, moeten alle webviews die aangemaakt worden dezelfde ephemere partition gebruiken (niet `persist:tandem`).
+**Wat:** Wanneer the shell in private-modus draait, must alle webviews that aangemaakt be the same ephemere partition use (not `persist:tandem`).
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Aanpassen in:** Tab/webview creatie functie (zoek naar waar `partition` wordt gezet op webview elementen)
+**Aanpassen in:** Tab/webview creatie function (zoek to waar `partition` is gezet op webview elementen)
 
 ```javascript
-// In de tab creatie functie, waar partition wordt gezet:
+// In the tab creatie function, waar partition is gezet:
 const partition = isPrivateMode
-  ? urlParams.get('partition')  // De ephemere partition van dit venster
+  ? urlParams.get('partition')  // The ephemere partition or this window
   : 'persist:tandem';           // Normale persistente partition
 
-// Bij het aanmaken van de webview:
+// Bij the aanmaken or the webview:
 webview.setAttribute('partition', partition);
 ```
 
-### Stap 8: Beperkingen in privé-modus
+### Stap 8: Beperkingen in private-modus
 
-**Wat:** In privé-modus: geen history opslaan, geen form memory, geen site memory. Dit wordt afgehandeld doordat de in-memory partition geen data naar disk schrijft. Maar we moeten ook expliciet voorkomen dat Tandem's eigen systemen data loggen.
+**Wat:** In private-modus: no history save, no form memory, no site memory. Dit is afgehandeld doordat the in-memory partition no data to disk schrijft. Maar we must also expliciet voorkomen that Tandem's own systemen data loggen.
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Toevoegen aan:** `createPrivateWindow()` functie
+**Add about:** `createPrivateWindow()` function
 
 ```typescript
-// Markeer het venster als privé zodat managers het kunnen checken
+// Markeer the window if private zodat managers the can checken
 (privateWin as any).__isPrivate = true;
 
-// Optioneel: voeg een methode toe aan het venster
-// zodat managers kunnen checken: if (win.__isPrivate) skip logging;
+// Optioneel: voeg a methode toe about the window
+// zodat managers can checken: if (win.__isPrivate) skip logging;
 ```
 
-**Let op:** Managers zoals SiteMemory, FormMemory, en History moeten checken of het actieve venster privé is. Dit is een nice-to-have voor v1 — de in-memory partition vangt het meeste al op.
+**Let op:** Managers zoals SiteMemory, FormMemory, and History must checken or the actieve window private is. Dit is a nice-to-have for v1 — the in-memory partition vangt the meeste already op.
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Open privé-venster via API
+# Test 1: Open private-window via API
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/window/private
 # Verwacht: {"ok":true, "windowId": [nummer]}
-# Verwacht: een nieuw venster opent met paarse titelbalk
+# Verwacht: a new window opens with paarse titelbalk
 
-# Test 2: Verifieer dat Cmd+Shift+N werkt
+# Test 2: Verifieer that Cmd+Shift+N works
 # (handmatige test — druk Cmd+Shift+N in Tandem)
-# Verwacht: nieuw venster met paarse header en "🔒 Private" badge
+# Verwacht: new window with paarse header and "🔒 Private" badge
 
-# Test 3: Browse in privé-venster
-# (handmatig: open een website, log in ergens)
-# Sluit het privé-venster
-# Open een nieuw privé-venster
-# Verwacht: geen cookies/logins bewaard — je bent uitgelogd
+# Test 3: Browse in private-window
+# (handmatig: open a website, log in ergens)
+# Closes the private-window
+# Open a new private-window
+# Verwacht: no cookies/logins bewaard — you bent uitgelogd
 
 # Test 4: Hoofdvenster onveranderd
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/list
-# Verwacht: tabs van het hoofdvenster zijn intact
+# Verwacht: tabs or the main window are intact
 
-# Test 5: Bestaande endpoints werken nog
+# Test 5: Existing endpoints werken still
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/status
 # Verwacht: {"ok":true, ...}
 ```
 
 **UI verificatie:**
-- [ ] Privé-venster heeft donkerpaarse titelbalk/header
-- [ ] "🔒 Private" badge zichtbaar links in tab bar
-- [ ] Tabs in privé-venster werken normaal (navigatie, nieuwe tabs, sluiten)
-- [ ] Na sluiten privé-venster: geen sessiedata bewaard
-- [ ] Hoofdvenster is volledig onafhankelijk en onveranderd
-- [ ] Meerdere privé-vensters tegelijk mogelijk (elk met eigen partition)
+- [ ] Private-window has donkerpaarse titelbalk/header
+- [ ] "🔒 Private" badge visible links in tab bar
+- [ ] Tabs in private-window werken normaal (navigatie, new tabs, sluiten)
+- [ ] Na sluiten private-window: no sessiedata bewaard
+- [ ] Hoofdvenster is fully onafhankelijk and onveranderd
+- [ ] Multiple private-vensters simultaneously mogelijk (elk with own partition)
 
 ---
 
@@ -296,21 +296,21 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-private-window.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-private-window.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 5. BELANGRIJK: bestudeer createWindow() goed — kopieer relevante opties
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. Handmatige test: Cmd+Shift+N → browse → sluit → verifieer geen data bewaard
-5. npx vitest run — alle bestaande tests blijven slagen
-6. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. Handmatige test: Cmd+Shift+N → browse → closes → verifieer no data bewaard
+5. npx vitest run — alle existing tests blijven slagen
+6. Update CHANGELOG.md with korte entry
 7. git commit -m "🔒 feat: private browsing window — Cmd+Shift+N, ephemeral partition, auto-cleanup"
 8. git push
 9. Rapport:
@@ -324,9 +324,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Bekende valkuilen
 
-- [ ] `createWindow()` bevat waarschijnlijk veel initialisatie-logica (stealth patches, event listeners, manager registratie) — het privé-venster heeft niet alles hiervan nodig. Kopieer selectief, niet blindelings.
-- [ ] De API server (`localhost:8765`) draait in het main process en is gedeeld. Het privé-venster kan dezelfde API gebruiken, maar pas op: API calls vanuit het privé-venster mogen geen tabs in het hoofdvenster beïnvloeden. Overweeg een `windowId` parameter toe te voegen aan tab-gerelateerde endpoints.
-- [ ] `crypto.randomUUID()` is beschikbaar in Node.js 19+ en Electron 40 — verifieer beschikbaarheid.
-- [ ] Stealth patches: als Tandem stealth patches toepast via `session.defaultSession`, moeten dezelfde patches ook op de privé-session worden toegepast. Check `webRequest` handlers, User-Agent overrides, etc.
-- [ ] macOS `titleBarStyle: 'hiddenInset'` moet in beide vensters hetzelfde zijn voor consistent gedrag van de traffic lights.
-- [ ] Bij het sluiten van het privé-venster moet `session.clearStorageData()` worden aangeroepen — maar de `'closed'` event kan te laat komen. Overweeg `'close'` (vóór sluiten) in plaats van `'closed'` (na sluiten).
+- [ ] `createWindow()` contains waarschijnlijk veel initialisatie-logica (stealth patches, event listeners, manager registratie) — the private-window has not alles hiervan nodig. Kopieer selectief, not blindelings.
+- [ ] The API server (`localhost:8765`) draait in the main process and is shared. The private-window can the same API use, but pas op: API calls vanuit the private-window mogen no tabs in the main window beïnvloeden. Overweeg a `windowId` parameter toe te voegen about tab-gerelateerde endpoints.
+- [ ] `crypto.randomUUID()` is beschikbaar in Node.js 19+ and Electron 40 — verifieer beschikbaarheid.
+- [ ] Stealth patches: if Tandem stealth patches toepast via `session.defaultSession`, must the same patches also op the private-session be toegepast. Check `webRequest` handlers, User-Agent overrides, etc.
+- [ ] macOS `titleBarStyle: 'hiddenInset'` must in beide vensters hetzelfde are for consistent behavior or the traffic lights.
+- [ ] Bij the sluiten or the private-window must `session.clearStorageData()` be aangeroepen — but the `'closed'` event can te shows komen. Overweeg `'close'` (vóór sluiten) in plaats or `'closed'` (na sluiten).

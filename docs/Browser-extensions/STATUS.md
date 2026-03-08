@@ -6,7 +6,7 @@
 ## Current State
 
 **Next phase to implement:** None — all phases complete
-**Last completed phase:** Phase 10a (Phase 10b skipped — conditional not met)
+**Last completed phase:** Phase 10a (Phase 10b skipped — conditional not with)
 **Overall status:** COMPLETE
 
 ---
@@ -42,7 +42,7 @@
 - **Issues encountered:**
   - CWS download endpoint requires `acceptformat=crx2,crx3` query param — without it, some extensions return 204 No Content
   - CWS redirects to `clients2.googleusercontent.com` — added to allowed Google domain regex
-  - Electron 40 deprecation: `session.loadExtension()` → `session.extensions.loadExtension()` (still works, logged warning). Not fixed in Phase 1 as loader.ts is out of scope — should be addressed in a future phase.
+  - Electron 40 deprecation: `session.loadExtension()` → `session.extensions.loadExtension()` (still works, logged warning). Not fixed in Phase 1 as loader.ts is out or scope — should be addressed in a future phase.
   - uBlock Origin and Dark Reader manifests lack `key` field — Electron assigns random IDs that differ from CWS IDs. Extensions still load and function.
 - **Notes for next phase:**
   - `ExtensionManager` is available on the API server as `this.extensionManager` — Phase 2 should use `this.extensionManager.install()` and `this.extensionManager.uninstall()` for the new API routes
@@ -70,7 +70,7 @@
   - [x] Error responses for invalid input, download failures, signature failures
   - [x] App launches, browsing works
 - **Issues encountered:**
-  - `ExtensionLoader.listLoaded()` returns an in-memory array that is not updated on uninstall — the `loaded` list may show stale entries until app restart. The extensions ARE properly removed from the session (via `session.removeExtension()`) and from disk. This is a pre-existing Phase 1 limitation of ExtensionLoader's internal state management. The `available` list (reads from disk) is always accurate.
+  - `ExtensionLoader.listLoaded()` returns an in-memory array that is not updated on uninstall — the `loaded` list may show stale entries until app restart. The extensions ARE properly removed from the session (via `session.removeExtension()`) and from disk. This is a pre-existing Phase 1 limitation or ExtensionLoader's internal state management. The `available` list (reads from disk) is always accurate.
   - Uninstall route handles both CWS ID and Electron runtime ID — resolves both before removal since these differ when manifest lacks `key` field.
 - **Notes for next phase:**
   - `POST /extensions/install` accepts `{ input: "CWS_URL_OR_ID" }` and returns `InstallResult` — Phase 3's Chrome import route should follow the same pattern
@@ -139,7 +139,7 @@
   - `GalleryEntry` (extends `GalleryExtension` with `installed: boolean`) and `GalleryResponse` types are exported from `gallery-loader.ts`
   - `GET /extensions/gallery` supports `?category=<category>` and `?featured=true` query params for filtering
   - The `installed` field checks if the extension ID exists as a folder in `~/.tandem/extensions/` (uses `extensionManager.list().available`)
-  - The merge architecture uses a spread-based `Map` merge — user gallery entries override defaults field-by-field (partial overrides work). The merge method accepts variadic sources, so a third layer (remote gallery) can be added without changing the merge logic
+  - The merge architecture uses a spread-based `Folder` merge — user gallery entries override defaults field-by-field (partial overrides work). The merge method accepts variadic sources, so a third layer (remote gallery) can be added without changing the merge logic
   - User gallery format: `{ version: 1, extensions: [{ id, name, description, category, compatibility, securityConflict, mechanism, featured }] }` — entries need at minimum an `id` field
   - No new npm dependencies added
 
@@ -186,11 +186,11 @@
 - **Commit:** d10f61b
 - **Verification:**
   - [x] `npx tsc --noEmit` — 0 errors
-  - [x] Extension toolbar visible in browser UI (right side of URL bar, between screenshot button and status dot)
+  - [x] Extension toolbar visible in browser UI (right side or URL bar, between screenshot button and status dot)
   - [x] Extension icons show for extensions with action/browser_action (tested with Dark Reader + uBlock Origin)
   - [x] Clicking icon opens popup with full chrome.* API access (BrowserWindow with persist:tandem session)
   - [x] Popup closes on click-outside (blur event) or Escape (no separate handler needed — blur handles it)
-  - [x] Badge text updates — infrastructure in place (badge polling timer + badge state map). Electron 40 Extension objects don't expose runtime badge state from main process; extensions set badges via chrome.action.setBadgeText() in service workers. Badge display works when set via setBadge() method.
+  - [x] Badge text updates — infrastructure in place (badge polling timer + badge state folder). Electron 40 Extension objects don't expose runtime badge state from main process; extensions set badges via chrome.action.setBadgeText() in service workers. Badge display works when set via setBadge() method.
   - [x] Right-click context menu: Extension name (label), Options (if options_page/options_ui), Pin/Unpin to Toolbar, Remove from Tandem (with confirm dialog)
   - [x] Overflow dropdown for >6 extensions (puzzle piece 🧩 button opens dropdown with remaining extensions)
   - [x] Pin state persists across restarts (saved to ~/.tandem/extensions/toolbar-state.json)
@@ -198,7 +198,7 @@
   - [x] App launches, browsing works (verified with 2 extensions loaded)
 - **Issues encountered:**
   - `session.getAllExtensions()` deprecated in Electron 40 — used `session.extensions.getAllExtensions()` with fallback to deprecated API
-  - `session.loadExtension()` deprecation (pre-existing from Phase 1) — still works, logged warning. Not fixed in Phase 5b as loader.ts is out of scope.
+  - `session.loadExtension()` deprecation (pre-existing from Phase 1) — still works, logged warning. Not fixed in Phase 5b as loader.ts is out or scope.
   - Badge text polling: Electron 40's Extension object returned by `session.extensions.getAllExtensions()` does not expose runtime badge state (text/color set by chrome.action.setBadgeText()). Polling infrastructure is in place but cannot read badge values from main process. Extensions that set badges will show correctly if the badge state is set via the ExtensionToolbar.setBadge() method externally.
 - **Notes for next phase:**
   - `ExtensionToolbar` is in `src/extensions/toolbar.ts` — instantiated in main.ts, takes ExtensionManager as constructor arg
@@ -394,7 +394,7 @@
   - [x] ScriptGuard empirical finding: Extension content scripts bypass ScriptGuard — they are injected by Electron's extension system, not via CDP (`scriptParsed` events). No whitelist needed. Broad content script patterns are logged for security auditing only.
 - **Issues encountered:**
   - uBlock Origin MV2 (installed version 1.69.0) does NOT use `declarativeNetRequest` — it uses `webRequestBlocking` instead. The gallery's static `securityConflict: 'dnr-overlap'` describes the MV3 version behavior. Dynamic detection is more precise than the gallery's static data since it checks the actual installed manifest. This is correct: MV2 ad blockers go through webRequest hooks (where Guardian lives), so they don't have the DNR overlap problem.
-  - Extension content scripts bypass ScriptGuard (confirmed by CLAUDE.md Security Rule #8: "Extension content scripts bypass ScriptGuard — they are injected by Electron's extension system, not via CDP"). No whitelist implementation needed — replaced with audit logging of broad content script patterns.
+  - Extension content scripts bypass ScriptGuard (confirmed by CLAUDE.md Security Rule #8: "Extension content scripts bypass ScriptGuard — they are injected by Electron's extension system, not via CDP"). No whitelist implementation needed — replaced with audit logging or broad content script patterns.
 - **Notes for next phase:**
   - `ConflictDetector` is in `src/extensions/conflict-detector.ts` — instantiated by ExtensionManager
   - `ExtensionManager.getConflictsForExtension(id)` returns conflicts for a single extension
@@ -415,13 +415,13 @@
 
 > **Conditional:** Only implement if Phase 1's DNR test confirmed Guardian misses requests blocked by DNR. If Guardian still sees all requests, mark as SKIPPED.
 
-- **Status:** SKIPPED (conditional not met)
+- **Status:** SKIPPED (conditional not with)
 - **Date:** 2026-02-25
 - **Commit:** —
 - **Reason for skip:**
   - Phase 1 DNR test found Guardian's dispatcher still fires with uBlock loaded (2 `onBeforeRequest` consumers registered). Guardian sees all requests that reach Electron's network layer.
   - Phase 10a confirmed the installed uBlock Origin is **MV2** (v1.69.0), which uses `webRequestBlocking` — NOT `declarativeNetRequest`. MV2 ad blockers go through `webRequest` hooks (where Guardian lives), so there is no DNR overlap problem with the installed version.
-  - **No installed extensions use `declarativeNetRequest`** — the condition "Phase 1's empirical DNR test confirmed Guardian misses requests blocked by DNR" was never met.
+  - **No installed extensions use `declarativeNetRequest`** — the condition "Phase 1's empirical DNR test confirmed Guardian misses requests blocked by DNR" was never with.
   - If a future MV3 DNR extension is installed and testing reveals Guardian misses requests, this phase can be un-skipped and implemented at that time.
 - **Verification:** N/A (skipped)
 - **Issues encountered:** None

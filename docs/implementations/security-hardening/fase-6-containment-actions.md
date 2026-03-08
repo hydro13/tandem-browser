@@ -1,4 +1,4 @@
-# Fase 6 — Containment Actions: Move From Detection To Response
+# Phase 6 — Containment Actions: Move From Detection To Response
 
 > **Feature:** Security hardening
 > **Sessions:** 1 session
@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Add automatic containment responses so critical detections do not merely appear
 in logs. The browser should be able to isolate, pause, or escalate when the

@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 This phase removes the assumption that `NetworkShield` must parse every local
 blocklist synchronously during startup. Tandem should become usable quickly with

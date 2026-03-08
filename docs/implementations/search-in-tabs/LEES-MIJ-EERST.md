@@ -1,80 +1,80 @@
-# Search in Tabs — START HIER
+# Search in Tabs — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Ctrl+Space zoek-overlay om snel open tabs te vinden op titel/URL, inclusief recent gesloten tabs
-> **Volgorde:** Fase 1 (één sessie, compleet)
+> **Goal:** Ctrl+Space zoek-overlay to snel open tabs te vinden op title/URL, inclusief recent closed tabs
+> **Order:** Phase 1 (één session, compleet)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Bij 20+ tabs is visueel scannen van de tab bar te traag. Robin weet vaak wél een keyword uit de titel of URL, maar kan de tab niet vinden. Een zoek-overlay met real-time filtering is de snelste manier om naar elke tab te springen. Zie `docs/research/gap-analysis.md` sectie "Search in Tabs" en `docs/research/opera-complete-inventory.md` sectie 1.6 voor de Opera referentie.
+Bij 20+ tabs is visual scannen or the tab bar te traag. Robin weet vaak wél a keyword out the title or URL, but can the tab not vinden. A zoek-overlay with real-time filtering is the snelste manier to to elke tab te springen. Zie `docs/research/gap-analysis.md` section "Search in Tabs" and `docs/research/opera-complete-inventory.md` section 1.6 for the Opera referentie.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
   Ctrl+Space → toggle #tab-search-overlay
          │
          ▼
   fetch() GET /tabs/list → alle open tabs
-  fetch() GET /tabs/closed → recent gesloten
+  fetch() GET /tabs/closed → recent closed
          │
          ▼
   Client-side filter op input.value
-  ├── match titel (case-insensitive)
+  ├── match title (case-insensitive)
   └── match URL (case-insensitive)
          │
          ▼
-  Klik of Enter → POST /tabs/focus (open tab)
-                → POST /tabs/open  (gesloten tab heropenen)
+  Klik or Enter → POST /tabs/focus (open tab)
+                → POST /tabs/open  (closed tab heropenen)
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, keyboard shortcut registratie | `createWindow()` |
 | `src/api/server.ts` | TandemAPI class | `class TandemAPI`, `setupRoutes()` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
 _(zie fase-1-search-overlay.md)_
 
 ---
 
-## Regels voor deze feature
+## Rules for this feature
 
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
+> These are the HARD rules in addition to the general AGENTS.md rules.
 
-1. **Puur shell UI** — dit is bijna volledig een shell/index.html feature. De enige backend-aanpassing is één nieuw endpoint (`GET /tabs/closed`).
-2. **Geen npm packages** — het zoekfilter is simpele string matching in JavaScript. Geen fuzzy search library nodig.
-3. **Keyboard-first** — de overlay moet volledig bedienbaar zijn met toetsenbord: Ctrl+Space open/sluit, pijltjes navigeren, Enter selecteert, Escape sluit.
-4. **Functienamen > regelnummers** — verwijs naar `function registerTabRoutes()`, nooit regelnummers.
+1. **Puur shell UI** — this is bijna fully a shell/index.html feature. The enige backend-aanpassing is één new endpoint (`GET /tabs/closed`).
+2. **No npm packages** — the zoekfilter is simpele string matching in JavaScript. No fuzzy search library nodig.
+3. **Keyboard-first** — the overlay must fully bedienbaar are with toetsenbord: Ctrl+Space open/closes, pijltjes navigeren, Enter selecteert, Escape closes.
+4. **Functienamen > regelnummers** — verwijs to `function registerTabRoutes()`, nooit regelnummers.
 
 ---
 
-## Manager Wiring — minimaal
+## Manager Wiring — minimum
 
-Er is **geen nieuwe manager** nodig. Eén klein nieuw endpoint toevoegen:
+Er is **no new manager** nodig. Eén klein new endpoint add:
 
-1. `src/tabs/manager.ts` → `class TabManager` → publiek maken van `closedTabs` via nieuwe methode `getClosedTabs()`
+1. `src/tabs/manager.ts` → `class TabManager` → publiek maken or `closedTabs` via new methode `getClosedTabs()`
 2. `src/api/routes/tabs.ts` → `function registerTabRoutes()` → `GET /tabs/closed`
-3. `shell/index.html` → volledige overlay UI + JS
+3. `shell/index.html` → full overlay UI + JS
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // In function registerTabRoutes():
@@ -89,22 +89,22 @@ router.get('/tabs/closed', async (_req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-search-overlay.md` | Volledige implementatie: overlay UI + keyboard + zoeklogica + recent gesloten | 📋 Klaar om te starten |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-search-overlay.md` | Volledige implementatie: overlay UI + keyboard + zoeklogica + recent closed | 📋 Ready to start |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -122,10 +122,10 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Ctrl+Space search overlay (shell UI) | ⏳ niet gestart | — |
+| 1 | Ctrl+Space search overlay (shell UI) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

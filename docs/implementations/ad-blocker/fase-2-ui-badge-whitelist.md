@@ -1,43 +1,43 @@
-# Fase 2 — UI: Shield Badge + Blocked Count + Whitelist Toggle
+# Phase 2 — UI: Shield Badge + Blocked Count + Whitelist Toggle
 
 > **Feature:** Ad Blocker
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Fase 1 klaar
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** Phase 1 complete
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de visuele ad blocker ervaring in de shell: een shield badge in de toolbar die het aantal geblokkeerde requests toont per pagina, een klikbare popup met geblokkeerd-details en een per-site whitelist toggle. Na deze fase ziet Robin visueel hoeveel ads geblokkeerd worden en kan hij per site de ad blocker uitschakelen.
+Build the visual ad blocker experience in the shell: a shield badge in the toolbar that shows the number or blocked requests per page, a clickable popup with blocked details, and a per-site whitelist toggle. After this phase Robin can visually see how many ads are blocked and can disable the ad blocker per site.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/adblock/manager.ts` | `class AdBlockManager`, `getBlockedCount()`, `getWhitelist()` | Data ophalen voor badge |
-| `shell/index.html` | `<div class="toolbar">`, `<div class="status-dot">` | Hier komt de shield badge bij |
-| `shell/js/main.js` | Toolbar event handlers, webview navigatie events | Badge update bij pagina wissel |
-| `shell/css/main.css` | `.toolbar`, `.status-dot` | Styling voor shield badge |
-| `src/ipc/handlers.ts` | `registerIpcHandlers()` | IPC handlers voor badge data |
+| `src/adblock/manager.ts` | `class AdBlockManager`, `getBlockedCount()`, `getWhitelist()` | Data ophalen for badge |
+| `shell/index.html` | `<div class="toolbar">`, `<div class="status-dot">` | Hier comes the shield badge bij |
+| `shell/js/main.js` | Toolbar event handlers, webview navigatie events | Badge update bij page wissel |
+| `shell/css/main.css` | `.toolbar`, `.status-dot` | Styling for shield badge |
+| `src/ipc/handlers.ts` | `registerIpcHandlers()` | IPC handlers for badge data |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Shield badge HTML
+### Step 1: Shield badge HTML
 
-**Wat:** Een schildje icoon in de toolbar met een badge counter die het aantal geblokkeerde requests toont.
+**Wat:** A schildje icon in the toolbar with a badge counter that the aantal blocked requests shows.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Zoek naar:** `<button id="btn-screenshot"` (in de toolbar)
+**Zoek to:** `<button id="btn-screenshot"` (in the toolbar)
 
-**Voeg toe vóór de screenshot knop:**
+**Voeg toe vóór the screenshot knop:**
 
 ```html
 <!-- Ad Blocker shield badge -->
@@ -47,13 +47,13 @@ Bouw de visuele ad blocker ervaring in de shell: een shield badge in de toolbar 
 </button>
 ```
 
-### Stap 2: Shield popup HTML
+### Step 2: Shield popup HTML
 
-**Wat:** Popup die verschijnt bij klik op het schildje — toont geblokkeerd aantal en whitelist toggle.
+**Wat:** Popup that appears bij click op the schildje — shows blocked count and whitelist toggle.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Voeg toe na de toolbar div:**
+**Voeg toe na the toolbar div:**
 
 ```html
 <!-- Ad Blocker popup -->
@@ -69,27 +69,27 @@ Bouw de visuele ad blocker ervaring in de shell: een shield badge in de toolbar 
   <div class="adblock-popup-stats">
     <div class="adblock-stat">
       <span class="adblock-stat-number" id="adblock-page-blocked">0</span>
-      <span class="adblock-stat-label">geblokkeerd op deze pagina</span>
+      <span class="adblock-stat-label">blocked on this page</span>
     </div>
     <div class="adblock-stat">
       <span class="adblock-stat-number" id="adblock-total-blocked">0</span>
-      <span class="adblock-stat-label">totaal geblokkeerd</span>
+      <span class="adblock-stat-label">total blocked</span>
     </div>
   </div>
   <div class="adblock-popup-whitelist">
     <label>
       <input type="checkbox" id="adblock-site-whitelist">
-      <span>Uitschakelen voor <strong id="adblock-current-domain">deze site</strong></span>
+      <span>Uitschakelen for <strong id="adblock-current-domain">this site</strong></span>
     </label>
   </div>
 </div>
 ```
 
-### Stap 3: CSS voor shield badge en popup
+### Step 3: CSS for shield badge and popup
 
-**Wat:** Styling voor het schildje, de badge counter, en de whitelist popup.
+**Wat:** Styling for the schildje, the badge counter, and the whitelist popup.
 
-**Bestand:** `shell/css/main.css`
+**File:** `shell/css/main.css`
 
 **Voeg toe:**
 
@@ -224,13 +224,13 @@ Bouw de visuele ad blocker ervaring in de shell: een shield badge in de toolbar 
 }
 ```
 
-### Stap 4: Shell JavaScript — badge logica
+### Step 4: Shell JavaScript — badge logica
 
-**Wat:** Update de badge counter bij navigatie, toggle popup, whitelist management.
+**Wat:** Update the badge counter bij navigatie, toggle popup, whitelist management.
 
-**Bestand:** `shell/js/main.js`
+**File:** `shell/js/main.js`
 
-**Toevoegen aan:** Event handlers sectie
+**Add about:** Event handlers section
 
 ```javascript
 // === AD BLOCKER UI ===
@@ -274,22 +274,22 @@ document.getElementById('adblock-site-whitelist').addEventListener('change', asy
   } else {
     await fetch(`http://localhost:8765/adblock/whitelist/${domain}`, { method: 'DELETE' });
   }
-  // Herlaad pagina zodat whitelist effect heeft
+  // Herlaad page zodat whitelist effect has
   getActiveWebview().reload();
 });
 
 // Update badge na elke navigatie
-// Voeg toe aan bestaande webview 'did-navigate' handler:
+// Voeg toe about existing webview 'did-navigate' handler:
 // updateAdBlockBadge();
 ```
 
-### Stap 5: IPC voor real-time badge updates
+### Stap 5: IPC for real-time badge updates
 
-**Wat:** AdBlockManager stuurt IPC event `adblock-count-updated` naar shell wanneer een request geblokkeerd wordt, zodat de badge real-time updatet zonder polling.
+**Wat:** AdBlockManager stuurt IPC event `adblock-count-updated` to shell wanneer a request is blocked, zodat the badge real-time updatet without polling.
 
-**Bestand:** `src/adblock/manager.ts`
+**File:** `src/adblock/manager.ts`
 
-**Toevoegen aan:** `incrementBlockedCount()` methode
+**Add about:** `incrementBlockedCount()` methode
 
 ```typescript
 // Na count update:
@@ -302,11 +302,11 @@ if (this.win) {
 }
 ```
 
-**Bestand:** `shell/js/main.js` — IPC listener:
+**File:** `shell/js/main.js` — IPC listener:
 
 ```javascript
 window.electronAPI.on('adblock-count-updated', (event, data) => {
-  // Update badge als het voor de actieve tab is
+  // Update badge if the for the actieve tab is
   if (data.webContentsId === getActiveWebContentsId()) {
     updateBadgeDisplay(data.count);
   }
@@ -315,10 +315,10 @@ window.electronAPI.on('adblock-count-updated', (event, data) => {
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
-# Test 1: Status na pagina laden
+# Test 1: Status na page laden
 TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/adblock/stats
@@ -326,20 +326,20 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [ ] Shield badge zichtbaar in toolbar (🛡️)
-- [ ] Badge toont getal na het laden van een ad-heavy site (bv. een nieuwssite)
-- [ ] Klik op shield → popup verschijnt met geblokkeerd-statistieken
-- [ ] Popup toont "geblokkeerd op deze pagina" en "totaal geblokkeerd"
-- [ ] Whitelist toggle werkt: uitvinken → pagina herlaadt → ads verschijnen
-- [ ] Whitelist toggle aanvinken → ads worden weer geblokkeerd
-- [ ] Globale toggle: ad blocker uit → geen requests meer geblokkeerd
-- [ ] Badge update is real-time (niet alleen bij navigatie)
-- [ ] Popup sluit bij klik erbuiten
+- [ ] Shield badge visible in toolbar (🛡️)
+- [ ] Badge shows getal na the laden or a ad-heavy site (bv. a nieuwssite)
+- [ ] Klik op shield → popup appears with blocked statistics
+- [ ] Popup shows "blocked on this page" and "total blocked"
+- [ ] Whitelist toggle works: uitvinken → page herlaadt → ads verschijnen
+- [ ] Check the whitelist toggle off again → ads are blocked again
+- [ ] Globale toggle: ad blocker out → no more requests blocked
+- [ ] Badge update is real-time (not only bij navigatie)
+- [ ] Popup closes bij click erbuiten
 
 **Compilatie verificatie:**
 - [ ] `npx tsc` — zero errors
-- [ ] `npx vitest run` — alle bestaande tests slagen
-- [ ] `npm start` — app start zonder crashes
+- [ ] `npx vitest run` — alle existing tests slagen
+- [ ] `npm start` — app start without crashes
 
 ---
 
@@ -347,35 +347,35 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-2-ui-badge-whitelist.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-2-ui-badge-whitelist.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🛡️ feat: ad blocker shield badge + whitelist UI"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende: Ad Blocker feature compleet ✅
+   ## Next: Ad Blocker feature compleet ✅
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Popup positioning: de popup moet correct gepositioneerd zijn onder de shield knop. Gebruik `getBoundingClientRect()` van het shield element.
-- [ ] Popup dismiss: klik erbuiten moet de popup sluiten — gebruik document-level click handler
-- [ ] Real-time badge: AdBlockManager heeft een referentie naar `win` nodig voor IPC — voeg dit toe aan constructor
-- [ ] Current domain extractie: gebruik `new URL(webview.getURL()).hostname` — niet `location.hostname` (dat is de shell, niet de pagina)
-- [ ] TypeScript strict mode — geen `any` buiten catch blocks
-- [ ] Whitelist state in popup: bij openen, check of huidige site gewhitelist is en zet checkbox correct
+- [ ] Popup positioning: the popup must correct gepositioneerd are under the shield knop. Usage `getBoundingClientRect()` or the shield element.
+- [ ] Popup dismiss: click erbuiten must the popup sluiten — usage document-level click handler
+- [ ] Real-time badge: AdBlockManager has a referentie to `win` nodig for IPC — voeg this toe about constructor
+- [ ] Current domain extractie: usage `new URL(webview.getURL()).hostname` — not `location.hostname` (that is the shell, not the page)
+- [ ] TypeScript strict mode — no `any` buiten catch blocks
+- [ ] Whitelist state in popup: bij openen, check or huidige site gewhitelist is and zet checkbox correct

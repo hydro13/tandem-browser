@@ -1,19 +1,19 @@
-# TAB SNOOZING — START HIER
+# TAB SNOOZING — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Suspendeer inactieve tabs om geheugen vrij te maken — handmatig (rechtermuisklik) en automatisch (na X minuten inactiviteit)
-> **Volgorde:** Fase 1 → 2 (elke fase is één sessie)
+> **Goal:** Suspendeer inactieve tabs to geheugen vrij te maken — handmatig (rechtermuisklik) and automatisch (na X minuten inactiviteit)
+> **Order:** Phase 1 → 2 (elke phase is één session)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Elke open tab verbruikt 50-300MB geheugen. Met 20+ tabs wordt Tandem traag. Opera snoozet inactieve tabs automatisch. Tab Snoozing navigeert inactieve tabs naar `about:blank` (geheugen vrij) en herlaadt de oorspronkelijke URL bij klik. Dit is de #9 prioriteit in de gap analyse (docs/research/gap-analysis.md).
+Elke open tab verbruikt 50-300MB geheugen. With 20+ tabs is Tandem traag. Opera snoozet inactieve tabs automatisch. Tab Snoozing navigeert inactieve tabs to `about:blank` (geheugen vrij) and herlaadt the oorspronkelijke URL bij click. Dit is the #9 prioriteit in the gap analyse (docs/research/gap-analysis.md).
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
 Rechtermuisklik tab → "Snooze for 1h"
@@ -22,68 +22,68 @@ Rechtermuisklik tab → "Snooze for 1h"
        ↓
   SnoozeManager.snooze(tabId)
        ↓
-  1. Sla URL + titel + favicon op in snoozedTabs Map
-  2. Navigeer webview naar about:blank (freed geheugen)
-  3. Set timer voor auto-wake (als duration opgegeven)
-  4. IPC → shell: toon 💤 icoon op tab
+  1. Store URL + title + favicon in snoozedTabs Folder
+  2. Navigeer webview to about:blank (freed geheugen)
+  3. Set timer for auto-wake (if duration opgegeven)
+  4. IPC → shell: toon 💤 icon op tab
        ↓
   Klik op snoozed tab
        ↓
   SnoozeManager.wake(tabId)
        ↓
-  1. Navigeer webview terug naar opgeslagen URL
-  2. Verwijder uit snoozedTabs
-  3. IPC → shell: verwijder 💤 icoon
+  1. Navigeer webview terug to opgeslagen URL
+  2. Delete out snoozedTabs
+  3. IPC → shell: delete 💤 icon
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie | `startAPI()`, `createWindow()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 | `src/registry.ts` | ManagerRegistry interface | `interface ManagerRegistry` |
 | `src/tabs/manager.ts` | TabManager — tab lifecycle, getTab(), webContents access | `class TabManager` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **about:blank voor snooze** — navigeer webview naar `about:blank` om geheugen vrij te maken. Geen `webContents.destroy()` (niet beschikbaar voor webview tags in Electron).
-2. **Sla altijd URL + titel + favicon op** — vóór snooze, sla alle info op die nodig is om de tab visueel correct te tonen en te herstellen.
-3. **Pinned tabs nooit auto-snoozen** — alleen handmatige snooze voor pinned tabs.
-4. **Functienamen > regelnummers** — verwijs altijd naar `function registerSnoozeRoutes()`, nooit naar "regel 99"
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — hoe nieuwe component registreren
+## Rules for this feature
 
-Elke nieuwe manager moet op **3 plekken** worden aangesloten:
+> These are the HARD rules in addition to the general AGENTS.md rules.
+
+1. **about:blank for snooze** — navigeer webview to `about:blank` to geheugen vrij te maken. No `webContents.destroy()` (not beschikbaar for webview tags in Electron).
+2. **Sla always URL + title + favicon op** — vóór snooze, sla alle info op that nodig is to the tab visual correct te tonen and te herstellen.
+3. **Pinned tabs nooit auto-snoozen** — only handmatige snooze for pinned tabs.
+4. **Functienamen > regelnummers** — verwijs always to `function registerSnoozeRoutes()`, nooit to "regel 99"
+
+---
+
+## Manager Wiring — How to Register a New Component
+
+Each new manager must be wired into **3 places**:
 
 ### 1. `src/registry.ts` — `ManagerRegistry` interface
 
 ```typescript
 export interface ManagerRegistry {
-  // ... bestaande managers ...
-  snoozeManager: SnoozeManager;  // ← toevoegen
+  // ... existing managers ...
+  snoozeManager: SnoozeManager;  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
 // Na tabManager aanmaak:
@@ -101,7 +101,7 @@ if (snoozeManager) snoozeManager.destroy();
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // ═══════════════════════════════════════════════
@@ -119,25 +119,25 @@ router.post('/tabs/:id/snooze', async (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-snooze-backend.md` | SnoozeManager + discard + auto-snooze timer + API | 📋 Klaar om te starten |
-| `fase-2-ui.md` | 💤 icoon, rechtermuisklik menu, snooze indicator | ⏳ Wacht op fase 1 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-snooze-backend.md` | SnoozeManager + discard + auto-snooze timer + API | 📋 Ready to start |
+| `fase-2-ui.md` | 💤 icon, rechtermuisklik menu, snooze indicator | ⏳ Waiting for phase 1 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -155,11 +155,11 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | SnoozeManager + REST API | ⏳ niet gestart | — |
-| 2 | Shell UI (💤 badge + right-click menu) | ⏳ niet gestart | — |
+| 1 | SnoozeManager + REST API | ⏳ not started | — |
+| 2 | Shell UI (💤 badge + right-click menu) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

@@ -43,7 +43,7 @@ Last updated: March 8, 2026
 
 ### Distribution and UX
 
-- [ ] Full multi-profile UX on top of the existing `SessionManager` isolation model
+- [ ] Full multi-profile UX on top or the existing `SessionManager` isolation model
 - [ ] Auto-updater integration (`electron-updater`); `release/` still contains an old `0.1.0` manifest
 - [ ] Production-ready DMG build for macOS with current naming and metadata
 - [ ] AppImage build for Linux

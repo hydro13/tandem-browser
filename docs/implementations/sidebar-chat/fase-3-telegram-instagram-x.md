@@ -1,41 +1,41 @@
-# Fase 3 — Telegram, Instagram en X/Twitter Panels
+# Phase 3 — Telegram, Instagram and X/Twitter Panels
 
 > **Feature:** Sidebar Chat Clients
-> **Sessies:** 1 sessie
-> **Prioriteit:** MIDDEL
-> **Afhankelijk van:** Fase 2 klaar (Discord + Slack werken)
+> **Sessions:** 1 session
+> **Priority:** MIDDEL
+> **Depends on:** Phase 2 complete (Discord + Slack werken)
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Voeg de laatste drie messenger panels toe: Telegram, Instagram en X/Twitter. Het sidebar framework en het panel-patroon staan al — deze fase voegt alleen de service-specifieke configuratie en eventuele edge cases toe. Na deze fase zijn alle 6 sidebar chat clients operationeel.
+Voeg the last drie messenger panels toe: Telegram, Instagram and X/Twitter. The sidebar framework and the panel-pattern stand already — this phase voegt only the service-specific configuration and eventuele edge cases toe. After this phase are alle 6 sidebar chat clients operationeel.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `LEES-MIJ-EERST.md` (deze map) | — (lees volledig) | Context en regels |
+| `LEES-MIJ-EERST.md` (this folder) | — (read fully) | Context and rules |
 | `src/sidebar/manager.ts` | `class SidebarManager`, `DEFAULT_SERVICES` | Service definities verifiëren |
-| `shell/index.html` | `// === SIDEBAR CHAT ===` | Icon strip verifiëren — Telegram, Instagram, X moeten er al staan |
-| `shell/js/sidebar.js` (of waar sidebar JS staat) | `parseBadgeCount()`, `toggleSidebarPanel()` | Badge parsing + panel logic |
+| `shell/index.html` | `// === SIDEBAR CHAT ===` | Icon strip verifiëren — Telegram, Instagram, X must er already stand |
+| `shell/js/sidebar.js` (or waar sidebar JS staat) | `parseBadgeCount()`, `toggleSidebarPanel()` | Badge parsing + panel logic |
 | `shell/css/sidebar.css` | `.sidebar-icon` | Eventuele styling tweaks |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Verifieer dat Telegram, Instagram en X al in het framework staan
+### Step 1: Verifieer that Telegram, Instagram and X already in the framework stand
 
-**Wat:** Alle 6 services zijn al gedefinieerd in fase 1. Verifieer dat Telegram, Instagram en X correct werken door ze te openen.
+**Wat:** Alle 6 services are already gedefinieerd in phase 1. Verifieer that Telegram, Instagram and X correct werken door ze te openen.
 
-**Bestand:** `src/sidebar/manager.ts`
+**File:** `src/sidebar/manager.ts`
 
-**Zoek naar:** `DEFAULT_SERVICES` — deze drie moeten er staan:
+**Zoek to:** `DEFAULT_SERVICES` — this drie must er stand:
 
 ```typescript
 { id: 'telegram', name: 'Telegram', url: 'https://web.telegram.org/a/', partition: 'persist:telegram', icon: '✈️' },
@@ -43,24 +43,24 @@ Voeg de laatste drie messenger panels toe: Telegram, Instagram en X/Twitter. Het
 { id: 'x', name: 'X', url: 'https://x.com', partition: 'persist:x', icon: '𝕏' },
 ```
 
-Normaal gesproken zou het klikken op deze iconen al een panel moeten openen met de juiste webview. Test dit eerst voordat je verder bouwt.
+Normaal gesproken zou the clicking op this icons already a panel must openen with the juiste webview. Test this eerst voordat you verder bouwt.
 
-### Stap 2: Telegram-specifieke aanpassingen
+### Step 2: Telegram-specific aanpassingen
 
-**Wat:** Telegram Web heeft twee versies. We gebruiken Telegram Web A (`https://web.telegram.org/a/`) — dit is de modernste versie met de beste responsieve layout.
+**Wat:** Telegram Web has twee versies. We use Telegram Web A (`https://web.telegram.org/a/`) — this is the modernste versie with the beste responsieve layout.
 
 **Aandachtspunten:**
-- Telegram Web A werkt goed in smalle panels (responsive design)
-- Login gaat via QR-code OF telefoonnummer — beide werken in een webview
-- Telegram badge patroon: `Telegram (N)` — het getal staat ACHTER de naam (anders dan de meeste services die `(N) Service` gebruiken)
+- Telegram Web A works goed in smalle panels (responsive design)
+- Login gaat via QR-code OF telefoonnummer — beide werken in a webview
+- Telegram badge pattern: `Telegram (N)` — the getal staat ACHTER the name (anders then the meeste services that `(N) Service` use)
 
-**Bestand:** `shell/js/sidebar.js`
+**File:** `shell/js/sidebar.js`
 
-**Toevoegen aan:** `parseBadgeCount()` functie
+**Add about:** `parseBadgeCount()` function
 
 ```javascript
 function parseBadgeCount(serviceId, title) {
-  // Standaard: zoek (N) patroon — werkt voor WhatsApp, Discord, Instagram, X
+  // Default: zoek (N) pattern — works for WhatsApp, Discord, Instagram, X
   const numMatch = title.match(/\((\d+)\)/);
   if (numMatch) return parseInt(numMatch[1], 10);
 
@@ -69,42 +69,42 @@ function parseBadgeCount(serviceId, title) {
     return -1;
   }
 
-  // Telegram: titel patroon is "Telegram (N)" — standaard regex vangt dit al
-  // Geen extra logica nodig
+  // Telegram: title pattern is "Telegram (N)" — default regex vangt this already
+  // No extra logica nodig
 
   return 0;
 }
 ```
 
-**Opmerking:** De standaard `\((\d+)\)` regex vangt Telegram's patroon `Telegram (2)` al correct op — geen extra logica nodig.
+**Opmerking:** The default `\((\d+)\)` regex vangt Telegram's pattern `Telegram (2)` already correct op — no extra logica nodig.
 
-### Stap 3: Instagram-specifieke aanpassingen
+### Step 3: Instagram-specific aanpassingen
 
-**Wat:** Instagram's web app is volledig responsief en werkt goed in smalle panels. Geen speciale aanpassingen nodig.
-
-**Aandachtspunten:**
-- Instagram badge patroon: `(N) Instagram` — standaard patroon, wordt al gevangen door de regex
-- Instagram kan een "open in app" banner tonen bovenaan de pagina — dit is vervelend maar onvermijdelijk in een desktop webview. Robin kan deze banner wegklikken.
-- Instagram DMs werken via `https://www.instagram.com/direct/inbox/` — deze URL laadt automatisch via de navigatie in de web app
-
-**Minimum breedte:** 360px (Instagram's responsive layout schaalt goed naar beneden)
-
-### Stap 4: X/Twitter-specifieke aanpassingen
-
-**Wat:** X/Twitter's web app is volledig responsief. De sidebar levert dezelfde ervaring als een smal browservenster.
+**Wat:** Instagram's web app is fully responsief and works goed in smalle panels. No speciale aanpassingen nodig.
 
 **Aandachtspunten:**
-- X badge patroon: `(N) X` — standaard patroon
-- X kan een "Cookies accepteren" dialoog tonen bij eerste bezoek — Robin moet dit eenmalig accepteren. Het wordt opgeslagen in `persist:x`.
-- X/Twitter heeft goed responsief design met een "slim" layout voor smalle schermen
+- Instagram badge pattern: `(N) Instagram` — default pattern, is already gevangen door the regex
+- Instagram can a "open in app" banner tonen at the top the page — this is vervelend but unavoidable in a desktop webview. Robin can this banner wegklikken.
+- Instagram DMs werken via `https://www.instagram.com/direct/inbox/` — this URL loads automatisch via the navigatie in the web app
 
-**Relatie met X-Scout:** Tandem heeft een interne X-Scout agent voor X/Twitter intelligence. De sidebar X panel is NIET dezelfde als X-Scout — de sidebar is voor Robin's handmatige X/Twitter gebruik. X-Scout opereert via de hoofd-webview met stealth. Ze gebruiken verschillende partitions en mogen niet met elkaar interfereren.
+**Minimum width:** 360px (Instagram's responsive layout schaalt goed to beneden)
+
+### Step 4: X/Twitter-specific aanpassingen
+
+**Wat:** X/Twitter's web app is fully responsief. The sidebar levert the same ervaring if a narrow browser window.
+
+**Aandachtspunten:**
+- X badge pattern: `(N) X` — default pattern
+- X can a "Cookies accepteren" dialoog tonen bij first bezoek — Robin must this eenmalig accepteren. The is opgeslagen in `persist:x`.
+- X/Twitter has goed responsief design with a "slim" layout for smalle schermen
+
+**Relatie with X-Scout:** Tandem has a interne X-Scout agent for X/Twitter intelligence. The sidebar X panel is NIET the same if X-Scout — the sidebar is for Robin's handmatige X/Twitter usage. X-Scout opereert via the main webview with stealth. Ze use verschillende partitions and mogen not with elkaar interfere.
 
 ### Stap 5: Optioneel — Panel reordering
 
-**Wat:** Robin wil misschien de volgorde van de sidebar iconen aanpassen. Dit is een nice-to-have voor fase 3.
+**Wat:** Robin wil misschien the order or the sidebar icons aanpassen. Dit is a nice-to-have for phase 3.
 
-**Implementatie:** Voeg een `order` veld toe aan `SidebarConfig.panels`:
+**Implementatie:** Voeg a `order` field toe about `SidebarConfig.panels`:
 
 ```typescript
 panels: Record<string, {
@@ -112,19 +112,19 @@ panels: Record<string, {
   muted: boolean;
   width: number;
   customUrl?: string;
-  order?: number;  // ← volgorde in de icon strip
+  order?: number;  // ← order in the icon strip
 }>
 ```
 
 **API endpoint:**
 
 ```typescript
-// POST /sidebar/reorder — pas icoon volgorde aan
+// POST /sidebar/reorder — pas icon order about
 router.post('/sidebar/reorder', async (req: Request, res: Response) => {
   try {
     const { order } = req.body; // ["whatsapp", "slack", "discord", "telegram", "x", "instagram"]
     if (!order || !Array.isArray(order)) {
-      return res.status(400).json({ error: 'Missing required field: order (array of service IDs)' });
+      return res.status(400).json({ error: 'Missing required field: order (array or service IDs)' });
     }
     ctx.sidebarManager.reorderPanels(order);
     res.json({ ok: true });
@@ -134,16 +134,16 @@ router.post('/sidebar/reorder', async (req: Request, res: Response) => {
 });
 ```
 
-Dit is **optioneel** — als er geen tijd voor is, kan het in een latere sprint.
+Dit is **optional** — if er no tijd for is, can the in a latere sprint.
 
 ### Stap 6: Optioneel — Panel enable/disable
 
-**Wat:** Robin wil misschien niet alle 6 iconen zien. Voeg een enable/disable per service toe.
+**Wat:** Robin wil misschien not alle 6 icons zien. Voeg a enable/disable per service toe.
 
 **API endpoint:**
 
 ```typescript
-// POST /sidebar/enable — enable/disable een service
+// POST /sidebar/enable — enable/disable a service
 router.post('/sidebar/enable', async (req: Request, res: Response) => {
   try {
     const { service, enabled } = req.body;
@@ -156,13 +156,13 @@ router.post('/sidebar/enable', async (req: Request, res: Response) => {
 });
 ```
 
-**Shell-side:** Verberg iconen met `enabled: false` in de icon strip.
+**Shell-side:** Verberg icons with `enabled: false` in the icon strip.
 
-Dit is ook **optioneel** voor fase 3.
+Dit is also **optional** for phase 3.
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 # Test 1: Open Telegram panel
@@ -187,7 +187,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   -d '{"service": "x"}'
 # Verwacht: {"ok":true,"panel":{"id":"x","name":"X",...}}
 
-# Test 4: Status — alle 6 services zichtbaar
+# Test 4: Status — alle 6 services visible
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/sidebar/status
 # Verwacht: {"ok":true,"services":[...6 services...]}
@@ -203,7 +203,7 @@ for svc in whatsapp discord slack telegram instagram x; do
 done
 # Verwacht: 6x {"ok":true,"visible":true,...}
 
-# Test 6 (optioneel): Panel reorder
+# Test 6 (optional): Panel reorder
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/sidebar/reorder \
   -H "Content-Type: application/json" \
@@ -212,18 +212,18 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [ ] Telegram icoon (✈️) opent Telegram Web A in sidebar panel
-- [ ] Telegram login (QR-code of telefoon) werkt in het panel
-- [ ] Telegram sessie blijft bewaard na herstart (persist:telegram)
-- [ ] Instagram icoon (📷) opent Instagram in sidebar panel
-- [ ] Instagram login werkt, feed en DMs zijn toegankelijk
-- [ ] Instagram sessie bewaard na herstart (persist:instagram)
-- [ ] X icoon (𝕏) opent X/Twitter in sidebar panel
-- [ ] X login werkt, timeline en DMs zijn toegankelijk
-- [ ] X sessie bewaard na herstart (persist:x)
-- [ ] Schakelen tussen alle 6 panels werkt soepel
-- [ ] Notification badges werken voor alle 6 services
-- [ ] Elke service onthoudt zijn eigen login, chat-positie, en scroll-state
+- [ ] Telegram icon (✈️) opens Telegram Web A in sidebar panel
+- [ ] Telegram login (QR-code or telefoon) works in the panel
+- [ ] Telegram session blijft bewaard na herstart (persist:telegram)
+- [ ] Instagram icon (📷) opens Instagram in sidebar panel
+- [ ] Instagram login works, feed and DMs are toegankelijk
+- [ ] Instagram session bewaard na herstart (persist:instagram)
+- [ ] X icon (𝕏) opens X/Twitter in sidebar panel
+- [ ] X login works, timeline and DMs are toegankelijk
+- [ ] X session bewaard na herstart (persist:x)
+- [ ] Schakelen between alle 6 panels works soepel
+- [ ] Notification badges werken for alle 6 services
+- [ ] Elke service onthoudt are own login, chat-positie, and scroll-state
 
 ---
 
@@ -231,19 +231,19 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-3-telegram-instagram-x.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-3-telegram-instagram-x.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🗨️ feat: sidebar Telegram + Instagram + X panels"
 7. git push
 8. Rapport:
@@ -257,9 +257,9 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Bekende valkuilen
 
-- [ ] Telegram Web versie — gebruik `https://web.telegram.org/a/` (Web A), niet de oude `https://web.telegram.org/z/` of `https://web.telegram.org/k/`
-- [ ] Instagram "open in app" banner — kan niet voorkomen worden, Robin moet hem wegklikken. Wordt per-sessie onthouden.
+- [ ] Telegram Web versie — usage `https://web.telegram.org/a/` (Web A), not the oude `https://web.telegram.org/z/` or `https://web.telegram.org/k/`
+- [ ] Instagram "open in app" banner — can not voorkomen be, Robin must hem wegklikken. Is per-session onthouden.
 - [ ] X/Twitter cookie-dialoog — eenmalig accepteren, opgeslagen in persist:x
-- [ ] X sidebar is NIET X-Scout — verschillende partitions, verschillende doelen. Geen interferentie.
-- [ ] TypeScript strict mode — geen `any` buiten catch
-- [ ] Test ALLE 6 services na voltooiing, niet alleen de 3 nieuwe — regressie voorkomen
+- [ ] X sidebar is NIET X-Scout — verschillende partitions, verschillende doelen. No interferentie.
+- [ ] TypeScript strict mode — no `any` buiten catch
+- [ ] Test ALLE 6 services na voltooiing, not only the 3 new — regressie voorkomen

@@ -11,7 +11,7 @@ request a private contact channel from the maintainers.
 
 Include:
 
-- a clear description of the issue
+- a clear description or the issue
 - affected version or commit
 - reproduction steps
 - impact assessment
@@ -19,7 +19,7 @@ Include:
 
 ## Scope
 
-Security issues of particular interest include:
+Security issues or particular interest include:
 
 - local API exposure or auth bypass
 - Electron sandbox or isolation breaks

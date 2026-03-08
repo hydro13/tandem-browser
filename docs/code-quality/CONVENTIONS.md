@@ -31,15 +31,15 @@ grep '"version"' package.json
 
 ### 2. Add changelog entry
 
-Add a new section at the TOP of `CHANGELOG.md` (below the header, above the previous entry):
+Add a new section at the TOP or `CHANGELOG.md` (below the header, above the previous entry):
 
 ```markdown
 ## [0.11.X] — YYYY-MM-DD
 
 ### Code Quality — Items N, M
 
-- **Item N title**: one-line description of what changed
-- **Item M title**: one-line description of what changed
+- **Item N title**: one-line description or what changed
+- **Item M title**: one-line description or what changed
 ```
 
 Keep changelog entries concise — 1-2 lines per item, not paragraphs.

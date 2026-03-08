@@ -1,25 +1,25 @@
-# Fase 1: MCP Server — Claude Code/Cowork ↔ Tandem Bridge
+# Phase 1: MCP Server — Claude Code/Cowork ↔ Tandem Bridge
 
-> 2-3 sessies | Dependency: alleen `@modelcontextprotocol/sdk`
-> Robin heeft Max Pro — Claude werkt via Cowork/Claude Code → MCP → Tandem API.
+> 2-3 sessions | Dependency: only `@modelcontextprotocol/sdk`
+> Robin has Max Pro — Claude works via Cowork/Claude Code → MCP → Tandem API.
 
 ---
 
-## Doel
+## Goal
 
-Claude Code en Cowork kunnen via MCP tools de Tandem Browser bedienen. MCP is DE primaire Claude-integratie — er is geen directe API backend.
+Claude Code and Cowork can via MCP tools the Tandem Browser bedienen. MCP is DE primaire Claude-integratie — er is no directe API backend.
 
-## Hoe het werkt
+## Hoe the works
 
 ```
-Robin opent Cowork → Cowork leest MCP config → start tandem-mcp bridge
-tandem-mcp maakt HTTP calls naar localhost:8765 → Tandem API antwoordt
-Tandem MOET draaien voor MCP werkt.
+Robin opens Cowork → Cowork leest MCP config → start tandem-mcp bridge
+tandem-mcp maakt HTTP calls to localhost:8765 → Tandem API antwoordt
+Tandem MOET draaien for MCP works.
 ```
 
-## Bestaande API (localhost:8765)
+## Existing API (localhost:8765)
 
-Auth: Bearer token in `~/.tandem/api-token`. Maar de middleware skipt requests zonder `origin` header, dus MCP server (lokaal) heeft geen token NODIG. Stuur het wel mee als best practice.
+Auth: Bearer token in `~/.tandem/api-token`. Maar the middleware skipt requests without `origin` header, dus MCP server (local) has no token NODIG. Stuur the indeed mee if best practice.
 
 ```
 POST /navigate          body: { url }
@@ -43,16 +43,16 @@ GET  /history/search    body: { query }
 
 ---
 
-## Sessie 1.1: Basis MCP Server + Lees/Navigatie Tools
+## Sessie 1.1: Basis MCP Server + Read/Navigatie Tools
 
 ### Pre-checks
 - [ ] Tandem draait op :8765 (`curl http://localhost:8765/status`)
 - [ ] `npm install @modelcontextprotocol/sdk` succesvol
-- [ ] API token bestaat (`cat ~/.tandem/api-token`)
+- [ ] API token exists (`cat ~/.tandem/api-token`)
 
-### Bestanden
+### Files
 
-**`src/mcp/api-client.ts`** — HTTP wrapper voor Tandem API:
+**`src/mcp/api-client.ts`** — HTTP wrapper for Tandem API:
 ```typescript
 import * as fs from 'fs';
 import * as path from 'path';
@@ -90,31 +90,31 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 }
 ```
 
-**`src/mcp/server.ts`** — MCP server met stdio transport.
+**`src/mcp/server.ts`** — MCP server with stdio transport.
 
-### Tools sessie 1.1
+### Tools session 1.1
 
 | Tool | Parameters | API Endpoint | Return |
 |------|-----------|--------------|--------|
 | `tandem_navigate` | `url: string` | `POST /navigate` | success/error |
-| `tandem_go_back` | - | `POST /navigate` met back | success/error |
-| `tandem_go_forward` | - | `POST /navigate` met forward | success/error |
-| `tandem_reload` | - | `POST /navigate` met reload | success/error |
-| `tandem_read_page` | - | `GET /page-content` | titel + URL + markdown tekst (max 2000 woorden) |
+| `tandem_go_back` | - | `POST /navigate` with back | success/error |
+| `tandem_go_forward` | - | `POST /navigate` with forward | success/error |
+| `tandem_reload` | - | `POST /navigate` with reload | success/error |
+| `tandem_read_page` | - | `GET /page-content` | title + URL + markdown text (max 2000 woorden) |
 | `tandem_screenshot` | - | `GET /screenshot` | base64 image (`image` content type) |
-| `tandem_get_links` | - | `GET /page-content` of JS exec | alle links op pagina |
+| `tandem_get_links` | - | `GET /page-content` or JS exec | alle links op page |
 | `tandem_wait_for_load` | `timeout?: number` | polling op page status | success wanneer geladen |
 
-### Kritieke regels
+### Kritieke rules
 
-1. **NOOIT `console.log()`** — stdout = MCP protocol. Gebruik `console.error()` voor debugging.
-2. **Screenshot als `image` content type** returnen:
+1. **NOOIT `console.log()`** — stdout = MCP protocol. Usage `console.error()` for debugging.
+2. **Screenshot if `image` content type** returnen:
    ```typescript
    { content: [{ type: "image", data: base64, mimeType: "image/png" }] }
    ```
-3. **Content truncatie:** `tandem_read_page()` stuurt markdown (niet HTML), max 2000 woorden. Gebruik ContentExtractor.
-4. **Activity logging:** Elke tool call → `POST /chat` met `from: "claude"` zodat Robin het ziet in het Kees panel.
-5. **Error als Tandem niet draait:** `"Tandem Browser is niet actief. Start Tandem met 'npm start' en probeer opnieuw."`
+3. **Content truncatie:** `tandem_read_page()` stuurt markdown (not HTML), max 2000 woorden. Usage ContentExtractor.
+4. **Activity logging:** Elke tool call → `POST /chat` with `from: "claude"` zodat Robin the sees in the Kees panel.
+5. **Error if Tandem not draait:** `"Tandem Browser is not actief. Start Tandem with 'npm start' and probeer again."`
 
 ### Package.json
 ```json
@@ -122,9 +122,9 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 ```
 
 ### Verificatie
-- [ ] MCP server start zonder errors
-- [ ] Cowork kan `tandem_read_page()` aanroepen
-- [ ] Cowork kan navigeren en pagina verandert in Tandem
+- [ ] MCP server start without errors
+- [ ] Cowork can `tandem_read_page()` aanroepen
+- [ ] Cowork can navigeren and page verandert in Tandem
 - [ ] Screenshot geeft zichtbare image
 - [ ] Tool calls verschijnen in Kees panel
 - [ ] `npx tsc` — zero errors
@@ -134,10 +134,10 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 ## Sessie 1.2: Interactie + Tabs + Chat + Extra Tools
 
 ### Pre-checks
-- [ ] Basis MCP server uit 1.1 werkt
-- [ ] Cowork kan verbinden
+- [ ] Basis MCP server out 1.1 works
+- [ ] Cowork can verbinden
 
-### Tools sessie 1.2
+### Tools session 1.2
 
 | Tool | Parameters | API Endpoint |
 |------|-----------|--------------|
@@ -149,17 +149,17 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 | `tandem_open_tab` | `url?: string` | `POST /tabs/open` |
 | `tandem_close_tab` | `tabId: string` | `POST /tabs/close` |
 | `tandem_focus_tab` | `tabId: string` | `POST /tabs/focus` |
-| `tandem_send_message` | `text: string` | `POST /chat` met `from: "claude"` |
+| `tandem_send_message` | `text: string` | `POST /chat` with `from: "claude"` |
 | `tandem_get_chat_history` | `limit?: number` | `GET /chat` |
 | `tandem_search_bookmarks` | `query: string` | `GET /bookmarks/search` |
 | `tandem_search_history` | `query: string` | `GET /history/search` |
-| `tandem_get_context` | - | meerdere calls gecombineerd |
+| `tandem_get_context` | - | multiple calls gecombineerd |
 
 ### Verificatie
-- [ ] Complete flow: navigeer → lees → klik → typ werkt end-to-end
-- [ ] Tab management werkt (open, focus, close)
+- [ ] Complete flow: navigeer → read → click → typ works end-to-end
+- [ ] Tab management works (open, focus, close)
 - [ ] Chat berichten verschijnen in Kees panel
-- [ ] Bookmarks/history search werkt
+- [ ] Bookmarks/history search works
 - [ ] `npx tsc` — zero errors
 
 ---
@@ -170,16 +170,16 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 
 | URI | Inhoud | Update trigger |
 |-----|--------|----------------|
-| `tandem://page/current` | Huidige pagina content | Bij navigatie |
+| `tandem://page/current` | Huidige page content | Bij navigatie |
 | `tandem://tabs/list` | Alle open tabs | Bij tab change |
-| `tandem://chat/history` | Chat berichten | Bij nieuw bericht |
-| `tandem://context` | Volledig browser overzicht | Bij elk event |
+| `tandem://chat/history` | Chat berichten | Bij new bericht |
+| `tandem://context` | Fully browser overzicht | Bij elk event |
 
 ### MCP Config
 
-**Voor Cowork:** Via Cowork plugin/MCP settings interface.
+**For Cowork:** Via Cowork plugin/MCP settings interface.
 
-**Voor Claude Code:** `~/.claude/settings.json`:
+**For Claude Code:** `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
@@ -194,24 +194,24 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 ### Content truncatie
 
 Implementeer in `tandem_read_page`:
-1. Gebruik bestaande `ContentExtractor` (src/content/extractor.ts)
-2. HTML → markdown via `turndown` (al geïnstalleerd)
+1. Usage existing `ContentExtractor` (src/content/extractor.ts)
+2. HTML → markdown via `turndown` (already geïnstalleerd)
 3. Max 2000 woorden
-4. Prioriteer: titel → headings → main content
+4. Prioriteer: title → headings → main content
 5. Strip navigatie, footer, ads
 
 ### Verificatie
 - [ ] Resources leesbaar vanuit Cowork
-- [ ] Config docs zijn duidelijk
-- [ ] Content truncatie werkt bij grote pagina's
+- [ ] Config docs are duidelijk
+- [ ] Content truncatie works bij grote page's
 - [ ] Setup guide geschreven
 
 ---
 
 ## Valkuilen
 
-1. **MCP SDK versie:** Pin `^1.26.0`, niet `latest`
+1. **MCP SDK versie:** Pin `^1.26.0`, not `latest`
 2. **stdio transport:** stdout = protocol, stderr = debug logging
-3. **Tandem moet draaien:** Geef duidelijke error als API niet beschikbaar
-4. **Screenshot formaat:** Gebruik MCP `image` content type
-5. **Async:** Alle API calls zijn async, MCP tools moeten dit afhandelen
+3. **Tandem must draaien:** Geef duidelijke error if API not beschikbaar
+4. **Screenshot formaat:** Usage MCP `image` content type
+5. **Async:** Alle API calls are async, MCP tools must this afhandelen

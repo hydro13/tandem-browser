@@ -1,17 +1,17 @@
-# Fase 4: Agent Autonomie
+# Phase 4: Agent Autonomie
 
-> 2-3 sessies | Geen nieuwe dependencies
-> AI kan zelfstandig browsen — met Robin's toestemming en oversight.
+> 2-3 sessions | No new dependencies
+> AI can zelfstandig browsen — with Robin's toestemming and oversight.
 
 ---
 
-## Doel
+## Goal
 
-Claude (via MCP/Cowork) kan zelfstandig taken uitvoeren: zoeken, lezen, vergelijken, rapporteren. Robin geeft een opdracht, ziet de voortgang real-time, en kan op elk moment ingrijpen.
+Claude (via MCP/Cowork) can zelfstandig taken uitvoeren: zoeken, read, vergelijken, rapporteren. Robin geeft a opdracht, sees the voortgang real-time, and can op elk moment ingrijpen.
 
-## Bestaande referentie: X-Scout (src/agents/x-scout.ts)
+## Existing referentie: X-Scout (src/agents/x-scout.ts)
 
-Herbruikbare patronen:
+Herbruikbare patterns:
 ```typescript
 const TIMING = {
   betweenPages: { min: 8000, max: 20000 },
@@ -51,23 +51,23 @@ interface TaskStep {
 
 Opslag: `~/.tandem/tasks/`
 
-### Approval Systeem
+### Approval System
 
-Risico-niveaus:
+Risk-niveaus:
 
 | Niveau | Acties | Default |
 |--------|--------|---------|
-| Geen risico | Lezen, screenshots, scrollen | Auto-approve |
-| Laag risico | Navigeren, tabs openen | Auto-approve (configureerbaar) |
-| Medium risico | Klikken, selecteren | Vraag bij onbekende sites |
-| Hoog risico | Typen, formulieren, bestellen | Altijd vragen |
+| No risk | Lezen, screenshots, scrollen | Auto-approve |
+| Laag risk | Navigeren, tabs openen | Auto-approve (configureerbaar) |
+| Medium risk | Klikken, selecteren | Question bij onbekende sites |
+| Hoog risk | Typen, formulieren, bestellen | Altijd questions |
 
 UI in Kees panel:
 ```
 ┌─────────────────────────────────────┐
-│ 🤖 Kees wil een actie uitvoeren:   │
+│ 🤖 Kees wil a actie uitvoeren:   │
 │                                     │
-│ ✏️ Tekst typen in zoekveld:        │
+│ ✏️ Text typen in zoekveld:        │
 │ "MacBook Pro M4 best price"         │
 │ Op: google.com                      │
 │                                     │
@@ -78,7 +78,7 @@ UI in Kees panel:
 
 ### Noodrem
 
-**Escape** of dedicated knop = stop ALLE agent-activiteit onmiddellijk.
+**Escape** or dedicated knop = stop ALLE agent-activiteit onmiddellijk.
 - Alle running tasks → paused
 - Alle pending tool calls → cancelled
 - Chat notificatie: "Agent activiteit gestopt door Robin"
@@ -87,22 +87,22 @@ UI in Kees panel:
 
 ```
 AI Autonomie:
-  ☑ Pagina's lezen zonder vragen
-  ☑ Navigeren zonder vragen
-  ☐ Klikken zonder vragen
-  ☐ Tekst typen zonder vragen
-  ☐ Formulieren invullen zonder vragen
+  ☑ Page's read without questions
+  ☑ Navigeren without questions
+  ☐ Klikken without questions
+  ☐ Text typen without questions
+  ☐ Formulieren invullen without questions
 
 Vertrouwde sites:
   + google.com
   + wikipedia.org
-  + [Toevoegen...]
+  + [Add...]
 ```
 
 ### Verificatie
-- [ ] Claude kan taak starten via MCP
-- [ ] Robin ziet approval request in panel
-- [ ] Goedkeuren/afwijzen werkt
+- [ ] Claude can taak starten via MCP
+- [ ] Robin sees approval request in panel
+- [ ] Goedkeuren/afwijzen works
 - [ ] Noodrem stopt alles
 - [ ] `npx tsc` — zero errors
 
@@ -112,19 +112,19 @@ Vertrouwde sites:
 
 ### Tab isolatie
 
-Agents werken in eigen tabs:
+Agents werken in own tabs:
 ```
 [🙂 Robin's Tab] [🤖 Kees: Google] [🤖 Kees: Amazon]
 ```
 
 - `tabSource` property: `'robin' | 'kees'`
-- Visuele indicator in tab header
-- Robin kan altijd een AI tab overnemen (klik = claim)
-- AI werkt NOOIT in Robin's actieve tab tenzij expliciet gevraagd
+- Visual indicator in tab header
+- Robin can always a AI tab overnemen (click = claim)
+- AI works NOOIT in Robin's actieve tab tenzij expliciet gevraagd
 
 ### Menselijke timing
 
-Hergebruik X-Scout patronen. Later: sample uit Robin's echte behavioral data via BehaviorObserver.
+Reuse X-Scout patterns. Later: sample from Robin's real behavioral data via `BehaviorObserver`.
 
 ```typescript
 function humanDelay(timing: { min: number, max: number }): Promise<void> {
@@ -139,7 +139,7 @@ MCP high-level tool:
 ```
 tandem_research(topic: string, maxPages?: number)
 ```
-- Opent eigen tabs
+- Opens own tabs
 - Zoekt via Google/DuckDuckGo
 - Leest top resultaten
 - Samenvat bevindingen
@@ -163,9 +163,9 @@ interface ActivityEntry {
 Zichtbaar in Kees panel activity tab.
 
 ### Verificatie
-- [ ] Claude kan zelfstandig 5 pagina's onderzoeken
-- [ ] Robin ziet voortgang real-time
-- [ ] AI stopt als Robin ingrijpt (noodrem)
-- [ ] Menselijke timing zichtbaar
-- [ ] Activity log toont alle acties
+- [ ] Claude can zelfstandig 5 page's onderzoeken
+- [ ] Robin sees voortgang real-time
+- [ ] AI stopt if Robin ingrijpt (noodrem)
+- [ ] Menselijke timing visible
+- [ ] Activity log shows alle acties
 - [ ] `npx tsc` — zero errors

@@ -4,7 +4,7 @@
 
 ## Goal
 
-Build an active reconciliation layer that measures and compensates for the telemetry gap caused by DNR-based extensions (ad blockers). Instead of only _warning_ about the conflict, this phase actively _measures_ what Guardian misses and fills the gaps in SecurityDB.
+Build an active reconciliation layer that measures and compensates for the telemetry gap caused by DNR-based extensions (ad blockers). Instead or only _warning_ about the conflict, this phase actively _measures_ what Guardian misses and fills the gaps in SecurityDB.
 
 This phase is **only needed if Phase 1's empirical DNR test confirmed that Guardian's `onBeforeRequest` misses requests blocked by DNR rules.** If Guardian still sees all requests despite DNR rules, this phase can be skipped — update STATUS.md accordingly.
 
@@ -16,12 +16,12 @@ When an extension like uBlock Origin installs `declarativeNetRequest` rules, Chr
 
 1. Extension DNR blocks request to `tracking.example.com`
 2. Guardian's `onBeforeRequest` (via RequestDispatcher) **never fires** for that request
-3. SecurityDB has no record of the request → EvolutionEngine baseline is incomplete
+3. SecurityDB has no record or the request → EvolutionEngine baseline is incomplete
 4. The user has _less_ security visibility, not more
 
 ### The Solution: Reconciliation
 
-Instead of fighting the DNR system (which would break extensions), we build a layer that:
+Instead or fighting the DNR system (which would break extensions), we build a layer that:
 
 1. **Knows what DNR rules are installed** — read the extension's DNR rule files
 2. **Observes what Guardian actually sees** — count requests per domain

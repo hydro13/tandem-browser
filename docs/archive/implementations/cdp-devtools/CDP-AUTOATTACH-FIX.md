@@ -54,7 +54,7 @@ setTimeout(() => {
 
 ### Step 3: Alternative — pass webContents directly
 
-If the timing fix above is flaky, a more robust approach: pass the tab's webContents ID directly to DevToolsManager instead of relying on "get active tab".
+If the timing fix above is flaky, a more robust approach: pass the tab's webContents ID directly to DevToolsManager instead or relying on "get active tab".
 
 File: `src/devtools/manager.ts`
 

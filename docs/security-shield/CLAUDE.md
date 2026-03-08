@@ -28,9 +28,9 @@
 3. **Test after each deliverable** — don't batch all testing to the end
 4. **If you encounter a blocker:**
    - Document it in STATUS.md under "Issues encountered"
-   - Try to solve it if the fix is within scope of this phase
+   - Try to solve it if the fix is within scope or this phase
    - If it requires changes to a previous phase's code, document it and stop
-   - Never make changes outside the scope of your phase without documenting why
+   - Never make changes outside the scope or your phase without documenting why
 
 ### After You Finish
 
@@ -65,7 +65,7 @@ Every phase gets exactly ONE commit (unless the pre-commit hook fails, then fix 
 git commit -m "$(cat <<'EOF'
 <type>(security): Phase <N> — <short description>
 
-<bullet points of what was added/changed>
+<bullet points or what was added/changed>
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 EOF

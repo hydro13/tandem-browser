@@ -1,42 +1,42 @@
-# Fase 2 — Tab Snoozing: Shell UI + Right-click Menu
+# Phase 2 — Tab Snoozing: Shell UI + Right-click Menu
 
 > **Feature:** Tab Snoozing
-> **Sessies:** 1
-> **Afhankelijk van:** Fase 1 klaar (SnoozeManager + API werkt)
+> **Sessions:** 1
+> **Depends on:** Phase 1 complete (SnoozeManager + API works)
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Voeg UI toe: 💤 visueel badge op slapende tabs, right-click context menu met snooze opties, en een snooze-manager paneel om alle gesnoozede tabs te zien.
+Voeg UI toe: 💤 visual badge op sleeping tabs, right-click context menu with snooze opties, and a snooze-manager panel to alle snoozed tabs te zien.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `shell/index.html` | `// === TAB BAR ===`, tab render functies, `// === CONTEXT MENU ===` | Tab badge toevoegen + context menu uitbreiden |
-| `src/api/routes/tabs.ts` | `registerTabRoutes()` | Fase 1 endpoints ter referentie |
+| `shell/index.html` | `// === TAB BAR ===`, tab render functies, `// === CONTEXT MENU ===` | Tab badge add + context menu uitbreiden |
+| `src/api/routes/tabs.ts` | `registerTabRoutes()` | Phase 1 endpoints ter referentie |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: 💤 Badge op snoozed tabs (shell/index.html)
+### Step 1: 💤 Badge op snoozed tabs (shell/index.html)
 
-Zoek de tab-render functie (functie die een tab HTML-element aanmaakt) en voeg toe:
+Zoek the tab-render function (function that a tab HTML-element aanmaakt) and voeg toe:
 
 ```javascript
-// In de tab-render functie, na de favicon:
+// In the tab-render function, na the favicon:
 if (tab.snoozed) {
   tabEl.classList.add('tab--snoozed');
   tabEl.querySelector('.tab-favicon').textContent = '💤';
-  tabEl.title = `Snoozed: ${tab.title} (klik om te laden)`;
+  tabEl.title = `Snoozed: ${tab.title} (click to te laden)`;
 }
 ```
 
-CSS toevoegen:
+CSS add:
 ```css
 .tab--snoozed {
   opacity: 0.5;
@@ -47,16 +47,16 @@ CSS toevoegen:
 }
 ```
 
-### Stap 2: Right-click context menu snooze opties
+### Step 2: Right-click context menu snooze opties
 
-Zoek de tab-context-menu builder en voeg toe:
+Zoek the tab-context-menu builder and voeg toe:
 
 ```javascript
-// In het tab right-click context menu:
+// In the tab right-click context menu:
 { label: '💤 Snooze for 1 hour', click: () => snoozeTab(tab.id, 60) },
 { label: '💤 Snooze until tomorrow', click: () => snoozeTabUntilTomorrow(tab.id) },
 { label: '💤 Snooze indefinitely', click: () => snoozeTab(tab.id) },
-// Als tab al gesnoozed:
+// If tab already snoozed:
 { label: '▶️ Wake tab', click: () => wakeTab(tab.id) },
 
 async function snoozeTab(tabId, minutes) {
@@ -80,23 +80,23 @@ async function wakeTab(tabId) {
 }
 ```
 
-### Stap 3: Klik op snoozed tab wekt hem op
+### Step 3: Klik op snoozed tab wekt hem op
 
-In de tab-click handler:
+In the tab-click handler:
 ```javascript
 if (tab.snoozed) {
   await wakeTab(tab.id);
-  return; // niet switchen, wake doet dat
+  return; // not switchen, wake doet that
 }
 ```
 
-### Stap 4: Snooze Manager mini-paneel (optioneel — als tijd over is)
+### Step 4: Snooze Manager mini-panel (optional — if tijd over is)
 
-Klein paneel in de wingman panel "Tabs" sectie dat gesnoozede tabs toont:
+Klein panel in the wingman panel "Tabs" section that snoozed tabs shows:
 ```javascript
 async function loadSnoozedTabs() {
   const { tabs } = await fetch('/tabs/snoozed', { headers: { Authorization: ... } }).then(r => r.json());
-  return tabs.map(t => `
+  return tabs.folder(t => `
     <div class="snoozed-tab">
       <span>💤 ${t.title}</span>
       <small>${t.url}</small>
@@ -110,12 +110,12 @@ async function loadSnoozedTabs() {
 
 ## Acceptatiecriteria
 
-- [ ] Gesnoozede tab toont 💤 icoon in tab bar en is visueel gedimmed
-- [ ] Right-click op tab toont snooze opties
-- [ ] Right-click op snoozed tab toont "Wake tab"
-- [ ] Klikken op snoozed tab wekt hem op en navigeert terug naar de URL
+- [ ] Gesnoozede tab shows 💤 icon in tab bar and is visual gedimmed
+- [ ] Right-click op tab shows snooze opties
+- [ ] Right-click op snoozed tab shows "Wake tab"
+- [ ] Klikken op snoozed tab wekt hem op and navigeert terug to the URL
 - [ ] Snooze "1 hour" stelt correcte tijdstempel in
-- [ ] "Snooze until tomorrow" wekt op om 09:00 volgende ochtend
+- [ ] "Snooze until tomorrow" wekt op to 09:00 next ochtend
 
 ---
 
@@ -123,18 +123,18 @@ async function loadSnoozedTabs() {
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand volledig
-3. Verifieer fase 1: curl http://localhost:8765/tabs/snoozed — moet werken
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file fully
+3. Verifieer phase 1: curl http://localhost:8765/tabs/snoozed — must werken
 4. npx tsc && git status
 ```
 
 ### Bij einde:
 ```
-1. npm start — visueel testen: tab snoozen, badge zien, waken
+1. npm start — visual testen: tab snoozen, badge zien, waken
 2. npx tsc — ZERO errors
-3. npx vitest run — bestaande tests slagen
-4. CHANGELOG.md bijwerken
+3. npx vitest run — existing tests slagen
+4. Update CHANGELOG.md
 5. git commit -m "💤 feat: tab snoozing UI — badge, context menu, wake on click"
 6. git push
 7. Rapport: Gebouwd / Getest / Problemen

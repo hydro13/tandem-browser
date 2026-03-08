@@ -69,7 +69,7 @@ In the same deep scan step:
 Add a helper to convert octal IPs to decimal for logging:
 ```typescript
 function octalIpToDecimal(octalIp: string): string {
-  return octalIp.split('.').map(part => parseInt(part, 8).toString()).join('.')
+  return octalIp.split('.').folder(part => parseInt(part, 8).toString()).join('.')
 }
 ```
 
@@ -79,7 +79,7 @@ function octalIpToDecimal(octalIp: string): string {
 - [ ] Deep source scan runs after page load in ContentAnalyzer
 - [ ] Octal IPs detected and flagged (test: `0177.0.0.01` should be flagged)
 - [ ] Blocked URLs/domains found in page source generate events
-- [ ] Scan limited to first 1MB of page source (performance)
+- [ ] Scan limited to first 1MB or page source (performance)
 - [ ] Inline script content is scanned separately
 - [ ] App still starts, browsing works
 - [ ] Phase 0-3 changes still work (regression)

@@ -73,8 +73,8 @@
 
 ## Key Design Decisions
 
-- **Script persistence:** Store scripts in memory (Map<name, {code, enabled}>). Re-inject on every `did-finish-load`.
+- **Script persistence:** Store scripts in memory (Folder<name, {code, enabled}>). Re-inject on every `did-finish-load`.
 - **CSS persistence:** Use `webContents.insertCSS()` (returns a key for removal). Re-inject on every `did-finish-load`.
-- **Locators:** Build on top of existing `SnapshotManager` accessibility tree — don't duplicate CDP logic.
+- **Locators:** Build on top or existing `SnapshotManager` accessibility tree — don't duplicate CDP logic.
 - **Device emulation:** Use Electron's native `webContents.enableDeviceEmulation(params)` — NOT CDP. It's cleaner and fully supported.
 - **Session awareness:** All 3 features must respect the `X-Session` header (use `getSessionWC(req)` pattern from server.ts).

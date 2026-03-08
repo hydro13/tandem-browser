@@ -1,31 +1,31 @@
-# Fase 4 — Tab Context Menu: "Add to Pinboard"
+# Phase 4 — Tab Context Menu: "Add to Pinboard"
 
 > **Feature:** Pinboards
-> **Prioriteit:** HOOG — #1 pijnpunt Robin
-> **Afhankelijk van:** Fase 1 (backend API) ✅ klaar
+> **Priority:** HIGH — #1 pijnpunt Robin
+> **Depends on:** Phase 1 (backend API) ✅ done
 
 ---
 
-## Doel
+## Goal
 
-"Add to Pinboard" toevoegen aan het **tab rechtermuisklik menu** (het custom DOM menu in shell/index.html). Wanneer geklikt → submenu met alle boards → pin aangemaakt voor die tab.
+"Add to Pinboard" add about the **tab rechtermuisklik menu** (the custom DOM menu in shell/index.html). Wanneer geklikt → submenu with alle boards → pin aangemaakt for that tab.
 
 ---
 
-## Bestaande code te lezen
+## Existing code to read
 
-| Bestand | Zoek naar | Waarom |
+| File | Look for | Why |
 |---------|-----------|--------|
-| `shell/index.html` | `showTabContextMenu(` | Hier het submenu toevoegen |
-| `shell/index.html` | `wsWorkspaces` array en "Move to workspace" submenu | Exact hetzelfde patroon gebruiken voor boards submenu |
-| `shell/index.html` | `TOKEN` const | Auth header voor fetch |
-| `shell/index.html` | `pbCreateBoard`, `pbState` | Begrijpen hoe pinboard state werkt |
+| `shell/index.html` | `showTabContextMenu(` | Hier the submenu add |
+| `shell/index.html` | `wsWorkspaces` array and "Move to workspace" submenu | Exact hetzelfde pattern use for boards submenu |
+| `shell/index.html` | `TOKEN` const | Auth header for fetch |
+| `shell/index.html` | `pbCreateBoard`, `pbState` | Begrijpen hoe pinboard state works |
 
 ---
 
 ## Wat te bouwen
 
-### In `showTabContextMenu()` — nieuw menu item toevoegen
+### In `showTabContextMenu()` — new menu item add
 
 Na "Move to Workspace" submenu, vóór "Mute Tab":
 
@@ -41,7 +41,7 @@ Na "Move to Workspace" submenu, vóór "Mute Tab":
       headers: { Authorization: `Bearer ${TOKEN}` }
     });
     const data = await res.json();
-    return (data.boards || []).map(board => ({
+    return (data.boards || []).folder(board => ({
       label: `${board.emoji} ${board.name}`,
       click: async () => {
         const tab = tabs.get(tabId); // tabId from context menu scope
@@ -66,16 +66,16 @@ Na "Move to Workspace" submenu, vóór "Mute Tab":
 }
 ```
 
-### Hoe het tab context menu werkt (lees dit goed!)
+### Hoe the tab context menu works (read this goed!)
 
-Het menu in `showTabContextMenu()` is een **custom DOM menu** — GEEN native Electron menu. Kijk hoe "Move to Workspace" submenu gebouwd is: het laadt workspaces synchroon en bouwt submenu items als DOM elementen.
+The menu in `showTabContextMenu()` is a **custom DOM menu** — NOT a native Electron menu. Look at how the "Move to Workspace" submenu is built: it loads workspaces synchronously and builds submenu items as DOM elements.
 
-**Probleem:** De fetch voor boards is async maar het context menu wordt sync gebouwd. **Oplossing:** Boards ophalen VOORDAT het menu getoond wordt, dan boards meegeven aan `showTabContextMenu()`.
+**Probleem:** The fetch for boards is async but the context menu is sync built. **Oplossing:** Boards ophalen VOORDAT the menu getoond is, then boards meegeven about `showTabContextMenu()`.
 
-### Aanpak
+### Approach
 
-1. In het `contextmenu` event op `.tab` elementen: fetch boards eerst, dan `showTabContextMenu(tabId, x, y, boards)`
-2. In `showTabContextMenu()`: parameter `boards` toevoegen, submenu direct bouwen zonder async
+1. In the `contextmenu` event op `.tab` elementen: fetch boards eerst, then `showTabContextMenu(tabId, x, y, boards)`
+2. In `showTabContextMenu()`: parameter `boards` add, submenu direct bouwen without async
 
 ### CSS — pin-flash animatie
 
@@ -95,11 +95,11 @@ Het menu in `showTabContextMenu()` is een **custom DOM menu** — GEEN native El
 ## Acceptatiecriteria
 
 ```
-1. Rechtermuisklik op tab → context menu toont "Add to Pinboard" submenu
-2. Submenu toont alle bestaande boards met emoji
+1. Rechtermuisklik op tab → context menu shows "Add to Pinboard" submenu
+2. Submenu shows alle existing boards with emoji
 3. Board aanklikken → pin aangemaakt (POST /pinboards/:id/items)
-4. Tab flitst kort indigo op als bevestiging
-5. Als er geen boards zijn: "No boards yet" disabled item tonen
+4. Tab flitst kort indigo op if bevestiging
+5. If er no boards are: "No boards yet" disabled item tonen
 6. npx tsc — zero errors
 ```
 
@@ -109,18 +109,18 @@ Het menu in `showTabContextMenu()` is een **custom DOM menu** — GEEN native El
 
 ### Bij start:
 ```
-1. Lees docs/implementations/pinboards/LEES-MIJ-EERST.md
-2. Lees dit bestand volledig
+1. Read docs/implementations/pinboards/LEES-MIJ-EERST.md
+2. Read this file fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees shell/index.html → zoek showTabContextMenu() en de workspace submenu implementatie
+4. Read shell/index.html → zoek showTabContextMenu() and the workspace submenu implementatie
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors
-2. Visueel getest: tab rechtermuisklik → "Add to Pinboard" → board kiezen → pin aangemaakt
-3. CHANGELOG.md bijwerken
+2. Visual getest: tab rechtermuisklik → "Add to Pinboard" → board kiezen → pin aangemaakt
+3. Update CHANGELOG.md
 4. git commit -m "feat: add 'Add to Pinboard' to tab context menu"
 5. git push
-6. Rapport: wat gebouwd, hoe getest, problemen
+6. Rapport: wat built, hoe getest, problemen
 ```

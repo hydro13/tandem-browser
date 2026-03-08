@@ -20,7 +20,7 @@ Wire confidence levels into the three highest-traffic security modules: Guardian
 
 ### 5B.1 Guardian confidence levels
 
-Map each detection type in Guardian to a confidence level:
+Folder each detection type in Guardian to a confidence level:
 - **Blocklist match** (domain on blocklist): `AnalysisConfidence.BLOCKLIST` (100)
 - **Untrusted domain block** (trust score too low in strict mode): `AnalysisConfidence.SPECULATIVE` (900)
 - **Suspicious redirect chain**: `AnalysisConfidence.HEURISTIC` (700)
@@ -30,7 +30,7 @@ Find every `logEvent()` call in `guardian.ts` and add the appropriate confidence
 
 ### 5B.2 OutboundGuard confidence levels
 
-Map each detection type:
+Folder each detection type:
 - **Credential data to third party**: `AnalysisConfidence.CREDENTIAL_EXFIL` (200)
 - **Cookie exfiltration**: `AnalysisConfidence.CREDENTIAL_EXFIL` (200)
 - **Suspicious outbound data**: `AnalysisConfidence.HEURISTIC` (700)
@@ -40,7 +40,7 @@ Find every `logEvent()` call in `outbound-guard.ts` and add confidence.
 
 ### 5B.3 ScriptGuard confidence levels
 
-Map each detection type:
+Folder each detection type:
 - **Script on blocked domain** (from Phase 3-A): `AnalysisConfidence.KNOWN_MALWARE_HASH` (300)
 - **Rule engine critical match**: `AnalysisConfidence.HEURISTIC` (700) — rules are pattern-based
 - **Rule engine high match**: `AnalysisConfidence.HEURISTIC` (700)

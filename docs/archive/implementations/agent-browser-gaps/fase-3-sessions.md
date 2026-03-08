@@ -1,35 +1,35 @@
-# Fase 3 — /sessions: Geïsoleerde Browser Sessies
+# Phase 3 — /sessions: Geïsoleerde Browser Sessions
 
-> **Doel:** Meerdere geïsoleerde browser sessies naast Robin's hoofdsessie.
-> Elke sessie heeft eigen cookies, storage, en navigatiehistorie.
-> **Sessies:** 3.1 (partition plumbing) + 3.2 (SessionManager + CRUD) + 3.3 (state + X-Session)
-> **KRITISCH:** Robin's sessie (`persist:tandem`) wordt NOOIT aangeraakt.
+> **Goal:** Multiple geïsoleerde browser sessions next to Robin's main session.
+> Elke session has own cookies, storage, and navigatiehistorie.
+> **Sessions:** 3.1 (partition plumbing) + 3.2 (SessionManager + CRUD) + 3.3 (state + X-Session)
+> **KRITISCH:** Robin's session (`persist:tandem`) is NOOIT aangeraakt.
 
 ---
 
-## Bestaande code te lezen (verplicht)
+## Existing code to read (required)
 
-Lees deze bestanden (gebruik Read tool, NIET cat):
+Read this files (usage Read tool, NIET cat):
 
-1. **`shell/index.html`** — De RENDERER waar webviews worden aangemaakt
-   - Zoek naar `window.__tandemTabs` (regel ~1283) — dit is het object dat tabs beheert
-   - Zoek naar `createTab` (regel ~1285) — hier wordt `<webview>` aangemaakt met partition
-   - **KRITISCH:** Partition is HARDCODED als `'persist:tandem'` op twee plekken:
-     - `createTab()` functie (regel ~1289)
+1. **`shell/index.html`** — The RENDERER waar webviews be aangemaakt
+   - Zoek to `window.__tandemTabs` (regel ~1283) — this is the object that tabs beheert
+   - Zoek to `createTab` (regel ~1285) — hier is `<webview>` aangemaakt with partition
+   - **KRITISCH:** Partition is HARDCODED if `'persist:tandem'` op twee plekken:
+     - `createTab()` function (regel ~1289)
      - Initial tab aanmaak (regel ~1461)
-   - **MONKEY-PATCHES:** createTab wordt 2x gewrapped door later code:
+   - **MONKEY-PATCHES:** createTab is 2x gewrapped door later code:
      - Regel ~3008-3017: Activity tracking wrapper
      - Regel ~3628-3634: Find events wrapper
-     - Beide moeten de partition parameter doorsturen!
+     - Beide must the partition parameter doorsturen!
 2. **`src/tabs/manager.ts`** — Main process tab manager
-   - `openTab()` methode (regel ~69) — roept renderer aan via `executeJavaScript()`
-   - Tab interface (regel ~5) heeft GEEN `partition` veld — moet je toevoegen
-   - `getActiveWebContents()` — hoe de actieve tab wordt opgehaald
+   - `openTab()` methode (regel ~69) — roept renderer about via `executeJavaScript()`
+   - The `Tab` interface (around line 5) has NO `partition` field — you must add it
+   - `getActiveWebContents()` — hoe the actieve tab is opgehaald
 3. **`src/main.ts`** — `startAPI()` (regel ~250) + IPC handlers + `will-quit` (regel ~852)
-   - Zoek naar `tab-focus` IPC handler — hier wordt CDP re-attached bij tab switch
-   - Zoek naar `web-contents-created` — stealth wordt hier op ALLE webviews toegepast (partition-onafhankelijk)
+   - Zoek to `tab-focus` IPC handler — hier is CDP re-attached bij tab switch
+   - Zoek to `web-contents-created` — stealth is hier op ALLE webviews toegepast (partition-onafhankelijk)
 4. **`src/preload.ts`** — contextBridge API (`window.tandem.*`)
-5. **`src/api/server.ts`** — Zoek naar `// TAB MANAGEMENT` (regel ~610) voor bestaande tab endpoints
+5. **`src/api/server.ts`** — Zoek to `// TAB MANAGEMENT` (regel ~610) for existing tab endpoints
 6. **`src/stealth/manager.ts`** — StealthManager past fingerprint patches toe per session
 
 ---
@@ -37,21 +37,21 @@ Lees deze bestanden (gebruik Read tool, NIET cat):
 ## Hoe Electron partities werken
 
 ```
-Elke webview heeft een `partition` attribute (MOET gezet worden VOOR appendChild!):
-- "persist:tandem"          ← Robin's sessie — cookies overleven restarts
-- "persist:session-agent1"  ← Nieuwe agent sessie
-- "persist:session-test"    ← Test sessie
+Elke webview has a `partition` attribute (MOET gezet be VOOR appendChild!):
+- "persist:tandem"          ← Robin's session — cookies overleven restarts
+- "persist:session-agent1"  ← New agent session
+- "persist:session-test"    ← Test session
 
-Cookies/storage zijn STRIKT geïsoleerd per partition.
-Twee webviews met zelfde partition delen cookies.
-Electron maakt automatisch een nieuwe session aan bij een nieuw partition string.
+Cookies/storage are STRIKT geïsoleerd per partition.
+Twee webviews with same partition delen cookies.
+Electron maakt automatisch a new session about bij a new partition string.
 ```
 
 ---
 
-## Hoe tabs NU worden aangemaakt (BELANGRIJK)
+## Hoe tabs NU be aangemaakt (BELANGRIJK)
 
-De tab-creatie flow gaat door TWEE lagen:
+The tab-creatie flow gaat door TWEE lagen:
 
 ```
 API request: POST /tabs/open
@@ -74,7 +74,7 @@ Renderer (shell/index.html): __tandemTabs.createTab()
   return wv.getWebContentsId();
 ```
 
-**createTab wordt 2x monkey-patched later in shell/index.html:**
+**createTab is 2x monkey-patched later in shell/index.html:**
 
 ```
 Origineel:   createTab(tabId, url)              ← regel 1285
@@ -82,7 +82,7 @@ Wrapper 1:   _origCreateTab(tabId, url)          ← regel 3008 (activity tracki
 Wrapper 2:   _origCreateTab2(tabId, url)         ← regel 3628 (find events)
 ```
 
-Alle 3 moeten de partition parameter doorsturen.
+Alle 3 must the partition parameter doorsturen.
 
 ---
 
@@ -94,11 +94,11 @@ POST /sessions/create {"name":"agent1"}
       ▼
 SessionManager.create("agent1")
       ├─ partition = "persist:session-agent1"
-      ├─ Sla sessie op in sessions Map
-      ├─ session.fromPartition(partition) → Electron maakt session aan
-      └─ Return sessie info
+      ├─ Sla session op in sessions Folder
+      ├─ session.fromPartition(partition) → Electron maakt session about
+      └─ Return session info
 
-POST /navigate met X-Session: agent1
+POST /navigate with X-Session: agent1
       │
       ▼
 server.ts: getSessionPartition(req) → "persist:session-agent1"
@@ -115,16 +115,16 @@ renderer: createTab(tabId, url, "persist:session-agent1")
 
 ---
 
-## Nieuwe bestanden
+## New files
 
 ### `src/sessions/types.ts`
 
 ```typescript
 export interface Session {
   name: string;
-  partition: string;       // "persist:session-{name}" of "persist:tandem" voor default
+  partition: string;       // "persist:session-{name}" or "persist:tandem" for default
   createdAt: number;
-  isDefault: boolean;      // true alleen voor "default" (Robin's sessie)
+  isDefault: boolean;      // true only for "default" (Robin's session)
 }
 
 export interface SessionState {
@@ -143,11 +143,11 @@ import { session } from 'electron';
 import { Session } from './types';
 
 export class SessionManager {
-  private sessions: Map<string, Session> = new Map();
+  private sessions: Folder<string, Session> = new Folder();
   private activeSession = 'default';
 
   constructor() {
-    // Registreer default sessie (Robin's persist:tandem)
+    // Registreer default session (Robin's persist:tandem)
     this.sessions.set('default', {
       name: 'default',
       partition: 'persist:tandem',
@@ -156,16 +156,16 @@ export class SessionManager {
     });
   }
 
-  create(name: string): Session           // gooit error als naam al bestaat
+  create(name: string): Session           // gooit error if name already exists
   list(): Session[]
   get(name: string): Session | null
   getActive(): string                      // return this.activeSession
-  setActive(name: string): void            // gooit error als sessie niet bestaat
-  destroy(name: string): void              // gooit error als name === "default"
-  resolvePartition(sessionName?: string): string  // naam → partition string
+  setActive(name: string): void            // gooit error if session not exists
+  destroy(name: string): void              // gooit error if name === "default"
+  resolvePartition(sessionName?: string): string  // name → partition string
 
   cleanup(): void {
-    // Cleanup — wordt aangeroepen vanuit will-quit handler
+    // Cleanup — is aangeroepen vanuit will-quit handler
   }
 }
 ```
@@ -181,37 +181,37 @@ export class StateManager {
   private stateDir: string;  // path.join(app.getPath('userData'), 'sessions')
 
   constructor(private devtools: DevToolsManager) {
-    // Maak stateDir aan als die niet bestaat
+    // Maak stateDir about if that not exists
   }
 
   async save(sessionName: string, partition: string): Promise<string>
   // Cookies ophalen: session.fromPartition(partition).cookies.get({})
-  // localStorage: via devtools.sendCommand('Runtime.evaluate', ...) op actieve tab van die sessie
+  // localStorage: via devtools.sendCommand('Runtime.evaluate', ...) op actieve tab or that session
 
   async load(sessionName: string, partition: string): Promise<{ cookiesRestored: number }>
   // Cookies zetten: session.fromPartition(partition).cookies.set(cookie)
 
   list(): string[]
-  // Lees bestanden uit stateDir
+  // Read files out stateDir
 
-  private encrypt(data: string): string   // AES-256-GCM als TANDEM_SESSION_KEY gezet
+  private encrypt(data: string): string   // AES-256-GCM if TANDEM_SESSION_KEY gezet
   private decrypt(data: string): string
 }
 ```
 
-**LET OP cookies ophalen:** Gebruik Electron's native `session.fromPartition(partition).cookies.get({})` in plaats van CDP `Network.getCookies`. Dit werkt voor ELKE partition, niet alleen de actieve tab.
+**LET OP cookies ophalen:** Usage Electron's native `session.fromPartition(partition).cookies.get({})` in plaats or CDP `Network.getCookies`. Dit works for ELKE partition, not only the actieve tab.
 
 ---
 
-## Manager Wiring (sessie 3.2)
+## Manager Wiring (session 3.2)
 
 ### 1. `src/api/server.ts` — TandemAPIOptions interface (regel ~64)
 
 ```typescript
 export interface TandemAPIOptions {
-  // ... bestaande velden ...
+  // ... existing velden ...
   sessionManager: SessionManager;
-  stateManager: StateManager;  // sessie 3.3
+  stateManager: StateManager;  // session 3.3
 }
 ```
 
@@ -220,10 +220,10 @@ Plus private fields + constructor toewijzing.
 ### 2. `src/main.ts` — startAPI() (regel ~250)
 
 ```typescript
-// SessionManager heeft geen dependencies:
+// SessionManager has no dependencies:
 const sessionManager = new SessionManager();
 
-// StateManager heeft devToolsManager nodig:
+// StateManager has devToolsManager nodig:
 const stateManager = new StateManager(devToolsManager!);
 
 // In new TandemAPI({...}):
@@ -241,11 +241,11 @@ if (sessionManager) sessionManager.cleanup();
 
 ## API Endpoints
 
-Voeg deze toe in `server.ts` setupRoutes() in een NIEUWE sectie:
+Voeg this toe in `server.ts` setupRoutes() in a NIEUWE section:
 
 ```typescript
 // ═══════════════════════════════════════════════
-// SESSIONS — Geïsoleerde Browser Sessies
+// SESSIONS — Geïsoleerde Browser Sessions
 // ═══════════════════════════════════════════════
 ```
 
@@ -262,7 +262,7 @@ Voeg deze toe in `server.ts` setupRoutes() in een NIEUWE sectie:
 }
 ```
 
-Om het aantal tabs per sessie te tellen: `tabManager.listTabs().filter(t => t.partition === session.partition).length`
+To the aantal tabs per session te tellen: `tabManager.listTabs().filter(t => t.partition === session.partition).length`
 
 ### `POST /sessions/create`
 
@@ -273,14 +273,14 @@ Om het aantal tabs per sessie te tellen: `tabManager.listTabs().filter(t => t.pa
 // Response
 {"ok": true, "name": "agent1", "partition": "persist:session-agent1"}
 
-// Error: naam bestaat al
+// Error: name exists already
 {"ok": false, "error": "Session 'agent1' already exists"}
 ```
 
 ### `POST /sessions/switch`
 
 ```json
-// Request — wisselt de "actieve API sessie" voor requests zonder X-Session header
+// Request — wisselt the "actieve API session" for requests without X-Session header
 {"name": "agent1"}
 
 // Response
@@ -300,13 +300,13 @@ Om het aantal tabs per sessie te tellen: `tabManager.listTabs().filter(t => t.pa
 {"ok": false, "error": "Cannot destroy the default session"}
 ```
 
-Bij destroy: sluit alle tabs met die partition via `tabManager.closeTab()`.
+Bij destroy: closes alle tabs with that partition via `tabManager.closeTab()`.
 
 ### `POST /sessions/state/save`
 
 ```json
 {"name": "twitter"}
-// → slaat op in ~/.tandem/sessions/twitter.json (of .enc als versleuteld)
+// → slaat op in ~/.tandem/sessions/twitter.json (or .enc if versleuteld)
 {"ok": true, "path": "/Users/robin/.tandem/sessions/twitter.json"}
 ```
 
@@ -323,29 +323,29 @@ Bij destroy: sluit alle tabs met die partition via `tabManager.closeTab()`.
 {"ok": true, "states": ["twitter", "linkedin", "github"]}
 ```
 
-### X-Session header op bestaande endpoints
+### X-Session header op existing endpoints
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Gebruik agent1 sessie voor deze navigatie
+# Usage agent1 session for this navigatie
 curl -X POST http://localhost:8765/navigate \
   -H "Authorization: Bearer $TOKEN" \
   -H "X-Session: agent1" \
   -H "Content-Type: application/json" \
   -d '{"url":"https://x.com"}'
 
-# Hetzelfde werkt voor: /click, /type, /page-content, /scroll, /screenshot
+# Hetzelfde works for: /click, /type, /page-content, /scroll, /screenshot
 ```
 
-Implementatie: helper functie in `server.ts`:
+Implementatie: helper function in `server.ts`:
 
 ```typescript
 private getSessionPartition(req: Request): string {
   const sessionName = req.headers['x-session'] as string;
   return this.sessionManager.resolvePartition(sessionName);
-  // → "persist:tandem" als geen header of "default"
-  // → "persist:session-{name}" als header aanwezig
+  // → "persist:tandem" if no header or "default"
+  // → "persist:session-{name}" if header aanwezig
 }
 ```
 
@@ -353,15 +353,15 @@ private getSessionPartition(req: Request): string {
 
 ## Sessie 3.1 — Partition Plumbing (renderer + TabManager)
 
-> **Doel:** Maak partition configureerbaar door de hele tab-creatie stack.
-> Geen nieuwe bestanden, geen nieuwe endpoints — alleen bestaande code aanpassen.
-> Na deze sessie werkt alles nog exact hetzelfde (default = 'persist:tandem').
+> **Goal:** Maak partition configureerbaar door the hele tab-creatie stack.
+> No new files, no new endpoints — only existing code aanpassen.
+> Na this session works alles still exact hetzelfde (default = 'persist:tandem').
 
-### Wat te wijzigen
+### Wat te change
 
 **4 plekken in `shell/index.html`:**
 
-#### 1. Originele `createTab` functie (regel ~1285)
+#### 1. Originele `createTab` function (regel ~1285)
 
 ```javascript
 // HUIDIGE code:
@@ -410,14 +410,14 @@ window.__tandemTabs.createTab = function(tabId, url, partition) {
 
 #### 4. Initial tab (regel ~1461) — NIET WIJZIGEN
 
-De initial tab op regel ~1461 gebruikt `'persist:tandem'` hardcoded. Dit is correct — de startup tab is altijd Robin's sessie. Laat dit ongewijzigd.
+The initial tab op regel ~1461 uses `'persist:tandem'` hardcoded. Dit is correct — the startup tab is always Robin's session. Laat this ongewijzigd.
 
 **2 plekken in `src/tabs/manager.ts`:**
 
 #### 5. Tab interface (regel ~5)
 
 ```typescript
-// Voeg toe aan interface:
+// Voeg toe about interface:
 export interface Tab {
   id: string;
   webContentsId: number;
@@ -463,36 +463,36 @@ async openTab(url: string = 'about:blank', groupId?: string, source: TabSource =
 
 #### 7. registerInitialTab (zoek in tabs/manager.ts)
 
-De methode die de startup-tab registreert moet ook `partition: 'persist:tandem'` meegeven:
+The methode that the startup-tab registreert must also `partition: 'persist:tandem'` meegeven:
 
 ```typescript
-// In registerInitialTab — voeg partition toe aan het tab object:
+// In registerInitialTab — voeg partition toe about the tab object:
 partition: 'persist:tandem',
 ```
 
 ### Implementatie stappen — Sessie 3.1
 
-1. Lees `shell/index.html` regels 1283-1351 (createTab)
-2. Lees `shell/index.html` regels 3007-3017 (monkey-patch 1)
-3. Lees `shell/index.html` regels 3628-3634 (monkey-patch 2)
-4. Lees `src/tabs/manager.ts` regels 5-16 (Tab interface) en regels 69-105 (openTab)
-5. Edit `shell/index.html` — createTab: voeg `partition` parameter toe (met default)
+1. Read `shell/index.html` rules 1283-1351 (createTab)
+2. Read `shell/index.html` rules 3007-3017 (monkey-patch 1)
+3. Read `shell/index.html` rules 3628-3634 (monkey-patch 2)
+4. Read `src/tabs/manager.ts` rules 5-16 (Tab interface) and rules 69-105 (openTab)
+5. Edit `shell/index.html` — createTab: voeg `partition` parameter toe (with default)
 6. Edit `shell/index.html` — monkey-patch 1: forward `partition` parameter
 7. Edit `shell/index.html` — monkey-patch 2: forward `partition` parameter
 8. Edit `src/tabs/manager.ts` — Tab interface: voeg `partition: string` toe
-9. Edit `src/tabs/manager.ts` — openTab: voeg `partition` parameter toe + pas executeJavaScript aan
+9. Edit `src/tabs/manager.ts` — openTab: voeg `partition` parameter toe + pas executeJavaScript about
 10. Edit `src/tabs/manager.ts` — registerInitialTab: voeg `partition: 'persist:tandem'` toe
 11. `npx tsc` — zero errors
-12. `npm start` — app start normaal, tabs werken nog
+12. `npm start` — app start normaal, tabs werken still
 13. Commit: `refactor: make partition configurable in tab creation stack`
 
 ### Verificatie — Sessie 3.1
 
 ```bash
-# App start zonder errors
+# App start without errors
 npm start
 
-# Bestaande tab endpoints werken nog
+# Existing tab endpoints werken still
 TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/tabs/list
 curl -X POST http://localhost:8765/tabs/open \
@@ -504,28 +504,28 @@ curl -X POST http://localhost:8765/tabs/open \
 npx tsc
 ```
 
-**Belangrijk:** Na deze sessie moet ALLES nog exact hetzelfde werken als voorheen. De default partition is `'persist:tandem'`, dus geen bestaande functionaliteit verandert.
+**Belangrijk:** Na this session must ALLES still exact hetzelfde werken if voorheen. The default partition is `'persist:tandem'`, dus no existing functionaliteit verandert.
 
 ---
 
 ## Sessie 3.2 — SessionManager + CRUD endpoints
 
-> **Doel:** SessionManager class + API endpoints voor create/list/switch/destroy.
-> **Vereist:** Sessie 3.1 compleet (partition is configureerbaar)
+> **Goal:** SessionManager class + API endpoints for create/list/switch/destroy.
+> **Requires:** Sessie 3.1 compleet (partition is configureerbaar)
 
 ### Implementatie stappen — Sessie 3.2
 
 1. Maak `src/sessions/types.ts`
 2. Maak `src/sessions/manager.ts` — SessionManager class
 3. **Manager Wiring:** TandemAPIOptions + main.ts startAPI() + will-quit handler
-4. Voeg SESSIONS sectie + endpoints toe aan `server.ts`:
+4. Voeg SESSIONS section + endpoints toe about `server.ts`:
    - `GET /sessions/list`
-   - `POST /sessions/create` → `sessionManager.create(name)` + optioneel direct een tab openen via `tabManager.openTab(url, null, 'kees', partition)`
+   - `POST /sessions/create` → `sessionManager.create(name)` + optional direct a tab openen via `tabManager.openTab(url, null, 'kees', partition)`
    - `POST /sessions/switch` → `sessionManager.setActive(name)`
-   - `POST /sessions/destroy` → sluit tabs met die partition + `sessionManager.destroy(name)`
+   - `POST /sessions/destroy` → closes tabs with that partition + `sessionManager.destroy(name)`
 5. `npx tsc` — fix errors
-6. Test: sessie aanmaken, tonen, verwijderen
-7. Test: Robin's sessie kan niet verwijderd worden
+6. Test: session aanmaken, tonen, verwijderen
+7. Test: Robin's session can not removed be
 8. Commit: `feat: /sessions create/list/switch/destroy`
 
 ### Verificatie — Sessie 3.2
@@ -533,19 +533,19 @@ npx tsc
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Lijst sessies (alleen default)
+# List sessions (only default)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/sessions/list
 
-# Nieuwe sessie aanmaken
+# New session aanmaken
 curl -X POST http://localhost:8765/sessions/create \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"agent1"}'
 
-# Lijst nu met agent1
+# List nu with agent1
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/sessions/list
 
-# Switch actieve sessie
+# Switch actieve session
 curl -X POST http://localhost:8765/sessions/switch \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -557,7 +557,7 @@ curl -X POST http://localhost:8765/sessions/destroy \
   -H "Content-Type: application/json" \
   -d '{"name":"agent1"}'
 
-# Default kan NIET verwijderd worden (verwacht: error)
+# Default can NIET removed be (verwacht: error)
 curl -X POST http://localhost:8765/sessions/destroy \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -568,28 +568,28 @@ curl -X POST http://localhost:8765/sessions/destroy \
 
 ## Sessie 3.3 — State save/load + X-Session header
 
-> **Doel:** Session state persistence + X-Session header op bestaande endpoints.
-> **Vereist:** Sessie 3.2 compleet (SessionManager werkt)
+> **Goal:** Session state persistence + X-Session header op existing endpoints.
+> **Requires:** Sessie 3.2 compleet (SessionManager works)
 
 ### Implementatie stappen — Sessie 3.3
 
 1. Maak `src/sessions/state.ts` — StateManager class
 2. `save()`: `session.fromPartition(partition).cookies.get({})` → JSON → disk (~/.tandem/sessions/)
 3. `load()`: disk → JSON → `session.fromPartition(partition).cookies.set(cookie)` per cookie
-4. **Manager Wiring:** Voeg `stateManager` toe aan TandemAPIOptions + startAPI()
-5. Voeg state endpoints toe aan server.ts:
+4. **Manager Wiring:** Voeg `stateManager` toe about TandemAPIOptions + startAPI()
+5. Voeg state endpoints toe about server.ts:
    - `POST /sessions/state/save`
    - `POST /sessions/state/load`
    - `GET /sessions/state/list`
 6. Voeg `getSessionPartition()` helper methode toe in TandemAPI class
-7. Pas bestaande endpoints aan die session-aware moeten zijn:
+7. Pas existing endpoints about that session-aware must are:
    `/navigate`, `/click`, `/type`, `/scroll`, `/page-content`, `/screenshot`
    - Haal partition op via `this.getSessionPartition(req)`
-   - Bij `/navigate`: als er geen tab bestaat voor die sessie, open een nieuwe met die partition
-   - Bij andere endpoints: zoek de actieve tab voor die partition
+   - Bij `/navigate`: if er no tab exists for that session, open a new with that partition
+   - Bij andere endpoints: zoek the actieve tab for that partition
 8. `npx tsc` — zero errors
-9. Test: state opslaan → sessie destroyen → state laden → cookies terug
-10. Test: `X-Session: agent1` header op `/navigate` opent pagina in agent1 partition
+9. Test: state save → session destroyen → state laden → cookies terug
+10. Test: `X-Session: agent1` header op `/navigate` opens page in agent1 partition
 11. Commit: `feat: session state save/load + X-Session header`
 
 ### Verificatie — Sessie 3.3
@@ -597,7 +597,7 @@ curl -X POST http://localhost:8765/sessions/destroy \
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Maak sessie + navigeer erin
+# Maak session + navigeer erin
 curl -X POST http://localhost:8765/sessions/create \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -609,7 +609,7 @@ curl -X POST http://localhost:8765/navigate \
   -H "Content-Type: application/json" \
   -d '{"url":"https://example.com"}'
 
-# State opslaan
+# State save
 curl -X POST http://localhost:8765/sessions/state/save \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -621,7 +621,7 @@ curl -X POST http://localhost:8765/sessions/destroy \
   -H "Content-Type: application/json" \
   -d '{"name":"agent1"}'
 
-# Nieuwe sessie + state laden
+# New session + state laden
 curl -X POST http://localhost:8765/sessions/create \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -633,10 +633,10 @@ curl -X POST http://localhost:8765/sessions/state/load \
   -H "Content-Type: application/json" \
   -d '{"name":"test-state"}'
 
-# State lijst
+# State list
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/sessions/state/list
 
-# Default kan niet verwijderd worden
+# Default can not removed be
 curl -X POST http://localhost:8765/sessions/destroy \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -649,35 +649,35 @@ curl -X POST http://localhost:8765/sessions/destroy \
 
 **Partition timing:**
 
-- ❌ Partition attribuut wijzigen NADAT webview in DOM is geplaatst (werkt niet)
-- ✅ Partition ALTIJD zetten VOOR `container.appendChild(wv)` — dit doet createTab al correct
+- ❌ Partition attribuut change NADAT webview in DOM is geplaatst (works not)
+- ✅ Partition ALTIJD zetten VOOR `container.appendChild(wv)` — this doet createTab already correct
 
 **Monkey-patches vergeten:**
 
-- ❌ Alleen de originele `createTab` aanpassen maar de 2 monkey-patches vergeten
+- ❌ Only the originele `createTab` aanpassen but the 2 monkey-patches vergeten
 - ✅ ALLE 3 plekken aanpassen: origineel (1285), activity patch (3009), find patch (3629)
 
-**Robin's sessie:**
+**Robin's session:**
 
-- ❌ `persist:tandem` partition gebruiken voor agent sessies
-- ✅ Altijd `persist:session-{name}` voor agent sessies, `persist:tandem` alleen voor "default"
+- ❌ `persist:tandem` partition use for agent sessions
+- ✅ Altijd `persist:session-{name}` for agent sessions, `persist:tandem` only for "default"
 
 **Initial tab:**
 
-- ❌ De initial tab (regel ~1461) aanpassen — die is altijd Robin's sessie
-- ✅ Alleen `createTab()` en de monkey-patches aanpassen, initial tab ongewijzigd laten
+- ❌ The initial tab (regel ~1461) aanpassen — that is always Robin's session
+- ✅ Only `createTab()` and the monkey-patches aanpassen, initial tab ongewijzigd laten
 
-**CDP vs Electron API voor cookies:**
+**CDP vs Electron API for cookies:**
 
-- ❌ CDP `Network.getCookies` gebruiken voor session state (werkt alleen op actieve tab)
-- ✅ Electron `session.fromPartition(partition).cookies.get({})` (werkt voor elke partition)
+- ❌ CDP `Network.getCookies` use for session state (works only op actieve tab)
+- ✅ Electron `session.fromPartition(partition).cookies.get({})` (works for elke partition)
 
 **Tab lookup:**
 
-- ❌ `tabManager.getActiveWebContents()` gebruiken voor agent sessie (geeft Robin's actieve tab)
+- ❌ `tabManager.getActiveWebContents()` use for agent session (geeft Robin's actieve tab)
 - ✅ Filter tabs op partition: `tabManager.listTabs().filter(t => t.partition === partition)`
 
 **Wiring:**
 
-- ❌ Alleen endpoint toevoegen aan server.ts en vergeten de manager te registreren
+- ❌ Only endpoint add about server.ts and vergeten the manager te registreren
 - ✅ Altijd 3 plekken: TandemAPIOptions, startAPI(), will-quit

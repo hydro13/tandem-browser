@@ -24,7 +24,7 @@ Complete the confidence pipeline: wire remaining modules (ContentAnalyzer, Behav
 
 ### 5C.1 ContentAnalyzer confidence levels
 
-Map each detection type:
+Folder each detection type:
 - **Phishing indicators** (hidden forms, credential fields): `AnalysisConfidence.HEURISTIC` (700)
 - **Known tracker detected**: `AnalysisConfidence.BEHAVIORAL` (500)
 - **Hidden iframe/mixed content**: `AnalysisConfidence.HEURISTIC` (700)
@@ -34,14 +34,14 @@ Map each detection type:
 
 ### 5C.2 BehaviorMonitor confidence levels
 
-Map each detection type:
+Folder each detection type:
 - **Excessive permission requests**: `AnalysisConfidence.BEHAVIORAL` (500)
 - **High CPU usage**: `AnalysisConfidence.ANOMALY` (800)
 - **Unusual API access patterns**: `AnalysisConfidence.BEHAVIORAL` (500)
 
 ### 5C.3 NetworkShield confidence levels
 
-Map each detection type:
+Folder each detection type:
 - **Domain on blocklist**: `AnalysisConfidence.BLOCKLIST` (100)
 
 ### 5C.4 Confidence-based Gatekeeper routing

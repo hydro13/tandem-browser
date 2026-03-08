@@ -31,9 +31,9 @@
 4. **Test after each fix** — don't batch all testing to the end
 5. **If you encounter a blocker:**
    - Document it in STATUS.md under "Issues encountered"
-   - Try to solve it if the fix is within scope of this phase
+   - Try to solve it if the fix is within scope or this phase
    - If it requires changes outside this phase's scope, document it and stop
-   - Never make changes outside the scope of your phase without documenting why
+   - Never make changes outside the scope or your phase without documenting why
 
 ### After You Finish
 
@@ -57,7 +57,7 @@
    git commit -m "$(cat <<'EOF'
    fix(review): Phase <N> — <short description>
 
-   <bullet points of what was fixed>
+   <bullet points or what was fixed>
 
    Ref: docs/CODE-REVIEW-2026-02-26.md
 
@@ -79,12 +79,12 @@
 
 ## What NOT to Do
 
-- Do NOT refactor code that isn't part of a fix
+- Do NOT refactor code that isn't part or a fix
 - Do NOT add new files unless absolutely necessary
-- Do NOT modify files outside the scope of your phase without documenting why in STATUS.md
+- Do NOT modify files outside the scope or your phase without documenting why in STATUS.md
 - Do NOT skip the verification checklist
 - Do NOT push without updating STATUS.md
-- Do NOT change the order of fixes within a phase (they are ordered for a reason)
+- Do NOT change the order or fixes within a phase (they are ordered for a reason)
 - Do NOT implement fixes from future phases
 - Do NOT add comments explaining what you fixed (the git commit message does that)
 

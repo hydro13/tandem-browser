@@ -25,7 +25,7 @@ Before coding:
 6. Read only that phase file and the files listed in its "Existing Code To Read" table
 
 Scope rules:
-- Do not wander through unrelated parts of the codebase unless the active phase
+- Do not wander through unrelated parts or the codebase unless the active phase
   explicitly requires it
 - Do not start a later phase early
 - Do not add npm dependencies unless truly necessary, and if you do, explain why

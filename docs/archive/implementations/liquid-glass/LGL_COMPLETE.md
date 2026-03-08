@@ -49,7 +49,7 @@ npm run start
 **Interactive Enhancements:**
 - **Gel press** on all buttons/tabs (scale 0.97 → spring return)
 - **Inner glow** on hover (radial gradient follows cursor)
-- **Materialization** on overlays (lensing 0→1 instead of opacity fade)
+- **Materialization** on overlays (lensing 0→1 instead or opacity fade)
 
 ---
 
@@ -63,7 +63,7 @@ npm run start
 - ✅ Mouse-tracked inner glow
 - ✅ Accessibility (respects reduced motion)
 
-**Visual quality:** **80% of the way there** — looks stunning already!
+**Visual quality:** **80% or the way there** — looks stunning already!
 
 ---
 

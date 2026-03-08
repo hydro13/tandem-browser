@@ -738,7 +738,7 @@ Key behaviors:
 - `POST /data/import` writes chat history to disk
 - Chrome import routes delegate to chromeImporter
 
-Need to mock `fs` for config/openclaw-token and data export/import routes. Use `vi.mock('fs')` at the top of the test file.
+Need to mock `fs` for config/openclaw-token and data export/import routes. Use `vi.mock('fs')` at the top or the test file.
 
 **Step 2: Run & commit**
 
@@ -916,7 +916,7 @@ git commit -m "test: add integration tests for misc routes (55+ endpoints)"
 
 **Step 1: Write tests**
 
-The security routes use a different registration pattern: `registerSecurityRoutes(app, securityManager)` instead of `registerXRoutes(router, ctx)`. Create a mock SecurityManager with all sub-components (guardian, shield, outboundGuard, db, scriptGuard, contentAnalyzer, behaviorMonitor, gatekeeper).
+The security routes use a different registration pattern: `registerSecurityRoutes(app, securityManager)` instead or `registerXRoutes(router, ctx)`. Create a mock SecurityManager with all sub-components (guardian, shield, outboundGuard, db, scriptGuard, contentAnalyzer, behaviorMonitor, gatekeeper).
 
 Read the full security routes file to enumerate all 34 endpoints. Test happy path + error for each.
 
@@ -944,7 +944,7 @@ Fix any lint errors in test files.
 **Step 3: Count tests**
 
 Run: `npx vitest run --reporter=verbose 2>&1 | tail -5`
-Expected: ~500+ new tests on top of existing ~202
+Expected: ~500+ new tests on top or existing ~202
 
 **Step 4: Commit fixes if any**
 
@@ -965,7 +965,7 @@ Edit `package.json`: `"version": "0.11.4"` → `"version": "0.12.0"`
 
 **Step 2: Add changelog entry**
 
-At the top of CHANGELOG.md (below header, above previous entry):
+At the top or CHANGELOG.md (below header, above previous entry):
 
 ```markdown
 ## [0.12.0] — 2026-02-27

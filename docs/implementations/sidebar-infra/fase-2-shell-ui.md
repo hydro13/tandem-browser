@@ -1,39 +1,39 @@
-# Fase 2 — Sidebar Infrastructuur: Shell UI
+# Phase 2 — Sidebar Infrastructuur: Shell UI
 
-> **Sessies:** 1
-> **Afhankelijk van:** Fase 1 klaar (SidebarManager + API werkt)
-> **Volgende fase:** fase-3-bookmarks-plugin.md
-
----
-
-## Doel
-
-Bouw de zichtbare sidebar in de shell: icon strip, panel container, animaties, shortcut, en narrow/wide/hidden toggle. Na deze fase is de sidebar zichtbaar en werkt het open/dicht klikken — maar panel inhoud is nog leeg (dat komt per feature).
+> **Sessions:** 1
+> **Depends on:** Phase 1 complete (SidebarManager + API works)
+> **Next phase:** fase-3-bookmarks-plugin.md
 
 ---
 
-## Bestanden te lezen — ALLEEN dit
+## Goal
 
-| Bestand | Zoek naar | Waarom |
+Bouw the zichtbare sidebar in the shell: icon strip, panel container, animaties, shortcut, and narrow/wide/hidden toggle. After this phase is the sidebar visible and works the open/dicht clicking — but panel inhoud is still leeg (that comes per feature).
+
+---
+
+## Files to read — ONLY this
+
+| File | Look for | Why |
 |---------|-----------|--------|
-| `shell/index.html` | `<!-- Main layout: browser + panel -->` en de `.main-layout` div | Hier voeg je sidebar als eerste kind toe |
-| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Patroon voor toggle knop |
-| `shell/css/main.css` | `.main-layout {` en `.browser-content {` | CSS aanpassen voor sidebar |
-| `shell/css/main.css` | `.wingman-panel {` en `.wingman-panel.open {` | Patroon voor uitschuif-animatie |
+| `shell/index.html` | `<!-- Main layout: browser + panel -->` and the `.main-layout` div | Add sidebar if first kind toe |
+| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Patroon for toggle knop |
+| `shell/css/main.css` | `.main-layout {` and `.browser-content {` | CSS aanpassen for sidebar |
+| `shell/css/main.css` | `.wingman-panel {` and `.wingman-panel.open {` | Patroon for uitschuif-animatie |
 
 ---
 
-## HTML structuur (toevoegen aan shell/index.html)
+## HTML structuur (add about shell/index.html)
 
-Voeg toe als EERSTE kind van `<div class="main-layout">`:
+Voeg toe if EERSTE kind or `<div class="main-layout">`:
 
 ```html
 <!-- ═══ SIDEBAR ═══ (SHELL layer, NOT in webview) -->
 <div class="sidebar" id="sidebar" data-state="narrow">
 
-  <!-- Icon strip (altijd zichtbaar in narrow/wide) -->
+  <!-- Icon strip (always visible in narrow/wide) -->
   <div class="sidebar-strip" id="sidebar-strip">
-    <!-- Items worden dynamisch gegenereerd door JS -->
+    <!-- Items be dynamisch gegenereerd door JS -->
     <div class="sidebar-items" id="sidebar-items"></div>
 
     <!-- Bodem: narrow/wide toggle + customize -->
@@ -43,14 +43,14 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
     </div>
   </div>
 
-  <!-- Panel container (uitschuifbaar naast icon strip) -->
+  <!-- Panel container (uitschuifbaar next to icon strip) -->
   <div class="sidebar-panel" id="sidebar-panel">
     <div class="sidebar-panel-header">
       <span class="sidebar-panel-title" id="sidebar-panel-title"></span>
       <button class="sidebar-panel-close" id="sidebar-panel-close" title="Sluiten">✕</button>
     </div>
     <div class="sidebar-panel-content" id="sidebar-panel-content">
-      <!-- Inhoud gerenderd door actief item (Fase 3+) -->
+      <!-- Inhoud gerenderd door actief item (Phase 3+) -->
     </div>
   </div>
 
@@ -59,7 +59,7 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
 
 ---
 
-## CSS (toevoegen aan shell/css/main.css)
+## CSS (add about shell/css/main.css)
 
 ```css
 /* ═══════════════════════════════════════
@@ -80,7 +80,7 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
   overflow: hidden;
 }
 
-/* Narrow state (standaard) */
+/* Narrow state (default) */
 .sidebar[data-state="narrow"] .sidebar-strip {
   width: 48px;
 }
@@ -133,7 +133,7 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
   color: var(--text, #fff);
 }
 
-/* Active indicator: gekleurde afgeronde vierkant (zoals Opera) */
+/* Active indicator: colored afgeronde vierkant (zoals Opera) */
 .sidebar-item.active {
   background: rgba(78,204,163,0.25);
   color: var(--accent, #4ecca3);
@@ -146,7 +146,7 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
   flex-shrink: 0;
 }
 
-/* Messenger item: gekleurde ronde achtergrond met wit brand logo erin */
+/* Messenger item: colored ronde achtergrond with wit brand logo erin */
 .sidebar-item.messenger-item {
   padding: 0;
 }
@@ -260,7 +260,7 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
 
 ---
 
-## JavaScript (toevoegen aan shell/index.html, in `<script>` sectie)
+## JavaScript (add about shell/index.html, in `<script>` section)
 
 ```javascript
 // ═══════════════════════════════════════
@@ -268,8 +268,8 @@ Voeg toe als EERSTE kind van `<div class="main-layout">`:
 // ═══════════════════════════════════════
 const ocSidebar = (() => {
   // Icon definities — twee stijlen zoals Opera:
-  // - Utility items: Heroicons outline (grijs, wordt wit bij hover/active)
-  // - Messenger items: gekleurde brand icons op gekleurde ronde achtergrond
+  // - Utility items: Heroicons outline (grijs, is wit bij hover/active)
+  // - Messenger items: colored brand icons op colored ronde achtergrond
   const ICONS = {
     // === UTILITY ITEMS (Heroicons outline) ===
     workspaces: { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z" /></svg>`, brand: null },
@@ -279,8 +279,8 @@ const ocSidebar = (() => {
     history:    { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>`, brand: null },
     downloads:  { svg: `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>`, brand: null },
 
-    // === MESSENGER ITEMS (gekleurde brand icons, eigen achtergrond) ===
-    // brand: achtergrondkleur voor de icon container
+    // === MESSENGER ITEMS (colored brand icons, own achtergrond) ===
+    // brand: achtergrondkleur for the icon container
     whatsapp:  { svg: `<svg viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>`, brand: '#25D366' },
     telegram:  { svg: `<svg viewBox="0 0 24 24" fill="white"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`, brand: '#2AABEE' },
     discord:   { svg: `<svg viewBox="0 0 24 24" fill="white"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057.101 18.08.114 18.1.134 18.114a19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>`, brand: '#5865F2' },
@@ -334,11 +334,11 @@ const ocSidebar = (() => {
     const utility = sorted.filter(i => !MESSENGER_IDS.includes(i.id));
     const messengers = sorted.filter(i => MESSENGER_IDS.includes(i.id));
 
-    // Utility items bovenaan, separator, dan messengers
+    // Utility items at the top, separator, then messengers
     itemsEl.innerHTML =
-      utility.map(renderItemHTML).join('') +
+      utility.folder(renderItemHTML).join('') +
       (messengers.length ? '<div class="sidebar-separator"></div>' : '') +
-      messengers.map(renderItemHTML).join('');
+      messengers.folder(renderItemHTML).join('');
 
     // Panel
     const panel = document.getElementById('sidebar-panel');
@@ -417,15 +417,15 @@ document.addEventListener('DOMContentLoaded', () => ocSidebar.init());
 
 ## Acceptatiecriteria
 
-Visuele controles na `npm start`:
-- [ ] Sidebar zichtbaar links van browser content (48px icon strip)
-- [ ] Klik icon → panel schuift open rechts van strip
-- [ ] Klik zelfde icon opnieuw → panel sluit
+Visual controles na `npm start`:
+- [ ] Sidebar visible links or browser content (48px icon strip)
+- [ ] Klik icon → panel schuift open rechts or strip
+- [ ] Klik same icon again → panel closes
 - [ ] ›/‹ knop → narrow↔wide (labels tonen/verbergen)
-- [ ] ⌘⇧B → sidebar verdwijnt volledig, browser pakt volledige breedte
-- [ ] ⌘⇧B opnieuw → sidebar terug op narrow
-- [ ] Tooltip zichtbaar bij hover in narrow mode
-- [ ] Actief item heeft groene linker border + lichte achtergrond
+- [ ] ⌘⇧B → sidebar disappears fully, browser pakt full width
+- [ ] ⌘⇧B again → sidebar terug op narrow
+- [ ] Tooltip visible bij hover in narrow mode
+- [ ] Actief item has groene linker border + lichte achtergrond
 
 ---
 
@@ -433,20 +433,20 @@ Visuele controles na `npm start`:
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand volledig
-3. Verifieer fase 1: curl http://localhost:8765/sidebar/config moet werken
-4. npm start — bekijk huidige layout voor je begint
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file fully
+3. Verifieer phase 1: curl http://localhost:8765/sidebar/config must werken
+4. npm start — bekijk huidige layout for you begint
 ```
 
 ### Bij einde:
 ```
-1. npm start — alle visuele checks hierboven doorlopen
+1. npm start — alle visual checks hierboven doorlopen
 2. npx tsc — ZERO errors
-3. npx vitest run — bestaande tests slagen
-4. CHANGELOG.md bijwerken
+3. npx vitest run — existing tests slagen
+4. Update CHANGELOG.md
 5. git commit -m "🗂️ feat: sidebar UI — icon strip, panel, narrow/wide/hidden, shortcut ⌘⇧B"
 6. git push
-7. Update LEES-MIJ-EERST.md: Fase 2 → ✅ + commit hash
-8. Rapport: Gebouwd / Getest / Problemen / Volgende sessie: fase-3-bookmarks-plugin.md
+7. Update LEES-MIJ-EERST.md: Phase 2 → ✅ + commit hash
+8. Rapport: Gebouwd / Getest / Problemen / Next session: fase-3-bookmarks-plugin.md
 ```

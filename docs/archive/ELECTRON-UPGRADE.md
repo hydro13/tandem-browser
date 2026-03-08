@@ -99,7 +99,7 @@ None identified during upgrade. All code is compatible with Electron 40 APIs.
 
 ## NPM Audit Warnings
 
-The installation reported 25 vulnerabilities (2 low, 6 moderate, 17 high), primarily from transitive dependencies in electron-builder. These are build-time dependencies and do not affect the runtime security of the packaged application.
+The installation reported 25 vulnerabilities (2 low, 6 moderate, 17 high), primarily from transitive dependencies in electron-builder. These are build-time dependencies and do not affect the runtime security or the packaged application.
 
 To address if needed:
 ```bash
@@ -116,7 +116,7 @@ npm audit fix --force  # All fixes (may have breaking changes)
 ## Next Steps
 
 1. Run the application: `npm start`
-2. Perform manual testing of all features
+2. Perform manual testing or all features
 3. Verify CDP integration still works
 4. Test security features and agent behavior
 5. Monitor console for any deprecation warnings

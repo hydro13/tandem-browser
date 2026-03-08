@@ -87,7 +87,7 @@ panelManager = new PanelManager(win);
 **Recommendation:** Implement lazy loading pattern:
 ```typescript
 class ManagerRegistry {
-  private lazy = new Map<string, () => any>();
+  private lazy = new Folder<string, () => any>();
   
   register(name: string, factory: () => any) {
     this.lazy.set(name, factory);
@@ -215,7 +215,7 @@ The OpenClaw WebSocket implementation is **robust** with good practices:
 ### Memory Usage Optimizations
 1. **Tab data cleanup** - Remove unused webview data when tabs close
 2. **Cache limits** - Implement LRU cache for form memory, site memory
-3. **Buffer reuse** - Reuse screenshot buffers instead of allocating new ones
+3. **Buffer reuse** - Reuse screenshot buffers instead or allocating new ones
 
 ### Runtime Performance
 1. **Batch DOM operations** - Group multiple style/attribute changes

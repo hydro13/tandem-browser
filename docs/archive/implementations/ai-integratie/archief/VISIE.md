@@ -1,58 +1,58 @@
-# Tandem Browser — AI Integratie Visie
+# Tandem Browser — AI Integration Vision
 
-## Kernidee
+## Core Idea
 
-Tandem Browser is geen gewone browser. Het is een **mens-AI fusie interface** waar Robin en AI samen één gebruiker worden. De browser is het punt waar menselijke agency en AI-capaciteiten samenkomen.
+Tandem Browser is not a normal browser. It is a **human-AI fusion interface** where Robin and the AI become one user together. The browser is the place where human agency and AI capabilities meet.
 
-### Waarom dit werkt
+### Why This Works
 
-- Robin bestuurt de browser als mens → geen bot-detectie, geen AI-blokkades
-- AI kijkt mee, leest mee, denkt mee → superhuman browse-capaciteit
-- AI kan de browser bedienen alsof het Robin's handen zijn
-- Sites zien één gebruiker: een mens met een browser. Dat klopt ook — Robin IS er.
+- Robin operates the browser as a human → no bot detection, no AI blocks
+- The AI watches, reads, and thinks along → superhuman browsing capability
+- The AI can operate the browser as if it were Robin's hands
+- Sites see one user: a human with a browser. That is also correct — Robin IS there.
 
-### De "Samen Eén" Filosofie
+### The "Together as One" Philosophy
 
 ```
-Robin (mens)  +  AI (Claude/OpenClaw)  =  Eén Gebruiker
+Robin (human)  +  AI (Claude/OpenClaw)  =  One User
    ↕                    ↕                      ↕
- ogen/handen      denken/lezen            browsen/handelen
- stem/keuzes      analyseren              samen beslissen
+ eyes/hands       thinking/reading        browsing/acting
+ voice/choices    analyzing               deciding together
 ```
 
-## Wat AI moet kunnen
+## What the AI Must Be Able to Do
 
-Alles wat een mens kan met een browser:
+Everything a human can do with a browser:
 
-| Categorie | Acties |
+| Category | Actions |
 |-----------|--------|
-| **Navigatie** | URL's openen, terug/vooruit, tabs beheren, bookmarks gebruiken |
-| **Lezen** | Pagina-inhoud lezen, tekst extracten, screenshots bekijken |
-| **Interactie** | Klikken, typen, scrollen, formulieren invullen |
-| **Communicatie** | Chat met Robin via Kees panel, voice input verwerken |
-| **Analyse** | Pagina's samenvatten, data extracten, patronen herkennen |
-| **Autonomie** | Zelfstandig browsen, onderzoeken, rapporteren aan Robin |
-| **Samenwerking** | Live meekijken, suggesties doen, taken overnemen |
+| **Navigation** | Open URLs, go back/forward, manage tabs, use bookmarks |
+| **Reading** | Read page content, extract text, view screenshots |
+| **Interaction** | Click, type, scroll, fill forms |
+| **Communication** | Chat with Robin through the Kees panel, process voice input |
+| **Analysis** | Summarize pages, extract data, recognize patterns |
+| **Autonomy** | Browse independently, investigate, report back to Robin |
+| **Collaboration** | Watch live, make suggestions, take over tasks |
 
 ## AI Backends
 
 ### 1. Claude (Anthropic API / Cowork / Code)
-- Sterkste redenering en analyse
-- Kan via MCP tools de browser bedienen
-- Cowork: collaborative sessie vanuit IDE
+- Strongest reasoning and analysis
+- Can control the browser via MCP tools
+- Cowork: collaborative session from the IDE
 - Code: command-line interface
 
 ### 2. OpenClaw
-- Bestaande WebSocket gateway (ws://127.0.0.1:18789)
+- Existing WebSocket gateway (`ws://127.0.0.1:18789`)
 - Custom agent platform
-- Eigen capabilities en personality (Kees)
+- Its own capabilities and personality (Kees)
 
-### 3. Toekomstig
-- Andere LLM backends (lokale modellen, open-source)
-- Gespecialiseerde agents voor specifieke taken
-- Multi-agent coördinatie
+### 3. Future
+- Other LLM backends (local models, open-source)
+- Specialized agents for specific tasks
+- Multi-agent coordination
 
-## Architectuur Overzicht
+## Architecture Overview
 
 ```
 ┌────────────────────────────────────────────────────────────┐
@@ -62,18 +62,18 @@ Alles wat een mens kan met een browser:
 │  │   Webview     │  │  Kees Panel  │  │   API Server    │ │
 │  │  (browsing)   │  │  (chat UI)   │  │   :8765         │ │
 │  │              │  │              │  │                 │ │
-│  │  Robin ziet  │  │  Chat +      │  │  REST endpoints │ │
-│  │  & bedient   │  │  Voice +     │  │  voor alles     │ │
+│  │  Robin sees  │  │  Chat +      │  │  REST endpoints │ │
+│  │  & controls  │  │  Voice +     │  │  for everything │ │
 │  │              │  │  Controls    │  │                 │ │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬────────┘ │
 │         │                 │                    │          │
 │         │          ┌──────┴───────┐            │          │
 │         │          │ Chat Router  │            │          │
 │         │          │              │            │          │
-│         │          │ Selecteer:   │            │          │
+│         │          │ Select:      │            │          │
 │         │          │ • OpenClaw   │            │          │
 │         │          │ • Claude     │            │          │
-│         │          │ • Beide      │            │          │
+│         │          │ • Both       │            │          │
 │         │          └──┬───────┬───┘            │          │
 │         │             │       │                │          │
 └─────────┼─────────────┼───────┼────────────────┼──────────┘
@@ -81,7 +81,7 @@ Alles wat een mens kan met een browser:
           │    ┌────────┘       └─────────┐      │
           │    ▼                          ▼      ▼
           │  ┌──────────┐       ┌─────────────────────┐
-          │  │ OpenClaw │       │   Claude Ecosystem   │
+          │  │ OpenClaw │       │   Claude Ecosystem  │
           │  │ Gateway  │       │                     │
           │  │ :18789   │       │  ┌───────────────┐  │
           │  └──────────┘       │  │ MCP Server    │  │
@@ -101,28 +101,28 @@ Alles wat een mens kan met een browser:
           │
     ┌─────┴──────┐
     │ Event      │
-    │ Stream     │──→ Alle AI's krijgen live updates
-    │ (SSE/WS)   │    van wat Robin doet
+    │ Stream     │──→ All AIs receive live updates
+    │ (SSE/WS)   │    about what Robin does
     └────────────┘
 ```
 
-## Cross-Platform Strategie
+## Cross-Platform Strategy
 
-Tandem wordt gebouwd voor:
-1. **macOS** (huidige ontwikkelomgeving)
-2. **Linux** (tweede prioriteit, docs in `/Linux-version/`)
+Tandem is being built for:
+1. **macOS** (current development environment)
+2. **Linux** (second priority, docs in `/Linux-version/`)
 3. **Windows** (later)
 
-Alle AI-integratie code moet platform-onafhankelijk zijn:
-- Geen hardcoded paden
-- `process.platform` checks waar nodig
-- Standaard web-APIs waar mogelijk
-- Node.js APIs voor filesystem operaties
+All AI integration code must be platform-independent:
+- No hardcoded paths
+- `process.platform` checks where needed
+- Standard web APIs where possible
+- Node.js APIs for filesystem operations
 
-## Privacy & Beveiliging
+## Privacy & Security
 
-- Alle AI communicatie is **lokaal** (localhost API, lokale WebSocket)
-- API token authenticatie voor externe toegang
-- Geen data naar derden zonder Robin's expliciete toestemming
-- Robin heeft altijd de finale controle
-- AI kan alleen handelen binnen de browser context
+- All AI communication is **local** (localhost API, local WebSocket)
+- API token authentication for external access
+- No data goes to third parties without Robin's explicit consent
+- Robin always has final control
+- The AI can act only within the browser context

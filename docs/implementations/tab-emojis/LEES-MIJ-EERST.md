@@ -1,19 +1,19 @@
-# Tab Emojis — START HIER
+# Tab Emojis — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Emoji-badges toewijzen aan tabs voor visuele identificatie, persistent across sessions
-> **Volgorde:** Fase 1 (één sessie, compleet)
+> **Goal:** Emoji-badges toewijzen about tabs for visual identificatie, persistent across sessions
+> **Order:** Phase 1 (één session, compleet)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Robin heeft vaak meerdere tabs open van dezelfde site (GitHub repos, Google Docs). Favicon + titel zijn niet genoeg om snel de juiste tab te herkennen. Emoji-badges geven tabs een persoonlijke visuele identiteit. Zie `docs/research/gap-analysis.md` sectie "Tab Emojis" en `docs/research/opera-complete-inventory.md` sectie 1.4 voor de Opera referentie.
+Robin has vaak multiple tabs open or the same site (GitHub repos, Google Docs). Favicon + title are not genoeg to snel the juiste tab te herkennen. Emoji-badges geven tabs a persoonlijke visual identiteit. Zie `docs/research/gap-analysis.md` section "Tab Emojis" and `docs/research/opera-complete-inventory.md` section 1.4 for the Opera referentie.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
   Tab hover → "+" knop → emoji picker popup
@@ -24,56 +24,56 @@ Robin heeft vaak meerdere tabs open van dezelfde site (GitHub repos, Google Docs
          ▼
   TabManager.setEmoji(tabId, emoji)
          │
-         ├──► Tab.emoji veld bijwerken
+         ├──► Tab.emoji field update
          ├──► IPC: 'tab-emoji-changed' → Shell badge updaten
-         └──► Opslaan in ~/.tandem/tab-emojis.json (per URL)
+         └──► Save in ~/.tandem/tab-emojis.json (per URL)
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie | `createWindow()`, `startAPI()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
 _(zie fase-1-emoji-tabs.md)_
 
 ---
 
-## Regels voor deze feature
+## Rules for this feature
 
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
+> These are the HARD rules in addition to the general AGENTS.md rules.
 
-1. **Emoji picker in de shell** — een simpel HTML/CSS popup grid. GEEN npm package voor emoji picker. Gebruik native emoji rendering.
-2. **Persistentie in JSON** — opslaan in `~/.tandem/tab-emojis.json`. Key = genormaliseerde URL (hostname + pathname). Laden bij TabManager init.
-3. **Functienamen > regelnummers** — verwijs naar `function registerTabRoutes()`, nooit regelnummers.
-4. **Bestaande Tab interface uitbreiden** — voeg `emoji?: string` toe aan de `Tab` interface in `src/tabs/manager.ts`.
+1. **Emoji picker in the shell** — a simple HTML/CSS popup grid. NO npm package for the emoji picker. Use native emoji rendering.
+2. **Persistentie in JSON** — save in `~/.tandem/tab-emojis.json`. Key = genormaliseerde URL (hostname + pathname). Laden bij TabManager init.
+3. **Functienamen > regelnummers** — verwijs to `function registerTabRoutes()`, nooit regelnummers.
+4. **Existing Tab interface uitbreiden** — voeg `emoji?: string` toe about the `Tab` interface in `src/tabs/manager.ts`.
 
 ---
 
-## Manager Wiring — geen nieuwe manager nodig
+## Manager Wiring — no new manager nodig
 
-Tab Emojis breiden de bestaande `TabManager` uit — er is **geen nieuwe manager** nodig.
+Tab Emojis breiden the existing `TabManager` out — er is **no new manager** nodig.
 
-### Bestaande wiring hergebruiken:
+### Existing wiring hergebruiken:
 
-1. `src/tabs/manager.ts` → `class TabManager` → nieuwe methodes `setEmoji()`, `clearEmoji()`, `loadEmojis()`, `saveEmojis()`
-2. `src/api/routes/tabs.ts` → `function registerTabRoutes()` → nieuwe endpoints
+1. `src/tabs/manager.ts` → `class TabManager` → new methodes `setEmoji()`, `clearEmoji()`, `loadEmojis()`, `saveEmojis()`
+2. `src/api/routes/tabs.ts` → `function registerTabRoutes()` → new endpoints
 3. `shell/index.html` → emoji badge + picker UI in tab element
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // In function registerTabRoutes():
@@ -91,24 +91,24 @@ router.post('/tabs/:id/emoji', async (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-emoji-tabs.md` | Volledige implementatie: backend + shell UI + persistentie | 📋 Klaar om te starten |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-emoji-tabs.md` | Volledige implementatie: backend + shell UI + persistentie | 📋 Ready to start |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -126,10 +126,10 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Emoji opslag + API + tab badge UI | ⏳ niet gestart | — |
+| 1 | Emoji opslag + API + tab badge UI | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

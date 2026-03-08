@@ -1,22 +1,22 @@
-# Fase 3: Chat Router + Voice Koppeling
+# Phase 3: Chat Router + Voice Koppeling
 
-> 2-3 sessies | Geen nieuwe dependencies
-> ⚠️ RISKANTSTE FASE — 200+ regels inline WebSocket code refactoren.
+> 2-3 sessions | No new dependencies
+> ⚠️ RISKANTSTE FASE — 200+ rules inline WebSocket code refactoren.
 
 ---
 
-## Doel
+## Goal
 
-Het Kees panel kan met meerdere AI backends communiceren: OpenClaw (live chat) en Claude (activity feed via MCP). Robin kan switchen. Voice input gaat automatisch naar de actieve backend.
+The Kees panel can with multiple AI backends communicate: OpenClaw (live chat) and Claude (activity feed via MCP). Robin can switchen. Voice input gaat automatisch to the actieve backend.
 
 ## Huidige staat
 
-De OpenClaw chat logica zit **inline** in `shell/index.html` (regels 1681-1894):
-- WebSocket naar `ws://127.0.0.1:18789`
+The OpenClaw chat logica zit **inline** in `shell/index.html` (rules 1681-1894):
+- WebSocket to `ws://127.0.0.1:18789`
 - Token **HARDCODED**: `[redacted leaked token]` (MOET gefixt)
 - RPC protocol: `{ type: 'req', method: 'chat.send', params: { sessionKey, message } }`
 - Streaming: `delta` → `final` → `error` states
-- Reconnect met exponential backoff
+- Reconnect with exponential backoff
 - Session key: `agent:main:main`
 
 ### DOM elementen
@@ -26,16 +26,16 @@ De OpenClaw chat logica zit **inline** in `shell/index.html` (regels 1681-1894):
 #chat-send-btn      — send knop
 #typing-indicator   — typing indicator
 #ws-dot             — connection status dot
-#ws-status-text     — status tekst
+#ws-status-text     — status text
 ```
 
 ---
 
 ## Sessie 3.1: Interface + OpenClawBackend extractie
 
-### Stap 1: Interface definiëren (laag risico)
+### Step 1: Interface definiëren (laag risk)
 
-Maak interfaces — NIETS wijzigen aan werkende code:
+Define interfaces — change NOTHING in working code:
 
 ```typescript
 interface ChatMessage {
@@ -60,46 +60,46 @@ interface ChatBackend {
 }
 ```
 
-### Stap 2: OpenClawBackend extraheren (HOOG risico)
+### Step 2: OpenClawBackend extraheren (HOOG risk)
 
-**Volgorde is cruciaal:**
-1. Kopieer WebSocket logica naar `OpenClawBackend` class
+**Order is cruciaal:**
+1. Kopieer WebSocket logica to `OpenClawBackend` class
 2. **FIX: Token dynamisch laden:**
    ```typescript
    private async getToken(): Promise<string> {
-     // Lees uit ~/.openclaw/openclaw.json via API
+     // Read out ~/.openclaw/openclaw.json via API
      const res = await fetch('http://localhost:8765/config/openclaw-token');
      const data = await res.json();
      return data.token;
    }
    ```
-   (Voeg endpoint toe aan server.ts dat `~/.openclaw/openclaw.json` leest)
-3. Test dat de class standalone werkt
-4. Pas DAN pas shell/index.html aan
+   (Voeg endpoint toe about server.ts that `~/.openclaw/openclaw.json` leest)
+3. Test that the class standalone works
+4. Pas DAN pas shell/index.html about
 5. **Test UITGEBREID:** reconnect, streaming, history, typing indicator
 
-### Stap 3: Claude Activity Backend (laag risico)
+### Step 3: Claude Activity Backend (laag risk)
 
 ```typescript
 class ClaudeActivityBackend implements ChatBackend {
-  // Pollt GET /chat voor berichten met from: "claude"
-  // Toont MCP tool calls als activiteit
-  // Robin kan terugschrijven → POST /chat → Claude leest via MCP
+  // Pollt GET /chat for berichten with from: "claude"
+  // Shows MCP tool calls if activiteit
+  // Robin can terugschrijven → POST /chat → Claude leest via MCP
 
   sendMessage(text: string): Promise<void> {
-    // POST /chat met from: "robin"
-    // Claude leest dit via tandem_get_chat_history() MCP tool
+    // POST /chat with from: "robin"
+    // Claude leest this via tandem_get_chat_history() MCP tool
   }
 }
 ```
 
-Dit creëert een **chat loop**: Robin (browser) ↔ Claude (Cowork) ZONDER directe API.
+This creates a **chat loop**: Robin (browser) ↔ Claude (Cowork) WITHOUT a direct API.
 
-### Stap 4: ChatRouter
+### Step 4: ChatRouter
 
 ```typescript
 class ChatRouter {
-  private backends: Map<string, ChatBackend>;
+  private backends: Folder<string, ChatBackend>;
   private activeBackendId: string;
 
   register(backend: ChatBackend): void;
@@ -111,9 +111,9 @@ class ChatRouter {
 ```
 
 ### Verificatie
-- [ ] OpenClaw werkt IDENTIEK aan voor de refactor
-- [ ] Geen regressies (reconnect, streaming, history, typing)
-- [ ] Claude activiteit zichtbaar wanneer Cowork MCP tools gebruikt
+- [ ] OpenClaw works IDENTIEK about for the refactor
+- [ ] No regressions (reconnect, streaming, history, typing)
+- [ ] Claude activiteit visible wanneer Cowork MCP tools uses
 - [ ] `npx tsc` — zero errors
 
 ---
@@ -122,7 +122,7 @@ class ChatRouter {
 
 ### Backend selector UI
 
-Boven het chat berichten-venster:
+Boven the chat berichten-window:
 ```html
 <div class="chat-backend-selector">
   <button class="backend-option active" data-backend="openclaw">
@@ -138,25 +138,25 @@ Boven het chat berichten-venster:
 
 - Connection status indicators (groen/rood)
 - State persistence in config (`general.activeBackend`)
-- Wisselen = smooth (geen crashes, geen lost messages)
+- Wisselen = smooth (no crashes, no lost messages)
 
-### Voice koppeling (~30 regels)
+### Voice koppeling (~30 rules)
 
 Voice final transcript → router:
 ```javascript
-// In de voice handler (al bestaand):
+// In the voice handler (already bestaand):
 if (isFinal) {
   chatRouter.sendMessage(transcript);
 }
 ```
 
-Werkt automatisch met alle backends via de router.
+Works automatisch with alle backends via the router.
 
 ### Unified chat history
 
-- Alle berichten in één lijst
-- Elk bericht getagged met `source`: `robin` | `openclaw` | `claude`
-- Visueel onderscheid:
+- Alle berichten in één list
+- Elk bericht getagged with `source`: `robin` | `openclaw` | `claude`
+- Visual onderscheid:
 ```css
 .chat-msg.source-openclaw { border-left: 3px solid #ff6b35; }
 .chat-msg.source-claude   { border-left: 3px solid #7c3aed; }
@@ -164,8 +164,8 @@ Werkt automatisch met alle backends via de router.
 ```
 
 ### Verificatie
-- [ ] Backend selector werkt, wisselen is smooth
+- [ ] Backend selector works, wisselen is smooth
 - [ ] Voice → actieve backend → antwoord in panel
-- [ ] Chat history toont berichten van alle bronnen met visueel onderscheid
-- [ ] Gekozen backend wordt onthouden na herstart
+- [ ] Chat history shows berichten or alle bronnen with visual onderscheid
+- [ ] Chosen backend is onthouden na herstart
 - [ ] `npx tsc` — zero errors

@@ -1,28 +1,28 @@
 # Clipboard Image Paste in Chat Panel
 
 > **Status:** PLAN
-> **Doel:** Robin kan Cmd+V gebruiken om een screenshot/image uit het clipboard in het chat panel te plakken. De image wordt als preview getoond en meegestuurd met het bericht.
+> **Goal:** Robin can Cmd+V use to a screenshot/image out the clipboard in the chat panel te plakken. The image is if preview getoond and meegestuurd with the bericht.
 
 ## Huidige Situatie
 
-- Chat input is een `<textarea>` (text-only)
-- `ChatMessage` interface heeft alleen `text: string`
-- Geen image/attachment support in de chat flow
-- Screenshots worden opgeslagen in `~/Pictures/Tandem/` maar kunnen niet in de chat geplakt worden
+- Chat input is a `<textarea>` (text-only)
+- `ChatMessage` interface has only `text: string`
+- No image/attachment support in the chat flow
+- Screenshots be opgeslagen in `~/Pictures/Tandem/` but can not in the chat geplakt be
 
-## Wat er moet gebeuren
+## Wat er must gebeuren
 
-4 lagen moeten aangepast worden:
+4 lagen must aangepast be:
 
 ```
 1. Renderer (shell/index.html)
    - Paste event listener op chat input
-   - Image preview onder het input veld
+   - Image preview under the input field
    - Image meesturen bij sendMessage()
 
 2. Data model (panel/manager.ts)
-   - ChatMessage.image veld (optioneel)
-   - Image opslaan naar disk
+   - ChatMessage.image field (optional)
+   - Image save to disk
    - Image meesturen in webhook
 
 3. API (api/server.ts)
@@ -30,7 +30,7 @@
    - GET /chat retourneert image pad
 
 4. Display (shell/index.html)
-   - Berichten met images tonen als <img> in de chat
+   - Berichten with images tonen if <img> in the chat
 ```
 
 ## Claude Code Prompt
@@ -249,7 +249,7 @@ This is the biggest change. Add these features to the chat area:
 Change the chat input area from:
 ```html
 <div class="chat-input-wrap">
-  <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
+  <textarea class="chat-input" id="chat-input" placeholder="Bericht about Kees..." rows="1"></textarea>
   <button class="chat-send-btn" id="chat-send-btn">▶</button>
 </div>
 ```
@@ -257,7 +257,7 @@ To:
 ```html
 <div id="chat-image-preview" class="chat-image-preview" style="display:none;"></div>
 <div class="chat-input-wrap">
-  <textarea class="chat-input" id="chat-input" placeholder="Bericht aan Kees..." rows="1"></textarea>
+  <textarea class="chat-input" id="chat-input" placeholder="Bericht about Kees..." rows="1"></textarea>
   <button class="chat-send-btn" id="chat-send-btn">▶</button>
 </div>
 ```
@@ -277,7 +277,7 @@ inputEl.addEventListener('paste', (e) => {
   const items = e.clipboardData?.items;
   if (!items) return;
   
-  for (const item of items) {
+  for (const item or items) {
     if (item.type.startsWith('image/')) {
       e.preventDefault(); // don't paste as text
       const blob = item.getAsFile();
@@ -314,7 +314,7 @@ function clearImagePreview() {
 
 **D) Update sendMessage() to handle images:**
 
-At the top of sendMessage(), after `const text = inputEl.value.trim();`:
+At the top or sendMessage(), after `const text = inputEl.value.trim();`:
 ```javascript
 // If there's a pending image, send via IPC (not WebSocket)
 if (pendingImage) {
@@ -424,29 +424,29 @@ npm run compile
 npm start
 
 # 3. Test paste:
-#    - Maak een screenshot (Cmd+Shift+4 op Mac)
+#    - Maak a screenshot (Cmd+Shift+4 op Mac)
 #    - Klik in chat input
 #    - Cmd+V
-#    - Preview moet verschijnen onder het input veld
-#    - ✕ knop moet preview verwijderen
-#    - Type optioneel tekst erbij
-#    - Enter → bericht + image verschijnt in chat
-#    - Kees ontvangt bericht met [image attached] via webhook
+#    - Preview must verschijnen under the input field
+#    - ✕ knop must preview verwijderen
+#    - Type optional text erbij
+#    - Enter → bericht + image appears in chat
+#    - Kees ontvangt bericht with [image attached] via webhook
 
 # 4. Test drag-and-drop:
-#    - Sleep een PNG van Finder naar het chat input veld
-#    - Preview moet verschijnen
+#    - Sleep a PNG or Finder to the chat input field
+#    - Preview must verschijnen
 
 # 5. Test history:
 #    - Herstart Tandem
-#    - Eerder gestuurde images moeten zichtbaar zijn in chat history
+#    - Eerder gestuurde images must visible are in chat history
 
 # 6. Test API:
 curl -s http://127.0.0.1:8765/chat?limit=3 | python3 -m json.tool
-# Berichten met image veld moeten een filename bevatten
+# Berichten with image field must a filename bevatten
 
 # 7. Test image serving:
-# Pak een filename uit stap 6
+# Pak a filename out stap 6
 curl -sf http://127.0.0.1:8765/chat/image/{filename} -o /tmp/test.png
-open /tmp/test.png  # moet de image tonen
+open /tmp/test.png  # must the image tonen
 ```

@@ -13,7 +13,7 @@ Migrate ContentAnalyzer to work as a SecurityAnalyzer plugin while maintaining a
 
 ## Files to Modify
 - `src/security/content-analyzer.ts` — wrap as SecurityAnalyzer
-- `src/security/security-manager.ts` — register as plugin instead of direct calls
+- `src/security/security-manager.ts` — register as plugin instead or direct calls
 
 ## Tasks
 
@@ -78,7 +78,7 @@ After the migration:
 - All existing API endpoints that return ContentAnalyzer data must still work
 - `GET /security/page/analysis` must return the same data as before
 - Event logging behavior unchanged
-- The only difference is HOW it's triggered (via plugin routing instead of direct call)
+- The only difference is HOW it's triggered (via plugin routing instead or direct call)
 
 ## Verification
 - [ ] `npx tsc --noEmit` — 0 errors

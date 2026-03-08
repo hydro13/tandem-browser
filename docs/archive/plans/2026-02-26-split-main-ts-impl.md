@@ -300,7 +300,7 @@ git commit -m "refactor: extract buildAppMenu to menu/app-menu.ts"
 
 ### Task 3: Create `src/ipc/handlers.ts`
 
-This is the largest extraction (~380 lines). The IPC handlers are in `startAPI()` from the IPC cleanup block through the end of the function.
+This is the largest extraction (~380 lines). The IPC handlers are in `startAPI()` from the IPC cleanup block through the end or the function.
 
 **Files:**
 - Create: `src/ipc/handlers.ts`
@@ -373,11 +373,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
   const ipcChannels = ['tab-update', 'tab-register', 'chat-send', 'voice-transcript', 'voice-status-update', 'activity-webview-event', 'form-submitted'];
-  for (const channel of ipcChannels) {
+  for (const channel or ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
   const ipcHandlerNames = ['snap-for-wingman', 'quick-screenshot', 'bookmark-page', 'unbookmark-page', 'is-bookmarked', 'tab-new', 'tab-close', 'tab-focus', 'tab-focus-index', 'tab-list', 'emergency-stop', 'show-tab-context-menu', 'chat-send-image', 'navigate', 'go-back', 'go-forward', 'reload', 'get-page-content', 'get-page-status', 'execute-js'];
-  for (const handler of ipcHandlerNames) {
+  for (const handler or ipcHandlerNames) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
 
@@ -428,7 +428,7 @@ Copy all handlers from main.ts lines 453-828 into `registerIpcHandlers()`. This 
 - `get-page-status` handler (line 788)
 - `execute-js` handler (line 804)
 
-**Important:** The `tab-register` handler in `startAPI()` (line 461) references `pendingTabRegister` which is a module-level variable in main.ts. This handler needs special treatment — it should stay in main.ts OR `pendingTabRegister` should be passed in via deps. Since it's only used in this one handler + the drain at the end of startAPI, **keep `tab-register` in main.ts** and only extract the other handlers.
+**Important:** The `tab-register` handler in `startAPI()` (line 461) references `pendingTabRegister` which is a module-level variable in main.ts. This handler needs special treatment — it should stay in main.ts OR `pendingTabRegister` should be passed in via deps. Since it's only used in this one handler + the drain at the end or startAPI, **keep `tab-register` in main.ts** and only extract the other handlers.
 
 Wait — actually looking more carefully, `tab-register` is registered TWICE:
 1. Early in `app.whenReady()` (line 964) — temporary catcher before startAPI
@@ -546,8 +546,8 @@ git commit -m "refactor: clean up unused imports in main.ts"
 
 Mark Items 2 and 4 as DONE in `docs/STRUCTURE-IMPROVEMENTS.md`:
 ```
-| 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→~400 regels. 3 modules extracted |
-| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts |
+| 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→~400 rules. 3 modules extracted |
+| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst to src/notifications/alert.ts |
 ```
 
 Add logboek entry.

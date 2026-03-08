@@ -1,13 +1,13 @@
-# Fase 5: Multi-AI Coördinatie
+# Phase 5: Multi-AI Coördinatie
 
-> 1-2 sessies | Geen nieuwe dependencies
-> OpenClaw + Claude tegelijk actief, met @-mention routing.
+> 1-2 sessions | No new dependencies
+> OpenClaw + Claude simultaneously actief, with @-mention routing.
 
 ---
 
-## Doel
+## Goal
 
-Meerdere AI's tegelijk actief in Tandem. OpenClaw (Kees) en Claude werken parallel. Robin orkestreert wie wat doet.
+Multiple AI's simultaneously actief in Tandem. OpenClaw (Kees) and Claude werken parallel. Robin orchestrates wie wat doet.
 
 ---
 
@@ -15,7 +15,7 @@ Meerdere AI's tegelijk actief in Tandem. OpenClaw (Kees) en Claude werken parall
 
 ### "Beide" mode
 
-Chat router stuurt berichten naar alle actieve backends:
+Chat router stuurt berichten to alle actieve backends:
 
 ```typescript
 class DualMode {
@@ -25,7 +25,7 @@ class DualMode {
     } else if (text.startsWith('@kees ')) {
       await this.openclawBackend.sendMessage(text.slice(6));
     } else {
-      // Naar alle actieve backends
+      // To alle actieve backends
       await Promise.all([
         this.openclawBackend.sendMessage(text),
         this.claudeBackend.sendMessage(text),
@@ -38,22 +38,22 @@ class DualMode {
 ### Antwoorden tonen
 
 ```
-Robin: Wat is de hoofdstad van Nederland?
+Robin: Wat is the hoofdstad or Nederland?
 
-[🐙 Kees]: Amsterdam is de hoofdstad, hoewel Den Haag de
+[🐙 Kees]: Amsterdam is the hoofdstad, hoewel Den Haag the
 regeringszetel is.
 
-[🤖 Claude]: De grondwettelijke hoofdstad is Amsterdam.
-Den Haag is zetel van regering en parlement.
+[🤖 Claude]: The grondwettelijke hoofdstad is Amsterdam.
+Den Haag is zetel or regering and parlement.
 ```
 
 ### TabLockManager
 
-Voorkom dat twee agents dezelfde tab bedienen:
+Voorkom that twee agents the same tab bedienen:
 
 ```typescript
 class TabLockManager {
-  private locks: Map<string, string>;  // tabId → agentId
+  private locks: Folder<string, string>;  // tabId → agentId
 
   acquire(tabId: string, agentId: string): boolean;
   release(tabId: string, agentId: string): void;
@@ -62,34 +62,34 @@ class TabLockManager {
 }
 ```
 
-Regels:
-1. Robin heeft ALTIJD voorrang
-2. Eerste agent die claimt wint
-3. Agents werken bij voorkeur in eigen tabs
-4. Bij conflict → vraag Robin
+Rules:
+1. Robin has ALTIJD voorrang
+2. First agent that claimt wint
+3. Agents werken bij voorkeur in own tabs
+4. Bij conflict → question Robin
 
 ### Backend selector update
 
-Derde optie in de selector:
+Derde optie in the selector:
 ```
 🐙 Kees | 🤖 Claude | 🐙🤖 Beide
 ```
 
 ### Verificatie
-- [ ] Beide backends tegelijk actief zonder crashes
+- [ ] Beide backends simultaneously actief without crashes
 - [ ] Berichten correct gerouteerd
-- [ ] @-mention routing werkt
+- [ ] @-mention routing works
 - [ ] Antwoorden duidelijk gelabeld per bron
-- [ ] Geen tab conflicten
+- [ ] No tab conflicts
 - [ ] `npx tsc` — zero errors
 
 ---
 
-## Toekomst (na fase 5)
+## Toekomst (na phase 5)
 
-Na de 5 fases, mogelijke uitbreidingen:
-- Lokale LLM integratie (Ollama/llama.cpp als backend)
+Na the 5 fases, mogelijke uitbreidingen:
+- Lokale LLM integratie (Ollama/llama.cpp if backend)
 - Role-based agents (Researcher, Analyst, Writer)
 - Agent-to-agent communicatie
-- Workflow recorder (Robin doet voor, AI herhaalt)
+- Workflow recorder (Robin doet for, AI herhaalt)
 - Multi-window support

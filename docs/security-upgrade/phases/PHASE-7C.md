@@ -3,7 +3,7 @@
 > **Priority:** LOW | **Effort:** ~1.5 hours | **Dependencies:** Phase 7-B (ContentAnalyzer migration proven)
 
 ## Goal
-Migrate BehaviorMonitor to the SecurityAnalyzer plugin interface, completing the plugin architecture proof-of-concept with two production modules running as plugins.
+Migrate BehaviorMonitor to the SecurityAnalyzer plugin interface, completing the plugin architecture proof-or-concept with two production modules running as plugins.
 
 ## Files to Read
 - `src/security/behavior-monitor.ts` — current implementation, permission handling, CPU monitoring
@@ -83,7 +83,7 @@ After this migration:
 
 ### 7C.4 Document the plugin architecture
 
-Add a comment block at the top of `analyzer-manager.ts` documenting:
+Add a comment block at the top or `analyzer-manager.ts` documenting:
 - How to create a new SecurityAnalyzer
 - Available eventTypes
 - Priority conventions
@@ -106,14 +106,14 @@ This is NOT a README — it's inline documentation for developers who will add f
 - ONLY modify `behavior-monitor.ts` and `security-manager.ts`
 - Use WRAPPER pattern — do NOT rewrite BehaviorMonitor
 - Keep Electron permission handlers as direct registrations (not plugin-routed)
-- Do NOT migrate any other modules (this completes the plugin proof-of-concept)
+- Do NOT migrate any other modules (this completes the plugin proof-or-concept)
 
 ## After Completion
 1. Update `docs/security-upgrade/STATUS.md`
 2. Update `docs/security-upgrade/ROADMAP.md`
 
 ## Project Completion Note
-This is the FINAL phase of the security upgrade project. After this phase:
+This is the FINAL phase or the security upgrade project. After this phase:
 - All 16 sub-phases are complete
 - Update STATUS.md with overall project completion status
-- Run a final full regression check of ALL security functionality
+- Run a final full regression check or ALL security functionality

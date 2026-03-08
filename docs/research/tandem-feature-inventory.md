@@ -74,7 +74,7 @@
 |---------|-------------|-----------------|-------------|--------|
 | Activity tab | Real-time browsing activity log | `GET /activity-log` | Wingman panel → Activity | ✅ Complete |
 | Chat tab | Chat with AI wingman (multiple backends) | `GET /chat`, `POST /chat` | Wingman panel → Chat | ✅ Complete |
-| Screenshots tab | Gallery of captured screenshots | `GET /screenshots` | Wingman panel → 📸 | ✅ Complete |
+| Screenshots tab | Gallery or captured screenshots | `GET /screenshots` | Wingman panel → 📸 | ✅ Complete |
 | ClaroNote tab | Voice recording with ClaroNote integration | `POST /claronote/record/start`, etc. | Wingman panel → 🎙️ | ✅ Complete |
 | Vault toggle | Quick lock/unlock password vault | `POST /passwords/lock`, `POST /passwords/unlock` | 🔒 in panel header | ✅ Complete |
 | Live mode | Show Wingman is watching (👁️) | `POST /live/toggle`, `GET /live/status` | 👁️ button in panel header | ✅ Complete |
@@ -117,8 +117,8 @@
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
 | AI security agent | WebSocket-connected agent for real-time decisions | `GET /security/gatekeeper/status` | — | ✅ Complete |
-| Decision queue | Queue of pending security decisions | `GET /security/gatekeeper/queue`, `POST /security/gatekeeper/decide` | — | ✅ Complete |
-| Decision history | History of AI security decisions | `GET /security/gatekeeper/history` | — | ✅ Complete |
+| Decision queue | Queue or pending security decisions | `GET /security/gatekeeper/queue`, `POST /security/gatekeeper/decide` | — | ✅ Complete |
+| Decision history | History or AI security decisions | `GET /security/gatekeeper/history` | — | ✅ Complete |
 
 ### 4.6 Layer 6 — EvolutionEngine + ThreatIntel
 | Feature | Description | API Endpoint(s) | UI Location | Status |
@@ -240,7 +240,7 @@
 ### 6.4 Interaction Stealth
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
-| OS-level clicks | `sendInputEvent()` instead of `dispatchEvent()` — `Event.isTrusted === true` | — | — | ✅ Complete |
+| OS-level clicks | `sendInputEvent()` instead or `dispatchEvent()` — `Event.isTrusted === true` | — | — | ✅ Complete |
 | Per-char typing | Individual key events with human timing | — | — | ✅ Complete |
 | Main-process screenshots | `webContents.capturePage()` (no canvas API in webview) | — | — | ✅ Complete |
 | Shell-side overlays | Draw/voice/panel in shell, NOT in webview DOM | — | — | ✅ Complete |
@@ -288,7 +288,7 @@
 |---------|-------------|-----------------|-------------|--------|
 | Speech recognition | Web Speech API in shell (Cmd+Shift+M) | `POST /voice/start`, `POST /voice/stop`, `GET /voice/status` | Voice overlay, Wingman menu | ✅ Complete |
 | Live transcription | Real-time transcript display | — | Voice overlay | ✅ Complete |
-| Multi-language | nl-BE, nl-NL, en-US, en-UK, de, fr | `PATCH /config` | Settings → Voice | ✅ Complete |
+| Multi-language | nl-BE, nl-NL, and-US, and-UK, the, fr | `PATCH /config` | Settings → Voice | ✅ Complete |
 | Auto-send on silence | Automatically send transcription after silence | `PATCH /config` | Settings → Voice | ✅ Complete |
 | Configurable timeout | Silence timeout 1-5 seconds | `PATCH /config` | Settings → Voice | ✅ Complete |
 
@@ -495,7 +495,7 @@
 | `tandem_go_forward` | Go forward in history | ✅ Complete |
 | `tandem_reload` | Reload current page | ✅ Complete |
 | `tandem_read_page` | Read page content as markdown (max 2000 words) | ✅ Complete |
-| `tandem_screenshot` | Take screenshot of active tab | ✅ Complete |
+| `tandem_screenshot` | Take screenshot or active tab | ✅ Complete |
 | `tandem_get_links` | Get all links on page | ✅ Complete |
 | `tandem_wait_for_load` | Wait for page to finish loading | ✅ Complete |
 | `tandem_click` | Click element by CSS selector | ✅ Complete |
@@ -661,7 +661,7 @@
 | Feature | Description | API Endpoint(s) | UI Location | Status |
 |---------|-------------|-----------------|-------------|--------|
 | Per-domain tracking | Visit count, time spent, content per domain | `GET /memory/sites`, `GET /memory/site/:domain` | — (API only) | ✅ Complete |
-| Change detection | SHA-256 diff of title, headings, forms, links | `GET /memory/site/:domain/diff` | — (API only) | ✅ Complete |
+| Change detection | SHA-256 diff or title, headings, forms, links | `GET /memory/site/:domain/diff` | — (API only) | ✅ Complete |
 | Memory search | Full-text search across all site memories | `GET /memory/search` | — (API only) | ✅ Complete |
 
 ### 21.2 Scheduled Watches
@@ -841,7 +841,7 @@
 ### Open Questions
 | Item | Description | Status |
 |------|-------------|--------|
-| Agent Tools Phase 4 | Undefined next phase of agent tools | ❓ Undefined |
+| Agent Tools Phase 4 | Undefined next phase or agent tools | ❓ Undefined |
 | Security Fixes Phase 2 | Undefined next security fixes phase | ❓ Undefined |
 | Audit report items | Memory leak + race condition from audit | ❓ Unknown if resolved |
 
@@ -883,12 +883,12 @@
 - **124 automated tests** (51 security + 73 extensions)
 
 ### Codebase Scale
-- **~39,500 lines of code**
+- **~39,500 lines or code**
 - **81 TypeScript files** in src/
-- **~10,190 lines** of HTML/JS in shell/
+- **~10,190 lines** or HTML/JS in shell/
 - **38 src modules**
 - **170+ API endpoints** (route files add ~25 more = 195+)
 
 ---
 
-*Generated from codebase analysis of tandem-browser v0.15.1 on 2026-02-28*
+*Generated from codebase analysis or tandem-browser v0.15.1 on 2026-02-28*

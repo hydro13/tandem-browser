@@ -1,83 +1,83 @@
-# AD BLOCKER — START HIER
+# AD BLOCKER — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Consumer-grade ad blocking via EasyList filterlijsten — blokkeer advertenties op netwerk-request niveau
-> **Volgorde:** Fase 1 → 2 (elke fase is één sessie)
+> **Goal:** Consumer-grade ad blocking via EasyList filterlijsten — blokkeer advertenties op netwerk-request niveau
+> **Order:** Phase 1 → 2 (elke phase is één session)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Tandem's NetworkShield blokkeert malware en phishing (811K+ URLs), maar geen advertenties. Ad blocking is table stakes voor moderne browsers — pagina's laden sneller, minder tracking, betere privacy. Opera heeft een ingebouwde ad blocker met EasyList. Dit is de #8 prioriteit in de gap analyse (docs/research/gap-analysis.md).
+Tandem's NetworkShield blokkeert malware and phishing (811K+ URLs), but no advertenties. Ad blocking is table stakes for moderne browsers — page's laden faster, minder tracking, betere privacy. Opera has a inbuilte ad blocker with EasyList. Dit is the #8 prioriteit in the gap analyse (docs/research/gap-analysis.md).
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
 Browser request → Electron session.webRequest.onBeforeRequest()
        ↓
-  RequestDispatcher (bestaand, central hub voor alle request hooks)
+  RequestDispatcher (bestaand, central hub for alle request hooks)
        ↓
   AdBlockManager.onBeforeRequest() handler (priority 20)
        ↓
   FilterEngine.match(url, resourceType, pageDomain)
        ↓
-  Match? → { cancel: true } → request geblokkeerd
-  Geen match? → request door naar internet
+  Match? → { cancel: true } → request blocked
+  No match? → request door to internet
        ↓
   Blocked count per tab → IPC → shell badge update
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie, RequestDispatcher setup | `startAPI()`, `createWindow()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 | `src/registry.ts` | ManagerRegistry interface | `interface ManagerRegistry` |
-| `src/network/dispatcher.ts` | RequestDispatcher — central hub voor webRequest hooks | `class RequestDispatcher`, `registerBeforeRequest()` |
+| `src/network/dispatcher.ts` | RequestDispatcher — central hub for webRequest hooks | `class RequestDispatcher`, `registerBeforeRequest()` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **Netwerk-niveau blocking** — blokkeer requests via `session.webRequest.onBeforeRequest()`, niet via DOM/content scripts. Dit is onzichtbaar voor de webview (anti-detect compliant).
-2. **RequestDispatcher integratie** — registreer via `dispatcher.registerBeforeRequest()` met priority 20 (na stealth patches priority 10, vóór andere hooks).
-3. **Geen externe services** — filter lists worden gedownload en lokaal gecacht. Geen externe API calls bij elke request.
-4. **Functienamen > regelnummers** — verwijs altijd naar `function registerAdBlockRoutes()`, nooit naar "regel 123"
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — hoe nieuwe component registreren
+## Rules for this feature
 
-Elke nieuwe manager moet op **3 plekken** worden aangesloten:
+> These are the HARD rules in addition to the general AGENTS.md rules.
+
+1. **Netwerk-niveau blocking** — blokkeer requests via `session.webRequest.onBeforeRequest()`, not via DOM/content scripts. Dit is onzichtbaar for the webview (anti-detect compliant).
+2. **RequestDispatcher integratie** — registreer via `dispatcher.registerBeforeRequest()` with priority 20 (na stealth patches priority 10, vóór andere hooks).
+3. **No externe services** — filter lists be gedownload and local gecacht. No external API calls bij elke request.
+4. **Functienamen > regelnummers** — verwijs always to `function registerAdBlockRoutes()`, nooit to "regel 123"
+
+---
+
+## Manager Wiring — How to Register a New Component
+
+Each new manager must be wired into **3 places**:
 
 ### 1. `src/registry.ts` — `ManagerRegistry` interface
 
 ```typescript
 export interface ManagerRegistry {
-  // ... bestaande managers ...
-  adBlockManager: AdBlockManager;  // ← toevoegen
+  // ... existing managers ...
+  adBlockManager: AdBlockManager;  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
 // Na RequestDispatcher aanmaak:
@@ -96,7 +96,7 @@ if (adBlockManager) adBlockManager.destroy();
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // ═══════════════════════════════════════════════
@@ -113,25 +113,25 @@ router.get('/adblock/status', (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-filter-engine.md` | Filter list download + parsing + request blocking | 📋 Klaar om te starten |
-| `fase-2-ui-badge-whitelist.md` | Shield badge + blocked count + per-site whitelist toggle | ⏳ Wacht op fase 1 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-filter-engine.md` | Filter list download + parsing + request blocking | 📋 Ready to start |
+| `fase-2-ui-badge-whitelist.md` | Shield badge + blocked count + per-site whitelist toggle | ⏳ Waiting for phase 1 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -149,11 +149,11 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | EasyList filter engine + request blocking | ⏳ niet gestart | — |
-| 2 | UI badge + per-site whitelist | ⏳ niet gestart | — |
+| 1 | EasyList filter engine + request blocking | ⏳ not started | — |
+| 2 | UI badge + per-site whitelist | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

@@ -1,62 +1,62 @@
-# Tandem Browser — Dagelijkse Status
+# Tandem Browser — Daily Status
 
-> **Format:** Kees werkt dit bij elke werkdag + na elke afgeronde fase
-> **Doel:** In 10 seconden weten waar we staan
+> **Format:** Kees updates this every workday + after each completed phase
+> **Goal:** Know where we stand in 10 seconds
 
 ---
 
 ## 📅 2026-02-28
 
-### Wat is er gedaan vandaag
-- [x] Opera Browser volledig onderzocht (68 features gedocumenteerd)
-- [x] Tandem feature inventory gemaakt (380+ features, 195+ endpoints)
-- [x] Gap analyse uitgevoerd (opera vs tandem)
-- [x] Project management structuur opgezet (ROADMAP.md, STATUS.md, templates)
-- [x] Design docs geschreven voor alle 10 HIGH priority features
-- [x] Implementation docs (LEES-MIJ-EERST + fase-docs) voor alle 10 features
-- [x] Alles gepushed: commits 488029e + cfa0e1b
-- [x] 40 nieuwe bestanden, 10.195 regels documentatie
+### What Was Done Today
+- [x] Fully researched Opera Browser (68 features documented)
+- [x] Created the Tandem feature inventory (380+ features, 195+ endpoints)
+- [x] Completed the gap analysis (Opera vs Tandem)
+- [x] Set up the project management structure (ROADMAP.md, STATUS.md, templates)
+- [x] Wrote design docs for all 10 high-priority features
+- [x] Wrote implementation docs (LEES-MIJ-EERST + phase docs) for all 10 features
+- [x] Pushed everything: commits 488029e + cfa0e1b
+- [x] 40 new files, 10,195 lines or documentation
 
-### Actief bezig
-- Niets — alles klaar, wachten op Robin
+### Actively In Progress
+- Nothing — everything is done, waiting for Robin
 
-### Geblokkeerd
-- Niets
+### Blocked
+- Nothing
 
-### Volgende stap
-- Robin keurt design docs goed (of past aan)
-- Robin kiest welke feature als eerste gebouwd wordt
-- Kees start Claude Code sessie voor fase 1 van gekozen feature
+### Next Step
+- Robin approves the design docs (or adjusts them)
+- Robin chooses which feature gets built first
+- Kees starts a Claude Code session for phase 1 or the chosen feature
 
 ---
 
-## Hoe dit document werkt
+## How This Document Works
 
-Kees voegt bovenaan een nieuwe datum-sectie toe bij elke werkdag.
-Formaat:
+Kees adds a new date section at the top for each workday.
+Format:
 
 ```markdown
 ## 📅 YYYY-MM-DD
 
-### Wat is er gedaan
-- [x] Feature X fase 1 → commit abc1234
-- [x] Design doc Feature Y geschreven, wacht op Robin goedkeuring
+### What Was Done
+- [x] Feature X phase 1 → commit abc1234
+- [x] Wrote the design doc for Feature Y, waiting for Robin approval
 
-### Actief bezig
-- Feature X fase 2 (agent draait)
+### Actively In Progress
+- Feature X phase 2 (agent running)
 
-### Geblokkeerd
-- Feature Y: wacht op Robin beslissing over architectuur
+### Blocked
+- Feature Y: waiting for Robin's decision on architecture
 
-### Volgende stap
-- Feature X fase 2 afronden → Robin reviewt diff
+### Next Step
+- Finish Feature X phase 2 → Robin reviews the diff
 ```
 
 ---
 
-## Open vragen voor Robin
+## Open Questions for Robin
 
-| Vraag | Datum | Antwoord |
+| Question | Date | Answer |
 |-------|-------|---------|
-| Welke feature als eerste bouwen? | 2026-02-28 | ⏳ |
-| Sidebar chats: welke apps exact? (WhatsApp ✓, Discord ✓, Slack ✓, Telegram ✓, Instagram ✓, X ✓) | 2026-02-28 | ⏳ |
+| Which feature should be built first? | 2026-02-28 | ⏳ |
+| Sidebar chats: which apps exactly? (WhatsApp ✓, Discord ✓, Slack ✓, Telegram ✓, Instagram ✓, X ✓) | 2026-02-28 | ⏳ |

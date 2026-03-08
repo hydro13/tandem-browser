@@ -85,10 +85,10 @@ Document the limitation in STATUS.md.
 These are macOS Finder copy artifacts (the " 2" naming pattern):
 
 ```bash
-rm -f "dist/main 2.js" "dist/main 2.js.map" "dist/main 2.d.ts"
-rm -f "dist/preload 2.js" "dist/preload 2.js.map" "dist/preload 2.d.ts"
-rm -rf "dist/activity/tracker 2.js" "dist/activity/tracker 2.d.ts" "dist/activity/tracker 2.js.map"
-rm -rf "dist/voice/recognition 2.js" "dist/voice/recognition 2.d.ts" "dist/voice/recognition 2.js.map"
+rm -f "dist/main 2.js" "dist/main 2.js.folder" "dist/main 2.d.ts"
+rm -f "dist/preload 2.js" "dist/preload 2.js.folder" "dist/preload 2.d.ts"
+rm -rf "dist/activity/tracker 2.js" "dist/activity/tracker 2.d.ts" "dist/activity/tracker 2.js.folder"
+rm -rf "dist/voice/recognition 2.js" "dist/voice/recognition 2.d.ts" "dist/voice/recognition 2.js.folder"
 rm -rf "dist/stealth 2"
 rm -rf "dist/api 2"
 ```

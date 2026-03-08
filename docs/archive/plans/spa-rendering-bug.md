@@ -9,7 +9,7 @@ The `/page-content` endpoint returns empty/minimal content on Single Page Applic
 3. **Expected:** Full documentation text (requirements, Unity versions, etc.)
 4. **Actual:** Only returns the shell/nav elements ("Developer", "VITURE XR SDK for Unity", "CONTACT US", footer) — the main content area is empty
 
-Same issue on `/developer/unity-sdk/quick-start` — 74KB of HTML but 0 headings rendered, content div is empty.
+Same issue on `/developer/unity-sdk/quick-start` — 74KB or HTML but 0 headings rendered, content div is empty.
 
 The overview page (`/developer/unity-sdk/unity#overview`) DOES work partially — it returns the introduction text. So the issue is specifically with subpages that lazy-load content.
 

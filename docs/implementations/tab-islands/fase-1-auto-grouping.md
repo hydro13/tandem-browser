@@ -1,41 +1,41 @@
-# Fase 1 — Auto-Grouping: Opener tracking en island data model
+# Phase 1 — Auto-Grouping: Opener tracking and island data model
 
 > **Feature:** Tab Islands
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de backend-logica voor Tab Islands: track welke tab door welke parent geopend is (opener chain), groepeer automatisch tabs met dezelfde parent in een eiland, en stel API endpoints beschikbaar om eilanden te beheren. Na deze fase werkt alles via de API — de visuele UI volgt in fase 2.
+Bouw the backend-logica for Tab Islands: track welke tab door welke parent geopend is (opener chain), group automatisch tabs with the same parent in a island, and stel API endpoints beschikbaar to islands te beheren. After this phase works alles via the API — the visual UI follows in phase 2.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/tabs/manager.ts` | `class TabManager`, `interface Tab`, `interface TabGroup`, `openTab()`, `setGroup()`, `listGroups()` | Hier komt de island-logica bij — snap de bestaande group-structuur |
-| `src/api/routes/tabs.ts` | `function registerTabRoutes()` | Hier komen nieuwe island-endpoints bij |
-| `src/main.ts` | `createWindow()` | Hier moet de `did-create-window` listener komen |
-| `src/api/context.ts` | `interface RouteContext` | Snap hoe de route context managers doorgeeft |
-| `AGENTS.md` | — (lees volledig) | Anti-detect regels en code stijl |
+| `src/tabs/manager.ts` | `class TabManager`, `interface Tab`, `interface TabGroup`, `openTab()`, `setGroup()`, `listGroups()` | Hier comes the island-logica bij — snap the existing group-structuur |
+| `src/api/routes/tabs.ts` | `function registerTabRoutes()` | Hier komen new island-endpoints bij |
+| `src/main.ts` | `createWindow()` | Hier must the `did-create-window` listener komen |
+| `src/api/context.ts` | `interface RouteContext` | Snap hoe the route context managers doorgeeft |
+| `AGENTS.md` | — (read fully) | Anti-detect rules and code stijl |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Island data model toevoegen aan TabManager
+### Step 1: Island data model add about TabManager
 
-**Wat:** Voeg een `TabIsland` interface toe en een `islands` Map aan `class TabManager`. Voeg `openerTabId` toe aan de `Tab` interface om parent-child relaties vast te leggen.
+**Wat:** Voeg a `TabIsland` interface toe and a `islands` Folder about `class TabManager`. Voeg `openerTabId` toe about the `Tab` interface to parent-child relaties vast te leggen.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager` (boven de class definitie voor de interface, in de class voor de Map)
+**Add about:** `class TabManager` (boven the class definitie for the interface, in the class for the Folder)
 
 ```typescript
 export interface TabIsland {
@@ -47,27 +47,27 @@ export interface TabIsland {
   originDomain?: string;
 }
 
-// Tab interface uitbreiden met:
+// Tab interface uitbreiden with:
 //   openerTabId?: string;
 //   islandId?: string;
 
 // In class TabManager:
-//   private islands: Map<string, TabIsland> = new Map();
+//   private islands: Folder<string, TabIsland> = new Folder();
 //   private islandCounter = 0;
 //   private readonly ISLAND_COLORS = ['#4285f4', '#ea4335', '#34a853', '#fbbc04', '#ff6d01', '#46bdc6', '#9334e6', '#e8710a'];
 ```
 
-### Stap 2: Opener tracking in openTab()
+### Step 2: Opener tracking in openTab()
 
-**Wat:** Breid `openTab()` uit met een optionele `openerTabId` parameter. Wanneer een tab geopend wordt met een opener, zoek of de opener al in een eiland zit — zo ja, voeg de nieuwe tab toe. Zo nee, maak een nieuw eiland als de drempel bereikt is (2 tabs vanuit dezelfde parent).
+**Wat:** Breid `openTab()` out with a optionele `openerTabId` parameter. Wanneer a tab geopend is with a opener, zoek or the opener already in a island zit — zo ja, voeg the new tab toe. Zo nee, maak a new island if the drempel bereikt is (2 tabs vanuit the same parent).
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
 **Aanpassen in:** `openTab()` methode
 
 ```typescript
 async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem', focus: boolean = true, openerTabId?: string): Promise<Tab> {
-  // ... bestaande logica ...
+  // ... existing logica ...
 
   // Na tab aanmaken:
   if (openerTabId) {
@@ -75,24 +75,24 @@ async openTab(url: string = 'about:blank', groupId?: string, source: TabSource =
     this.autoGroupIntoIsland(tab, openerTabId);
   }
 
-  // ... rest van bestaande logica ...
+  // ... rest or existing logica ...
 }
 ```
 
-### Stap 3: Auto-group logica
+### Step 3: Auto-group logica
 
-**Wat:** Implementeer `autoGroupIntoIsland()` — de kernlogica die beslist of een tab aan een bestaand eiland wordt toegevoegd of dat een nieuw eiland wordt aangemaakt.
+**Wat:** Implementeer `autoGroupIntoIsland()` — the kernlogica that beslist or a tab about a bestaand island is added or that a new island is aangemaakt.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager`
+**Add about:** `class TabManager`
 
 ```typescript
 private autoGroupIntoIsland(childTab: Tab, openerTabId: string): void {
   const openerTab = this.tabs.get(openerTabId);
   if (!openerTab) return;
 
-  // Check of opener al in een eiland zit
+  // Check or opener already in a island zit
   if (openerTab.islandId) {
     const island = this.islands.get(openerTab.islandId);
     if (island) {
@@ -103,7 +103,7 @@ private autoGroupIntoIsland(childTab: Tab, openerTabId: string): void {
     }
   }
 
-  // Opener zit niet in een eiland — maak een nieuw eiland met opener + child
+  // Opener zit not in a island — maak a new island with opener + child
   const islandId = `island-${++this.islandCounter}`;
   const domain = this.extractDomain(openerTab.url);
   const color = this.ISLAND_COLORS[this.islandCounter % this.ISLAND_COLORS.length];
@@ -132,13 +132,13 @@ private extractDomain(url: string): string {
 }
 ```
 
-### Stap 4: Island management methodes
+### Step 4: Island management methodes
 
-**Wat:** Voeg publieke methodes toe aan `TabManager` voor het ophalen, hernoemen, collapseren en verwijderen van eilanden.
+**Wat:** Voeg publieke methodes toe about `TabManager` for the ophalen, hernoemen, collapseren and verwijderen or islands.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager`
+**Add about:** `class TabManager`
 
 ```typescript
 getIslands(): TabIsland[] {
@@ -176,7 +176,7 @@ setIslandColor(islandId: string, color: string): boolean {
 dissolveIsland(islandId: string): boolean {
   const island = this.islands.get(islandId);
   if (!island) return false;
-  for (const tabId of island.tabIds) {
+  for (const tabId or island.tabIds) {
     const tab = this.tabs.get(tabId);
     if (tab) tab.islandId = undefined;
   }
@@ -204,9 +204,9 @@ createIslandFromTabs(tabIds: string[], name?: string): TabIsland | null {
   };
 
   this.islands.set(islandId, island);
-  for (const tabId of validTabs) {
+  for (const tabId or validTabs) {
     const tab = this.tabs.get(tabId)!;
-    // Verwijder uit oud eiland indien nodig
+    // Delete out oud island indien nodig
     if (tab.islandId) {
       const oldIsland = this.islands.get(tab.islandId);
       if (oldIsland) {
@@ -222,23 +222,23 @@ createIslandFromTabs(tabIds: string[], name?: string): TabIsland | null {
 }
 ```
 
-### Stap 5: closeTab() uitbreiden voor island cleanup
+### Stap 5: closeTab() uitbreiden for island cleanup
 
-**Wat:** Wanneer een tab gesloten wordt die in een eiland zit, verwijder de tab uit het eiland. Als het eiland minder dan 2 tabs overhoudt, los het eiland op.
+**Wat:** Wanneer a tab closed is that in a island zit, delete the tab out the island. If the island minder then 2 tabs overhoudt, los the island op.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
 **Aanpassen in:** `closeTab()` methode
 
 ```typescript
-// Na de bestaande group-cleanup logica, vóór removeTab:
+// Na the existing group-cleanup logica, vóór removeTab:
 if (tab.islandId) {
   const island = this.islands.get(tab.islandId);
   if (island) {
     island.tabIds = island.tabIds.filter(id => id !== tabId);
     if (island.tabIds.length < 2) {
-      // Eiland opheffen — resterende tab wordt los
-      for (const remainingId of island.tabIds) {
+      // Eiland opheffen — resterende tab is los
+      for (const remainingId or island.tabIds) {
         const remaining = this.tabs.get(remainingId);
         if (remaining) remaining.islandId = undefined;
       }
@@ -253,26 +253,26 @@ if (tab.islandId) {
 
 ### Stap 6: did-create-window listener in main.ts
 
-**Wat:** Luister naar het `did-create-window` event op webContents om te detecteren wanneer een tab een nieuw venster/tab opent. Gebruik de opener webContentsId om de parent tab te identificeren en `openerTabId` door te geven aan `openTab()`.
+**Wat:** Luister to the `did-create-window` event op webContents to te detecteren wanneer a tab a new window/tab opens. Usage the opener webContentsId to the parent tab te identificeren and `openerTabId` door te geven about `openTab()`.
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Toevoegen aan:** `createWindow()` functie, na de webview-attach event listener
+**Add about:** `createWindow()` function, na the webview-attach event listener
 
 ```typescript
-// In createWindow(), na bestaande webContents event listeners:
-// Let op: dit moet op de juiste plek komen waar webContents beschikbaar zijn
-// Het 'did-create-window' event op de parent webContents
-// geeft de child webContents mee — gebruik die om opener te tracken.
+// In createWindow(), na existing webContents event listeners:
+// Let op: this must op the juiste plek komen waar webContents beschikbaar are
+// The 'did-create-window' event op the parent webContents
+// geeft the child webContents mee — usage that to opener te tracken.
 ```
 
-### Stap 7: API endpoints voor islands
+### Stap 7: API endpoints for islands
 
-**Wat:** Voeg REST endpoints toe voor eiland-management.
+**Wat:** Voeg REST endpoints toe for island-management.
 
-**Bestand:** `src/api/routes/tabs.ts`
+**File:** `src/api/routes/tabs.ts`
 
-**Toevoegen aan:** `function registerTabRoutes()`
+**Add about:** `function registerTabRoutes()`
 
 ```typescript
 router.get('/tabs/islands', async (_req: Request, res: Response) => {
@@ -344,36 +344,36 @@ router.delete('/tabs/islands/:id', async (req: Request, res: Response) => {
 });
 ```
 
-### Stap 8: openTab API uitbreiden met openerTabId
+### Stap 8: openTab API uitbreiden with openerTabId
 
-**Wat:** Breid het bestaande `POST /tabs/open` endpoint uit zodat het een optionele `openerTabId` accepteert en doorgeeft aan `TabManager.openTab()`.
+**Wat:** Breid the existing `POST /tabs/open` endpoint out zodat the a optionele `openerTabId` accepteert and doorgeeft about `TabManager.openTab()`.
 
-**Bestand:** `src/api/routes/tabs.ts`
+**File:** `src/api/routes/tabs.ts`
 
-**Aanpassen in:** `function registerTabRoutes()` → het bestaande `router.post('/tabs/open', ...)` blok
+**Aanpassen in:** `function registerTabRoutes()` → the existing `router.post('/tabs/open', ...)` blok
 
 ```typescript
-// Bestaande destructuring uitbreiden:
+// Existing destructuring uitbreiden:
 const { url = 'about:blank', groupId, source = 'robin', focus = true, openerTabId } = req.body;
 
-// Doorgeven aan openTab:
+// Doorgeven about openTab:
 const tab = await ctx.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus, openerTabId);
 ```
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Open 2 tabs met dezelfde opener → auto-island
+# Test 1: Open 2 tabs with the same opener → auto-island
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/open \
   -H "Content-Type: application/json" \
   -d '{"url": "https://google.com"}'
 # Verwacht: {"ok":true, "tab": {"id": "tab-2", ...}}
-# Noteer het tab ID als PARENT_ID
+# Noteer the tab ID if PARENT_ID
 
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/open \
@@ -385,14 +385,14 @@ curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/open \
   -H "Content-Type: application/json" \
   -d '{"url": "https://example.com/page2", "openerTabId": "tab-2"}'
-# Verwacht: tab-4 met islandId "island-1"
+# Verwacht: tab-4 with islandId "island-1"
 
-# Test 2: Lijst alle eilanden
+# Test 2: List alle islands
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/islands
 # Verwacht: {"ok":true, "islands": [{"id":"island-1", "name":"google.com", "tabIds":["tab-2","tab-3","tab-4"], ...}]}
 
-# Test 3: Hernoem eiland
+# Test 3: Hernoem island
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/islands/island-1/rename \
   -H "Content-Type: application/json" \
@@ -404,7 +404,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/islands/island-1/collapse
 # Verwacht: {"ok":true}
 
-# Test 5: Handmatig eiland maken
+# Test 5: Handmatig island maken
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/islands/create \
   -H "Content-Type: application/json" \
@@ -418,7 +418,7 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [ ] Nog geen visuele verificatie nodig — fase 2 bouwt de UI
+- [ ] Still no visual verificatie nodig — phase 2 bouwt the UI
 
 ---
 
@@ -426,34 +426,34 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-auto-grouping.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-auto-grouping.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🏝️ feat: tab islands auto-grouping backend + API endpoints"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-2-visual-ui.md
+   ## Next session start bij fase-2-visual-ui.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] `openTab()` signature wijzigt — controleer dat alle bestaande callers (API routes, context menu, etc.) nog werken met de nieuwe optionele parameter
-- [ ] `did-create-window` event is niet altijd beschikbaar voor alle soorten tab-openingen — test met `window.open()` vanuit een webview
-- [ ] TypeScript strict mode: `islandId` op `Tab` moet optional zijn (`islandId?: string`) zodat bestaande tabs niet breken
-- [ ] Vergeet niet de `will-quit` cleanup — islands hoeven niet expliciet opgeruimd te worden (ze zijn in-memory), maar verifieer dat er geen memory leaks zijn
-- [ ] `listTabs()` response bevat nu `islandId` en `openerTabId` — controleer dat dit geen bestaande consumers breekt
+- [ ] `openTab()` signature wijzigt — controleer that alle existing callers (API routes, context menu, etc.) still werken with the new optionele parameter
+- [ ] `did-create-window` event is not always beschikbaar for alle soorten tab-openingen — test with `window.open()` vanuit a webview
+- [ ] TypeScript strict mode: `islandId` op `Tab` must optional are (`islandId?: string`) zodat existing tabs not breken
+- [ ] Vergeet not the `will-quit` cleanup — islands hoeven not expliciet opgeruimd te be (ze are in-memory), but verifieer that er no memory leaks are
+- [ ] `listTabs()` response contains nu `islandId` and `openerTabId` — controleer that this no existing consumers breekt

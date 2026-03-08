@@ -1,36 +1,36 @@
 # Design: Ad Blocker (Consumer Grade)
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** Draft
 > **Effort:** Medium (3-5d)
-> **Auteur:** Kees
+> **Author:** Kees
 
 ---
 
-## Probleem / Motivatie
+## Problem / Motivation
 
-Tandem heeft NetworkShield dat 811K+ malicious URLs blokkeert (phishing, malware), maar het blokkeert geen advertenties. Advertenties zijn niet alleen vervelend — ze vertragen pagina's, verspillen bandbreedte, en vormen een tracking/privacy risico. Elke serieuze browser biedt ad blocking. Dit is table stakes.
+Tandem has NetworkShield that 811K+ malicious URLs blokkeert (phishing, malware), but the blokkeert no advertenties. Advertenties are not only vervelend — ze vertragen page's, verspillen bandbreedte, and vormen a tracking/privacy risk. Elke serieuze browser biedt ad blocking. Dit is table stakes.
 
-**Opera heeft:** Ingebouwde ad blocker op netwerk-request niveau (blokkeert vóór render). Gebruikt EasyList filterlijsten + NoCoin mining protection. Badge in URL bar met geblokkeerd-aantal. Per-site uitzonderingen. YouTube ad blocking.
-**Tandem heeft nu:** NetworkShield met custom blocklist (malicious URLs). Geen EasyList/adblock filter support. Geen consumer ad blocking.
-**Gap:** Groot — geen ad blocking, alleen malware blocking.
-
----
-
-## Gebruikerservaring — hoe het werkt
-
-> Robin opent een nieuwssite. Normaal ziet hij banners, popups, en video-ads.
-> Met de Ad Blocker actief: de pagina laadt sneller, geen ads zichtbaar.
-> In de toolbar ziet Robin een schildje met een getal (bv. "23") — het aantal geblokkeerde requests op deze pagina.
-> Robin klikt op het schildje: een popup toont het geblokkeerde aantal en een toggle "Uitzetten voor deze site".
-> Op een site die kapot gaat door ad blocking, klikt Robin de toggle uit. De pagina herlaadt zonder ad blocking.
-> De whitelist wordt onthouden — volgende bezoeken aan die site zijn ook niet gefilterd.
+**Opera has:** A built-in ad blocker at the network-request level (blocks before render). Uses EasyList filter lists + NoCoin mining protection. Badge in the URL bar with a blocked-count indicator. Per-site exceptions. YouTube ad blocking.
+**Tandem currently has:** NetworkShield with custom blocklist (malicious URLs). No EasyList/adblock filter support. No consumer ad blocking.
+**Gap:** Large — no ad blocking, only malware blocking.
 
 ---
 
-## Technische Aanpak
+## User Experience — How It Works
 
-### Architectuur
+> Robin opens a nieuwssite. Normaal sees he banners, popups, and video-ads.
+> With the Ad Blocker actief: the page loads faster, no ads visible.
+> In the toolbar sees Robin a schildje with a getal (bv. "23") — the aantal blocked requests op this page.
+> Robin clicks op the schildje: a popup shows the geblokkeerde aantal and a toggle "Uitzetten for this site".
+> Op a site that kapot gaat door ad blocking, clicks Robin the toggle out. The page herlaadt without ad blocking.
+> The whitelist is onthouden — next bezoeken about that site are also not gefilterd.
+
+---
+
+## Technical Approach
+
+### Architecture
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
@@ -44,9 +44,9 @@ Tandem heeft NetworkShield dat 811K+ malicious URLs blokkeert (phishing, malware
 │       ↓                                                       │
 │   FilterEngine.match(url, resourceType, pageDomain)          │
 │       ↓ match?                                                │
-│   { cancel: true }  → request geblokkeerd                    │
+│   { cancel: true }  → request blocked                       │
 │       ↓ no match                                              │
-│   request doorgezet naar internet                             │
+│   request doorgezet to internet                             │
 │                                                               │
 │   FilterEngine                                                │
 │   ├── EasyList.txt      (ads)                                │
@@ -58,79 +58,79 @@ Tandem heeft NetworkShield dat 811K+ malicious URLs blokkeert (phishing, malware
 └──────────────────────────────────────────────────────────────┘
 ```
 
-### Nieuwe bestanden
+### New Files
 
-| Bestand | Verantwoordelijkheid |
+| File | Responsibility |
 |---------|---------------------|
 | `src/adblock/manager.ts` | AdBlockManager — filter engine lifecycle, whitelist, blocked count tracking |
-| `src/adblock/filter-engine.ts` | FilterEngine — parse EasyList/ABP filter rules, match URLs tegen regels |
-| `src/adblock/filter-lists.ts` | Download en cache EasyList + EasyPrivacy filterlijsten |
-| `src/api/routes/adblock.ts` | REST API endpoints voor ad blocker |
+| `src/adblock/filter-engine.ts` | FilterEngine — parse EasyList/ABP filter rules, match URLs tegen rules |
+| `src/adblock/filter-lists.ts` | Download and cache EasyList + EasyPrivacy filterlijsten |
+| `src/api/routes/adblock.ts` | REST API endpoints for ad blocker |
 
-### Bestaande bestanden aanpassen
+### Modify Existing Files
 
-| Bestand | Aanpassing | Functie |
+| File | Change | Function |
 |---------|-----------|---------|
-| `src/registry.ts` | `adBlockManager` toevoegen aan `ManagerRegistry` | `interface ManagerRegistry` |
+| `src/registry.ts` | `adBlockManager` add about `ManagerRegistry` | `interface ManagerRegistry` |
 | `src/api/server.ts` | AdBlock routes registreren | `setupRoutes()` |
 | `src/main.ts` | AdBlockManager instantiëren, registreren bij RequestDispatcher | `startAPI()` |
 | `src/main.ts` | Cleanup | `app.on('will-quit')` |
 | `shell/index.html` | Shield badge in toolbar | `<div class="toolbar">` |
 | `shell/js/main.js` | Badge update logica, whitelist toggle popup | event handlers |
-| `shell/css/main.css` | Shield badge styling | nieuwe CSS classes |
+| `shell/css/main.css` | Shield badge styling | new CSS classes |
 
-### Nieuwe API Endpoints
+### New API Endpoints
 
-| Methode | Endpoint | Beschrijving |
+| Method | Endpoint | Description |
 |---------|---------|--------------|
 | GET | `/adblock/status` | Ad blocker status: enabled, filter count, total blocked |
-| POST | `/adblock/toggle` | Schakel ad blocker in/uit globaal |
-| GET | `/adblock/stats` | Statistieken: geblokkeerd per pagina, totaal |
-| GET | `/adblock/whitelist` | Lijst gewhiteliste domeinen |
-| POST | `/adblock/whitelist` | Voeg domein toe aan whitelist `{domain}` |
-| DELETE | `/adblock/whitelist/:domain` | Verwijder domein van whitelist |
+| POST | `/adblock/toggle` | Schakel ad blocker in/out globaal |
+| GET | `/adblock/stats` | Statistics: blocked per page, total |
+| GET | `/adblock/whitelist` | List gewhiteliste domains |
+| POST | `/adblock/whitelist` | Voeg domain toe about whitelist `{domain}` |
+| DELETE | `/adblock/whitelist/:domain` | Delete domain or whitelist |
 | POST | `/adblock/update-filters` | Forceer filter list update (download nieuwste versie) |
 
-### Geen nieuwe npm packages nodig? ✅
-We bouwen een eigen lightweight filter engine. Geen `@nicedoc/adblocker` of `@nicedoc/cosmetic-filter` nodig — die zijn te zwaar en voegen onnodige dependencies toe. EasyList/ABP filter syntax is goed gedocumenteerd en de core matching logic is relatief simpel (URL pattern matching met domein-optie filtering).
+### No new npm packages needed? ✅
+We bouwen a own lightweight filter engine. No `@nicedoc/adblocker` or `@nicedoc/cosmetic-filter` nodig — that are te zwaar and voegen onnodige dependencies toe. EasyList/ABP filter syntax is goed gedocumenteerd and the core matching logic is relatief simpel (URL pattern matching with domain-optie filtering).
 
 ---
 
-## Fase-opdeling
+## Phase Breakdown
 
-| Fase | Inhoud | Sessies | Afhankelijk van |
+| Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | Filter engine: download lijsten, parse regels, block requests via RequestDispatcher | 1 | — |
-| 2 | Shell UI: shield badge, blocked count, per-site whitelist toggle | 1 | Fase 1 |
+| 1 | Filter engine: download lijsten, parse rules, block requests via RequestDispatcher | 1 | — |
+| 2 | Shell UI: shield badge, blocked count, per-site whitelist toggle | 1 | Phase 1 |
 
 ---
 
-## Risico's / Valkuilen
+## Risks / Pitfalls
 
-- **Filter list parsing performance:** EasyList heeft ~90.000 regels. Naïeve string matching is te traag. We gebruiken een hash-tabel voor domain-based regels en een compacte trie/set voor URL-pattern regels. Eerste parse kan ~2-3 seconden duren — doe dit async bij startup.
-- **False positives:** Sommige EasyList regels blokkeren te agressief. Per-site whitelist is essentieel als escape hatch.
-- **YouTube ads:** YouTube serveert ads via dezelfde domeinen als video content. Volledige YouTube ad blocking vereist meer geavanceerde logica (request pattern matching). V1 blokkeert standaard display ads; YouTube specifieke rules zijn een V2 item.
-- **RequestDispatcher integratie:** De bestaande `RequestDispatcher` in Tandem routeert alle `session.webRequest` hooks. AdBlockManager moet zich registreren met de juiste priority (na stealth patches, maar vóór NetworkShield).
-- **Memory:** 90K regels in memory is ~10-15MB. Acceptabel voor een desktop app.
-
----
-
-## Anti-detect overwegingen
-
-- ✅ Ad blocking gebeurt op Electron session niveau via `webRequest.onBeforeRequest()` — de webview ziet alleen dat requests niet aankomen, niet waarom
-- ✅ Geen content scripts of DOM manipulatie — puur netwerk-niveau blocking
-- ⚠️ Websites kunnen detecteren dat ads niet laden (anti-adblock scripts). Dit is een known issue met elke ad blocker. V1 doet hier niets mee — gebruiker kan de site whitelisten.
+- **Filter list parsing performance:** EasyList has ~90.000 rules. Naïeve string matching is te traag. We use a hash-tabel for domain-based rules and a compacte trie/set for URL-pattern rules. First parse can ~2-3 seconden duren — doe this async bij startup.
+- **False positives:** Sommige EasyList rules blokkeren te agressief. Per-site whitelist is essentieel if escape hatch.
+- **YouTube ads:** YouTube serves ads via the same domains if video content. Volledige YouTube ad blocking requires meer advanced logica (request pattern matching). V1 blokkeert default display ads; YouTube specific rules are a V2 item.
+- **RequestDispatcher integratie:** The existing `RequestDispatcher` in Tandem routeert alle `session.webRequest` hooks. AdBlockManager must zich registreren with the juiste priority (na stealth patches, but vóór NetworkShield).
+- **Memory:** 90K rules in memory is ~10-15MB. Acceptabel for a desktop app.
 
 ---
 
-## Beslissingen nodig van Robin
+## Anti-detect considerations
 
-- [ ] Wil je EasyPrivacy (tracker blocking) ook meteen in V1, of alleen EasyList (ads)?
-- [ ] Standaard aan of uit bij eerste start? Opera heeft het standaard uit (opt-in).
-- [ ] NoCoin crypto mining protection: toevoegen als derde filterlijst?
+- ✅ Ad blocking gebeurt op Electron session niveau via `webRequest.onBeforeRequest()` — the webview sees only that requests not aankomen, not why
+- ✅ No content scripts or DOM manipulatie — purely netwerk-niveau blocking
+- ⚠️ Websites can detecteren that ads not laden (anti-adblock scripts). Dit is a known issue with elke ad blocker. V1 doet hier nothing mee — user can the site whitelisten.
 
 ---
 
-## Goedkeuring
+## Decisions Needed from Robin
 
-Robin: [ ] Go / [ ] No-go / [ ] Go met aanpassing: ___________
+- [ ] Wil you EasyPrivacy (tracker blocking) also meteen in V1, or only EasyList (ads)?
+- [ ] Default about or out bij first start? Opera has the default out (opt-in).
+- [ ] NoCoin crypto mining protection: add if derde filterlijst?
+
+---
+
+## Approval
+
+Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

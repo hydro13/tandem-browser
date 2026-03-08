@@ -47,12 +47,12 @@ Shows extensions available to import from the user's Chrome installation.
 - Message at top: "Import extensions from your Chrome browser"
 - "Import All" button at top → calls `POST /extensions/chrome/import` with `{ all: true }`
 - Per extension row: name, version, Import button
-- Already-imported extensions show "Imported" badge instead of Import button
+- Already-imported extensions show "Imported" badge instead or Import button
 - Empty state: "Chrome not found" or "No extensions found in Chrome"
 
 ### 5a.4 Implement "Gallery" tab
 
-Curated gallery of recommended extensions.
+Curated gallery or recommended extensions.
 
 **Data source:** `GET /extensions/gallery`
 
@@ -64,7 +64,7 @@ Curated gallery of recommended extensions.
   - Compatibility badge: "Works" (green), "Partial" (yellow), "Needs Setup" (orange)
   - Security conflict badge if applicable: "DNR Overlap" (amber), "Native Messaging" (blue)
   - "Install" button → calls `POST /extensions/install` with `{ input: extension.id }`
-  - Already-installed extensions show "Installed" badge instead of Install button
+  - Already-installed extensions show "Installed" badge instead or Install button
 - Featured extensions highlighted or shown first
 
 ### 5a.5 Wire up install/uninstall actions

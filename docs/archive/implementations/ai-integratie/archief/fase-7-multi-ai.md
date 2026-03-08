@@ -1,28 +1,28 @@
-# Fase 7: Multi-AI Coördinatie — Sessie Context
+# Phase 7: Multi-AI Coördinatie — Sessie Context
 
-## Wat is dit?
+## Wat is this?
 
-Meerdere AI's tegelijk actief in Tandem. OpenClaw en Claude werken samen, of meerdere Claude instanties met verschillende rollen. Robin orkestreert.
+Multiple AI's simultaneously actief in Tandem. OpenClaw and Claude werken together, or multiple Claude instanties with verschillende rollen. Robin orchestrates.
 
 ## Scenario's
 
 ### Dual Backend: OpenClaw + Claude
-- Robin stelt een vraag
+- Robin stelt a question
 - Beide AI's antwoorden (gelabeld)
-- Robin kiest het beste antwoord of combineert
-- AI's kunnen elkaars antwoorden lezen en aanvullen
+- Robin chooses the beste antwoord or combineert
+- AI's can elkaars antwoorden read and aanvullen
 
 ### Gespecialiseerde Agents
-- **Research Claude:** zoekt informatie op het web
-- **Analyst Claude:** analyseert data en pagina's
+- **Research Claude:** zoekt informatie op the web
+- **Analyst Claude:** analyseert data and page's
 - **OpenClaw Kees:** persoonlijke assistent, kent Robin's voorkeuren
 
 ### Parallel Onderzoek
-- Robin: "Vergelijk deze 3 producten"
+- Robin: "Vergelijk this 3 producten"
 - Agent 1 → Tab 1: Product A onderzoeken
 - Agent 2 → Tab 2: Product B onderzoeken
 - Agent 3 → Tab 3: Product C onderzoeken
-- Alle agents rapporteren → unified vergelijking
+- Alle agents rapporteren → unified comparison
 
 ## Message Routing
 
@@ -33,7 +33,7 @@ class DualBackend implements ChatBackend {
   private backends: ChatBackend[];
 
   async sendMessage(text: string): Promise<void> {
-    // Check voor @-mentions
+    // Check for @-mentions
     if (text.startsWith('@claude ')) {
       const claude = this.backends.find(b => b.id === 'claude');
       await claude?.sendMessage(text.slice(8));
@@ -41,9 +41,9 @@ class DualBackend implements ChatBackend {
       const openclaw = this.backends.find(b => b.id === 'openclaw');
       await openclaw?.sendMessage(text.slice(6));
     } else {
-      // Stuur naar alle actieve backends
+      // Stuur to alle actieve backends
       await Promise.all(
-        this.backends.map(b => b.sendMessage(text))
+        this.backends.folder(b => b.sendMessage(text))
       );
     }
   }
@@ -53,16 +53,16 @@ class DualBackend implements ChatBackend {
 ### Antwoorden Tonen
 
 ```
-Robin: Wat is de hoofdstad van Nederland?
+Robin: Wat is the hoofdstad or Nederland?
 
-[🐙 Kees]: Amsterdam is de hoofdstad van Nederland, hoewel
-Den Haag de regeringszetel is.
+[🐙 Kees]: Amsterdam is the hoofdstad or Nederland, hoewel
+Den Haag the regeringszetel is.
 
-[🤖 Claude]: De hoofdstad van Nederland is Amsterdam (grondwettelijk
-vastgelegd). Den Haag is de zetel van de regering en het parlement.
+[🤖 Claude]: The hoofdstad or Nederland is Amsterdam (grondwettelijk
+vastgelegd). Den Haag is the zetel or the regering and the parlement.
 ```
 
-### Visueel Onderscheid
+### Visual Onderscheid
 
 ```css
 .chat-msg.source-openclaw {
@@ -79,24 +79,24 @@ vastgelegd). Den Haag is de zetel van de regering en het parlement.
 ## Inter-AI Communicatie
 
 ### Context Sharing
-Wanneer beide AI's actief zijn, moeten ze elkaars context kennen:
+Wanneer beide AI's actief are, must ze elkaars context kennen:
 
 ```typescript
-// Bij elk bericht naar Claude, voeg toe:
-system_context += `\n\n## Andere actieve AI\nOpenClaw (Kees) is ook actief.
-Zijn laatste antwoord was: "${lastOpenClawResponse}"`;
+// Bij elk bericht to Claude, voeg toe:
+system_context += `\n\n## Andere actieve AI\nOpenClaw (Kees) is also actief.
+Are last antwoord was: "${lastOpenClawResponse}"`;
 
-// Bij elk bericht naar OpenClaw, voeg toe als context:
-// (via het chat protocol dat OpenClaw al heeft)
+// Bij elk bericht to OpenClaw, voeg toe if context:
+// (via the chat protocol that OpenClaw already has)
 ```
 
 ### Taak Delegatie
-AI's kunnen taken aan elkaar delegeren:
+AI's can taken about elkaar delegeren:
 ```
-Claude: "Kees, kun jij even de prijs op die Amazon pagina checken?"
-→ Router stuurt dit als instructie naar OpenClaw
-→ OpenClaw voert uit en rapporteert
-→ Claude verwerkt het antwoord
+Claude: "Kees, can jij even the prijs op that Amazon page checken?"
+→ Router stuurt this if instructie to OpenClaw
+→ OpenClaw voert out and rapporteert
+→ Claude verwerkt the antwoord
 ```
 
 ## Role-Based Agents (Uitbreiding)
@@ -110,7 +110,7 @@ interface AgentRole {
   description: string;
   backend: 'claude' | 'openclaw';
   systemPromptAddition: string;    // Extra instructies
-  capabilities: string[];          // Welke tools mag deze agent gebruiken
+  capabilities: string[];          // Welke tools mag this agent use
   autoApprove: string[];           // Welke acties auto-approve
 }
 
@@ -118,27 +118,27 @@ const ROLES: AgentRole[] = [
   {
     id: 'researcher',
     name: 'Researcher',
-    description: 'Zoekt en leest informatie op het web',
+    description: 'Zoekt and leest informatie op the web',
     backend: 'claude',
-    systemPromptAddition: 'Je bent gespecialiseerd in web research...',
+    systemPromptAddition: 'You bent gespecialiseerd in web research...',
     capabilities: ['navigate', 'read_page', 'screenshot', 'open_tab'],
     autoApprove: ['navigate', 'read_page', 'screenshot']
   },
   {
     id: 'analyst',
     name: 'Analyst',
-    description: 'Analyseert pagina content en data',
+    description: 'Analyseert page content and data',
     backend: 'claude',
-    systemPromptAddition: 'Je analyseert webpagina content...',
+    systemPromptAddition: 'You analyseert webpagina content...',
     capabilities: ['read_page', 'execute_js', 'screenshot'],
     autoApprove: ['read_page', 'screenshot']
   },
   {
     id: 'assistant',
     name: 'Persoonlijke Assistent',
-    description: 'Kent Robin, helpt met dagelijkse taken',
+    description: 'Kent Robin, helpt with dagelijkse taken',
     backend: 'openclaw',
-    systemPromptAddition: '',  // OpenClaw heeft eigen personality
+    systemPromptAddition: '',  // OpenClaw has own personality
     capabilities: ['*'],
     autoApprove: ['navigate', 'read_page']
   }
@@ -147,7 +147,7 @@ const ROLES: AgentRole[] = [
 
 ### Agent Management UI
 
-In Kees panel, een "Agents" tab:
+In Kees panel, a "Agents" tab:
 
 ```
 ┌─────────────────────────────────────┐
@@ -162,24 +162,24 @@ In Kees panel, een "Agents" tab:
 │ ⬚ Analyst (Claude)        [Start]  │
 │ ⬚ Navigator (Claude)      [Start]  │
 │                                     │
-│ [+ Nieuwe Agent Rol]                │
+│ [+ New Agent Rol]                │
 └─────────────────────────────────────┘
 ```
 
 ## Conflict Resolution
 
-Wat als twee AI's tegelijkertijd dezelfde tab willen bedienen?
+Wat if twee AI's at the same time the same tab willen bedienen?
 
-### Regels:
-1. **Robin heeft altijd voorrang** — als Robin een tab gebruikt, AI wacht
-2. **Eerste claimt wint** — AI die een tab eerst claimt, mag ermee werken
-3. **Eigen tabs** — AI's werken bij voorkeur in hun eigen tabs
-4. **Escalatie** — bij conflict, vraag Robin
+### Rules:
+1. **Robin has always voorrang** — if Robin a tab uses, AI wait
+2. **First claimt wint** — AI that a tab eerst claimt, mag ermee werken
+3. **Own tabs** — AI's werken bij voorkeur in hun own tabs
+4. **Escalatie** — bij conflict, question Robin
 
 ### Implementatie:
 ```typescript
 class TabLockManager {
-  private locks: Map<string, string>;  // tabId → agentId
+  private locks: Folder<string, string>;  // tabId → agentId
 
   acquire(tabId: string, agentId: string): boolean;
   release(tabId: string, agentId: string): void;
@@ -188,17 +188,17 @@ class TabLockManager {
 }
 ```
 
-## Platform Overwegingen
+## Platform Considerations
 
-- Message routing: puur JavaScript, cross-platform
-- UI updates: standaard DOM manipulatie
+- Message routing: purely JavaScript, cross-platform
+- UI updates: default DOM manipulatie
 - Inter-AI communicatie: via in-memory events
-- Geen platform-specifieke code nodig
+- No platform-specific code needed
 - Agent state persistence: `~/.tandem/agents/` (cross-platform path)
 
-## Kosten Overwegingen
+## Kosten Considerations
 
-Met meerdere Claude instanties actief:
+With multiple Claude instanties actief:
 - Elk agent-bericht kost tokens
 - Parallel agents = parallel kosten
 - **Budgettering:** configureerbaar max tokens per uur/dag

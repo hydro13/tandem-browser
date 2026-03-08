@@ -1,4 +1,4 @@
-# Claude's Review — Verification of Kees' Review + Own Findings
+# Claude's Review — Verification or Kees' Review + Own Findings
 
 **Date:** February 25, 2026
 **Reviewer:** Claude (Opus 4.6)
@@ -9,7 +9,7 @@
 
 ## Approach
 
-I verified each of Kees' points by reading the relevant source files:
+I verified each or Kees' points by reading the relevant source files:
 
 - `src/network/dispatcher.ts` — RequestDispatcher hook registration and consumer priorities
 - `src/security/guardian.ts` — Guardian registration (priority 1) and request analysis
@@ -68,7 +68,7 @@ In Chromium's architecture, the answer is not straightforward:
 
 - Add Kees' proposed "Security Stack Rules" section — his wording is correct and complete
 
-**Regarding OutboundGuard:** I verified that Guardian (`guardian.ts:268-310`) calls `outboundGuard.analyzeOutbound()` for ALL POST/PUT/PATCH requests. This applies to every request in the session — including requests from extension content scripts and service workers. OutboundGuard scans the first 100KB of the body (`outbound-guard.ts:37`) with credential patterns (`password`, `token`, `api_key`, `credit_card`, `ssn`, etc.). Extension-initiated exfiltration is therefore caught, provided Guardian sees the request (back to the DNR question).
+**Regarding OutboundGuard:** I verified that Guardian (`guardian.ts:268-310`) calls `outboundGuard.analyzeOutbound()` for ALL POST/PUT/PATCH requests. This applies to every request in the session — including requests from extension content scripts and service workers. OutboundGuard scans the first 100KB or the body (`outbound-guard.ts:37`) with credential patterns (`password`, `token`, `api_key`, `credit_card`, `ssn`, etc.). Extension-initiated exfiltration is therefore caught, provided Guardian sees the request (back to the DNR question).
 
 ---
 
@@ -87,8 +87,8 @@ Grammarly and Notion Web Clipper have indeed migrated to MV3.
 ### Kees' three options
 
 - **Option A (companion extension):** Technically feasible but complex. Requires cross-extension messaging (`chrome.runtime.sendMessage`) and the target extension must support this or be patched.
-- **Option B (`ses.protocol.handle()`):** Intercepts protocol-level requests. Could work for intercepting the OAuth flow, but requires deep understanding of how Electron handles extension protocols.
-- **Option C (test fallback first):** The most sensible approach. Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead of `chrome.identity`. If that fallback works in Electron, the entire polyfill is unnecessary.
+- **Option B (`ses.protocol.handle()`):** Intercepts protocol-level requests. Could work for intercepting the OAuth flow, but requires deep understanding or how Electron handles extension protocols.
+- **Option C (test fallback first):** The most sensible approach. Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead or `chrome.identity`. If that fallback works in Electron, the entire polyfill is unnecessary.
 
 ### Required plan changes: MV3 preloads
 
@@ -233,7 +233,7 @@ This is a double problem:
 
 `process.versions.chrome` is used nowhere in the codebase. The value is available in the Electron runtime and returns the exact Chromium version (e.g., `130.0.6723.91`).
 
-The `prodversion` parameter in the CWS download URL determines which version of the CRX Google returns. If Tandem updates to a newer Electron (with a higher Chromium version) but still sends `130.0.0.0`, Google may return an older CRX version that isn't compatible with the newer Chromium.
+The `prodversion` parameter in the CWS download URL determines which version or the CRX Google returns. If Tandem updates to a newer Electron (with a higher Chromium version) but still sends `130.0.0.0`, Google may return an older CRX version that isn't compatible with the newer Chromium.
 
 ### Required plan changes: prodversion
 
@@ -258,7 +258,7 @@ Installed extensions don't auto-update. This is a security risk — extensions r
 
 ### Why this requires a full phase
 
-An extension without updates is a frozen snapshot of the code at the time of installation. This means:
+An extension without updates is a frozen snapshot or the code at the time or installation. This means:
 
 - **Security vulnerabilities stay open** — if uBlock Origin releases an XSS fix, Tandem keeps running the old vulnerable version
 - **Functionality degrades** — extensions that depend on external APIs (Grammarly, Honey, Wappalyzer) stop working when those APIs change
@@ -367,7 +367,7 @@ A hardcoded `GALLERY_EXTENSIONS` array in TypeScript has these consequences:
 
 ## Additional finding: Initialization order is safe
 
-During my verification I traced the full initialization order in `main.ts`. This is relevant to several of Kees' points:
+During my verification I traced the full initialization order in `main.ts`. This is relevant to several or Kees' points:
 
 ```text
 1. ses = session.fromPartition('persist:tandem')     ← session created
@@ -385,7 +385,7 @@ During my verification I traced the full initialization order in `main.ts`. This
 
 This is good: the security stack is fully operational before extensions are loaded. Extensions cannot influence the registration order.
 
-However: the question of whether extension `declarativeNetRequest` rules are already active by the time the first page loads depends on how quickly Electron initializes the extension after `loadExtension()`. This must be tested (see point 1).
+However: the question or whether extension `declarativeNetRequest` rules are already active by the time the first page loads depends on how quickly Electron initializes the extension after `loadExtension()`. This must be tested (see point 1).
 
 ---
 
@@ -467,6 +467,6 @@ Guardian runs first on request arrival (priority 1) and first on redirect evalua
 
 Kees' review is thorough and all 9 points are verified as correct. The three critical points (security stack interaction, MV3 preloads, OAuth popup security) require real changes to the plan — not just documentation but architectural adjustments to Phase 1, 4, and 7.
 
-Points 8 and 9 (auto-updates and gallery architecture) are not future improvements but fundamental parts of a correctly functioning extension system. Both must receive full phase specifications.
+Points 8 and 9 (auto-updates and gallery architecture) are not future improvements but fundamental parts or a correctly functioning extension system. Both must receive full phase specifications.
 
 The existing security architecture (Guardian at priority 1, initialization before extensions) is a strong foundation. The interaction with extension `declarativeNetRequest` is the most important open question that must be tested empirically in Phase 1.

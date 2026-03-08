@@ -1,4 +1,4 @@
-# Fase 1 — API Auth: Tighten the Local Trust Boundary
+# Phase 1 — API Auth: Tighten the Local Trust Boundary
 
 > **Feature:** Security hardening
 > **Sessions:** 1 session
@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Make the local HTTP API stop trusting loopback traffic as equivalent to a fully
 authorized caller. The end result should be an explicit caller model where

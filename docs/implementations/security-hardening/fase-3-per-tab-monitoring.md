@@ -1,4 +1,4 @@
-# Fase 3 — Per-Tab Monitoring: Expand Runtime Coverage Beyond The Attached Tab
+# Phase 3 — Per-Tab Monitoring: Expand Runtime Coverage Beyond The Attached Tab
 
 > **Feature:** Security hardening
 > **Sessions:** 1-2 sessions
@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Broaden ScriptGuard and BehaviorMonitor coverage so runtime security is not tied
 mainly to the currently attached or focused tab.
@@ -40,7 +40,7 @@ Track which tabs have:
 
 ### 2. Expand Coverage
 
-Ensure that at least one of these becomes true:
+Ensure that at least one or these becomes true:
 
 - every live browsing tab gets baseline security coverage
 - high-risk tabs get full monitoring automatically

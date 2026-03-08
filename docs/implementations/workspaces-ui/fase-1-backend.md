@@ -1,42 +1,42 @@
-# Fase 1 — Backend: WorkspaceManager + Tab Mapping + API
+# Phase 1 — Backend: WorkspaceManager + Tab Mapping + API
 
 > **Feature:** Workspaces UI
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de `WorkspaceManager` die workspace metadata beheert (naam, kleur, emoji) en tabs aan workspaces koppelt. De manager bouwt bovenop de bestaande `SessionManager` — elke workspace correspondeert 1:1 met een sessie. Registreer API endpoints zodat workspaces via REST aangestuurd kunnen worden. Na deze fase kan je via `curl` workspaces aanmaken, wisselen, en tabs verplaatsen.
+Bouw the `WorkspaceManager` that workspace metadata beheert (name, color, emoji) and tabs about workspaces koppelt. The manager bouwt bovenop the existing `SessionManager` — elke workspace correspondeert 1:1 with a session. Registreer API endpoints zodat workspaces via REST aangestuurd can be. After this phase can you via `curl` workspaces aanmaken, wisselen, and tabs verplaatsen.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
 | `src/sessions/manager.ts` | `class SessionManager`, `create()`, `setActive()`, `list()` | WorkspaceManager delegeert session operaties hiernaartoe |
 | `src/sessions/types.ts` | `interface Session` | Session data model begrijpen |
 | `src/tabs/manager.ts` | `class TabManager`, `listTabs()`, `getTab()` | Tab→workspace mapping |
-| `src/main.ts` | `startAPI()` | Hier wordt WorkspaceManager aangemaakt en geregistreerd |
-| `src/main.ts` | `app.on('will-quit')` | Cleanup toevoegen |
-| `src/registry.ts` | `interface ManagerRegistry` | WorkspaceManager toevoegen |
+| `src/main.ts` | `startAPI()` | Hier is WorkspaceManager aangemaakt and geregistreerd |
+| `src/main.ts` | `app.on('will-quit')` | Cleanup add |
+| `src/registry.ts` | `interface ManagerRegistry` | WorkspaceManager add |
 | `src/api/server.ts` | `setupRoutes()` | Route-module registreren |
-| `src/api/routes/sessions.ts` | `registerSessionRoutes()` | Referentiepatroon voor route registratie |
+| `src/api/routes/sessions.ts` | `registerSessionRoutes()` | Referentiepatroon for route registratie |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: WorkspaceManager class
+### Step 1: WorkspaceManager class
 
-**Wat:** Manager die workspace metadata en tab-toewijzingen beheert. Elke workspace mapt op een SessionManager sessie. Metadata wordt opgeslagen in `~/.tandem/workspaces.json`.
+**Wat:** Manager that workspace metadata and tab-toewijzingen beheert. Elke workspace mapt op a SessionManager session. Metadata is opgeslagen in `~/.tandem/workspaces.json`.
 
-**Bestand:** `src/workspaces/manager.ts`
+**File:** `src/workspaces/manager.ts`
 
 ```typescript
 import { SessionManager } from '../sessions/manager';
@@ -44,33 +44,33 @@ import { TabManager } from '../tabs/manager';
 
 export interface WorkspaceMetadata {
   name: string;
-  color: string;      // hex kleur, bv. '#4285f4'
-  emoji: string;       // bv. '💼' of 'W'
-  order: number;       // volgorde in de strip
+  color: string;      // hex color, bv. '#4285f4'
+  emoji: string;       // bv. '💼' or 'W'
+  order: number;       // order in the strip
   isDefault: boolean;
-  tabIds: number[];    // tabs die bij deze workspace horen
+  tabIds: number[];    // tabs that bij this workspace belong
 }
 
 export class WorkspaceManager {
-  private workspaces: Map<string, WorkspaceMetadata> = new Map();
+  private workspaces: Folder<string, WorkspaceMetadata> = new Folder();
   private sessionManager: SessionManager;
   private tabManager: TabManager;
 
   constructor(sessionManager: SessionManager, tabManager: TabManager) { ... }
 
-  /** Laad workspace metadata van disk */
+  /** Laad workspace metadata or disk */
   private loadFromDisk(): void { ... }
 
-  /** Sla workspace metadata op naar disk */
+  /** Sla workspace metadata op to disk */
   private saveToDisk(): void { ... }
 
-  /** Lijst alle workspaces */
+  /** List alle workspaces */
   list(): WorkspaceMetadata[] { ... }
 
-  /** Maak nieuwe workspace (= session + metadata) */
+  /** Maak new workspace (= session + metadata) */
   create(opts: { name: string; color?: string; emoji?: string }): WorkspaceMetadata { ... }
 
-  /** Verwijder workspace (tabs gaan naar default) */
+  /** Delete workspace (tabs gaan to default) */
   remove(name: string): void { ... }
 
   /** Activeer workspace (= session switch + notificatie) */
@@ -82,13 +82,13 @@ export class WorkspaceManager {
   /** Update workspace metadata */
   update(name: string, opts: { color?: string; emoji?: string; newName?: string }): WorkspaceMetadata { ... }
 
-  /** Verplaats tab naar workspace */
+  /** Verplaats tab to workspace */
   moveTab(tabId: number, workspaceName: string): void { ... }
 
-  /** Haal tabs op voor een workspace */
+  /** Haal tabs op for a workspace */
   getTabs(workspaceName: string): number[] { ... }
 
-  /** Wijs nieuw geopende tab toe aan actieve workspace */
+  /** Wijs new geopende tab toe about actieve workspace */
   assignTabToActive(tabId: number): void { ... }
 
   /** Cleanup */
@@ -97,17 +97,17 @@ export class WorkspaceManager {
 ```
 
 **Kernlogica:**
-- `create()` roept `sessionManager.create(name)` aan en voegt metadata toe
-- `switch()` roept `sessionManager.setActive(name)` aan en stuurt IPC event `workspace-switched` naar de shell
-- `moveTab()` verplaatst tabId van de ene workspace's `tabIds` array naar de andere
-- `assignTabToActive()` wordt aangeroepen wanneer een nieuwe tab geopend wordt — voegt tabId toe aan actieve workspace
-- Default workspace heeft standaard kleur `#4285f4` (blauw) en emoji `🏠`
+- `create()` roept `sessionManager.create(name)` about and voegt metadata toe
+- `switch()` roept `sessionManager.setActive(name)` about and stuurt IPC event `workspace-switched` to the shell
+- `moveTab()` verplaatst tabId or the ene workspace's `tabIds` array to the andere
+- `assignTabToActive()` is aangeroepen wanneer a new tab geopend is — voegt tabId toe about actieve workspace
+- Default workspace has default color `#4285f4` (blauw) and emoji `🏠`
 
-### Stap 2: Persistence — workspaces.json
+### Step 2: Persistence — workspaces.json
 
-**Wat:** Workspace metadata opslaan in `~/.tandem/workspaces.json` zodat het browser restarts overleeft.
+**Wat:** Workspace metadata save in `~/.tandem/workspaces.json` zodat the browser restarts overleeft.
 
-**Bestand:** `src/workspaces/manager.ts` (in `loadFromDisk()` en `saveToDisk()`)
+**File:** `src/workspaces/manager.ts` (in `loadFromDisk()` and `saveToDisk()`)
 
 ```typescript
 // ~/.tandem/workspaces.json
@@ -133,13 +133,13 @@ export class WorkspaceManager {
 }
 ```
 
-### Stap 3: API routes
+### Step 3: API routes
 
-**Wat:** REST endpoints voor workspace management.
+**Wat:** REST endpoints for workspace management.
 
-**Bestand:** `src/api/routes/workspaces.ts`
+**File:** `src/api/routes/workspaces.ts`
 
-**Functie:** `registerWorkspaceRoutes(router, ctx)`
+**Function:** `registerWorkspaceRoutes(router, ctx)`
 
 ```typescript
 export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void {
@@ -157,19 +157,19 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
 }
 ```
 
-### Stap 4: Wiring — registreer manager en routes
+### Step 4: Wiring — registreer manager and routes
 
-**Bestand:** `src/registry.ts` — voeg `workspaceManager: WorkspaceManager` toe aan interface
+**File:** `src/registry.ts` — voeg `workspaceManager: WorkspaceManager` toe about interface
 
-**Bestand:** `src/main.ts` — instantieer in `startAPI()`:
+**File:** `src/main.ts` — instantieer in `startAPI()`:
 ```typescript
 import { WorkspaceManager } from './workspaces/manager';
 const workspaceManager = new WorkspaceManager(sessionManager!, tabManager!);
 ```
 
-Voeg toe aan registry object en will-quit cleanup.
+Voeg toe about registry object and will-quit cleanup.
 
-**Bestand:** `src/api/server.ts` — registreer routes in `setupRoutes()`:
+**File:** `src/api/server.ts` — registreer routes in `setupRoutes()`:
 ```typescript
 import { registerWorkspaceRoutes } from './routes/workspaces';
 registerWorkspaceRoutes(router, ctx);
@@ -177,35 +177,35 @@ registerWorkspaceRoutes(router, ctx);
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
-# Test 1: Lijst workspaces (alleen default)
+# Test 1: List workspaces (only default)
 TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/workspaces
 # Verwacht: {"ok":true, "workspaces":[{"name":"default","color":"#4285f4","emoji":"🏠","order":0,"isDefault":true,"tabIds":[...]}]}
 
-# Test 2: Maak nieuwe workspace
+# Test 2: Maak new workspace
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/workspaces \
   -H "Content-Type: application/json" \
   -d '{"name": "Work", "color": "#4ecca3", "emoji": "💼"}'
 # Verwacht: {"ok":true, "workspace":{"name":"Work","color":"#4ecca3","emoji":"💼","order":1,...}}
 
-# Test 3: Switch naar nieuwe workspace
+# Test 3: Switch to new workspace
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/workspaces/Work/switch
 # Verwacht: {"ok":true, "workspace":{"name":"Work",...}}
 
-# Test 4: Verplaats tab naar workspace
+# Test 4: Verplaats tab to workspace
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/workspaces/Work/move-tab \
   -H "Content-Type: application/json" \
   -d '{"tabId": 1}'
 # Verwacht: {"ok":true}
 
-# Test 5: Haal tabs op voor workspace
+# Test 5: Haal tabs op for workspace
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/workspaces/Work/tabs
 # Verwacht: {"ok":true, "tabIds":[1]}
@@ -217,12 +217,12 @@ curl -H "Authorization: Bearer $TOKEN" \
   -d '{"color": "#e94560", "emoji": "🔥"}'
 # Verwacht: {"ok":true, "workspace":{"name":"Work","color":"#e94560","emoji":"🔥",...}}
 
-# Test 7: Verwijder workspace
+# Test 7: Delete workspace
 curl -H "Authorization: Bearer $TOKEN" \
   -X DELETE http://localhost:8765/workspaces/Work
 # Verwacht: {"ok":true}
 
-# Test 8: Kan default niet verwijderen
+# Test 8: Can default not verwijderen
 curl -H "Authorization: Bearer $TOKEN" \
   -X DELETE http://localhost:8765/workspaces/default
 # Verwacht: {"error":"Cannot delete the default workspace"}
@@ -230,8 +230,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 **Compilatie verificatie:**
 - [ ] `npx tsc` — zero errors
-- [ ] `npx vitest run` — alle bestaande tests slagen
-- [ ] `npm start` — app start zonder crashes
+- [ ] `npx vitest run` — alle existing tests slagen
+- [ ] `npm start` — app start without crashes
 
 ---
 
@@ -239,34 +239,34 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-backend.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-backend.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🏢 feat: workspace manager + API endpoints"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-2-shell-ui.md
+   ## Next session start bij fase-2-shell-ui.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Vergeet niet `destroy()` toe te voegen aan will-quit handler
-- [ ] Vergeet niet `saveToDisk()` aan te roepen na elke mutatie (create, update, remove, moveTab)
-- [ ] TypeScript strict mode — geen `any` buiten catch blocks
-- [ ] Tab IDs kunnen hergebruikt worden na tab sluiting — clean stale tabIds uit workspace data bij laden
-- [ ] SessionManager.create() gooit error als sessie al bestaat — WorkspaceManager moet dit afhandelen
+- [ ] Vergeet not `destroy()` toe te voegen about will-quit handler
+- [ ] Vergeet not `saveToDisk()` about te roepen na elke mutatie (create, update, remove, moveTab)
+- [ ] TypeScript strict mode — no `any` buiten catch blocks
+- [ ] Tab IDs can hergebruikt be na tab sluiting — clean stale tabIds out workspace data bij laden
+- [ ] SessionManager.create() gooit error if session already exists — WorkspaceManager must this afhandelen

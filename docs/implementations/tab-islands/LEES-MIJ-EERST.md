@@ -1,19 +1,19 @@
-# Tab Islands — START HIER
+# Tab Islands — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Automatische visuele groepering van gerelateerde tabs in eilanden, met collapse/expand en naamgeving
-> **Volgorde:** Fase 1 → 2 (elke fase is één sessie)
+> **Goal:** Automatische visual groepering or gerelateerde tabs in islands, with collapse/expand and naamgeving
+> **Order:** Phase 1 → 2 (elke phase is één session)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Robin opent regelmatig meerdere tabs vanuit dezelfde pagina (zoekresultaten, Reddit threads, documentatie). Die tabs staan nu los in de tab bar zonder visueel verband. Tab Islands groeperen deze tabs automatisch in herkenbare eilanden met kleur, naam, en collapse-functie. Zie `docs/research/gap-analysis.md` sectie "Tab Islands" voor de volledige Opera vergelijking.
+Robin opens regelmatig multiple tabs vanuit the same page (zoekresultaten, Reddit threads, documentatie). That tabs stand nu los in the tab bar without visual verband. Tab Islands group this tabs automatisch in herkenbare islands with color, name, and collapse-function. Zie `docs/research/gap-analysis.md` section "Tab Islands" for the full Opera comparison.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
   webContents 'did-create-window'
@@ -22,7 +22,7 @@ Robin opent regelmatig meerdere tabs vanuit dezelfde pagina (zoekresultaten, Red
   TabManager.trackOpener(childId, parentId)
          │
          ▼
-  autoGroupTabs() → eiland aanmaken/uitbreiden
+  autoGroupTabs() → island aanmaken/uitbreiden
          │
          ├──► REST API: GET /tabs/islands, POST .../collapse, etc.
          │
@@ -34,49 +34,49 @@ Robin opent regelmatig meerdere tabs vanuit dezelfde pagina (zoekresultaten, Red
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie, window events | `createWindow()`, `startAPI()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **Opener tracking via Electron events** — gebruik `webContents` `'did-create-window'` event in het main process. NOOIT iets injecteren in de webview om parent-child relaties te detecteren.
-2. **Eilanden zijn een uitbreiding van bestaande groups** — bouw voort op de bestaande `TabGroup` interface en `setGroup()` in `class TabManager`. Breek bestaande `POST /tabs/group` niet.
-3. **Functienamen > regelnummers** — verwijs altijd naar `function registerTabRoutes()`, nooit naar "regel 51".
-4. **Geen nieuwe npm packages** — dit is puur TypeScript + HTML/CSS.
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — geen nieuwe manager nodig
+## Rules for this feature
 
-Tab Islands breiden de bestaande `TabManager` uit — er is **geen nieuwe manager** nodig. De island-logica wordt toegevoegd als methodes op `class TabManager` in `src/tabs/manager.ts`.
+> These are the HARD rules in addition to the general AGENTS.md rules.
 
-### Bestaande wiring hergebruiken:
-
-1. `src/api/server.ts` → `TandemAPIOptions` bevat al `registry: ManagerRegistry` met `tabManager`
-2. `src/api/routes/tabs.ts` → `function registerTabRoutes()` krijgt nieuwe island-endpoints
-3. `src/main.ts` → `createWindow()` krijgt de `did-create-window` listener
+1. **Opener tracking via Electron events** — usage `webContents` `'did-create-window'` event in the main process. NOOIT iets injecteren in the webview to parent-child relaties te detecteren.
+2. **Eilanden are a uitbreiding or existing groups** — bouw voort op the existing `TabGroup` interface and `setGroup()` in `class TabManager`. Breek existing `POST /tabs/group` not.
+3. **Functienamen > regelnummers** — verwijs always to `function registerTabRoutes()`, nooit to "regel 51".
+4. **No new npm packages** — this is purely TypeScript + HTML/CSS.
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## Manager Wiring — no new manager nodig
+
+Tab Islands breiden the existing `TabManager` out — er is **no new manager** nodig. The island-logica is added if methodes op `class TabManager` in `src/tabs/manager.ts`.
+
+### Existing wiring hergebruiken:
+
+1. `src/api/server.ts` → `TandemAPIOptions` contains already `registry: ManagerRegistry` with `tabManager`
+2. `src/api/routes/tabs.ts` → `function registerTabRoutes()` gets new island-endpoints
+3. `src/main.ts` → `createWindow()` gets the `did-create-window` listener
+
+---
+
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // In function registerTabRoutes():
@@ -91,25 +91,25 @@ router.get('/tabs/islands', async (_req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-auto-grouping.md` | Backend: opener tracking, island data model, API endpoints | 📋 Klaar om te starten |
-| `fase-2-visual-ui.md` | Shell UI: visuele eilanden met gap, label, kleur, collapse | ⏳ Wacht op fase 1 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-auto-grouping.md` | Backend: opener tracking, island data model, API endpoints | 📋 Ready to start |
+| `fase-2-visual-ui.md` | Shell UI: visual islands with gap, label, color, collapse | ⏳ Waiting for phase 1 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -127,11 +127,11 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Auto-grouping backend (opener tracking) | ⏳ niet gestart | — |
-| 2 | Shell UI (visuele gap + naam + collapse) | ⏳ niet gestart | — |
+| 1 | Auto-grouping backend (opener tracking) | ⏳ not started | — |
+| 2 | Shell UI (visual gap + name + collapse) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

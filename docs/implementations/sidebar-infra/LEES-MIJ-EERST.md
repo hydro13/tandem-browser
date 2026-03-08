@@ -1,77 +1,77 @@
-# Sidebar Infrastructuur — START HIER
+# Sidebar Infrastructure — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Design doc:** `docs/plans/sidebar-infra-design.md`
-> **Volgorde:** Fase 1 → 2 → 3 (elke fase is één Claude Code sessie)
-> **Prioriteit:** #0 — fundament voor Workspaces, Messengers, Pinboards, etc.
+> **Order:** Phase 1 → 2 → 3 (each phase is one Claude Code session)
+> **Priority:** #0 — foundation for Workspaces, Messengers, Pinboards, etc.
 
 ---
 
-## Waarom dit project?
+## Why This Project?
 
-Tandem heeft geen linker sidebar. Alle geplande features (Workspaces, Messengers, Personal News, Pinboards, Bookmarks, History, Downloads) moeten in een uniforme, configureerbare sidebar leven — niet als losse ad-hoc icon strips. Dit bouwt het fundament.
+Tandem does not have a left sidebar yet. All planned features (Workspaces, Messengers, Personal News, Pinboards, Bookmarks, History, Downloads) need to live in one uniform, configurable sidebar, not as separate ad hoc icon strips. This builds the foundation.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 Seconds
 
 ```
 .main-layout (flex row, shell/index.html)
-  ├── .sidebar (NIEUW, links)
-  │     ├── .sidebar-icon-strip (48px altijd)
-  │     │     ├── [icon knop per item]
-  │     │     └── [toggle narrow/wide + customize knop onderaan]
-  │     └── .sidebar-panel (240px, uitschuifbaar)
-  │           └── [inhoud gerenderd door actief item]
-  ├── .browser-content (flex:1, ongewijzigd)
-  └── .wingman-panel (rechts, ongewijzigd)
+  ├── .sidebar (NEW, left)
+  │     ├── .sidebar-icon-strip (48px always)
+  │     │     ├── [icon button per item]
+  │     │     └── [toggle narrow/wide + customize button at the bottom]
+  │     └── .sidebar-panel (240px, collapsible)
+  │           └── [content rendered by active item]
+  ├── .browser-content (flex:1, unchanged)
+  └── .wingman-panel (right, unchanged)
 
 Sidebar states:
   hidden (0px) ←→ narrow (48px) ←→ wide (~180px)
   Shortcut: ⌘⇧B (toggle hidden↔narrow)
 ```
 
-### Manager wiring — 3 touch points (ALTIJD alle 3!)
+### Manager Wiring — 3 Touch Points (ALWAYS all 3!)
 
-| Touch point | Functie | Bestand |
+| Touch point | Purpose | File |
 |-------------|---------|---------|
-| 1. Interface | `ManagerRegistry` — voeg `sidebarManager` toe | `src/registry.ts` |
-| 2. Instantiëren | `startAPI()` — `new SidebarManager()` | `src/main.ts` |
+| 1. Interface | `ManagerRegistry` — add `sidebarManager` | `src/registry.ts` |
+| 2. Instantiation | `startAPI()` — `new SidebarManager()` | `src/main.ts` |
 | 3. Cleanup | `app.on('will-quit')` — `sidebarManager.destroy()` | `src/main.ts` |
 
 ---
 
-## Relevante bestanden per fase
+## Relevant Files per Phase
 
-### Fase 1 (Backend + API)
-| Bestand | Wat zoeken | Waarom |
+### Phase 1 (Backend + API)
+| File | What to look for | Why |
 |---------|-----------|--------|
-| `src/registry.ts` | `interface ManagerRegistry` | SidebarManager toevoegen |
-| `src/main.ts` | `startAPI()`, `app.on('will-quit')` | Manager instantiëren + cleanup |
-| `src/api/server.ts` | `import { register...Routes }` blok bovenaan | Import sidebar routes toevoegen |
-| `src/api/routes/data.ts` | `function registerDataRoutes()` | Patroon kopiëren voor nieuwe route file |
-| `src/bookmarks/manager.ts` | `class BookmarkManager` | Patroon voor JSON storage + load/save |
+| `src/registry.ts` | `interface ManagerRegistry` | Add `SidebarManager` |
+| `src/main.ts` | `startAPI()`, `app.on('will-quit')` | Instantiate manager + cleanup |
+| `src/api/server.ts` | top `import { register...Routes }` block | Add the sidebar routes import |
+| `src/api/routes/data.ts` | `function registerDataRoutes()` | Copy the pattern for the new route file |
+| `src/bookmarks/manager.ts` | `class BookmarkManager` | Pattern for JSON storage + load/save |
 | `src/utils/paths.ts` | `function tandemDir()`, `function ensureDir()` | Storage helpers |
-| `src/utils/errors.ts` | `function handleRouteError()` | Error handling patroon |
+| `src/utils/errors.ts` | `function handleRouteError()` | Error-handling pattern |
 
-### Fase 2 (Shell UI)
-| Bestand | Wat zoeken | Waarom |
+### Phase 2 (Shell UI)
+| File | What to look for | Why |
 |---------|-----------|--------|
-| `shell/index.html` | `<!-- Main layout -->` comment | Sidebar HTML hier invoegen |
-| `shell/css/main.css` | `.main-layout {` | CSS voor sidebar naast browser-content |
-| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Patroon voor toggle knop |
+| `shell/index.html` | `<!-- Main layout -->` comment | Insert sidebar HTML here |
+| `shell/css/main.css` | `.main-layout {` | CSS for the sidebar next to browser-content |
+| `shell/index.html` | `<!-- Wingman Panel Toggle Button -->` | Pattern for the toggle button |
 
-### Fase 3 (Eerste plugin: Bookmarks)
-| Bestand | Wat zoeken | Waarom |
+### Phase 3 (First Plugin: Bookmarks)
+| File | What to look for | Why |
 |---------|-----------|--------|
-| `src/api/routes/data.ts` | `function registerDataRoutes()`, `/bookmarks` endpoints | Bestaande bookmark API gebruiken |
-| `shell/index.html` | sidebar panel container (gebouwd in fase 2) | Bookmarks panel HTML toevoegen |
+| `src/api/routes/data.ts` | `function registerDataRoutes()`, `/bookmarks` endpoints | Reuse the existing bookmark API |
+| `shell/index.html` | sidebar panel container (built in phase 2) | Add the bookmarks panel HTML |
 
 ---
 
-## Code patronen
+## Code Patterns
 
-### Manager patroon (kopieer van BookmarkManager)
+### Manager Pattern (copy from `BookmarkManager`)
 ```typescript
 import { tandemDir, ensureDir } from '../utils/paths';
 
@@ -84,13 +84,13 @@ export class SidebarManager {
     this.config = this.load();
   }
 
-  private load(): SidebarConfig { /* JSON.parse of default */ }
-  private save(): void { /* JSON.stringify naar storageFile */ }
-  destroy(): void { /* cleanup timers etc */ }
+  private load(): SidebarConfig { /* JSON.parse or default */ }
+  private save(): void { /* JSON.stringify to storageFile */ }
+  destroy(): void { /* cleanup timers etc. */ }
 }
 ```
 
-### Route patroon (kopieer van registerDataRoutes)
+### Route Pattern (copy from `registerDataRoutes`)
 ```typescript
 export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
   router.get('/sidebar/config', (_req, res) => {
@@ -103,7 +103,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
 }
 ```
 
-### Registry patroon
+### Registry Pattern
 In `src/registry.ts` → `interface ManagerRegistry`:
 ```typescript
 sidebarManager: SidebarManager;
@@ -111,29 +111,29 @@ sidebarManager: SidebarManager;
 
 ---
 
-## Anti-detect noot
+## Anti-Detect Note
 
-Sidebar leeft volledig in de SHELL (Electron BrowserWindow) — NIET in een webview.
-Geen DOM-manipulatie in webpages. Geen stealth impact.
-
----
-
-## Hard rules voor Claude Code
-
-1. **Nooit regelnummers** — altijd functienamen zoals `startAPI()`, `registerDataRoutes()`
-2. **Lees eerst, schrijf dan** — lees elk bestand voor je het aanpast
-3. **npx tsc na elke stap** — zero TypeScript errors voor je doorgaat
-4. **Alle 3 manager touch points** — registry + startAPI + will-quit
-5. **Patroon volgen** — kopieer bestaande manager/route structuur, geen eigen varianten
+The sidebar lives entirely in the SHELL (Electron BrowserWindow), NOT in a webview.
+No DOM manipulation inside webpages. No stealth impact.
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## Hard Rules for Claude Code
 
-| Fase | Titel | Status | Commit |
+1. **Never line numbers** — always use function names such as `startAPI()` and `registerDataRoutes()`
+2. **Read first, write second** — read each file before editing it
+3. **`npx tsc` after every step** — zero TypeScript errors before you continue
+4. **All 3 manager touch points** — registry + `startAPI()` + `will-quit`
+5. **Follow the pattern** — copy the existing manager/route structure, no custom variants
+
+---
+
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
+
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | SidebarManager + config API | ✅ klaar | 0e34eae |
-| 2 | Shell UI (icon strip + panel container + shortcut) | ✅ klaar | a6fb57a |
-| 3 | Eerste plugin: Bookmarks panel | ⏳ niet gestart | — |
+| 1 | `SidebarManager` + config API | ✅ done | 0e34eae |
+| 2 | Shell UI (icon strip + panel container + shortcut) | ✅ done | a6fb57a |
+| 3 | First plugin: Bookmarks panel | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: mark the phase as ✅ and add the commit hash after completion.

@@ -118,7 +118,7 @@ Six independent layers that run before anything reaches the page:
 | 5 | BehaviorMonitor | Welford's algorithm, per-domain baseline + anomaly detection, trust scores |
 | 6 | GatekeeperWebSocket | AI agent makes real-time decisions on ambiguous requests |
 
-None of this touches the webview. Websites don't know it's running.
+None or this touches the webview. Websites don't know it's running.
 
 ---
 
@@ -159,7 +159,7 @@ Sidebar toggle: `Cmd+Shift+B`. Setup panel (⚙️) to enable/disable individual
 
 ## Workspaces
 
-Named tab groups. Each workspace has an icon (slug, e.g. "briefcase"), a name, and a list of assigned tab IDs. Tab bar filters to show only the active workspace's tabs.
+Named tab groups. Each workspace has an icon (slug, e.g. "briefcase"), a name, and a list or assigned tab IDs. Tab bar filters to show only the active workspace's tabs.
 
 Persisted to `~/.tandem/workspaces.json`. Default workspace ("home" icon) is always present and cannot be deleted.
 
@@ -191,7 +191,7 @@ Close Tabs to the Right
 
 ## API Overview
 
-Most endpoints require the `Authorization: Bearer <token>` header. The token is stored in `~/.tandem/api-token`. `/status` is public, and a narrow set of helper routes is also available to installed extensions under explicit route-level checks.
+Most endpoints require the `Authorization: Bearer <token>` header. The token is stored in `~/.tandem/api-token`. `/status` is public, and a narrow set or helper routes is also available to installed extensions under explicit route-level checks.
 
 Current route modules:
 - `browser.ts` — navigation, screenshots, page actions

@@ -25,9 +25,9 @@
 3. **Test after each deliverable** — don't batch all testing to the end
 4. **If you encounter a blocker:**
    - Document it in STATUS.md under "Issues encountered"
-   - Try to solve it if the fix is within scope of this phase
+   - Try to solve it if the fix is within scope or this phase
    - If it requires changes to a previous phase's code, document it and stop
-   - Never make changes outside the scope of your phase without documenting why
+   - Never make changes outside the scope or your phase without documenting why
 
 ### After You Finish
 
@@ -52,7 +52,7 @@
    git commit -m "$(cat <<'EOF'
    feat(extensions): Phase <N> — <short description>
 
-   <bullet points of what was added/changed>
+   <bullet points or what was added/changed>
 
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
    EOF
@@ -119,7 +119,7 @@ Rules:
 
 ## What NOT to Do
 
-- Do NOT modify files outside the scope of your phase without documenting why in STATUS.md
+- Do NOT modify files outside the scope or your phase without documenting why in STATUS.md
 - Do NOT break the existing `ExtensionLoader.loadAllExtensions()` flow
 - Do NOT call `session.loadExtension()` directly — use ExtensionLoader or ExtensionManager
 - Do NOT implement features from future phases ("I'll just add this too since I'm here")
@@ -170,7 +170,7 @@ or document the new file here before creating it.
 
 ## Electron 40 Extension API Notes
 
-Key limitations to be aware of (see TOP30-EXTENSIONS.md for full matrix):
+Key limitations to be aware or (see TOP30-EXTENSIONS.md for full matrix):
 
 - `chrome.identity.*` — NOT supported natively, needs Phase 7 polyfill
 - `chrome.offscreen` — NOT supported in Electron 40

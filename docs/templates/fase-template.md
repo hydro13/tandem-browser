@@ -1,40 +1,40 @@
-# Fase [N] — [Naam]: [Korte omschrijving]
+# Phase [N] — [Name]: [Korte omschrijving]
 
-> **Feature:** [Feature naam]
-> **Sessies:** 1 sessie (soms 2 als het complex is)
-> **Prioriteit:** [HOOG / MIDDEL / LAAG]
-> **Afhankelijk van:** Fase [N-1] klaar / Geen
-
----
-
-## Doel van deze fase
-
-[2-3 zinnen: wat bouwt Claude Code in deze sessie? Wat is het eindresultaat?]
+> **Feature:** [Feature name]
+> **Sessions:** 1 session (soms 2 if the complex is)
+> **Priority:** [HOOG / MIDDEL / LAAG]
+> **Depends on:** Phase [N-1] complete / No
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Goal or this fase
 
-> Lees NIETS anders. Geen wandering door de codebase.
+[2-3 zinnen: wat bouwt Claude Code in this session? Wat is the eindresultaat?]
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+---
+
+## Existing Code to Read — ONLY This
+
+> Read NOTHING else. Do not wander through the codebase.
+
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/api/routes/[file].ts` | `function register[X]Routes()` | Hier komen nieuwe endpoints bij |
-| `src/[module]/manager.ts` | `class [X]Manager` | Bestaande manager die uitgebreid wordt |
-| `src/main.ts` | `startAPI()` | Registratie nieuwe manager |
+| `src/api/routes/[file].ts` | `function register[X]Routes()` | Hier komen new endpoints bij |
+| `src/[module]/manager.ts` | `class [X]Manager` | Existing manager that uitgebreid is |
+| `src/main.ts` | `startAPI()` | Registratie new manager |
 | `shell/index.html` | `// === [SECTIE] ===` | UI aanpassen |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### [Stap 1: Naam]
+### [Step 1: Name]
 
 **Wat:** [Duidelijke omschrijving in 1-2 zinnen]
 
-**Bestand:** `src/[pad/naar/bestand].ts`
+**File:** `src/[pad/to/file].ts`
 
-**Functie toevoegen aan:** `function [existingFunction]()`
+**Function add about:** `function [existingFunction]()`
 
 ```typescript
 // Code voorbeeld / skelet
@@ -47,13 +47,13 @@ export class [NieuweKlasse] {
 }
 ```
 
-### [Stap 2: Naam]
+### [Step 2: Name]
 
 **Wat:** [Omschrijving]
 
-**Bestand:** `src/api/routes/[file].ts`
+**File:** `src/api/routes/[file].ts`
 
-**Toevoegen aan:** `function register[X]Routes()`
+**Add about:** `function register[X]Routes()`
 
 ```typescript
 router.post('/[endpoint]', async (req, res) => {
@@ -68,39 +68,39 @@ router.post('/[endpoint]', async (req, res) => {
 
 ### [Stap N: UI aanpassen]
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Zoek naar:** `// === [SECTIE] ===`
+**Zoek to:** `// === [SECTIE] ===`
 
 **Voeg toe:**
 
 ```html
-<!-- Beschrijving van UI toevoeging -->
+<!-- Description or UI toevoeging -->
 <div class="[class]">...</div>
 ```
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
-# Test 1: [naam]
+# Test 1: [name]
 TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/[endpoint] \
   -H "Content-Type: application/json" \
   -d '{"[param]": "[waarde]"}'
-# Verwacht: {"ok":true, "[veld]": ...}
+# Verwacht: {"ok":true, "[field]": ...}
 
-# Test 2: [naam]
+# Test 2: [name]
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/[endpoint]
 # Verwacht: {"ok":true, ...}
 ```
 
 **UI verificatie:**
-- [ ] [Visueel te zien: beschrijf wat zichtbaar moet zijn]
-- [ ] [Interactie: beschrijf wat klikbaar/werkend moet zijn]
+- [ ] [Visual te zien: beschrijf wat visible must are]
+- [ ] [Interactie: beschrijf wat klikbaar/werkend must are]
 
 ---
 
@@ -108,32 +108,32 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-[N].md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-[N].md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
-6. git commit -m "[emoji] feat: [korte beschrijving]"
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
+6. git commit -m "[emoji] feat: [korte description]"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij...
+   ## Next session start bij...
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] [Valkuil 1: bv. vergeet de will-quit cleanup]
-- [ ] [Valkuil 2: bv. TypeScript strict mode — geen any buiten catch]
-- [ ] [Valkuil 3: bv. test in persist:tandem sessie, niet in guest]
+- [ ] [Valkuil 1: bv. vergeet the will-quit cleanup]
+- [ ] [Valkuil 2: bv. TypeScript strict mode — no any buiten catch]
+- [ ] [Valkuil 3: bv. test in persist:tandem session, not in guest]

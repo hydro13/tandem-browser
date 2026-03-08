@@ -6,7 +6,7 @@ CDP Wingman Vision events (scroll, text selection, form focus) go to WingmanStre
 ## Solution
 1. Route CDP events into the existing ActivityTracker so they appear in `/activity-log`
 2. Add type filtering to `/activity-log` so Kees can query only relevant events
-3. Drop the webhook approach entirely — Kees reads `/activity-log` via pull instead of push
+3. Drop the webhook approach entirely — Kees reads `/activity-log` via pull instead or push
 
 ## Changes
 

@@ -1,44 +1,44 @@
-# Tandem Browser — AI Implementatie: START HIER
+# Tandem Browser — AI Implementatie: START HERE
 
-> **Laatste update:** 12 februari 2026
+> **Last update:** 12 februari 2026
 > **Architectuur:** Claude Max Pro → Cowork/Claude Code → MCP → Tandem API
-> **Geen API key nodig** — Claude werkt via MCP, niet via directe API calls.
+> **No API key nodig** — Claude works via MCP, not via directe API calls.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
 Robin spreekt/typt ──→ Cowork/Claude Code ──→ MCP Server ──→ Tandem API (:8765)
                                                     ↕
-Robin ziet resultaat ←── Kees Panel ←── OpenClaw Gateway (:18789)
+Robin sees resultaat ←── Kees Panel ←── OpenClaw Gateway (:18789)
                                                     +
-                         MCP tool calls verschijnen als activiteit in Kees panel
+                         MCP tool calls verschijnen if activiteit in Kees panel
 ```
 
-- **Robin** heeft een Claude Max Pro account ($200/maand). Geen API key.
-- **Claude** werkt UITSLUITEND via Cowork of Claude Code → MCP tools → Tandem HTTP API.
-- **OpenClaw (Kees)** draait lokaal, WebSocket naar `:18789`.
-- **Tandem API** draait op `:8765`, auth via Bearer token uit `~/.tandem/api-token`.
+- **Robin** has a Claude Max Pro account ($200/maand). No API key.
+- **Claude** works UITSLUITEND via Cowork or Claude Code → MCP tools → Tandem HTTP API.
+- **OpenClaw (Kees)** draait local, WebSocket to `:18789`.
+- **Tandem API** draait op `:8765`, auth via Bearer token out `~/.tandem/api-token`.
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
 | `VERFIJND-PLAN.md` | Master plan — alle details, audit, architectuur | ✅ Definitief |
-| `fase-1-mcp-server.md` | Fase 1: MCP Server (2-3 sessies) | 📋 Klaar om te starten |
-| `fase-2-event-stream.md` | Fase 2: Event Stream + Context (1-2 sessies) | 📋 Wacht op fase 1 |
-| `fase-3-chat-router.md` | Fase 3: Chat Router + Voice (2-3 sessies) | 📋 Wacht op fase 2 |
-| `fase-4-agent-autonomie.md` | Fase 4: Agent Autonomie (2-3 sessies) | 📋 Wacht op fase 3 |
-| `fase-5-multi-ai.md` | Fase 5: Multi-AI Coördinatie (1-2 sessies) | 📋 Wacht op fase 4 |
-| `TODO.md` | Checklist per fase — vink af wat klaar is | 📋 Actief bijhouden |
-| `archief/` | Oude docs (ter referentie, NIET gebruiken als instructie) | 🗄️ Archief |
+| `fase-1-mcp-server.md` | Phase 1: MCP Server (2-3 sessions) | 📋 Ready to start |
+| `fase-2-event-stream.md` | Phase 2: Event Stream + Context (1-2 sessions) | 📋 Waiting for phase 1 |
+| `fase-3-chat-router.md` | Phase 3: Chat Router + Voice (2-3 sessions) | 📋 Waiting for phase 2 |
+| `fase-4-agent-autonomie.md` | Phase 4: Agent Autonomie (2-3 sessions) | 📋 Waiting for phase 3 |
+| `fase-5-multi-ai.md` | Phase 5: Multi-AI Coördinatie (1-2 sessions) | 📋 Waiting for phase 4 |
+| `TODO.md` | Checklist per phase — vink af wat complete is | 📋 Keep actively updated |
+| `archief/` | Oude docs (ter referentie, NIET use if instructie) | 🗄️ Archief |
 
 ### ⚠️ Archief
 
-De map `archief/` bevat de **oude** fase docs (fase-1 t/m fase-7, ROADMAP, VISIE, ARCHITECTUUR, oude TODO). Deze zijn achterhaald door het verfijnde 5-fasen plan. **Gebruik ze NIET als instructie.** Ze staan er alleen als historische referentie.
+The folder `archief/` contains the **oude** phase docs (fase-1 t/m fase-7, ROADMAP, VISIE, ARCHITECTUUR, oude TODO). This are achterhaald door the verfijnde 5-fasen plan. **Usage ze NIET if instructie.** Ze stand er only if historische referentie.
 
 ---
 
@@ -60,16 +60,16 @@ git status
 
 ---
 
-## Regels voor elke sessie
+## Rules for elke session
 
-1. **Lees dit bestand eerst** — dan het relevante fase-document
-2. **Test incrementeel** — niet alles in één keer bouwen
-3. **Breek niets** — bestaande features moeten blijven werken
-4. **NOOIT `console.log()` in MCP code** — stdout = MCP protocol, gebruik `console.error()`
-5. **Commit werkende code** — aan het eind van elke sessie
+1. **Read this file eerst** — then the relevante fase-document
+2. **Test incrementeel** — not alles in één keer bouwen
+3. **Breek nothing** — existing features must blijven werken
+4. **NOOIT `console.log()` in MCP code** — stdout = MCP protocol, usage `console.error()`
+5. **Commit werkende code** — about the eind or elke session
 6. **Update TODO.md** — vink taken af, noteer obstakels
-7. **`npm start`** om de app te starten (NIET `npm run dev`)
-8. **Alleen `@modelcontextprotocol/sdk`** als nieuwe dependency (fase 1)
+7. **`npm start`** to the app te starten (NIET `npm run dev`)
+8. **Only `@modelcontextprotocol/sdk`** if new dependency (phase 1)
 
 ---
 
@@ -79,32 +79,32 @@ git status
 tandem-browser/
 ├── shell/
 │   ├── index.html          # Hoofd UI (tabs, chat/Kees panel, bookmarks)
-│   │                       # ⚠️ Bevat 200+ regels inline WebSocket code (regel 1681-1894)
+│   │                       # ⚠️ Contains 200+ rules inline WebSocket code (regel 1681-1894)
 │   │                       # ⚠️ OpenClaw token HARDCODED op regel 1687
-│   ├── newtab.html         # Nieuwe tab pagina
+│   ├── newtab.html         # New tab page
 │   ├── bookmarks.html      # Bookmark manager
-│   ├── settings.html       # Settings pagina
-│   └── help.html           # Help pagina
+│   ├── settings.html       # Settings page
+│   └── help.html           # Help page
 ├── src/
 │   ├── main.ts             # Electron main process + IPC handlers
 │   ├── preload.ts          # IPC bridge (25+ methods via window.tandem.*)
 │   ├── api/
 │   │   └── server.ts       # HTTP API server (:8765) — 118 endpoints
-│   │                       # Auth middleware: skipt requests ZONDER origin header
+│   │                       # Auth middleware: skips requests WITHOUT an origin header
 │   ├── bookmarks/
 │   │   └── manager.ts      # Bookmark data management
 │   ├── config/
 │   │   └── manager.ts      # Config (~/.tandem/config.json)
 │   ├── content/
-│   │   └── extractor.ts    # Page content extraction (herbruiken voor MCP!)
+│   │   └── extractor.ts    # Page content extraction (herbruiken for MCP!)
 │   ├── bridge/
-│   │   └── context-bridge.ts # ContextBridge (162 regels, EXTEND niet rebuild)
+│   │   └── context-bridge.ts # ContextBridge (162 rules, EXTEND not rebuild)
 │   ├── draw/
 │   │   └── overlay.ts      # Draw mode + screenshots
 │   ├── import/
 │   │   └── chrome-importer.ts # Chrome data import
 │   ├── agents/
-│   │   └── x-scout.ts      # Agent skeleton met timing patronen (herbruiken)
+│   │   └── x-scout.ts      # Agent skeleton with timing patterns (herbruiken)
 │   ├── mcp/                # [FASE 1 — MCP Server + tools]
 │   ├── chat/               # [FASE 3 — ChatRouter + backends]
 │   └── events/             # [FASE 2 — EventStreamManager]
@@ -122,8 +122,8 @@ tandem-browser/
 
 - **Repo:** https://github.com/hydro13/tandem-browser (private)
 - **Owner:** Robin Waslander (hydro13)
-- **Account:** Claude Max Pro ($200/maand) — geen API key
+- **Account:** Claude Max Pro ($200/maand) — no API key
 - **Taal:** Nederlands (docs, chat), Engels (code, variabelen)
 - **App starten:** `npm start`
-- **OpenClaw naam in UI:** "Kees" 🐙
-- **Claude naam in UI:** "Claude" 🤖
+- **OpenClaw name in UI:** "Kees" 🐙
+- **Claude name in UI:** "Claude" 🤖

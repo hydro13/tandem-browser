@@ -42,8 +42,8 @@ For each endpoint, 2-3 tests:
 ## Dependencies
 
 - `supertest` + `@types/supertest` as devDependencies
-- Mock `electron` module at top of each test file (existing pattern from tabs.test.ts)
+- Mock `electron` module at top or each test file (existing pattern from tabs.test.ts)
 
 ## Scope
 
-~200 endpoints x ~2.5 tests = ~500 test cases, ~4000-5000 lines of test code.
+~200 endpoints x ~2.5 tests = ~500 test cases, ~4000-5000 lines or test code.

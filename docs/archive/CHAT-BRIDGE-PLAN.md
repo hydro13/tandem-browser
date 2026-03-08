@@ -1,34 +1,34 @@
 # Chat Bridge: Tandem ↔ Kees (OpenClaw) — Real-time Verbinding
 
 > **Status:** PLAN  
-> **Doel:** Als Robin een bericht stuurt in Tandem's chat panel (of via "Ask Kees" context menu), moet Kees het **direct** ontvangen — niet pas bij de volgende heartbeat.
+> **Goal:** If Robin a bericht stuurt in Tandem's chat panel (or via "Ask Kees" context menu), must Kees the **direct** ontvangen — not pas bij the next heartbeat.
 
 ---
 
 ## Huidige Situatie
 
 ```
-Robin klikt "Ask Kees about Selection"
-  → chat panel opent, tekst in input
+Robin clicks "Ask Kees about Selection"
+  → chat panel opens, text in input
   → Robin drukt Enter
   → chat-send IPC → panelManager.addChatMessage('robin', text)
-  → bericht opgeslagen in JSON bestand
+  → bericht opgeslagen in JSON file
   → ... stilte ...
   → Kees pollt /chat elke 30-60 min via heartbeat
-  → Kees leest bericht (30-60 min te laat)
+  → Kees leest bericht (30-60 min te shows)
 ```
 
 ## Gewenste Situatie
 
 ```
-Robin klikt "Ask Kees about Selection"
-  → chat panel opent, tekst in input
+Robin clicks "Ask Kees about Selection"
+  → chat panel opens, text in input
   → Robin drukt Enter
   → chat-send IPC → panelManager.addChatMessage('robin', text)
-  → panelManager stuurt webhook naar OpenClaw
-  → OpenClaw injecteert bericht in Kees' sessie
-  → Kees antwoordt binnen seconden
-  → Antwoord via POST /chat → verschijnt in Tandem chat panel
+  → panelManager stuurt webhook to OpenClaw
+  → OpenClaw injecteert bericht in Kees' session
+  → Kees antwoordt within seconden
+  → Antwoord via POST /chat → appears in Tandem chat panel
 ```
 
 ## Architectuur
@@ -38,27 +38,27 @@ Robin klikt "Ask Kees about Selection"
 │   Tandem    │ ──────────────────────→│   OpenClaw   │
 │ PanelMgr   │   localhost:18789      │   Gateway    │
 │             │←──────────────────────│              │
-│ POST /chat  │   Kees antwoordt      │  Kees sessie │
+│ POST /chat  │   Kees antwoordt      │  Kees session │
 └─────────────┘                       └──────────────┘
 ```
 
-**Waarom webhook (niet SSE/WebSocket):**
-- OpenClaw heeft al een lokale HTTP server op port 18789
-- Eén simpele POST = klaar, geen persistent connection nodig
-- PanelManager hoeft geen subscriber-state bij te houden
-- Failsafe: als OpenClaw niet draait, faalt de POST stil → geen crash
+**Why webhook (not SSE/WebSocket):**
+- OpenClaw has already a lokale HTTP server op port 18789
+- Eén simpele POST = complete, no persistent connection nodig
+- PanelManager hoeft no subscriber-state bij te houden
+- Failsafe: if OpenClaw not draait, faalt the POST stil → no crash
 
 ---
 
 ## Implementatie — 1 Claude Code Run
 
-### Wat er moet gebeuren:
+### Wat er must gebeuren:
 
-1. **Config uitbreiden** — `webhook` sectie toevoegen aan TandemConfig
+1. **Config uitbreiden** — `webhook` section add about TandemConfig
 2. **PanelManager uitbreiden** — na `addChatMessage('robin', ...)` webhook firen
-3. **API endpoint toevoegen** — `POST /chat/webhook/test` om de verbinding te testen
+3. **API endpoint add** — `POST /chat/webhook/test` to the verbinding te testen
 
-### Bestanden te wijzigen:
+### Files te change:
 - `src/config/manager.ts` — webhook config
 - `src/panel/manager.ts` — webhook dispatch
 - `src/api/server.ts` — test endpoint
@@ -69,9 +69,9 @@ Robin klikt "Ask Kees about Selection"
 
 ```
 Read these files first:
-- src/panel/manager.ts (hele bestand)
-- src/config/manager.ts (hele bestand)
-- src/api/server.ts (alleen regels 683-730, de /chat routes)
+- src/panel/manager.ts (hele file)
+- src/config/manager.ts (hele file)
+- src/api/server.ts (only rules 683-730, the /chat routes)
 
 ## Context
 Tandem Browser has a chat panel where Robin (the human user) talks to Kees (an AI wingman). Kees runs in OpenClaw, a separate process on localhost. Currently Kees only reads chat messages by polling GET /chat — which means messages can take 30-60 minutes to arrive. We need real-time delivery.
@@ -116,7 +116,7 @@ The constructor needs to accept a ConfigManager instance. Check if it already do
 Add these methods to PanelManager:
 
 ```typescript
-/** Fire webhook to notify OpenClaw of new chat message */
+/** Fire webhook to notify OpenClaw or new chat message */
 private async fireWebhook(msg: ChatMessage): Promise<void> {
   if (!this.configManager) return;
   const config = this.configManager.getConfig();
@@ -242,15 +242,15 @@ Do NOT run `npm start` or `npm run dev`.
 
 ---
 
-## Na de Claude Code Run
+## Na the Claude Code Run
 
-### Kees-kant (OpenClaw configuratie)
+### Kees-kant (OpenClaw configuration)
 
-Na de Tandem build moet Kees' kant geconfigureerd worden:
+Na the Tandem build must Kees' kant geconfigureerd be:
 
-1. **Testen of webhook aankomt** — `curl -X POST http://127.0.0.1:8765/chat/webhook/test`
-2. **OpenClaw webhook endpoint bepalen** — het juiste pad voor incoming events uitzoeken
-3. **HEARTBEAT.md updaten** — Tandem chat polling kan weg als webhook werkt
+1. **Testen or webhook aankomt** — `curl -X POST http://127.0.0.1:8765/chat/webhook/test`
+2. **OpenClaw webhook endpoint bepalen** — the juiste pad for incoming events uitzoeken
+3. **HEARTBEAT.md updaten** — Tandem chat polling can weg if webhook works
 4. **TOOLS.md updaten** — webhook flow documenteren
 
 ### Verificatie Flow
@@ -260,10 +260,10 @@ Na de Tandem build moet Kees' kant geconfigureerd worden:
 npm start
 
 # 2. Open chat panel (Cmd+K)
-# 3. Type een bericht als Robin
-# 4. Check Tandem console voor webhook log:
-#    ✅ Geen "Webhook failed" waarschuwing = POST gelukt
-#    ⚠️ "OpenClaw not running?" = OpenClaw is uit (verwacht als die niet draait)
+# 3. Type a bericht if Robin
+# 4. Check Tandem console for webhook log:
+#    ✅ No "Webhook failed" waarschuwing = POST gelukt
+#    ⚠️ "OpenClaw not running?" = OpenClaw is out (verwacht if that not draait)
 
 # 5. Test endpoint:
 curl -s http://127.0.0.1:8765/chat/webhook/test | jq .

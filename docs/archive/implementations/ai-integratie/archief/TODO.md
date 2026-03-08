@@ -1,26 +1,26 @@
 # Tandem Browser — AI Implementatie TODO
 
-> Master checklist voor alle fases. Vink af per sessie.
-> Elke sessie begint met het lezen van dit bestand + de relevante fase docs.
+> Master checklist for alle fases. Vink af per session.
+> Elke session begint with the read or this file + the relevante phase docs.
 
 ---
 
-## Pre-Requisites (voor alle fases)
+## Pre-Requisites (for alle fases)
 
-- [ ] Tandem Browser start zonder crashes (`npm start`)
+- [ ] Tandem Browser start without crashes (`npm start`)
 - [ ] API server draait op :8765 (`curl http://localhost:8765/status`)
-- [ ] API token bestaat (`cat ~/.tandem/api-token`)
+- [ ] API token exists (`cat ~/.tandem/api-token`)
 - [ ] Git repo is up-to-date (`git pull`)
 - [ ] TypeScript compileert clean (`npx tsc`)
 
 ---
 
-## Fase 1: MCP Server
+## Phase 1: MCP Server
 
 ### Sessie 1.1 — Basis MCP Server
 - [ ] `npm install @modelcontextprotocol/sdk`
 - [ ] `src/mcp/server.ts` — MCP server entry point
-- [ ] `src/mcp/api-client.ts` — HTTP client voor Tandem API
+- [ ] `src/mcp/api-client.ts` — HTTP client for Tandem API
 - [ ] Tool: `tandem_navigate(url)`
 - [ ] Tool: `tandem_go_back()`
 - [ ] Tool: `tandem_go_forward()`
@@ -28,10 +28,10 @@
 - [ ] Tool: `tandem_read_page()`
 - [ ] Tool: `tandem_screenshot()`
 - [ ] npm script: `"mcp": "node dist/mcp/server.js"`
-- [ ] tsconfig.json update (mcp bestanden includen)
-- [ ] Test: MCP server start zonder errors
-- [ ] Test: Claude Code kan `tandem_read_page()` aanroepen
-- [ ] Test: Claude Code kan navigeren en pagina verandert
+- [ ] tsconfig.json update (mcp files includen)
+- [ ] Test: MCP server start without errors
+- [ ] Test: Claude Code can `tandem_read_page()` aanroepen
+- [ ] Test: Claude Code can navigeren and page verandert
 
 ### Sessie 1.2 — Interactie + Tabs + Chat
 - [ ] Tool: `tandem_click(selector, text?)`
@@ -44,8 +44,8 @@
 - [ ] Tool: `tandem_focus_tab(tabId)`
 - [ ] Tool: `tandem_send_message(text)`
 - [ ] Tool: `tandem_get_chat_history(limit?)`
-- [ ] Test: Complete flow — navigeer → lees → klik → typ
-- [ ] Test: Tab management werkt
+- [ ] Test: Complete flow — navigeer → read → click → typ
+- [ ] Test: Tab management works
 - [ ] Test: Chat berichten verschijnen in Kees panel
 
 ### Sessie 1.3 — Resources + Context
@@ -53,72 +53,72 @@
 - [ ] Resource: `tandem://tabs/list`
 - [ ] Resource: `tandem://chat/history`
 - [ ] Tool: `tandem_get_context()`
-- [ ] MCP configuratie template (`tandem-mcp-config.json`)
+- [ ] MCP configuration template (`tandem-mcp-config.json`)
 - [ ] Documentatie: hoe MCP server configureren
 - [ ] Test: Resources leesbaar vanuit Claude Code
 
 ---
 
-## Fase 2: Chat Router
+## Phase 2: Chat Router
 
 ### Sessie 2.1 — Router + OpenClaw Refactor
 - [ ] `ChatBackend` interface definiëren
-- [ ] `OpenClawBackend` class (refactor uit index.html)
+- [ ] `OpenClawBackend` class (refactor out index.html)
 - [ ] `ChatRouter` class
 - [ ] Backend selector UI in Kees panel
-- [ ] Test: OpenClaw werkt identiek aan voor refactor
-- [ ] Test: Selector is zichtbaar en klikbaar
-- [ ] Test: Geen regressies in chat
+- [ ] Test: OpenClaw works identiek about for refactor
+- [ ] Test: Selector is visible and klikbaar
+- [ ] Test: No regressions in chat
 
 ### Sessie 2.2 — Selector UI + State
 - [ ] Backend selector styling
 - [ ] Connection status indicators (groen/rood)
-- [ ] State persistence (onthoud gekozen backend)
+- [ ] State persistence (onthoud chosen backend)
 - [ ] Graceful disconnect/reconnect
 - [ ] "Beide" optie (UI placeholder)
 - [ ] Test: Wisselen is smooth
-- [ ] Test: Status indicators zijn accuraat
+- [ ] Test: Status indicators are accuraat
 
 ---
 
-## Fase 3: Claude Direct Backend
+## Phase 3: Claude Direct Backend
 
-> ⚠️ VERVALLEN — Robin heeft Max Pro, geen API key. Zie VERFIJND-PLAN.md.
-> Claude integratie gaat via MCP (Fase 1). Chat panel integratie via Activity Feed (Fase 3 nieuw).
+> ⚠️ VERVALLEN — Robin has Max Pro, no API key. Zie VERFIJND-PLAN.md.
+> Claude integratie gaat via MCP (Phase 1). Chat panel integratie via Activity Feed (Phase 3 new).
 
 ### Sessie 3.1 — Claude Backend + Tools
 - [ ] `npm install @anthropic-ai/sdk`
 - [ ] `ClaudeBackend` class
 - [ ] API key management (config + settings UI)
-- [ ] System prompt met browser context
+- [ ] System prompt with browser context
 - [ ] Tool definities (navigate, click, type, read, screenshot)
 - [ ] Tool execution loop
 - [ ] Streaming responses
 - [ ] Test: Robin chat → Claude antwoordt
-- [ ] Test: Claude kan browser bedienen via tools
-- [ ] Test: Streaming werkt (woord voor woord)
+- [ ] Test: Claude can browser bedienen via tools
+- [ ] Test: Streaming works (woord for woord)
 
 ### Sessie 3.2 — System Prompt + Context
 - [ ] Kees persoonlijkheid in system prompt
-- [ ] Auto context injection (URL, titel, tabs)
-- [ ] Laatste events meesturen
+- [ ] Auto context injection (URL, title, tabs)
+- [ ] Last events meesturen
 - [ ] Conversation memory management
-- [ ] Content truncatie (grote pagina's)
-- [ ] Test: Claude weet altijd welke pagina open staat
+- [ ] Content truncatie (grote page's)
+- [ ] Test: Claude weet always welke page open staat
 - [ ] Test: Lange gesprekken werken stabiel
 
 ---
 
-## Fase 4: Event Stream
+## Phase 4: Event Stream
 
 ### Sessie 4.1 — Event Emitter + Endpoints
 - [ ] `EventStreamManager` class
 - [ ] Event types definiëren
-- [ ] Verzamel events uit bestaande IPC
+- [ ] Verzamel events out existing IPC
 - [ ] SSE endpoint: `GET /events/stream`
-- [ ] WebSocket optie (optioneel)
+- [ ] WebSocket optie (optional)
 - [ ] MCP notifications
-- [ ] Test: Events zichtbaar via curl/SSE
+- [ ] Test: Events visible via curl/SSE
 - [ ] Test: Navigatie events komen door
 
 ### Sessie 4.2 — Context Manager
@@ -126,39 +126,39 @@
 - [ ] Auto-update bij events
 - [ ] Periodic content refresh
 - [ ] Screenshot caching
-- [ ] Integratie met Claude Backend
-- [ ] Integratie met MCP Resources
-- [ ] Test: Context altijd actueel
-- [ ] Test: Geen performance impact
+- [ ] Integratie with Claude Backend
+- [ ] Integratie with MCP Resources
+- [ ] Test: Context always actueel
+- [ ] Test: No performance impact
 
 ---
 
-## Fase 5: Voice Flow
+## Phase 5: Voice Flow
 
-> ⚠️ SAMENGEVOEGD met Chat Router (Fase 3 nieuw). Voice koppeling is ~30 regels code.
+> ⚠️ SAMENGEVOEGD with Chat Router (Phase 3 new). Voice koppeling is ~30 rules code.
 
 ### Sessie 5.1 — Voice Pipeline
 - [ ] Voice transcript → chat bericht (automatisch)
 - [ ] Interim results in voice indicator
-- [ ] Final result naar actieve backend
-- [ ] Voice knop in Kees panel (naast input)
+- [ ] Final result to actieve backend
+- [ ] Voice knop in Kees panel (next to input)
 - [ ] Push-to-talk mode
-- [ ] Optioneel: text-to-speech voor antwoorden
+- [ ] Optioneel: text-to-speech for antwoorden
 - [ ] Test: Spreek → chat → AI antwoordt
-- [ ] Test: Werkt met alle backends
-- [ ] Test: Shortcut (Cmd/Ctrl+Shift+M) werkt
+- [ ] Test: Works with alle backends
+- [ ] Test: Shortcut (Cmd/Ctrl+Shift+M) works
 
 ---
 
-## Fase 6: Agent Autonomie
+## Phase 6: Agent Autonomie
 
 ### Sessie 6.1 — Task Queue + Approvals
-- [ ] Task queue systeem
+- [ ] Task queue system
 - [ ] Approval UI in Kees panel
 - [ ] Auto-approve settings per actie type
 - [ ] Activity log
 - [ ] Test: AI start taak, pauzeert bij approval
-- [ ] Test: Robin kan goedkeuren/afwijzen
+- [ ] Test: Robin can goedkeuren/afwijzen
 
 ### Sessie 6.2 — Autonomous Browse
 - [ ] Browse session management (tabs per agent)
@@ -166,67 +166,67 @@
 - [ ] Research agent implementatie
 - [ ] Monitoring agent implementatie
 - [ ] Menselijke timing (delays)
-- [ ] Test: AI onderzoekt 5 pagina's zelfstandig
-- [ ] Test: Robin ziet voortgang real-time
+- [ ] Test: AI onderzoekt 5 page's zelfstandig
+- [ ] Test: Robin sees voortgang real-time
 
 ---
 
-## Fase 7: Multi-AI Coördinatie
+## Phase 7: Multi-AI Coördinatie
 
 ### Sessie 7.1 — Dual Backend
 - [ ] "Beide" mode in chat router
-- [ ] Berichten naar alle actieve backends
+- [ ] Berichten to alle actieve backends
 - [ ] Antwoorden gelabeld per bron
 - [ ] Selective routing (@claude, @kees)
 - [ ] Inter-AI context sharing
-- [ ] Test: Beide backends tegelijk actief
-- [ ] Test: @-mention routing werkt
+- [ ] Test: Beide backends simultaneously actief
+- [ ] Test: @-mention routing works
 
 ### Sessie 7.2 — Role-Based Agents
 - [ ] Agent rollen definiëren
 - [ ] Role assignment UI
 - [ ] Agent-to-agent communicatie
 - [ ] Unified activity log
-- [ ] Test: Meerdere agents parallel
-- [ ] Test: Robin heeft overzicht
+- [ ] Test: Multiple agents parallel
+- [ ] Test: Robin has overzicht
 
 ---
 
 ## Cross-Platform Checks (herhaal per fase)
 
 Na elke fase, controleer:
-- [ ] Geen hardcoded macOS paden
-- [ ] Geen `process.platform === 'darwin'` zonder else
-- [ ] Alle file paden via `path.join()` en `os.homedir()`
+- [ ] No hardcoded macOS paden
+- [ ] No `process.platform === 'darwin'` without else
+- [ ] Alle file paden via `path.join()` and `os.homedir()`
 - [ ] Keyboard shortcuts: `CmdOrCtrl` in Electron, dynamisch in UI
 - [ ] TypeScript compileert clean
-- [ ] Geen platform-specifieke npm packages
+- [ ] No platform-specific npm packages
 
 ---
 
 ## Sessie Start Protocol
 
-Elke nieuwe Claude Code sessie die aan dit project werkt moet:
+Elke new Claude Code session that about this project works must:
 
-1. **Lees** `ai-implementatie/VISIE.md` voor de context
-2. **Lees** `ai-implementatie/ARCHITECTUUR.md` voor technische details
-3. **Lees** `ai-implementatie/TODO.md` (dit bestand) voor voortgang
-4. **Lees** de relevante fase sectie in `ai-implementatie/ROADMAP.md`
-5. **Check** pre-requisites van de huidige sessie
-6. **Run** `npm start` om te bevestigen dat de app werkt
-7. **Run** `npx tsc` om te bevestigen dat TypeScript clean is
-8. **Begin** met de eerste onafgevinkte taak van de huidige sessie
-9. **Test** elke change incrementeel (niet alles in één keer)
-10. **Commit** werkende code aan het eind van de sessie
+1. **Read** `ai-implementatie/VISIE.md` for the context
+2. **Read** `ai-implementatie/ARCHITECTUUR.md` for technische details
+3. **Read** `ai-implementatie/TODO.md` (this file) for voortgang
+4. **Read** the relevante phase section in `ai-implementatie/ROADMAP.md`
+5. **Check** pre-requisites or the huidige session
+6. **Run** `npm start` to te bevestigen that the app works
+7. **Run** `npx tsc` to te bevestigen that TypeScript clean is
+8. **Begin** with the first onafgevinkte taak or the huidige session
+9. **Test** elke change incrementeel (not alles in één keer)
+10. **Commit** werkende code about the eind or the session
 
 ---
 
 ## Sessie Einde Protocol
 
-Aan het eind van elke sessie:
+Aan the eind or elke session:
 
-1. **Update** dit TODO bestand (vink taken af)
+1. **Update** this TODO file (vink taken af)
 2. **Commit** alle werkende code
-3. **Documenteer** obstakels die tegenkwamen
-4. **Noteer** wat de volgende sessie moet oppakken
-5. **Push** naar GitHub (`git push origin main`)
+3. **Documenteer** obstakels that tegenkwamen
+4. **Noteer** wat the next session must oppakken
+5. **Push** to GitHub (`git push origin main`)

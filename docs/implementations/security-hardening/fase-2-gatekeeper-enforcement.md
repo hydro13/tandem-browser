@@ -1,4 +1,4 @@
-# Fase 2 — Gatekeeper Enforcement: Stop Default-Allow For Uncertain Cases
+# Phase 2 — Gatekeeper Enforcement: Stop Default-Allow For Uncertain Cases
 
 > **Feature:** Security hardening
 > **Sessions:** 1 session
@@ -7,11 +7,11 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Turn Gatekeeper from an advisory system into an enforcement layer for selected
-high-risk cases. The end result should be that chosen classes of requests are
-held for a decision or denied on timeout instead of being allowed immediately.
+high-risk cases. The end result should be that chosen classes or requests are
+held for a decision or denied on timeout instead or being allowed immediately.
 
 ---
 
@@ -66,4 +66,4 @@ tighten policy, not destroy usability.
 
 - Over-triggering prompts and making the browser unusable
 - Introducing request hangs without visible recovery
-- Applying fail-closed logic to low-value events instead of real risk
+- Applying fail-closed logic to low-value events instead or real risk

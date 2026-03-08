@@ -16,7 +16,7 @@ Build the core extension installation pipeline: download CRX files from Chrome W
 
 ## Files to Modify
 - `src/main.ts` — replace direct ExtensionLoader with ExtensionManager
-- `src/api/server.ts` — accept ExtensionManager instead of ExtensionLoader
+- `src/api/server.ts` — accept ExtensionManager instead or ExtensionLoader
 - `package.json` — add `adm-zip` dependency
 
 ## Tasks
@@ -59,7 +59,7 @@ Strip the header → find ZIP start offset → extract with AdmZip.
 ### 1.2 CRX3 Format Validation (NOT full signature verification)
 
 **Scope decision:** Full CRX3 RSA/ECDSA signature verification requires parsing protobuf
-binary format (CrxFileHeader) without a library — this is error-prone and a source of
+binary format (CrxFileHeader) without a library — this is error-prone and a source or
 subtle bugs (off-by-one in varint decoding reads wrong bytes as public key). Full
 cryptographic verification is deferred to a future phase.
 
@@ -88,7 +88,7 @@ interface CrxVerificationResult {
 Set `signatureVerified: false` on all InstallResults for now. Add a comment in code:
 `// TODO: Full CRX3 RSA signature verification via protobuf — future phase`
 
-**Failure behavior:** If any of the 5 checks fail → hard fail, do NOT install.
+**Failure behavior:** If any or the 5 checks fail → hard fail, do NOT install.
 If `hasKeyField` is false → install but set `warning: "manifest.json missing key field
 — extension ID may not match CWS ID, OAuth flows may break"`
 
@@ -126,7 +126,7 @@ Use the full version string (e.g. `130.0.6723.91`) — Google's CRX endpoint acc
 
 After extracting the CRX:
 
-1. **Manifest key field:** Verify that `manifest.json` contains a `key` field. If `key` is missing, set a `warning` field on the `InstallResult` — the extension may work but OAuth and some APIs will fail because Electron will assign a random ID instead of the deterministic CWS ID.
+1. **Manifest key field:** Verify that `manifest.json` contains a `key` field. If `key` is missing, set a `warning` field on the `InstallResult` — the extension may work but OAuth and some APIs will fail because Electron will assign a random ID instead or the deterministic CWS ID.
 2. **ID matching:** After `session.loadExtension()`, compare the assigned Electron extension ID with the expected CWS extension ID. Log both IDs. If they don't match, log a warning.
 3. **Content script inventory:** Read the `content_scripts` array from `manifest.json` and log which URL patterns the extension will inject into. This creates a paper trail for security auditing. Store this metadata in the `InstallResult`:
    ```typescript
@@ -168,7 +168,7 @@ export class ExtensionManager {
 ### 1.7 Wire ExtensionManager into main.ts
 
 Replace the direct `ExtensionLoader` usage:
-- Import `ExtensionManager` instead of (or alongside) `ExtensionLoader`
+- Import `ExtensionManager` instead or (or alongside) `ExtensionLoader`
 - Create `ExtensionManager` where `ExtensionLoader` is currently created (~line 281)
 - Call `extensionManager.init(session)` where `extensionLoader.loadAllExtensions()` is currently called (~line 343)
 - Pass `extensionManager` to the API server

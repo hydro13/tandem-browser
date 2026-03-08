@@ -1,42 +1,42 @@
-# Fase 1 — BrowserViews: SplitScreenManager backend + API
+# Phase 1 — BrowserViews: SplitScreenManager backend + API
 
 > **Feature:** Split Screen
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de `SplitScreenManager` die de split screen state beheert: welke tabs in welk paneel, welke layout (vertical/horizontal), en de divider positie. Registreer API endpoints zodat de split screen via REST aangestuurd kan worden. Na deze fase kan je via `curl` een split screen openen en sluiten — de shell UI volgt in fase 2.
+Bouw the `SplitScreenManager` that the split screen state beheert: welke tabs in welk panel, welke layout (vertical/horizontal), and the divider positie. Registreer API endpoints zodat the split screen via REST aangestuurd can be. After this phase can you via `curl` a split screen openen and sluiten — the shell UI follows in phase 2.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/main.ts` | `startAPI()` | Hier wordt SplitScreenManager aangemaakt en geregistreerd |
-| `src/main.ts` | `app.on('will-quit')` | Cleanup toevoegen |
-| `src/registry.ts` | `interface ManagerRegistry` | SplitScreenManager toevoegen |
-| `src/api/server.ts` | `setupRoutes()` | Hier worden route-modules geregistreerd |
-| `src/api/routes/tabs.ts` | `registerTabRoutes()` | Referentiepatroon voor route registratie |
-| `src/api/context.ts` | `interface RouteContext` | Context type voor route handlers (als dit bestaat, anders skip) |
-| `src/tabs/manager.ts` | `class TabManager`, `getTab()`, `listTabs()` | TabManager API die SplitScreenManager nodig heeft |
-| `shell/index.html` | `<div class="browser-content">`, `id="webview-container"` | Begrijp de huidige webview layout |
+| `src/main.ts` | `startAPI()` | Hier is SplitScreenManager aangemaakt and geregistreerd |
+| `src/main.ts` | `app.on('will-quit')` | Cleanup add |
+| `src/registry.ts` | `interface ManagerRegistry` | SplitScreenManager add |
+| `src/api/server.ts` | `setupRoutes()` | Hier be route-modules geregistreerd |
+| `src/api/routes/tabs.ts` | `registerTabRoutes()` | Referentiepatroon for route registratie |
+| `src/api/context.ts` | `interface RouteContext` | Context type for route handlers (if this exists, anders skip) |
+| `src/tabs/manager.ts` | `class TabManager`, `getTab()`, `listTabs()` | TabManager API that SplitScreenManager nodig has |
+| `shell/index.html` | `<div class="browser-content">`, `id="webview-container"` | Begrijp the huidige webview layout |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: SplitScreenManager class
+### Step 1: SplitScreenManager class
 
-**Wat:** Core manager die split screen state beheert. Houdt bij of split actief is, welke tabIds in welk paneel zitten, layout mode, en divider ratio.
+**Wat:** Core manager that split screen state beheert. Houdt bij or split actief is, welke tabIds in welk panel zitten, layout mode, and divider ratio.
 
-**Bestand:** `src/split-screen/manager.ts`
+**File:** `src/split-screen/manager.ts`
 
 ```typescript
 export interface SplitLayout {
@@ -47,7 +47,7 @@ export interface SplitLayout {
 
 export interface SplitPane {
   tabId: number;
-  index: number; // 0 = links/boven, 1 = rechts/onder
+  index: number; // 0 = links/boven, 1 = rechts/under
 }
 
 export class SplitScreenManager {
@@ -58,10 +58,10 @@ export class SplitScreenManager {
 
   constructor(win: BrowserWindow, tabManager: TabManager) { ... }
 
-  /** Start split screen met twee tabs */
+  /** Start split screen with twee tabs */
   async open(opts: { tabId1: number; tabId2: number; layout?: 'vertical' | 'horizontal' }): Promise<SplitLayout> { ... }
 
-  /** Sluit split screen */
+  /** Closes split screen */
   async close(): Promise<void> { ... }
 
   /** Haal huidige status op */
@@ -73,7 +73,7 @@ export class SplitScreenManager {
   /** Verplaats divider */
   async resize(ratio: number): Promise<void> { ... }
 
-  /** Focus een specifiek paneel */
+  /** Focus a specifiek panel */
   async focusPane(paneIndex: number): Promise<void> { ... }
 
   /** Cleanup */
@@ -82,18 +82,18 @@ export class SplitScreenManager {
 ```
 
 **Logica:**
-- `open()` valideert dat beide tabIds bestaan via `tabManager.getTab()`, slaat de layout op, en stuurt een IPC event naar de shell (`split-screen-open`) met de tab info
-- `close()` reset de state en stuurt IPC event `split-screen-close`
-- `focusPane()` stuurt IPC event `split-screen-focus` met de pane index
-- De shell ontvangt deze IPC events en past de DOM layout aan (fase 2)
+- `open()` valideert that beide tabIds bestaan via `tabManager.getTab()`, slaat the layout op, and stuurt a IPC event to the shell (`split-screen-open`) with the tab info
+- `close()` reset the state and stuurt IPC event `split-screen-close`
+- `focusPane()` stuurt IPC event `split-screen-focus` with the pane index
+- The shell ontvangt this IPC events and past the DOM layout about (phase 2)
 
-### Stap 2: API routes
+### Step 2: API routes
 
-**Wat:** REST endpoints voor split screen.
+**Wat:** REST endpoints for split screen.
 
-**Bestand:** `src/api/routes/split.ts`
+**File:** `src/api/routes/split.ts`
 
-**Functie:** `registerSplitRoutes(router, ctx)`
+**Function:** `registerSplitRoutes(router, ctx)`
 
 ```typescript
 import type { Router } from 'express';
@@ -173,19 +173,19 @@ export function registerSplitRoutes(router: Router, ctx: RouteContext): void {
 }
 ```
 
-### Stap 3: Wiring — registreer manager en routes
+### Step 3: Wiring — registreer manager and routes
 
-**Wat:** SplitScreenManager aansluiten op het systeem.
+**Wat:** SplitScreenManager aansluiten op the system.
 
-**Bestand:** `src/registry.ts`
-**Toevoegen aan:** `interface ManagerRegistry`
+**File:** `src/registry.ts`
+**Add about:** `interface ManagerRegistry`
 
 ```typescript
 splitScreenManager: SplitScreenManager;
 ```
 
-**Bestand:** `src/main.ts`
-**Toevoegen aan:** `startAPI()`
+**File:** `src/main.ts`
+**Add about:** `startAPI()`
 
 ```typescript
 import { SplitScreenManager } from './split-screen/manager';
@@ -197,14 +197,14 @@ const splitScreenManager = new SplitScreenManager(win, tabManager!);
 splitScreenManager: splitScreenManager!,
 ```
 
-**Toevoegen aan:** `app.on('will-quit')`
+**Add about:** `app.on('will-quit')`
 
 ```typescript
 if (splitScreenManager) splitScreenManager.destroy();
 ```
 
-**Bestand:** `src/api/server.ts`
-**Toevoegen aan:** `setupRoutes()`
+**File:** `src/api/server.ts`
+**Add about:** `setupRoutes()`
 
 ```typescript
 import { registerSplitRoutes } from './routes/split';
@@ -215,7 +215,7 @@ registerSplitRoutes(router, ctx);
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 # Test 1: Open split screen (vertical)
@@ -250,7 +250,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   -d '{"ratio": 0.7}'
 # Verwacht: {"ok":true, "ratio":0.7}
 
-# Test 6: Sluit split screen
+# Test 6: Closes split screen
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/split/close
 # Verwacht: {"ok":true}
@@ -263,8 +263,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 **Compilatie verificatie:**
 - [ ] `npx tsc` — zero errors
-- [ ] `npx vitest run` — alle bestaande tests slagen
-- [ ] `npm start` — app start zonder crashes
+- [ ] `npx vitest run` — alle existing tests slagen
+- [ ] `npm start` — app start without crashes
 
 ---
 
@@ -272,33 +272,33 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-browserviews.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-browserviews.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🖥️ feat: split screen manager + API endpoints"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-2-shell-ui.md
+   ## Next session start bij fase-2-shell-ui.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Vergeet niet `destroy()` toe te voegen aan will-quit handler
-- [ ] TypeScript strict mode — geen `any` buiten catch blocks
-- [ ] Valideer tabIds via `tabManager.getTab()` — gooi error als tab niet bestaat
-- [ ] IPC events sturen met `win.webContents.send()` — de shell luistert hier pas naar in fase 2, maar de events moeten al wel verstuurd worden
+- [ ] Vergeet not `destroy()` toe te voegen about will-quit handler
+- [ ] TypeScript strict mode — no `any` buiten catch blocks
+- [ ] Valideer tabIds via `tabManager.getTab()` — gooi error if tab not exists
+- [ ] IPC events sturen with `win.webContents.send()` — the shell luistert hier pas to in phase 2, but the events must already indeed verstuurd be

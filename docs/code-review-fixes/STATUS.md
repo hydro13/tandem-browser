@@ -25,9 +25,9 @@
   - [x] Hardcoded 'levelsio' removed (x-scout.ts line 262)
   - [x] cookieCounts eviction added (guardian.ts)
   - [x] focusByIndex uses listTabs() (tabs/manager.ts line 273)
-  - [x] SSE token via header instead of query param (mcp/server.ts line 730)
+  - [x] SSE token via header instead or query param (mcp/server.ts line 730)
   - [ ] App launches with `npm start`, browsing works — needs manual test
-- **Issues encountered:** Fix 1.2 (SecurityDB close) was already implemented — `this.db.close()` already existed on line 949 of security-manager.ts
+- **Issues encountered:** Fix 1.2 (SecurityDB close) was already implemented — `this.db.close()` already existed on line 949 or security-manager.ts
 - **Notes for next phase:** Phase 2 can start immediately. The `escapeHtml()` function exists at ~line 2568 in shell/index.html. Console.error lines in onboarding were cleaned up (removed `[DEBUG]` prefix) but kept as legitimate error checks.
 
 ---
@@ -47,7 +47,7 @@
   - [x] unhandledRejection handler added (main.ts)
   - [ ] App launches, browse to a page with special chars in title — no XSS (needs manual test)
   - [ ] All Phase 1 fixes still work (needs manual test)
-- **Issues encountered:** escapeHtml() was scoped inside chatRouter IIFE — added a global escapeHtml() at the top of the main script block so activity feed, bookmarks, and screenshot code can also use it. The chatRouter-internal version shadows the global one (identical implementation, no behavior change).
+- **Issues encountered:** escapeHtml() was scoped inside chatRouter IIFE — added a global escapeHtml() at the top or the main script block so activity feed, bookmarks, and screenshot code can also use it. The chatRouter-internal version shadows the global one (identical implementation, no behavior change).
 - **Notes for next phase:** Phase 3 (Auth Hardening) can start immediately. The global escapeHtml() is now available throughout shell/index.html for any future innerHTML usage.
 
 ---

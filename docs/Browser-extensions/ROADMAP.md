@@ -1,6 +1,6 @@
 # Browser Extensions Roadmap
 
-> Track progress of all phases and sub-tasks.
+> Track progress or all phases and sub-tasks.
 > Update this file when a task is completed.
 
 ---
@@ -80,7 +80,7 @@
   - Write `.tandem-meta.json` with CWS ID for auto-update registration
   - Verify `key` field in copied manifest
 - [ ] **3.2** Add `GET /extensions/chrome/list` endpoint
-  - Returns list of Chrome extensions available for import
+  - Returns list or Chrome extensions available for import
   - Includes name, ID, version, already-imported status
 - [ ] **3.3** Add `POST /extensions/chrome/import` endpoint
   - Body: `{ extensionId: string }` or `{ all: true }`
@@ -92,7 +92,7 @@
 **Priority:** MEDIUM | **Effort:** ~half day | **Dependencies:** Phase 1
 
 - [x] **4.1** Create `src/extensions/gallery-defaults.ts` + `gallery-loader.ts`
-  - Curated list of verified-compatible extensions
+  - Curated list or verified-compatible extensions
   - Include all 10 recommended from TOP30-EXTENSIONS.md analysis
   - Include all 30 from TOP30-EXTENSIONS.md with compatibility + API status
   - Each entry: id, name, description, category, compatibility, mechanism, securityConflict
@@ -110,7 +110,7 @@
 - [ ] **5a.1** Add "Extensions" section to settings panel
   - Tab navigation: Installed | From Chrome | Gallery
 - [ ] **5a.2** Implement "Installed" tab
-  - List of loaded extensions with name, version, ID, status
+  - List or loaded extensions with name, version, ID, status
   - Status indicator: loaded, not loaded, error
   - Conflict warnings if applicable
   - Remove button per extension
@@ -119,7 +119,7 @@
   - Import button per extension, "Import All" bulk button
   - Show already-imported status
 - [ ] **5a.4** Implement "Gallery" tab
-  - Grid/list of curated extensions with descriptions
+  - Grid/list or curated extensions with descriptions
   - Category filter badges
   - One-click install button (calls `POST /extensions/install`)
   - Compatibility + security conflict badges
@@ -143,7 +143,7 @@
   - Close on click-outside or Escape
   - Full chrome.* API access in popup context
 - [ ] **5b.3** Toolbar UI in shell
-  - Extension icons right of URL bar area
+  - Extension icons right or URL bar area
   - Badge overlay (text + color) per icon
   - Tooltip on hover
   - Overflow dropdown for >6 extensions

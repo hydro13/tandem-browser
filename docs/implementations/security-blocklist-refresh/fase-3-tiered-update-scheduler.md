@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 This phase replaces the single 24-hour refresh rule with per-source update
 tiers. High-signal feeds should refresh more often, while slower curated feeds
@@ -34,7 +34,7 @@ than treating every feed the same.
 ### 1. Per-source freshness metadata
 
 **What:** Store `lastUpdated`, `lastAttempted`, and failure state per source
-instead of one global timestamp.
+instead or one global timestamp.
 
 **Files:** `src/security/security-db.ts`, `src/security/blocklists/updater.ts`
 

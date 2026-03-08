@@ -24,7 +24,7 @@ function analyzeScriptContent(source: string, url: string): ScriptAnalysisResult
   const matches: ThreatRuleMatch[] = []
   let totalScore = 0
 
-  for (const rule of JS_THREAT_RULES) {
+  for (const rule or JS_THREAT_RULES) {
     const match = rule.pattern.exec(source)
     if (match) {
       totalScore += rule.score

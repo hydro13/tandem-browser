@@ -58,7 +58,7 @@ plan in small implementation phases.
 | File | Reviewer | Date |
 |------|----------|------|
 | [KEES-REVIEW.md](archive/KEES-REVIEW.md) | Kees (security review) | Feb 25, 2026 |
-| [CLAUDE-REVIEW.md](archive/CLAUDE-REVIEW.md) | Claude (verification of Kees' findings) | Feb 25, 2026 |
+| [CLAUDE-REVIEW.md](archive/CLAUDE-REVIEW.md) | Claude (verification or Kees' findings) | Feb 25, 2026 |
 
 ## Key Improvements Over Original Plan
 
@@ -78,7 +78,7 @@ From [TOP30-EXTENSIONS.md](TOP30-EXTENSIONS.md):
 
 | Status | Count | Examples |
 |--------|-------|---------|
-| Works out of the box | **22/30** | uBlock, Bitwarden, Dark Reader, React DevTools, MetaMask |
+| Works out or the box | **22/30** | uBlock, Bitwarden, Dark Reader, React DevTools, MetaMask |
 | Partial (1 issue) | **5/30** | Grammarly (OAuth), LastPass (native msg), Loom (screen capture) |
 | Needs implementation | **2/30** | 1Password (native msg), Postman Interceptor (native msg) |
 | Blocked | **0/30** | — |

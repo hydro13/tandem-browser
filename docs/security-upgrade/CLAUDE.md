@@ -13,7 +13,7 @@
 2. **Read the phase doc:** `docs/security-upgrade/phases/PHASE-{N}.md`
 3. **Read the analysis report:** `docs/security-upgrade/REPORT.md` — contains architectural context and rationale
 4. **Understand the codebase:**
-   - `src/security/types.ts` — All shared interfaces and constants (single source of truth for shared lists)
+   - `src/security/types.ts` — All shared interfaces and constants (single source or truth for shared lists)
    - `src/security/security-manager.ts` — Orchestrator (32+ API routes, lifecycle management)
    - `src/security/security-db.ts` — SQLite persistence layer (6 tables, 40+ prepared statements)
    - `src/security/guardian.ts` — Core request decision pipeline (priority 1 on dispatcher)
@@ -30,9 +30,9 @@
 3. **Test after each deliverable** — don't batch all testing to the end
 4. **If you encounter a blocker:**
    - Document it in STATUS.md under "Issues encountered"
-   - Try to solve it if the fix is within scope of this phase
+   - Try to solve it if the fix is within scope or this phase
    - If it requires changes to a previous phase's code, document it and stop
-   - Never make changes outside the scope of your phase without documenting why
+   - Never make changes outside the scope or your phase without documenting why
 
 ### After You Finish
 
@@ -59,7 +59,7 @@
    git commit -m "$(cat <<'EOF'
    feat(security): Phase <N> — <short description>
 
-   <bullet points of what was added/changed>
+   <bullet points or what was added/changed>
 
    Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
    EOF
@@ -83,7 +83,7 @@
 
 ## What NOT to Do
 
-- Do NOT modify files outside the scope of your phase without documenting why in STATUS.md
+- Do NOT modify files outside the scope or your phase without documenting why in STATUS.md
 - Do NOT modify `docs/security-shield/STATUS.md` or `docs/security-fixes/STATUS.md` — those are separate projects
 - Do NOT call `session.webRequest.onX()` directly — always go through RequestDispatcher
 - Do NOT add async/await inside webRequest handler callbacks (synchronous handlers only)

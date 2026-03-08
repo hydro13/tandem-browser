@@ -1,41 +1,41 @@
-# Fase 1: MCP Server — Sessie Context
+# Phase 1: MCP Server — Sessie Context
 
-## Wat is dit?
+## Wat is this?
 
-Een MCP (Model Context Protocol) server die Claude Code en Claude Cowork in staat stelt de Tandem Browser te bedienen via tools. MCP is Anthropic's standaard protocol voor tool-integratie.
+A MCP (Model Context Protocol) server that Claude Code and Claude Cowork in staat stelt the Tandem Browser te bedienen via tools. MCP is Anthropic's default protocol for tool-integratie.
 
-## Waarom MCP?
+## Why MCP?
 
 - Claude Code/Cowork ondersteunen MCP native
-- Standaard protocol, goed gedocumenteerd
-- Tools zijn typesafe en self-documenting
+- Default protocol, goed gedocumenteerd
+- Tools are typesafe and self-documenting
 - Resources bieden auto-updating context
 
-## Bestaande API die gewrapped wordt
+## Existing API that gewrapped is
 
-Tandem heeft een HTTP API op `localhost:8765`. De MCP server is een dunne wrapper daaromheen.
+Tandem has a HTTP API op `localhost:8765`. The MCP server is a dunne wrapper daaromheen.
 
 **API Authenticatie:**
 - Token in `~/.tandem/api-token` (32-byte hex)
 - Header: `Authorization: Bearer <token>`
-- Localhost requests zijn exempt van auth
+- Localhost requests are exempt or auth
 
-### Correcties uit audit (12 feb 2026)
+### Correcties out audit (12 feb 2026)
 
-**Auth:** De auth middleware skipt requests zonder `origin` header. Dit betekent dat de MCP server (die geen origin stuurt) GEEN token nodig heeft voor lokale calls. Stuur het token WEL mee als best practice.
+**Auth:** The auth middleware skips requests without an `origin` header. This means the MCP server (which sends no origin) does NOT need a token for local calls. Still send the token as a best practice.
 
-**Extra tools (niet in origineel plan):**
-- `tandem_get_links()` — alle links op de pagina
-- `tandem_wait_for_load()` — wacht tot pagina geladen na navigatie
+**Extra tools (not in origineel plan):**
+- `tandem_get_links()` — alle links op the page
+- `tandem_wait_for_load()` — wait tot page geladen na navigatie
 - `tandem_search_bookmarks(query)` — bookmarks doorzoeken
 - `tandem_search_history(query)` — history doorzoeken
 - `tandem_get_context()` — alles in één call
 
-**Activity logging:** Elke MCP tool call → `POST /chat` met `from: "claude"` zodat Robin in het Kees panel ziet wat Claude aan het doen is.
+**Activity logging:** Elke MCP tool call → `POST /chat` with `from: "claude"` zodat Robin in the Kees panel sees wat Claude about the doen is.
 
-**Content truncatie:** `tandem_read_page()` moet markdown returnen (niet HTML), max 2000 woorden, via ContentExtractor.
+**Content truncatie:** `tandem_read_page()` must markdown returnen (not HTML), max 2000 woorden, via ContentExtractor.
 
-**Logging:** Gebruik `console.error()` voor debugging, NOOIT `console.log()` (stdout = MCP protocol).
+**Logging:** Usage `console.error()` for debugging, NOOIT `console.log()` (stdout = MCP protocol).
 
 **Relevante endpoints:**
 
@@ -67,7 +67,7 @@ npm install @modelcontextprotocol/sdk
 
 ### 2. Maak API Client
 
-Bestand: `src/mcp/api-client.ts`
+File: `src/mcp/api-client.ts`
 
 ```typescript
 import * as fs from 'fs';
@@ -108,42 +108,42 @@ export async function apiCall(method: string, endpoint: string, body?: any) {
 
 ### 3. Maak MCP Server
 
-Bestand: `src/mcp/server.ts`
+File: `src/mcp/server.ts`
 
-Gebruik `@modelcontextprotocol/sdk` met stdio transport.
+Usage `@modelcontextprotocol/sdk` with stdio transport.
 Definieer tools per categorie.
 
 **Referentie:** https://modelcontextprotocol.io/docs/concepts/tools
 
 ### 4. Claude Code MCP Config
 
-Bestand template: `tandem-mcp-config.json`
+File template: `tandem-mcp-config.json`
 
 ```json
 {
   "mcpServers": {
     "tandem-browser": {
       "command": "node",
-      "args": ["<pad-naar-tandem>/dist/mcp/server.js"],
+      "args": ["<pad-to-tandem>/dist/mcp/server.js"],
       "env": {}
     }
   }
 }
 ```
 
-Dit moet gemerged worden in:
+Dit must gemerged be in:
 - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 - Linux: `~/.config/Claude/claude_desktop_config.json`
 - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
-Of voor Claude Code: `.claude/settings.json` in het project of `~/.claude/settings.json` globally.
+Or for Claude Code: `.claude/settings.json` in the project or `~/.claude/settings.json` globally.
 
 ### 5. TypeScript Config
 
-Voeg toe aan `tsconfig.json`:
+Voeg toe about `tsconfig.json`:
 ```json
 {
-  "include": ["src/**/*.ts"]  // moet src/mcp/ includen
+  "include": ["src/**/*.ts"]  // must src/mcp/ includen
 }
 ```
 
@@ -152,27 +152,27 @@ Voeg toe aan `tsconfig.json`:
 ### Handmatig testen
 1. Start Tandem: `npm start`
 2. Start MCP server apart: `node dist/mcp/server.js`
-3. Test met Claude Code: configureer MCP, vraag Claude om pagina te lezen
+3. Test with Claude Code: configureer MCP, question Claude to page to read
 
 ### Automatisch testen
-Maak een test script: `scripts/test-mcp.ts`
+Maak a test script: `scripts/test-mcp.ts`
 ```typescript
-// Roep elke tool aan en check het result
-// Vergelijk met directe API call resultaten
+// Roep elke tool about and check the result
+// Vergelijk with directe API call resultaten
 ```
 
 ## Bekende Valkuilen
 
-1. **MCP SDK versie:** Check de latest versie, API kan veranderd zijn
-2. **stdio transport:** MCP server moet op stdin/stdout communiceren, geen console.log gebruiken voor debugging (gebruik stderr)
-3. **Tandem moet draaien:** MCP server faalt als API niet beschikbaar is — geef duidelijke error
-4. **Screenshot formaat:** MCP tools ondersteunen `image` content type — gebruik dit voor screenshots
-5. **Async tools:** Alle API calls zijn async, MCP tools moeten dit correct afhandelen
+1. **MCP SDK versie:** Check the latest versie, API can veranderd are
+2. **stdio transport:** MCP server must op stdin/stdout communicate, no console.log use for debugging (usage stderr)
+3. **Tandem must draaien:** MCP server faalt if API not beschikbaar is — geef duidelijke error
+4. **Screenshot formaat:** MCP tools ondersteunen `image` content type — usage this for screenshots
+5. **Async tools:** Alle API calls are async, MCP tools must this correct afhandelen
 
 ## Definities & Links
 
 - **MCP:** Model Context Protocol — https://modelcontextprotocol.io/
 - **MCP SDK:** `@modelcontextprotocol/sdk` — npm package
-- **stdio transport:** Communicatie via stdin/stdout, standaard voor CLI tools
-- **Tool:** Een functie die Claude kan aanroepen met parameters
-- **Resource:** Een data bron die Claude kan lezen (auto-updating)
+- **stdio transport:** Communicatie via stdin/stdout, default for CLI tools
+- **Tool:** A function that Claude can aanroepen with parameters
+- **Resource:** A data bron that Claude can read (auto-updating)

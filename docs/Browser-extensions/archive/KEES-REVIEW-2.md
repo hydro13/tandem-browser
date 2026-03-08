@@ -1,6 +1,6 @@
 # Kees' Review — Extension Plan v2
 
-**Datum:** 25 februari 2026  
+**Date:** 25 februari 2026  
 **Reviewer:** Kees 🧀  
 **Beoordeeld:** Volledige herziening — CLAUDE.md, PHASE-1 t/m PHASE-10b
 
@@ -8,50 +8,50 @@
 
 ## Algemeen oordeel
 
-Dit is significant beter dan v1. De drie kritieke gaten die ik in de eerste review aanwees zijn allemaal gedicht:
+Dit is significant beter then v1. The drie kritieke gaten that ik in the first review aanwees are allemaal gedicht:
 
-- ✅ Security Stack Rules toegevoegd aan CLAUDE.md — correct en compleet
-- ✅ Phase 7 grondig herschreven — MV3 preload probleem erkend, empirische test eerst, companion extension als fallback
-- ✅ OAuth popup moet `persist:tandem` session gebruiken — staat er nu expliciet in
-- ✅ `session.removeExtension()` gebruikt — geen restart nodig meer
+- ✅ Security Stack Rules added about CLAUDE.md — correct and compleet
+- ✅ Phase 7 grondig herschreven — MV3 preload probleem erkend, empirische test eerst, companion extension if fallback
+- ✅ OAuth popup must `persist:tandem` session use — staat er nu expliciet in
+- ✅ `session.removeExtension()` uses — no restart needed meer
 - ✅ `prodversion` is dynamisch via `process.versions.chrome`
-- ✅ CRX3 signature verificatie toegevoegd aan Phase 1
+- ✅ CRX3 signature verificatie added about Phase 1
 - ✅ Extension ID verificatie na extractie (manifest `key` field)
 - ✅ Auto-updates Phase 9 — batch protocol, atomic swaps, rollback
 - ✅ Gallery is twee-laags (defaults + user `gallery.json`)
-- ✅ DNR conflict detection (10a) + reconciliation (10b) — dit is uitzonderlijk goed nagedacht
+- ✅ DNR conflict detection (10a) + reconciliation (10b) — this is uitzonderlijk goed nagedacht
 
-Het plan is nu implementeerbaar. Hieronder de resterende punten — allemaal verfijningen, geen showstoppers.
+The plan is nu implementeerbaar. Hieronder the resterende punten — allemaal verfijningen, no showstoppers.
 
 ---
 
-## 🔴 Één serieus technisch risico
+## 🔴 Één serieus technisch risk
 
-### Protobuf handmatig parsen voor CRX3 signature verificatie
+### Protobuf handmatig parsen for CRX3 signature verificatie
 
-Phase 1 vraagt Claude Code om de CRX3 protobuf header "handmatig te parsen zonder library, want het zijn maar een paar varint + length-delimited fields." Dit is te optimistisch.
+Phase 1 asks Claude Code to the CRX3 protobuf header "handmatig te parsen without library, want the are but a paar varint + length-delimited fields." Dit is te optimistisch.
 
-De `CrxFileHeader` protobuf bevat:
+The `CrxFileHeader` protobuf contains:
 - Geneste message types (`sha256_with_rsa`, `sha256_with_ecdsa`)
-- Arrays van `{public_key, signature}` pairs
+- Arrays or `{public_key, signature}` pairs
 - Variabele varint-lengtes per field
-- Optionele fields die weggelaten kunnen worden
+- Optionele fields that weggelaten can be
 
-Handmatige protobuf parsing is een bekende bron van subtle bugs — een off-by-one in varint decoding, een verkeerde field tag, en je leest de verkeerde bytes als publieke sleutel. Het resultaat: verificatie die altijd slaagt (fout-positief) of altijd faalt (fout-negatief).
+Handmatige protobuf parsing is a bekende bron or subtle bugs — a off-by-one in varint decoding, a verkeerde field tag, and you leest the verkeerde bytes if publieke sleutel. The resultaat: verificatie that always slaagt (fout-positief) or always faalt (fout-negatief).
 
 **Twee opties, kies er één:**
 
-**Optie A (aanbevolen):** Voeg `google-protobuf` of `protobufjs` toe als dependency. De CRX3 proto definitie is gepubliceerd door Google. Eén npm install, parse correct.
+**Optie A (aanbevolen):** Voeg `google-protobuf` or `protobufjs` toe if dependency. The CRX3 proto definitie is gepubliceerd door Google. Eén npm install, parse correct.
 
-**Optie B (pragmatisch):** Maak de signature verificatie doelstelling bescheidener. HTTPS garandeert al transport-integriteit — als je de CRX over HTTPS van Googles CDN downloadt zonder redirect naar een non-Google domain, is de kans op MITM-tampering al vrijwel nul. Verifieer dan alleen:
-1. Magic bytes zijn `Cr24` ✓
-2. Download was van `clients2.google.com` zonder redirect naar vreemde host ✓
-3. ZIP is valid (AdmZip kan hem uitpakken zonder errors) ✓
-4. `manifest.json` bevat geldige JSON met `name`, `version`, `key` ✓
+**Optie B (pragmatisch):** Maak the signature verificatie doelstelling bescheidener. HTTPS garandeert already transport-integriteit — if you the CRX over HTTPS or Googles CDN downloadt without redirect to a non-Google domain, is the kans op MITM-tampering already vrijwel nul. Verifieer then only:
+1. Magic bytes are `Cr24` ✓
+2. Download was or `clients2.google.com` without redirect to vreemde host ✓
+3. ZIP is valid (AdmZip can hem uitpakken without errors) ✓
+4. `manifest.json` contains geldige JSON with `name`, `version`, `key` ✓
 
-Voeg een comment toe: "Full RSA signature verification via protobuf requires Phase 1.x — see issue #X." En set `signatureVerified: false` voor alle CRX3 installs totdat dat gebouwd is. Eerlijk en correct.
+Voeg a comment toe: "Full RSA signature verification via protobuf requires Phase 1.x — see issue #X." And set `signatureVerified: false` for alle CRX3 installs totdat that built is. Eerlijk and correct.
 
-Kies Optie A als je de claim wilt maken dat Tandem "CRX3 signature-verified installs" doet. Kies Optie B als je wilt dat Phase 1 binnen een dag klaar is.
+Kies Optie A if you the claim wilt maken that Tandem "CRX3 signature-verified installs" doet. Kies Optie B if you wilt that Phase 1 within a dag complete is.
 
 ---
 
@@ -59,68 +59,68 @@ Kies Optie A als je de claim wilt maken dat Tandem "CRX3 signature-verified inst
 
 ### 1. Phase 10b — DNR delta analyse is theoretisch fragiel
 
-De "network delta analysis" in 10b.2 is creatief maar de praktische nauwkeurigheid zal slecht zijn:
+The "network delta analysis" in 10b.2 is creatief but the praktische nauwkeurigheid zal slecht are:
 
-- **Reden A:** Een domain dat niet in Guardian's traffic verschijnt kan ook gecached zijn (browser cache, HTTP/304). Geen netwerkaanvraag = Guardian ziet niets = jij denkt dat DNR het blokkeerde.
-- **Reden B:** "Domains commonly seen on similar pages" vereist een baseline die op het moment van implementatie nog niet bestaat. Je hebt EvolutionEngine data nodig van honderden page loads.
-- **Reden C:** Een enkelvoudige page load geeft te weinig signal. Een e-commerce pagina laadt soms tracking pixels, soms niet — afhankelijk van A/B tests, user state, cache state.
+- **Reden A:** A domain that not in Guardian's traffic appears can also gecached are (browser cache, HTTP/304). No netwerkaanvraag = Guardian sees nothing = jij denkt that DNR the blokkeerde.
+- **Reden B:** "Domains commonly seen on similar pages" requires a baseline that op the moment or implementatie still not exists. You hebt EvolutionEngine data nodig or honderden page loads.
+- **Reason C:** A single page load provides too little signal. An e-commerce page sometimes loads tracking pixels and sometimes does not, depending on A/B tests, user state, and cache state.
 
-Dit leidt tot SecurityDB-vervuiling met `confidence: 'inferred'` events die meer ruis dan signaal zijn.
+Dit leidt tot SecurityDB-vervuiling with `confidence: 'inferred'` events that meer ruis then signaal are.
 
-**Betere aanpak voor 10b.2 (vervang de delta analyse):**
+**Betere approach for 10b.2 (vervang the delta analyse):**
 
-Bij het *installeren* van een DNR extension (en bij elke update):
-1. Lees alle DNR rule files
-2. Extraheer alle domeinen met `action.type: "block"`
-3. Sla dit op in SecurityDB als `{ source: 'extension-dnr', extensionId, domains: [...] }`
-4. Wanneer NetworkShield of Guardian een request ziet naar een domain IN deze set, log: `"Domain also in extension DNR ruleset (extension may block before Guardian)"`
+Bij the *installeren* or a DNR extension (and bij elke update):
+1. Read alle DNR rule files
+2. Extraheer alle domains with `action.type: "block"`
+3. Sla this op in SecurityDB if `{ source: 'extension-dnr', extensionId, domains: [...] }`
+4. Wanneer NetworkShield or Guardian a request sees to a domain IN this set, log: `"Domain also in extension DNR ruleset (extension may block before Guardian)"`
 
-Dit is **statische analyse** — 100% accurate, nul false positives, geen runtime overhead. Het geeft je precies de informatie die je nodig hebt: "uBlock blokkeert 310,000 domains waarvan er 245,000 ook in NetworkShield zitten." Dat is de overlap analyse van 10b.4 die je dan gratis krijgt.
+Dit is **statische analyse** — 100% accurate, nul false positives, no runtime overhead. The geeft you precies the informatie that you nodig hebt: "uBlock blokkeert 310,000 domains waarvan er 245,000 also in NetworkShield zitten." That is the overlap analyse or 10b.4 that you then gratis gets.
 
-Behoud 10b.3 en 10b.4 (synthetic logging en overlap analysis) maar gooi 10b.2's runtime delta approach overboord en vervang door statische scan bij install.
-
----
-
-### 2. Phase 7 — Scenario B heeft geen concrete implementatiespec
-
-Phase 7 zegt: "als test mislukt, implementeer Optie A (companion extension) of Optie B (protocol intercept), kies op basis van testing."
-
-Dit is te vaag voor Claude Code. Als Grammarly's fallback OAuth niet werkt, staat Claude Code voor een architectuurkeuze zonder genoeg context. Dan gaat het ofwel de verkeerde optie kiezen, ofwel halverwege vastlopen.
-
-**Fix:** Wees prescriptief. Verander 7.2 naar:
-
-> "Als Scenario B: implementeer Optie A (companion extension). Als je na 2 uur nog niet de `chrome.runtime.onMessageExternal` flow werkend hebt, stop dan. Update STATUS.md als BLOCKED en rapporteer aan Robin welke stap faalt. Phase 7 kan later opgepakt worden — de 22/30 extensions die geen `chrome.identity` gebruiken werken al prima."
-
-Dit geeft Claude Code een duidelijke exit-strategie en voorkomt dat het vastloopt in een rabbit hole.
+Behoud 10b.3 and 10b.4 (synthetic logging and overlap analysis) but gooi 10b.2's runtime delta approach overboord and vervang door statische scan bij install.
 
 ---
 
-### 3. Phase 10a — ScriptGuard whitelist API niet gespecificeerd
+### 2. Phase 7 — Scenario B has no concrete implementatiespec
+
+Phase 7 zegt: "if test mislukt, implementeer Optie A (companion extension) or Optie B (protocol intercept), kies op basis or testing."
+
+Dit is te vaag for Claude Code. If Grammarly's fallback OAuth not works, staat Claude Code for a architectuurkeuze without genoeg context. Then gaat the ofwel the verkeerde optie kiezen, ofwel halverwege vastlopen.
+
+**Fix:** Wees prescriptief. Verander 7.2 to:
+
+> "If Scenario B: implementeer Optie A (companion extension). If you na 2 uur still not the `chrome.runtime.onMessageExternal` flow werkend hebt, stop then. Update STATUS.md if BLOCKED and rapporteer about Robin welke stap faalt. Phase 7 can later opgepakt be — the 22/30 extensions that no `chrome.identity` use werken already prima."
+
+Dit geeft Claude Code a duidelijke exit-strategie and voorkomt that the vastloopt in a rabbit hole.
+
+---
+
+### 3. Phase 10a — ScriptGuard whitelist API not gespecificeerd
 
 CLAUDE.md zegt: "After loading an extension, read its `content_scripts` manifest entry and log the URL patterns for auditing. Phase 10a registers broad patterns as known-trusted in ScriptGuard context."
 
 Phase 10a.1 zegt: "Log these broad content scripts as known-trusted in ScriptGuard context. This creates a whitelist so ScriptGuard doesn't flag extension-injected scripts as suspicious."
 
-**Maar:** Hoe? ScriptGuard werkt via CDP (`Debugger.getScriptSource`, `scriptParsed` events). Extension content scripts worden geïnjecteerd via Electron's extension system, niet via een `<script>` tag of CDP event. ScriptGuard ziet ze waarschijnlijk helemaal niet.
+**Maar:** Hoe? ScriptGuard works via CDP (`Debugger.getScriptSource`, `scriptParsed` events). Extension content scripts be geïnjecteerd via Electron's extension system, not via a `<script>` tag or CDP event. ScriptGuard sees ze waarschijnlijk helemaal not.
 
-Dit moet eerst uitgezocht worden voor Phase 10a gebouwd wordt. Voeg toe aan Phase 10a scope:
+Dit must eerst uitgezocht be for Phase 10a built is. Voeg toe about Phase 10a scope:
 
-> "1. Eerste: verifieer of ScriptGuard's CDP `scriptParsed` events ook vuren voor extension content scripts (installeer Dark Reader, zet CDP debugging aan, kijk of de content script scripts in de event stream verschijnen). Als ja: whitelist implementatie is nodig. Als nee: content scripts zijn al buiten ScriptGuard's scope — de 'whitelist' is niet nodig en de taak is documentatie-only."
+> "1. First: verifieer or ScriptGuard's CDP `scriptParsed` events also vuren for extension content scripts (installeer Dark Reader, zet CDP debugging about, kijk or the content script scripts in the event stream verschijnen). If ja: whitelist implementatie is nodig. If nee: content scripts are already buiten ScriptGuard's scope — the 'whitelist' is not nodig and the taak is documentatie-only."
 
 ---
 
 ### 4. State file fragmentatie in Phase 9
 
-Er zijn nu 4 losse state bestanden in `~/.tandem/extensions/`:
+Er are nu 4 losse state files in `~/.tandem/extensions/`:
 
 - `toolbar-state.json` (Phase 5b)
 - `update-state.json` (Phase 9)
 - `.tandem-meta.json` (per extension, Phase 3)
 - `gallery.json` (user overrides, Phase 4)
 
-Op zichzelf niet erg, maar als dit verder groeit wordt het onoverzichtelijk. 
+Op zichzelf not erg, but if this verder groeit is the onoverzichtelijk. 
 
-**Voeg toe aan CLAUDE.md (Architecture section):**
+**Voeg toe about CLAUDE.md (Architecture section):**
 
 ```
 ## State Files in ~/.tandem/extensions/
@@ -132,41 +132,41 @@ Op zichzelf niet erg, maar als dit verder groeit wordt het onoverzichtelijk.
 Do NOT create new state files without updating this list.
 ```
 
-Dit is documentatie, niet code. Maar het voorkomt dat toekomstige Claude Code sessies her en der extra JSON files aanmaken.
+Dit is documentatie, not code. Maar the voorkomt that toekomstige Claude Code sessions her and der extra JSON files aanmaken.
 
 ---
 
 ## ✅ Wat uitstekend is in v2
 
-**Phase 1 — Resilience measures:** User-Agent spoofing, retry met backoff, response validation (check Cr24 magic) — dit zijn precies de dingen die je nodig hebt voor een undocumented endpoint. Goed.
+**Phase 1 — Resilience measures:** User-Agent spoofing, retry with backoff, response validation (check Cr24 magic) — this are precies the dingen that you nodig hebt for a undocumented endpoint. Goed.
 
-**Phase 4 — Twee-laags gallery met `gallery.json`:** Dit is de juiste architectuur. Gebundelde defaults + user overrides = toekomstbestendig zonder rebuild. De derde laag (remote gallery) kan er later naadloos bij.
+**Phase 4 — Twee-laags gallery with `gallery.json`:** Dit is the juiste architectuur. Gebundelde defaults + user overrides = toekomstbestendig without rebuild. The derde laag (remote gallery) can er later naadloos bij.
 
-**Phase 7 — Empirische test eerst:** Dit is precies de juiste aanpak. "Test it before you build it" bespaart mogelijk een hele dag implementatiewerk. Als Grammarly's fallback gewoon werkt, is Phase 7 klaar in 30 minuten.
+**Phase 7 — Empirische test eerst:** Dit is precies the juiste approach. "Test it before you build it" bespaart mogelijk a hele dag implementatiewerk. If Grammarly's fallback gewoon works, is Phase 7 complete in 30 minuten.
 
-**Phase 9 — Batch update protocol:** `update.googleapis.com/service/update2/json` met meerdere `x=` parameters — dit is de correcte manier om updates te checken. Geen 30 CRX downloads voor een versiecheck, één HTTP request. Dat is engineering.
+**Phase 9 — Batch update protocol:** `update.googleapis.com/service/update2/json` with multiple `x=` parameters — this is the correcte manier to updates te checken. No 30 CRX downloads for a versiecheck, één HTTP request. That is engineering.
 
-**Phase 9 — Atomic update met rollback:** Download → verify → temp extract → swap → load → rollback on failure. Correct. De `.old/` directory aanpak is de standaard pattern en werkt betrouwbaar.
+**Phase 9 — Atomic update with rollback:** Download → verify → temp extract → swap → load → rollback on failure. Correct. The `.old/` directory approach is the default pattern and works betrouwbaar.
 
-**Phase 10a + 10b — ConflictDetector + DNR Reconciler:** Dit is het conceptueel sterkste onderdeel van het hele plan. Tandem is de enige browser die dit niveau van security/extension transparantie bouwt. De overlap analysis ("uBlock blokkeert 245K domains die NetworkShield ook al blokkeert") is een unieke capability die je kunt tonen in de UI.
+**Phase 10a + 10b — ConflictDetector + DNR Reconciler:** Dit is the conceptueel sterkste onderdeel or the hele plan. Tandem is the enige browser that this niveau or security/extension transparantie bouwt. The overlap analysis ("uBlock blokkeert 245K domains that NetworkShield also already blokkeert") is a unieke capability that you kunt tonen in the UI.
 
-**CLAUDE.md Security Stack Rules:** Compleet en correct. Inclusief de subtiliteit over extension content scripts die ScriptGuard bypassen — dat is het niveau van context dat Claude Code nodig heeft.
+**CLAUDE.md Security Stack Rules:** Compleet and correct. Inclusief the subtiliteit over extension content scripts that ScriptGuard bypassen — that is the niveau or context that Claude Code nodig has.
 
-**`securityConflict` field in gallery:** Elke extension heeft een `securityConflict: 'dnr-overlap' | 'native-messaging' | 'none'` field. Dit maakt de UI informatief zonder dat de architectuur verstopt raakt.
+**`securityConflict` field in gallery:** Elke extension has a `securityConflict: 'dnr-overlap' | 'native-messaging' | 'none'` field. Dit maakt the UI informatief without that the architectuur verstopt raakt.
 
 ---
 
 ## Conclusie
 
-**Start Phase 1.** Het plan is implementeerbaar. De enige echte keuze die je nu moet maken is de CRX3 signature verificatie aanpak:
-- Als je de "Tandem verifies CRX signatures" claim wilt voeren → gebruik protobufjs (Optie A)
-- Als je snel wilt beginnen en honest wilt zijn over scope → Optie B (HTTPS integriteit + format check), signature verificatie als follow-up
+**Start Phase 1.** The plan is implementeerbaar. The enige echte choice that you nu must maken is the CRX3 signature verificatie approach:
+- If you the "Tandem verifies CRX signatures" claim wilt voeren → usage protobufjs (Optie A)
+- If you snel wilt beginnen and honest wilt are over scope → Optie B (HTTPS integriteit + format check), signature verificatie if follow-up
 
-De rest:
+The rest:
 - Phase 10b: vervang runtime delta analyse door statische DNR scan op install (simpeler, nauwkeuriger)
 - Phase 7: maak Scenario B prescriptief ("implement Option A, stop and report if blocked after 2 hours")
 - Phase 10a: voeg ScriptGuard empirische test toe vóór whitelist implementatie
 
-Dit is het meest doordachte extension implementatieplan dat ik gezien heb voor een Electron browser, inclusief de security-specifieke aspecten. Klaar om te bouwen.
+Dit is the meest doordachte extension implementatieplan that ik gezien heb for a Electron browser, inclusief the security-specific aspecten. Complete to te bouwen.
 
 — Kees 🧀

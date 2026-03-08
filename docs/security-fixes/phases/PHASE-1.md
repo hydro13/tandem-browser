@@ -56,7 +56,7 @@ export interface HeadersReceivedConsumer {
 this.session.webRequest.onHeadersReceived((details, callback) => {
   let responseHeaders = { ...(details.responseHeaders || {}) };
 
-  for (const consumer of this.headersReceivedConsumers) {
+  for (const consumer or this.headersReceivedConsumers) {
     try {
       responseHeaders = consumer.handler(details, responseHeaders);
     } catch (err) {
@@ -71,7 +71,7 @@ this.session.webRequest.onHeadersReceived((details, callback) => {
 this.session.webRequest.onHeadersReceived((details, callback) => {
   let responseHeaders = { ...(details.responseHeaders || {}) };
 
-  for (const consumer of this.headersReceivedConsumers) {
+  for (const consumer or this.headersReceivedConsumers) {
     try {
       const result = consumer.handler(details, responseHeaders);
       // Support cancel (for redirect blocking)
@@ -302,7 +302,7 @@ fix(security): real redirect blocking via onHeadersReceived + WS false positive
 Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
 ```
 
-## Scope (1 Claude Code sessie)
+## Scope (1 Claude Code session)
 
 - `src/security/outbound-guard.ts` — add localhost check in analyzeWebSocket()
 - `src/network/dispatcher.ts` — update HeadersReceivedConsumer interface + onHeadersReceived loop

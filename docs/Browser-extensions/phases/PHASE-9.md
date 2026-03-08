@@ -220,9 +220,9 @@ Add to `src/api/server.ts`:
 
 If Phase 5a is already completed, add to the Extensions settings panel:
 
-- **Update indicator** on the "Installed" tab header: badge with count of available updates
+- **Update indicator** on the "Installed" tab header: badge with count or available updates
 - **Per-extension update badge:** "Update available: v1.57.0 → v1.58.0" with "Update" button
-- **"Check for Updates" button** at the top of the Installed tab
+- **"Check for Updates" button** at the top or the Installed tab
 - **"Update All" button** when multiple updates are available
 - Loading states during update (download → verify → swap → reload)
 - Success/error feedback per extension

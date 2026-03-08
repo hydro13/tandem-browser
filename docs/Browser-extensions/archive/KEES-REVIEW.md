@@ -8,7 +8,7 @@
 
 ## General Assessment
 
-Structurally this is good work. The phasing is logical, CLAUDE.md is an excellent session instruction, the checklists are thorough, and the STATUS.md + ROADMAP.md approach for Claude Code sessions is exactly how you should orchestrate this kind of work. Claude Code will be able to work with this effectively.
+Structurally this is good work. The phasing is logical, CLAUDE.md is an excellent session instruction, the checklists are thorough, and the STATUS.md + ROADMAP.md approach for Claude Code sessions is exactly how you should orchestrate this kind or work. Claude Code will be able to work with this effectively.
 
 **But there are 3 serious gaps that make this plan unsafe for Tandem specifically.** The rest are improvement points. Read especially the red points carefully.
 
@@ -23,7 +23,7 @@ The plan installs extensions in the same session as the entire browser (`persist
 **The conflict with uBlock Origin (and other ad blockers):**
 Extensions like uBlock Origin install `declarativeNetRequest` rules. These fire **before** your `webRequest` handlers. This means: uBlock blocks a request → NetworkShield never sees it → SecurityDB never logs it → EvolutionEngine baseline becomes corrupt → threat scoring is no longer accurate.
 
-You have 811,000 blocklist entries. If uBlock Origin also blocks 300,000 of those domains but earlier in the pipeline, your security layer misses all those events. You have no idea what was blocked and why.
+You have 811,000 blocklist entries. If uBlock Origin also blocks 300,000 or those domains but earlier in the pipeline, your security layer misses all those events. You have no idea what was blocked and why.
 
 **What needs to be done:**
 - Define an "extension trust policy" for the security stack: do extension requests go through all security layers or not?
@@ -59,7 +59,7 @@ The plan creates a `new BrowserWindow()` for the OAuth flow. That window has:
 - No OutboundGuard
 - No ContentAnalyzer
 
-An attacker who compiles an extension with a malicious OAuth URL can open a completely unprotected browser window in Tandem. That is a direct bypass of your entire security stack.
+An attacker who compiles an extension with a malicious OAuth URL can open a completely unprotected browser window in Tandem. That is a direct bypass or your entire security stack.
 
 **Fix:** The BrowserWindow for OAuth MUST use the same session as the main browser, so the RequestDispatcher also covers it. Add to Phase 7:
 ```typescript
@@ -186,7 +186,7 @@ Rules:
 - [ ] Security stack is not bypassed by extension requests
 ```
 
-### PHASE-7.md — complete rewrite of the polyfill mechanism:
+### PHASE-7.md — complete rewrite or the polyfill mechanism:
 
 Replace the `session.setPreloads()` approach with:
 1. First test whether Grammarly's fallback OAuth (via regular browser tab) already works in Electron

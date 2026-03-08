@@ -1,19 +1,19 @@
-# Sidebar Chat Clients — START HIER
+# Sidebar Chat Clients — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** WhatsApp, Discord, Slack, Telegram, Instagram en X/Twitter als sidebar webview panels naast de browsercontent
-> **Volgorde:** Fase 1 → 2 → 3 (elke fase is één sessie)
+> **Goal:** WhatsApp, Discord, Slack, Telegram, Instagram and X/Twitter if sidebar webview panels next to the browser content
+> **Order:** Phase 1 → 2 → 3 (elke phase is één session)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Robin gebruikt dagelijks 6 chat-apps en moet nu constant schakelen tussen Tandem en losse apps. Door deze als sidebar panels in te bouwen kan hij chatten terwijl hij browst — zonder context te verliezen. Opera heeft dit als kern-feature; het is de #1 gap in onze gap analyse (zie `docs/research/gap-analysis.md`, sectie "Sidebar Chat Clients — Full Spec").
+Robin uses daily 6 chat-apps and must nu constant schakelen between Tandem and losse apps. Door this if sidebar panels in te bouwen can he chatten terwijl he browst — without context te verliezen. Opera has this if kern-feature; the is the #1 gap in onze gap analyse (zie `docs/research/gap-analysis.md`, section "Sidebar Chat Clients — Full Spec").
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
 ┌──────┐  ┌──────────────┐  ┌────────────────────┐  ┌──────────┐
@@ -30,59 +30,59 @@ SidebarManager (main process)
   → persisted config (~/.tandem/sidebar-config.json)
 ```
 
-**Elke messenger is een `<webview>` tag met eigen partition:**
+**Elke messenger is a `<webview>` tag with own partition:**
 - `persist:whatsapp`, `persist:discord`, `persist:slack`, etc.
-- Sessie/cookies blijven bewaard tussen herstart
-- Gescheiden van Robin's hoofdsessie (`persist:tandem`)
+- Sessie/cookies blijven bewaard between herstart
+- Gescheiden or Robin's main session (`persist:tandem`)
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie, will-quit cleanup | `startAPI()`, `app.on('will-quit')` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 | `src/registry.ts` | ManagerRegistry interface — alle managers | `interface ManagerRegistry` |
 | `src/api/context.ts` | RouteContext type definitie | `type RouteContext` |
-| `shell/index.html` | Browser UI — zoek naar `<div class="main-layout">` voor de plek waar sidebar HTML moet | `<div class="main-layout">` |
-| `shell/css/main.css` | Layout styling — zoek `.main-layout` voor het grid dat aangepast moet worden | `.main-layout` |
+| `shell/index.html` | Browser UI — zoek to `<div class="main-layout">` for the plek waar sidebar HTML must | `<div class="main-layout">` |
+| `shell/css/main.css` | Layout styling — zoek `.main-layout` for the grid that aangepast must be | `.main-layout` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
+_(see the relevant phase file)_
 
 ---
 
-## Regels voor deze feature
+## Rules for this feature
 
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
+> These are the HARD rules in addition to the general AGENTS.md rules.
 
-1. **Sidebar webviews NIET in de webview injecteren** — de sidebar icon strip en panel container zijn shell-level HTML, net als het wingman panel. Ze zitten NAAST de main webview, niet ERIN.
+1. **Sidebar webviews NIET in the webview injecteren** — the sidebar icon strip and panel container are shell-level HTML, net if the wingman panel. Ze zitten NAAST the main webview, not ERIN.
 
-2. **Geen stealth script injection in sidebar webviews** — sidebar panels zijn voor Robin's eigen gebruik (hij logt zelf in, typt zelf). De stealth patches in `createWindow()` die via `app.on('web-contents-created')` worden geïnjecteerd moeten sidebar webviews overslaan. Check de partition naam: als die begint met `persist:whatsapp`, `persist:discord`, etc. → skip stealth injection.
+2. **No stealth script injection in sidebar webviews** — sidebar panels are for Robin's own usage (he logt zelf in, typt zelf). The stealth patches in `createWindow()` that via `app.on('web-contents-created')` be geïnjecteerd must sidebar webviews overslaan. Check the partition name: if that begint with `persist:whatsapp`, `persist:discord`, etc. → skip stealth injection.
 
-3. **Eigen partitions per messenger** — nooit `persist:tandem` gebruiken voor sidebar panels. Elke messenger krijgt zijn eigen partition zodat sessies volledig geïsoleerd zijn.
+3. **Own partitions per messenger** — nooit `persist:tandem` use for sidebar panels. Elke messenger gets are own partition zodat sessions fully geïsoleerd are.
 
-4. **Standaard Chrome User-Agent voor sidebar webviews** — sommige messengers (WhatsApp Web) weigeren non-Chrome UA's. Gebruik een standaard Chrome UA, niet de Tandem stealth UA.
+4. **Default Chrome User-Agent for sidebar webviews** — sommige messengers (WhatsApp Web) weigeren non-Chrome UA's. Usage a default Chrome UA, not the Tandem stealth UA.
 
-5. **Geen nieuwe npm packages** — alles wordt gebouwd met Electron's native `<webview>` tag en bestaande IPC patterns.
+5. **No new npm packages** — alles is built with Electron's native `<webview>` tag and existing IPC patterns.
 
-6. **Functienamen > regelnummers** — verwijs altijd naar `function setupRoutes()`, nooit naar "regel 287"
+6. **Functienamen > regelnummers** — verwijs always to `function setupRoutes()`, nooit to "regel 287"
 
-7. **Panel state persistence** — configuratie wordt opgeslagen in `~/.tandem/sidebar-config.json`. Gebruik `tandemDir()` uit `src/utils/paths.ts` voor het pad.
+7. **Panel state persistence** — configuration is opgeslagen in `~/.tandem/sidebar-config.json`. Usage `tandemDir()` out `src/utils/paths.ts` for the pad.
 
 ---
 
 ## Manager Wiring — hoe SidebarManager registreren
 
-Elke nieuwe manager moet op **4 plekken** worden aangesloten:
+Elke new manager must op **4 plekken** be aangesloten:
 
 ### 1. `src/registry.ts` — `ManagerRegistry` interface
 
@@ -90,22 +90,22 @@ Elke nieuwe manager moet op **4 plekken** worden aangesloten:
 import type { SidebarManager } from './sidebar/manager';
 
 export interface ManagerRegistry {
-  // ... bestaande managers ...
-  sidebarManager: SidebarManager;  // ← toevoegen
+  // ... existing managers ...
+  sidebarManager: SidebarManager;  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
 import { SidebarManager } from './sidebar/manager';
 
-// Na aanmaken van aanverwante managers:
+// Na aanmaken or aanverwante managers:
 const sidebarManager = new SidebarManager(win);
 
-// In de registry object:
+// In the registry object:
 const registry: ManagerRegistry = {
-  // ... bestaande managers ...
+  // ... existing managers ...
   sidebarManager: sidebarManager!,
 };
 ```
@@ -118,16 +118,16 @@ if (sidebarManager) sidebarManager.destroy();
 
 ### 4. `src/main.ts` — `createWindow()` stealth skip
 
-In de `app.on('web-contents-created')` handler, waar stealth scripts geïnjecteerd worden in webviews, voeg een check toe om sidebar partitions over te slaan:
+In the `app.on('web-contents-created')` handler, waar stealth scripts geïnjecteerd be in webviews, voeg a check toe to sidebar partitions over te slaan:
 
 ```typescript
 contents.on('dom-ready', () => {
   const url = contents.getURL();
-  // Skip stealth voor Google auth
+  // Skip stealth for Google auth
   if (url.includes('accounts.google.com') || url.includes('consent.google.com')) {
     return;
   }
-  // Skip stealth voor sidebar messenger panels
+  // Skip stealth for sidebar messenger panels
   const session = contents.session;
   const partitionId = /* partition check logic */;
   if (partitionId && partitionId.startsWith('persist:') &&
@@ -138,11 +138,11 @@ contents.on('dom-ready', () => {
 });
 ```
 
-**Let op:** Electron's `webContents.session` is beschikbaar maar de partition naam is niet direct uitleesbaar. Alternatief: laat `SidebarManager` een Set bijhouden van sidebar webContents IDs en check daar tegen.
+**Let op:** Electron's `webContents.session` is beschikbaar but the partition name is not direct uitleesbaar. Alternatief: shows `SidebarManager` a Set bijhouden or sidebar webContents IDs and check daar tegen.
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // In src/api/routes/sidebar.ts:
@@ -165,17 +165,17 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
 }
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Notification Badge Detectie
+## Notification Badge Detection
 
-Alle grote messengers embedden unread count in de page title. Universele detectie:
+Alle grote messengers embedden unread count in the page title. Universele detection:
 
 ```typescript
 webview.addEventListener('page-title-updated', (event) => {
@@ -186,29 +186,29 @@ webview.addEventListener('page-title-updated', (event) => {
 });
 ```
 
-| Service | Title patroon | Voorbeeld |
+| Service | Title pattern | Voorbeeld |
 |---------|--------------|-----------|
 | WhatsApp | `(N) WhatsApp` | `(3) WhatsApp` |
 | Discord | `(N) Discord \| #channel` | `(5) Discord \| #general` |
-| Slack | `* Slack` of `(N) Slack` | `* Slack - myteam` |
+| Slack | `* Slack` or `(N) Slack` | `* Slack - myteam` |
 | Telegram | `Telegram (N)` | `Telegram (2)` |
 | Instagram | `(N) Instagram` | `(1) Instagram` |
 | X/Twitter | `(N) X` | `(4) X` |
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-infrastructure-whatsapp.md` | Sidebar framework + WhatsApp panel | 📋 Klaar om te starten |
-| `fase-2-discord-slack.md` | Discord + Slack panels | ⏳ Wacht op fase 1 |
-| `fase-3-telegram-instagram-x.md` | Telegram + Instagram + X panels | ⏳ Wacht op fase 2 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-infrastructure-whatsapp.md` | Sidebar framework + WhatsApp panel | 📋 Ready to start |
+| `fase-2-discord-slack.md` | Discord + Slack panels | ⏳ Waiting for phase 1 |
+| `fase-3-telegram-instagram-x.md` | Telegram + Instagram + X panels | ⏳ Waiting for phase 2 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -226,12 +226,12 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Sidebar infrastructuur + WhatsApp | ⏳ niet gestart | — |
-| 2 | Discord + Slack | ⏳ niet gestart | — |
-| 3 | Telegram + Instagram + X | ⏳ niet gestart | — |
+| 1 | Sidebar infrastructuur + WhatsApp | ⏳ not started | — |
+| 2 | Discord + Slack | ⏳ not started | — |
+| 3 | Telegram + Instagram + X | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

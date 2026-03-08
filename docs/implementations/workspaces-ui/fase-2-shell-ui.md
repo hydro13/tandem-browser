@@ -1,57 +1,57 @@
-# Fase 2 — Shell UI: Workspace Strip + Tab Filtering
+# Phase 2 — Shell UI: Workspace Strip + Tab Filtering
 
 > **Feature:** Workspaces UI
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Fase 1 klaar
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** Phase 1 complete
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de visuele workspace ervaring in de shell: een verticale icon strip links van het main content area met gekleurde vierkantjes per workspace, tab bar filtering bij workspace switch, en een "Verplaats naar workspace" optie in het tab context menu. Na deze fase kan Robin visueel tussen workspaces wisselen met één klik.
+Bouw the visual workspace ervaring in the shell: a verticale icon strip links or the main content area with colored squares per workspace, tab bar filtering bij workspace switch, and a "Verplaats to workspace" optie in the tab context menu. After this phase can Robin visual between workspaces wisselen with één click.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/workspaces/manager.ts` | `class WorkspaceManager` | Begrijp IPC events en data model |
-| `shell/index.html` | `<div class="main-layout">`, `<div class="tab-bar">` | Layout waar workspace strip bij komt |
-| `shell/js/main.js` | Tab rendering logica, tab context menu | Uitbreiden met workspace filtering |
-| `shell/css/main.css` | `.main-layout`, `.tab-bar` | CSS voor workspace strip |
-| `src/context-menu/manager.ts` | `class ContextMenuManager` | "Verplaats naar workspace" item |
+| `src/workspaces/manager.ts` | `class WorkspaceManager` | Begrijp IPC events and data model |
+| `shell/index.html` | `<div class="main-layout">`, `<div class="tab-bar">` | Layout waar workspace strip bij comes |
+| `shell/js/main.js` | Tab rendering logica, tab context menu | Uitbreiden with workspace filtering |
+| `shell/css/main.css` | `.main-layout`, `.tab-bar` | CSS for workspace strip |
+| `src/context-menu/manager.ts` | `class ContextMenuManager` | "Verplaats to workspace" item |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Workspace strip HTML
+### Step 1: Workspace strip HTML
 
-**Wat:** Verticale strip met workspace iconen links van de main content, of bovenaan de tab bar.
+**Wat:** Verticale strip with workspace icons links or the main content, or at the top the tab bar.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Zoek naar:** `<div class="main-layout">`
+**Zoek to:** `<div class="main-layout">`
 
-**Voeg toe als eerste child van main-layout:**
+**Voeg toe if first child or main-layout:**
 
 ```html
 <!-- Workspace strip -->
 <div class="workspace-strip" id="workspace-strip">
-  <!-- Workspace iconen worden dynamisch gegenereerd via JS -->
-  <button class="workspace-add-btn" id="workspace-add-btn" title="Nieuwe workspace">+</button>
+  <!-- Workspace icons be dynamisch gegenereerd via JS -->
+  <button class="workspace-add-btn" id="workspace-add-btn" title="New workspace">+</button>
 </div>
 ```
 
-### Stap 2: CSS voor workspace strip
+### Step 2: CSS for workspace strip
 
-**Wat:** Verticale strip styling: smalle kolom, gekleurde vierkantjes, active indicator.
+**Wat:** Verticale strip styling: smalle kolom, colored squares, active indicator.
 
-**Bestand:** `shell/css/main.css`
+**File:** `shell/css/main.css`
 
 **Voeg toe:**
 
@@ -123,13 +123,13 @@ Bouw de visuele workspace ervaring in de shell: een verticale icon strip links v
 }
 ```
 
-### Stap 3: Shell JavaScript — workspace logica
+### Step 3: Shell JavaScript — workspace logica
 
-**Wat:** Workspace strip renderen, klik handlers, tab bar filtering bij workspace switch.
+**Wat:** Workspace strip renderen, click handlers, tab bar filtering bij workspace switch.
 
-**Bestand:** `shell/js/main.js`
+**File:** `shell/js/main.js`
 
-**Toevoegen aan:** Event handlers sectie
+**Add about:** Event handlers section
 
 ```javascript
 // === WORKSPACES ===
@@ -147,9 +147,9 @@ async function loadWorkspaces() {
 
 function renderWorkspaceStrip() {
   const strip = document.getElementById('workspace-strip');
-  // Clear bestaande icons (behalve de + knop)
-  // Render een .workspace-icon per workspace met kleur en emoji
-  // Actieve workspace krijgt .active class
+  // Clear existing icons (behalve the + knop)
+  // Render a .workspace-icon per workspace with color and emoji
+  // Actieve workspace gets .active class
 }
 
 async function switchWorkspace(name) {
@@ -160,12 +160,12 @@ async function switchWorkspace(name) {
 }
 
 function filterTabBar() {
-  // Haal tabIds op voor actieve workspace
-  // Verberg tab elements die niet in de lijst zitten
-  // Toon tab elements die wel in de lijst zitten
+  // Haal tabIds op for actieve workspace
+  // Verberg tab elements that not in the list zitten
+  // Toon tab elements that indeed in the list zitten
 }
 
-// Luister naar IPC events
+// Luister to IPC events
 window.electronAPI.on('workspace-switched', (event, data) => {
   activeWorkspace = data.name;
   renderWorkspaceStrip();
@@ -174,57 +174,57 @@ window.electronAPI.on('workspace-switched', (event, data) => {
 
 // + knop handler
 document.getElementById('workspace-add-btn').addEventListener('click', () => {
-  // Toon prompt/dialog voor workspace naam
-  // POST /workspaces met naam, standaard kleur, standaard emoji
+  // Toon prompt/dialog for workspace name
+  // POST /workspaces with name, default color, default emoji
   // Herlaad strip
 });
 ```
 
-### Stap 4: Tab bar filtering
+### Step 4: Tab bar filtering
 
-**Wat:** Wanneer de workspace wisselt, moeten alleen de tabs van die workspace zichtbaar zijn in de tab bar. Andere tabs worden verborgen via CSS `display:none`.
+**Wat:** Wanneer the workspace wisselt, must only the tabs or that workspace visible are in the tab bar. Andere tabs be hidden via CSS `display:none`.
 
-**Bestand:** `shell/js/main.js`
+**File:** `shell/js/main.js`
 
-**Aanpassen:** De tab rendering functie (zoek naar waar tabs in de tab bar worden gerenderd)
+**Aanpassen:** The tab rendering function (zoek to waar tabs in the tab bar be gerenderd)
 
 ```javascript
-// Bij het renderen van tabs: check of tab.id in activeWorkspace.tabIds zit
-// Zo niet: tab element krijgt style.display = 'none'
-// Zo ja: tab element is zichtbaar
+// Bij the renderen or tabs: check or tab.id in activeWorkspace.tabIds zit
+// Zo not: tab element gets style.display = 'none'
+// Zo ja: tab element is visible
 ```
 
-### Stap 5: Tab context menu — "Verplaats naar workspace"
+### Stap 5: Tab context menu — "Verplaats to workspace"
 
-**Wat:** Rechtermuisklik op tab → submenu "Verplaats naar workspace" met lijst van beschikbare workspaces.
+**Wat:** Rechtermuisklik op tab → submenu "Verplaats to workspace" with list or beschikbare workspaces.
 
-**Bestand:** `src/context-menu/manager.ts`
+**File:** `src/context-menu/manager.ts`
 
-**Toevoegen aan:** Tab context menu (zoek naar bestaande tab menu items)
+**Add about:** Tab context menu (zoek to existing tab menu items)
 
 ```typescript
 {
-  label: 'Verplaats naar workspace',
-  submenu: workspaces.map(ws => ({
+  label: 'Verplaats to workspace',
+  submenu: workspaces.folder(ws => ({
     label: `${ws.emoji} ${ws.name}`,
     click: () => {
-      // POST /workspaces/:name/move-tab met tabId
+      // POST /workspaces/:name/move-tab with tabId
     }
   }))
 }
 ```
 
-### Stap 6: Nieuwe tab toewijzen aan actieve workspace
+### Stap 6: New tab toewijzen about actieve workspace
 
-**Wat:** Wanneer een nieuwe tab geopend wordt, moet deze automatisch bij de actieve workspace horen.
+**Wat:** Wanneer a new tab geopend is, must this automatisch bij the actieve workspace belong.
 
-**Bestand:** `shell/js/main.js` of `src/tabs/manager.ts`
+**File:** `shell/js/main.js` or `src/tabs/manager.ts`
 
-**Aanpassen:** De new-tab handler — na tab aanmaak, roep `workspaceManager.assignTabToActive(tabId)` aan.
+**Aanpassen:** The new-tab handler — na tab aanmaak, roep `workspaceManager.assignTabToActive(tabId)` about.
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 # Test 1: Workspaces laden
@@ -235,15 +235,15 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [x] Workspace strip zichtbaar links van het browser content area
+- [x] Workspace strip visible links or the browser content area
 - [x] Default workspace icon (blauw, 🏠) is actief (indigo bg) — now SVG icons
-- [x] "+" knop maakt nieuwe workspace aan (inline icon picker + name input)
-- [x] Klik op workspace icon → tab bar filtert, alleen die workspace's tabs zichtbaar
-- [x] Nieuwe tabs worden automatisch aan actieve workspace toegewezen
-- [x] Rechtermuisklik tab → "Verplaats naar workspace" → submenu met workspaces (v0.27.1, custom DOM menu)
-- [x] Tab verplaatsen naar andere workspace → tab verdwijnt uit huidige tab bar (v0.27.1, drag-and-drop + context menu)
-- [x] Workspace wisselen → tab bar update → juiste tabs zichtbaar
-- [x] Na browser restart: workspaces en hun SVG icons zijn behouden
+- [x] "+" knop maakt new workspace about (inline icon picker + name input)
+- [x] Klik op workspace icon → tab bar filtert, only that workspace's tabs visible
+- [x] New tabs be automatisch about actieve workspace toegewezen
+- [x] Rechtermuisklik tab → "Verplaats to workspace" → submenu with workspaces (v0.27.1, custom DOM menu)
+- [x] Tab verplaatsen to andere workspace → tab disappears out huidige tab bar (v0.27.1, drag-and-drop + context menu)
+- [x] Workspace wisselen → tab bar update → juiste tabs visible
+- [x] Na browser restart: workspaces and hun SVG icons are behouden
 - [x] Opera-style icon picker: 24 SVG icons in 6-col grid (v0.26.0)
 - [x] Edit workspace: inline sheet with icon picker, rename, delete (v0.26.0)
 - [x] Data model migrated: emoji → icon slug (v0.26.0)
@@ -251,8 +251,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 **Compilatie verificatie:**
 - [x] `npx tsc` — zero errors
-- [ ] `npx vitest run` — alle bestaande tests slagen
-- [x] `npm start` — app start zonder crashes
+- [ ] `npx vitest run` — alle existing tests slagen
+- [x] `npm start` — app start without crashes
 
 ---
 
@@ -260,35 +260,35 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-2-shell-ui.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-2-shell-ui.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🏢 feat: workspace strip UI + tab bar filtering"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende: Workspaces UI feature compleet ✅
+   ## Next: Workspaces UI feature compleet ✅
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Tab bar rendering race condition: na workspace switch moet filterTabBar() wachten tot de workspace data geladen is
-- [ ] Workspace strip moet responsive zijn: bij veel workspaces moet het scrollbaar zijn (overflow-y: auto)
-- [ ] De "+" knop dialoog: gebruik een simpele `prompt()` voor V1, fancy dialog kan later
-- [ ] TypeScript strict mode — geen `any` buiten catch blocks
-- [ ] Main layout CSS: voeg `display: flex` toe aan `.main-layout` als dat er nog niet is, zodat de workspace strip links naast de content verschijnt
-- [ ] Tab context menu: WorkspaceManager heeft workspace data nodig in het context menu proces — stuur workspace lijst via IPC
+- [ ] Tab bar rendering race condition: na workspace switch must filterTabBar() wachten tot the workspace data geladen is
+- [ ] Workspace strip must responsive are: bij veel workspaces must the scrollbaar are (overflow-y: auto)
+- [ ] The "+" button dialog: use a simple `prompt()` for V1; a fancier dialog can come later
+- [ ] TypeScript strict mode — no `any` buiten catch blocks
+- [ ] Main layout CSS: voeg `display: flex` toe about `.main-layout` if that er still not is, zodat the workspace strip links next to the content appears
+- [ ] Tab context menu: WorkspaceManager has workspace data nodig in the context menu proces — stuur workspace list via IPC

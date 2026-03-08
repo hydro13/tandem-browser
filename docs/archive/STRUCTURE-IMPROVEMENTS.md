@@ -1,38 +1,38 @@
 # Structure Improvements — Voortgang
 
 > Gebaseerd op `docs/CODEBASE-STRUCTURE-REPORT.md` (2026-02-26)
-> Update dit bestand na elke sessie die aan een punt werkt.
+> Update this file na elke session that about a punt works.
 
 ## Status
 
 | # | Verbetering | Status | Sessie | Notities |
 |---|-------------|--------|--------|----------|
-| 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 regels. 12 route files + context.ts |
-| 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 regels. 3 modules: ipc/, menu/, notifications/ |
+| 1 | Split `api/server.ts` in route files | DONE | 2026-02-26 | 3032→349 rules. 12 route files + context.ts |
+| 2 | Split `main.ts` (IPC, bootstrap, menu) | DONE | 2026-02-26 | 1016→575 rules. 3 modules: ipc/, menu/, notifications/ |
 | 3 | Shared utilities (`paths`, `url`, `errors`) | DONE | 2026-02-27 | `tandemDir()` in 40 files, `handleRouteError()` in 12 routes. URL utils overgeslagen (te divers). |
-| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst naar src/notifications/alert.ts + setter pattern |
+| 4 | Fix circulaire deps (`wingmanAlert`) | DONE | 2026-02-26 | Verplaatst to src/notifications/alert.ts + setter pattern |
 | 5 | Unified `npm test` + meer tests | DONE | 2026-02-27 | 152 tests (was 86). TabManager, TaskManager, utils tests. |
 | 6 | Type safety: CDP types + minder `any` | DONE | 2026-02-27 | 12 CDP types, catch blocks, subscriber handlers |
-| 7 | Split `shell/index.html` | DONE | 2026-02-27 | 6572→451 regels. 4 bestanden: css/main.css, css/shortcuts.css, js/main.js, js/shortcuts.js |
+| 7 | Split `shell/index.html` | DONE | 2026-02-27 | 6572→451 rules. 4 files: css/main.css, css/shortcuts.css, js/main.js, js/shortcuts.js |
 | 8 | Manager registry / DI pattern | DONE | 2026-02-27 | ManagerRegistry in src/registry.ts. TandemAPIOptions: 35→3 params. RouteContext = type alias. |
-| 9 | Expliciete initialisatie volgorde | DONE | 2026-02-27 | SecurityManager.init() consolideert 3 losse calls. initGatekeeper apart (post-start). |
+| 9 | Expliciete initialisatie order | DONE | 2026-02-27 | SecurityManager.init() consolideert 3 losse calls. initGatekeeper apart (post-start). |
 | 10 | Naming consistency | DONE | 2026-02-27 | `SessionManager.cleanup()` → `destroy()`. ChatMessage/ActivityEntry later. |
 
-## Hoe te gebruiken
+## Hoe te use
 
-Start een sessie met:
-> "Voer punt [N] uit van docs/STRUCTURE-IMPROVEMENTS.md"
+Start a session with:
+> "Voer punt [N] out or docs/STRUCTURE-IMPROVEMENTS.md"
 
-Of voor meerdere quick wins:
-> "Doe punten 3 en 4 van docs/STRUCTURE-IMPROVEMENTS.md"
+Or for multiple quick wins:
+> "Doe punten 3 and 4 or docs/STRUCTURE-IMPROVEMENTS.md"
 
 ## Logboek
 
-<!-- Voeg hier per sessie een entry toe -->
+<!-- Voeg hier per session a entry toe -->
 
 ### 2026-02-26 — Punt 1: Split `api/server.ts` in route files
-- **Wat gedaan:** server.ts (3032 regels, 160+ routes) opgesplitst in 12 route files + context module
-- **Bestanden aangemaakt:**
+- **Wat gedaan:** server.ts (3032 rules, 160+ routes) opgesplitst in 12 route files + context module
+- **Files aangemaakt:**
   - `src/api/context.ts` — RouteContext interface + 5 shared helpers
   - `src/api/routes/browser.ts` — 14 routes (navigate, click, type, execute-js, etc.)
   - `src/api/routes/tabs.ts` — 7 routes (open, close, list, focus, etc.)
@@ -46,39 +46,39 @@ Of voor meerdere quick wins:
   - `src/api/routes/content.ts` — 14 routes (extract, context bridge, scripts, styles)
   - `src/api/routes/media.ts` — 19 routes (panel, chat, voice, audio, screenshots)
   - `src/api/routes/misc.ts` — 58 routes (status, passwords, events, live, workflows, etc.)
-- **Bestanden gewijzigd:** `src/api/server.ts` (3032→349 regels)
+- **Files gewijzigd:** `src/api/server.ts` (3032→349 rules)
 - **Tests:** passing (86 passed, 38 skipped)
-- **Openstaand:** geen
+- **Openstaand:** no
 
 ### 2026-02-26 — Punt 2+4: Split `main.ts` + fix circulaire deps
-- **Wat gedaan:** main.ts (1016 regels) opgesplitst in 3 modules + wingmanAlert circulaire dependency opgelost
-- **Bestanden aangemaakt:**
+- **Wat gedaan:** main.ts (1016 rules) opgesplitst in 3 modules + wingmanAlert circulaire dependency opgelost
+- **Files aangemaakt:**
   - `src/notifications/alert.ts` — wingmanAlert + setMainWindow setter (breekt circulaire dep)
-  - `src/menu/app-menu.ts` — buildAppMenu + MenuDeps interface (~130 regels)
-  - `src/ipc/handlers.ts` — registerIpcHandlers + IpcDeps interface + syncTabsToContext (~295 regels)
-- **Bestanden gewijzigd:**
-  - `src/main.ts` (1016→575 regels)
-  - `src/api/routes/browser.ts` — import wingmanAlert van notifications/alert
-  - `src/watch/watcher.ts` — import wingmanAlert van notifications/alert
-  - `src/headless/manager.ts` — import wingmanAlert van notifications/alert
+  - `src/menu/app-menu.ts` — buildAppMenu + MenuDeps interface (~130 rules)
+  - `src/ipc/handlers.ts` — registerIpcHandlers + IpcDeps interface + syncTabsToContext (~295 rules)
+- **Files gewijzigd:**
+  - `src/main.ts` (1016→575 rules)
+  - `src/api/routes/browser.ts` — import wingmanAlert or notifications/alert
+  - `src/watch/watcher.ts` — import wingmanAlert or notifications/alert
+  - `src/headless/manager.ts` — import wingmanAlert or notifications/alert
 - **Tests:** passing (86 passed, 38 skipped)
-- **Openstaand:** geen
+- **Openstaand:** no
 
 ### 2026-02-27 — Punt 3+10: Shared utilities + naming consistency
-- **Wat gedaan:** `src/utils/paths.ts` (tandemDir, ensureDir) + `src/utils/errors.ts` (handleRouteError) aangemaakt. 40 bestanden gerefactored naar tandemDir(). 184 catch blocks in 12 route files vervangen door handleRouteError(). SessionManager.cleanup() hernoemd naar destroy().
-- **Bestanden aangemaakt:**
+- **Wat gedaan:** `src/utils/paths.ts` (tandemDir, ensureDir) + `src/utils/errors.ts` (handleRouteError) aangemaakt. 40 files gerefactored to tandemDir(). 184 catch blocks in 12 route files vervangen door handleRouteError(). SessionManager.cleanup() hernoemd to destroy().
+- **Files aangemaakt:**
   - `src/utils/paths.ts` — tandemDir() + ensureDir()
   - `src/utils/errors.ts` — handleRouteError()
   - `docs/plans/2026-02-27-shared-utils-design.md` — Design doc
-- **Bestanden gewijzigd:** 40 src/ files + 1 cli/ file (tandemDir), 12 route files (handleRouteError), sessions/manager.ts + main.ts (cleanup→destroy)
+- **Files gewijzigd:** 40 src/ files + 1 cli/ file (tandemDir), 12 route files (handleRouteError), sessions/manager.ts + main.ts (cleanup→destroy)
 - **Tests:** passing (86 passed, 38 skipped)
-- **Openstaand:** URL utilities overgeslagen (patronen te divers). ChatMessage/ActivityEntry type renames later.
+- **Open:** URL utilities were skipped (patterns too diverse). ChatMessage/ActivityEntry type renames can come later.
 
 ### Template
 ```
-### [datum] — Punt [N]: [titel]
+### [date] — Punt [N]: [title]
 - **Wat gedaan:** ...
-- **Bestanden gewijzigd:** ...
+- **Files gewijzigd:** ...
 - **Tests:** passing / failing
 - **Openstaand:** ...
 ```

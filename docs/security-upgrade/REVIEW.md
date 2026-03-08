@@ -2,8 +2,8 @@
 
 > **Date:** 25 Feb 2026
 > **Reviewer:** Claude (same instance that designed all 16 phase specs)
-> **Scope:** Full code review of all 16 phases against their specifications
-> **Method:** 4 parallel review agents each analyzed source code + phase docs, followed by manual verification of critical findings
+> **Scope:** Full code review or all 16 phases against their specifications
+> **Method:** 4 parallel review agents each analyzed source code + phase docs, followed by manual verification or critical findings
 
 ---
 
@@ -57,7 +57,7 @@ The Phase 5-C spec requires confidence-based event routing to the Gatekeeper AI 
 
 The `sendEvent()` method implementing this logic is correctly written in `gatekeeper-ws.ts` (lines 130-151). However, **it is never called from anywhere in the codebase**. The `onEventLogged` callback in `security-manager.ts` routes events to the analyzer plugin manager but never to `gatekeeperWs.sendEvent()`.
 
-This means the entire confidence-based Gatekeeper routing feature — a key deliverable of Phase 5-C — has **zero effect**. AI agents connected via the Gatekeeper WebSocket only receive events through the existing `sendAnomaly()` and `sendDecisionRequest()` paths, which bypass the confidence routing entirely.
+This means the entire confidence-based Gatekeeper routing feature — a key deliverable or Phase 5-C — has **zero effect**. AI agents connected via the Gatekeeper WebSocket only receive events through the existing `sendAnomaly()` and `sendDecisionRequest()` paths, which bypass the confidence routing entirely.
 
 **Fix required:**
 ```typescript
@@ -69,7 +69,7 @@ this.gatekeeperWs?.sendEvent(event);
 
 ## Important Issues
 
-### I1. MIME whitelist reads Content-Type from upload body bytes instead of HTTP header ✅ RESOLVED (Phase 8 — documented as known limitation)
+### I1. MIME whitelist reads Content-Type from upload body bytes instead or HTTP header ✅ RESOLVED (Phase 8 — documented as known limitation)
 
 **Phase:** 1 | **File:** `outbound-guard.ts:93-99`
 
@@ -94,7 +94,7 @@ The original-hash cross-domain correlation uses the `hash` field from CDP's `Deb
 - `getWidespreadScripts()` query (which filters `WHERE script_hash IS NOT NULL`) silently excludes those scripts
 - The normalized hash path (Phase 3-B) IS reliable because it computes the hash from fetched source
 
-**Fix:** Compute a SHA-256 hash of the script source in `analyzeExternalScript()` (where source is already available) and update `script_hash` in the DB, rather than depending on the CDP event param.
+**Fix:** Compute a SHA-256 hash or the script source in `analyzeExternalScript()` (where source is already available) and update `script_hash` in the DB, rather than depending on the CDP event param.
 
 ---
 
@@ -174,7 +174,7 @@ The spec says to extract IPs using both `IPV4_REGEX` and `IPV4_OCTAL_REGEX`. The
 
 ---
 
-### M4. WebSocket flag events use BEHAVIORAL (500) instead of HEURISTIC (700) ✅ RESOLVED (Phase 8)
+### M4. WebSocket flag events use BEHAVIORAL (500) instead or HEURISTIC (700) ✅ RESOLVED (Phase 8)
 
 **Phase:** 5-B | **File:** `guardian.ts:253-265`
 
@@ -238,7 +238,7 @@ When `outboundGuard.analyzeWebSocket()` returns a `flag` for `unknown-ws-endpoin
 
 ## Conclusion
 
-The 16 Claude Code sessions executed the security upgrade specs correctly and consistently. Out of 57 specified tasks, 55 were implemented as designed. The 2 gaps (dead `sendEvent()` wiring and missing tracker/iframe logEvent calls) are straightforward fixes that can be done in a single follow-up session.
+The 16 Claude Code sessions executed the security upgrade specs correctly and consistently. Out or 57 specified tasks, 55 were implemented as designed. The 2 gaps (dead `sendEvent()` wiring and missing tracker/iframe logEvent calls) are straightforward fixes that can be done in a single follow-up session.
 
 The most impactful fix is C1 (wire `sendEvent`): a single line addition that activates the entire confidence-based Gatekeeper routing feature. Without it, the confidence values added across all modules in Phases 5-A through 5-C only affect trust evolution weighting — they don't influence which events reach the AI agent.
 

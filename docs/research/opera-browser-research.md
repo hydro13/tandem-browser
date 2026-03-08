@@ -1,13 +1,13 @@
-# Opera Browser — Volledig Onderzoeksrapport
-**Datum:** 28 februari 2026  
-**Doel:** Alles leren van Opera's UI/UX om Tandem Browser te verbeteren  
+# Opera Browser — Fully Onderzoeksrapport
+**Date:** 28 februari 2026  
+**Goal:** Alles leren or Opera's UI/UX to Tandem Browser te verbeteren  
 **Bron:** Opera help.opera.com + opera.com/features  
 
 ---
 
 ## 1. LAYOUT & STRUCTUUR
 
-Opera heeft 5 hoofdcomponenten:
+Opera has 5 hoofdcomponenten:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -15,7 +15,7 @@ Opera heeft 5 hoofdcomponenten:
 ├─────────────────────────────────────────────────────────┤
 │ [←][→][↻][⌂]  [ COMBINED ADDRESS + SEARCH BAR ]  [⚙]   │
 ├──┬──────────────────────────────────────────────────────┤
-│  │  TAB BAR (bovenaan, met Tab Islands + emojis)         │
+│  │  TAB BAR (at the top, with Tab Islands + emojis)         │
 │  ├──────────────────────────────────────────────────────┤
 │S │                                                       │
 │I │                   WEB VIEW                            │
@@ -27,8 +27,8 @@ Opera heeft 5 hoofdcomponenten:
 └──┴──────────────────────────────────────────────────────┘
 ```
 
-**Sidebar (links, verticaal)**
-- Workspaces (virtual desktops voor tabs)
+**Sidebar (links, vertical)**
+- Workspaces (virtual desktops for tabs)
 - Messengers: WhatsApp, Telegram, FB Messenger, Instagram, Discord, Slack, VK, X/Twitter
 - Flow (cross-device sync)
 - Speed Dial
@@ -43,223 +43,223 @@ Opera heeft 5 hoofdcomponenten:
 - Pinboards
 - Aria (AI)
 
-De sidebar is **volledig aanpasbaar**: drag to reorder, enable/disable per item, narrow mode optie.
+The sidebar is **fully aanpasbaar**: drag to reorder, enable/disable per item, narrow mode optie.
 
 ---
 
 ## 2. TAB MANAGEMENT — Opera's sterkste punt
 
 ### 2.1 Tab Islands ⭐⭐⭐
-Tabs die vanuit dezelfde pagina geopend worden, worden automatisch gegroepeerd in een "eiland":
-- Benoembaar (geef een island een naam)
+Tabs that vanuit the same page geopend be, be automatisch grouped in a "island":
+- Benoembaar (geef a island a name)
 - Inklapbaar (save space bij veel tabs)
-- Per-island kleur instellen
-- Manual islands ook te maken
-- Werkt samen met Split Screen
+- Per-island color instellen
+- Manual islands also te maken
+- Works together with Split Screen
 
-**Verschil met Chrome Tab Groups:** Opera doet het _automatisch_ op basis van context, niet handmatig.
+**Verschil with Chrome Tab Groups:** Opera doet the _automatisch_ op basis or context, not handmatig.
 
 **⭐ VISUELE IMPLEMENTATIE (live bestudeerd):**
-Simpeler dan verwacht! Tab Islands zijn GEEN speciale container of bracket. Het zijn tabs die dichter bij elkaar staan met een subtiele extra gap tussen de groepen. Dat is het. Voorbeeld gezien:
+Simpler than expected! Tab Islands are NOT a special container or bracket. They are tabs that sit closer together with a subtle extra gap between the groups. That is it. Example observed:
 - Island 1: [Speed Dial] [Speed Dial] — gap — Island 2: [Gemini] [Add-ons] — gap — Island 3: [GitHub] [Claude]...
-- Implementatie in Tandem: track `opener` tabId → groepeer in tab bar via CSS margin/gap tussen groepen. ~1 dag werk.
+- Implementatie in Tandem: track `opener` tabId → group in tab bar via CSS margin/gap between groups. ~1 dag werk.
 
 ### 2.2 Workspaces ⭐⭐⭐
-Zoals virtuele desktops, maar voor tabs:
-- Meerdere workspaces (bv. "Work", "Shopping", "Research")
-- Elk workspace heeft eigen set tabs
-- Tabs verplaatsbaar tussen workspaces (right-click → Move to Workspace)
-- Eigen naam + kleur + icoon per workspace
-- Snel schakelen via sidebar of keyboard shortcut
-- Workspaces zijn zichtbaar bovenaan de sidebar
+Zoals virtuele desktops, but for tabs:
+- Multiple workspaces (bv. "Work", "Shopping", "Research")
+- Elk workspace has own set tabs
+- Tabs verplaatsbaar between workspaces (right-click → Move to Workspace)
+- Own name + color + icon per workspace
+- Snel schakelen via sidebar or keyboard shortcut
+- Workspaces are visible at the top the sidebar
 
 **⭐ VISUELE IMPLEMENTATIE (live bestudeerd):**
-Workspaces verschijnen als gekleurde vierkante icoontjes BOVENAAN de sidebar, bóven alle messenger iconen. Home icoon (huis) = default workspace. Andere workspaces = gekleurde vierkantjes met eigen icoon. Klikken switcht alle tabs naar die workspace.
+Workspaces appear as colored square icons at the top of the sidebar, above all messenger icons. Home icon (house) = default workspace. Other workspaces = colored squares with their own icon. Clicking switches all tabs to that workspace.
 
 **Opera's definitie:** "Organize tab groups in separate customizable workspaces"
 
 ### 2.3 Split Screen
-- Drag een tab omlaag → keuze: links of rechts splitsen
-- Of: Shift+select twee tabs → right-click → Create Split Screen
-- Twee tabs naast elkaar
-- Scheidingslijn klikken om te sluiten
-- Werkt binnen Tab Islands
-- Meerdere split screen groepen mogelijk
+- Drag a tab omlaag → choice: links or rechts splitsen
+- Or: Shift+select twee tabs → right-click → Create Split Screen
+- Twee tabs next to elkaar
+- Scheidingslijn clicking to te sluiten
+- Works within Tab Islands
+- Multiple split screen groups mogelijk
 
 ### 2.4 Tab Emojis
-- Hover over tab → emoji picker verschijnt
-- Visuele identificatie van tabs
-- An- en uitzetten in Settings
+- Hover over tab → emoji picker appears
+- Visual identificatie or tabs
+- An- and uitzetten in Settings
 
 ### 2.5 Visual Tab Cycler
-- Ctrl+Tab → thumbnail preview popup van alle open tabs
-- Hou Ctrl ingedrukt, Tab om te cyclen, loslaten om te kiezen
+- Ctrl+Tab → thumbnail preview popup or alle open tabs
+- Hou Ctrl ingedrukt, Tab to te cyclen, loslaten to te kiezen
 
 ### 2.6 Tab Preview
-- Hover over tab → miniature preview van page content
-- Ziet content zonder focus te wisselen
+- Hover over tab → miniature preview or page content
+- Sees content without focus te wisselen
 - Optioneel in Settings
 
 ### 2.7 Search in Tabs
-- Ctrl+Space → zoekbalk die open tabs doorzoekt op keyword
+- Ctrl+Space → zoekbalk that open tabs doorzoekt op keyword
 - Superhandig bij 20+ tabs
 
 ### 2.8 Pinned Tabs
-- Pin tab: blijft altijd aan (overleeft herstart)
-- Verplaatst naar links van tab bar
-- Kan niet per ongeluk gesloten worden
+- Pin tab: blijft always about (overleeft herstart)
+- Verplaatst to links or tab bar
+- Can not per ongeluk closed be
 
 ### 2.9 Save Tabs as Speed Dial Folder
 - Right-click tab bar → "Save all tabs as Speed Dial folder"
-- Hele sessie opslaan voor later
-- Selectie van tabs ook mogelijk
+- Save the whole session for later
+- Selectie or tabs also mogelijk
 
 ### 2.10 Tab Snoozing
-- Tab "slapen" sturen voor later
-- Ontbreekt nog in Tandem!
+- Send a tab to sleep for later
+- Ontbreekt still in Tandem!
 
 ---
 
-## 3. SIDEBAR — Het hart van Opera's UX
+## 3. SIDEBAR — The hart or Opera's UX
 
 ### 3.1 Integrated Messengers ⭐⭐⭐
-Opera bouwde alle grote messengers IN de browser als sidebar panels:
-- **WhatsApp** — volledig functioneel in sidebar panel
-- **Telegram** — volledig functioneel
-- **Facebook Messenger** — volledig functioneel
+Opera bouwde alle grote messengers IN the browser if sidebar panels:
+- **WhatsApp** — fully functioneel in sidebar panel
+- **Telegram** — fully functioneel
+- **Facebook Messenger** — fully functioneel
 - **Instagram** — DMs + feed
-- **Discord** — volledig server/channel interface
+- **Discord** — fully server/channel interface
 - **Slack** — workspace + channels
 - **VK Messenger** — Russisch social
 - **X/Twitter** — timeline + compose
 - **Spotify** — muziek speler in sidebar
 
-Elk heeft notification badges op het icoon. De panels openen naast de main browser view zonder nieuwe tab.
+Elk has notification badges op the icon. The panels openen next to the main browser view without new tab.
 
 ### 3.2 Music Player ⭐⭐
 - Spotify, Apple Music, YouTube Music, Deezer, Tidal in één plek
-- Detachable: kan losgemaakt worden als floating module
+- Detachable: can losgemaakt be if floating module
 - Overal op scherm te plaatsen (buiten browser)
 - Pin to toolbar optie
-- Auto-pause als andere media start
+- Auto-pause if andere media start
 
 ### 3.3 My Flow ⭐⭐⭐
 Cross-device sync tool:
 - Desktop ↔ Mobile Opera (QR code koppeling)
-- Stuur links, notities, bestanden heen en weer
+- Stuur links, notes, files heen and weer
 - Encrypted
 - Real-time sync
-- Geen account nodig (device-based pairing)
+- No account needed (device-based pairing)
 
-**Tandem equivalent:** Wij hebben geen cross-device sync. Grote kans hier.
+**Tandem equivalent:** We hebben no cross-device sync. Grote kans hier.
 
 ### 3.4 Pinboards ⭐⭐
-Visuele mood board / collectie tool:
-- Sla web content op (links, afbeeldingen, tekst, video)
+Visual mood board / collectie tool:
+- Sla web content op (links, images, text, video)
 - Drag & drop interface
-- Meerdere boards
-- Deelbaar met anderen
-- Visuele weergave (niet als lijst maar als board)
+- Multiple boards
+- Deelbaar with anderen
+- Visual weergave (not if list but if board)
 
-**Tandem equivalent:** Geen. Mogelijke toevoeging voor "research sessions"
+**Tandem equivalent:** No. Mogelijke toevoeging for "research sessions"
 
 ---
 
 ## 4. AI — ARIA ⭐⭐⭐
 
-Opera's ingebouwde AI assistent:
-- **Naam:** Aria
+Opera's inbuilte AI assistent:
+- **Name:** Aria
 - **Locatie:** Sidebar panel + address bar shortcut
-- **Aangedreven door:** Meerdere LLMs (Opera's eigen AI gateway)
+- **Aangedreven door:** Multiple LLMs (Opera's own AI gateway)
 - **Functies:**
   - Chat / Q&A
-  - Pagina samenvatten (actieve tab als context)
-  - Tekst genereren
-  - Afbeeldingen genereren (Google Imagen2, op mobile)
-  - Zoeken op het web
-  - Voice input (spreek je vragen in)
-  - ChatGPT integratie als extra optie
-- **Browser integratie:** Kan actieve pagina lezen als context
-- **Gratis** — inbegrepen in browser, account nodig voor sommige functies
+  - Page samenvatten (actieve tab if context)
+  - Text genereren
+  - Images genereren (Google Imagen2, op mobile)
+  - Zoeken op the web
+  - Voice input (spreek you questions in)
+  - ChatGPT integratie if extra optie
+- **Browser integratie:** Can actieve page read if context
+- **Gratis** — inbegrepen in browser, account nodig for sommige functies
 
-**Versus Tandem:** Tandem heeft dit al via de Wingman panel en OpenClaw WebSocket integratie — maar Opera's Aria heeft betere UX (voice, image gen, snellere sidebar toggle).
+**Versus Tandem:** Tandem has this already via the Wingman panel and OpenClaw WebSocket integratie — but Opera's Aria has betere UX (voice, image gen, snellere sidebar toggle).
 
 ---
 
 ## 5. MEDIA & VIDEO ⭐⭐
 
 ### 5.1 Video Popout
-- Hover over video → "Popout" knop verschijnt bovenaan video
-- Video wordt floating window (boven alle andere vensters)
+- Hover over video → "Popout" knop appears at the top video
+- Video is floating window (boven alle andere vensters)
 - Aanpasbaar formaat + positie
-- Werkt op YouTube, Twitch, Vimeo, Google Meet, Zoom...
+- Works op YouTube, Twitch, Vimeo, Google Meet, Zoom...
 - Transparantie aanpasbaar
-- Auto-popout optie (automatisch als je naar andere tab gaat)
-- Volledig playback control in het floating window
-- Video blijft spelen in host tab als je floating sluit
+- Auto-popout optie (automatisch if you to andere tab gaat)
+- Fully playback control in the floating window
+- Video blijft spelen in host tab if you floating closes
 
 ### 5.2 Lucid Mode — ❌ ONINTERESSANT VOOR TANDEM
-Sharpening filter op gecomprimeerde video. Nuttig voor media-browsers, compleet irrelevant voor ons AI-werktuig. Nooit bouwen.
+Sharpening filter op gecomprimeerde video. Nuttig for media-browsers, compleet irrelevant for ons AI-werktuig. Nooit bouwen.
 
 ### 5.3 Video Skip
-- Hover over video → "Skip" knop (dubbele pijl icoon)
-- Springt naar het einde van video/advertentie
-- Werkt ook als site vraagt om adblocker uit te zetten
+- Hover over video → "Skip" knop (dubbele pijl icon)
+- Springt to the einde or video/advertentie
+- Works also if site asks to adblocker out te zetten
 
 ---
 
 ## 6. PRIVACY & SECURITY
 
-### 6.1 Ad Blocker (ingebouwd)
-- Geen extensie nodig
-- Blokkeert ook: cryptocurrency mining scripts (NoCoin)
-- Badge rechts van adresbalk: toont aantal geblokkeerde ads/trackers
+### 6.1 Ad Blocker (inbuilt)
+- No extensie nodig
+- Blokkeert also: cryptocurrency mining scripts (NoCoin)
+- Badge rechts or adresbalk: shows aantal geblokkeerde ads/trackers
 - Per-site uitzonderingen
-- Meerdere blokkeerlijsten
+- Multiple blokkeerlijsten
 
 ### 6.2 Tracker Blocker
 - Analytic scripts, tracking pixels, data collection methoden
-- Aparte instelling van ad blocker
-- Eigen lijsten + uitzonderingen
+- Aparte instelling or ad blocker
+- Own lijsten + uitzonderingen
 
-### 6.3 Free VPN (ingebouwd)
+### 6.3 Free VPN (inbuilt)
 - Gratis, onbeperkt datavolume
-- Geen logs
+- No logs
 - 3 regio's: Europa, Azië, Amerika
-- IP verandert naar VPN server locatie
-- "Bypass for default search engines" optie (zoekresultaten blijven lokaal relevant)
+- IP verandert to VPN server locatie
+- "Bypass for default search engines" optie (zoekresultaten blijven local relevant)
 - Toggle in adresbalk
 
 ### 6.4 Paste Protection ⭐
-Uniek en slim:
-- Detecteert als je een IBAN of creditcardnummer kopieert
-- Monitort clipboard voor 2 minuten (of tot je plakt)
-- Waarschuwt als een externe app het clipboard heeft gewijzigd
+Uniek and slim:
+- Detecteert if you a IBAN or creditcardnummer kopieert
+- Monitort clipboard for 2 minuten (or tot you plakt)
+- Waarschuwt if a externe app the clipboard has gewijzigd
 - Beschermt tegen clipboard hijacking aanvallen
 
-**Tandem equivalent:** We hebben NetworkShield + OutboundGuard — maar geen clipboard protection. Nieuwe idee!
+**Tandem equivalent:** We hebben NetworkShield + OutboundGuard — but no clipboard protection. New idee!
 
 ### 6.5 Private Window
-- Geen history, geen cookies, geen cache
-- Standaard Chromium incognito equivalent
+- No history, no cookies, no cache
+- Default Chromium incognito equivalent
 
 ---
 
 ## 7. START PAGE & SPEED DIAL
 
 ### 7.1 Speed Dial
-- Visuele thumbnails van favoriete sites
-- Organiseerbaar in folders (één thumbnail sleep je op een andere)
+- Visual thumbnails or favoriete sites
+- Organiseerbaar in folders (één thumbnail sleep you op a andere)
 - Aanpasbare kolommen
-- Geanimeerde thumbnails optioneel
-- Suggested Speed Dials (op basis van browsing)
+- Geanimeerde thumbnails optional
+- Suggested Speed Dials (op basis or browsing)
 - Promoted Speed Dials (Opera's advertentie model)
-- Sla alle open tabs op als Speed Dial folder
+- Sla alle open tabs op if Speed Dial folder
 
 ### 7.2 Personal News
-- Nieuws feed op start pagina
-- Selecteer onderwerpen en talen
-- Niet beïnvloed door browsing history (privacy)
+- Nieuws feed op start page
+- Selecteer onderwerpen and talen
+- Not beïnvloed door browsing history (privacy)
 - Aanpasbaar via instellingen
 
 ### 7.3 Easy Setup Panel
@@ -268,46 +268,46 @@ Uniek en slim:
   - Themes + wallpapers
   - Pin/unpin sidebar
   - Show/hide bookmarks bar
-  - Ad blocker aan/uit
+  - Ad blocker about/out
   - Download locatie
   - Clear browsing data
-- Link naar volledige Settings
+- Link to full Settings
 
 ---
 
 ## 8. PRODUCTIVITEIT
 
 ### 8.1 Search Pop-up Tool ⭐
-Selecteer tekst op pagina → popup verschijnt met:
-- Zoeken met default search engine (één klik)
+Selecteer text op page → popup appears with:
+- Zoeken with default search engine (één click)
 - Kopiëren
 - Delen (macOS)
-- **Currency converter:** Selecteer "$30" → toont in jouw valuta
-- **Unit converter:** Selecteer "10 miles" → toont in km
-- **Time zone converter:** Selecteer "18:30 KST" → toont in jouw tijdzone
+- **Currency converter:** Selecteer "$30" → shows in jouw valuta
+- **Unit converter:** Selecteer "10 miles" → shows in km
+- **Time zone converter:** Selecteer "18:30 KST" → shows in jouw tijdzone
 
 **Ondersteunde valuta:** 35+ valuta + 4 cryptocurrencies (BTC, ETH, LTC, BCH)  
 **Ondersteunde eenheden:** lb↔kg, °F↔°C, oz↔g, mph↔km/h, mi↔km, enz.
 
 ### 8.2 Snapshot ⭐⭐
-Ingebouwde screenshot tool:
-- Capture rectangle, volledig scherm, of specifiek element
-- Annoteer (tekst, vormen, arrows)
-- Direct delen of opslaan
+Inbuilte screenshot tool:
+- Capture rectangle, fully scherm, or specifiek element
+- Annoteer (text, vormen, arrows)
+- Direct delen or save
 - Knop in toolbar
 
-**Tandem equivalent:** ⚠️ GEDEELTELIJK — Tandem HAS een snapshot tool met annotatie UI (pen, rechthoek, cirkel, freehand, tekst, kleuren, blur/pixelate), maar de kwaliteit/werking is nog work in progress. Verbetering staat op de TODO.
+**Tandem equivalent:** ⚠️ GEDEELTELIJK — Tandem HAS a snapshot tool with annotatie UI (pen, rechthoek, cirkel, freehand, text, kleuren, blur/pixelate), but the kwaliteit/werking is still work in progress. Verbetering staat op the TODO.
 
 ### 8.3 Easy Files
-Upload dialoog toont recent gebruikte bestanden bovenaan — geen zoeken in mappenstructuur.
+Upload dialoog shows recent gebruikte files at the top — no zoeken in mappenstructuur.
 
 ### 8.4 Battery Saver
-- Activeer automatisch als laptop unplugged is
+- Activeer automatisch if laptop unplugged is
 - Vermindert activiteit in background tabs
-- Pauzeert plugins en animaties
+- Pauzeert plugins and animaties
 - Herplant JavaScript timers
 - Optimaliseert video playback parameters
-- Toont geschatte resterende batterij tijd
+- Shows geschatte resterende batterij tijd
 - 50% langere browsetijd geclaimd
 
 ---
@@ -315,12 +315,12 @@ Upload dialoog toont recent gebruikte bestanden bovenaan — geen zoeken in mapp
 ## 9. CUSTOMIZATION ⭐⭐
 
 ### 9.1 Themes
-Drie themes met heel andere vibes:
-- **Classic** — custom wallpaper, kleur kiezen (cool↔warm, calm↔vibrant), light/dark mode
-- **Aurora** — geanimeerde dark mode, kleur: Borealis (rood/roze/paars) of Australis (blauw/groen)
+Drie themes with heel andere vibes:
+- **Classic** — custom wallpaper, color kiezen (cool↔warm, calm↔vibrant), light/dark mode
+- **Aurora** — geanimeerde dark mode, color: Borealis (rood/roze/paars) or Australis (blauw/groen)
 - **Midsommar** — geanimeerde light mode, pastel tot gesatureerd, **MET GELUID**: browser sounds, keyboard sounds, achtergrondmuziek
 
-Je kan de laatste 10 geconfigureerde themes opslaan. Snel wisselen via Alt+Shift+T.
+You can the last 10 geconfigureerde themes save. Snel wisselen via Alt+Shift+T.
 
 ### 9.2 Wallpapers
 - Custom upload
@@ -328,8 +328,8 @@ Je kan de laatste 10 geconfigureerde themes opslaan. Snel wisselen via Alt+Shift
 - Community wallpapers op addons.opera.com
 
 ### 9.3 Extensions
-- Eigen extensies store (addons.opera.com)
-- **Chrome extensies werken ook** via addon "Install Chrome extensions"
+- Own extensies store (addons.opera.com)
+- **Chrome extensies werken also** via addon "Install Chrome extensions"
 
 ---
 
@@ -342,9 +342,9 @@ Je kan de laatste 10 geconfigureerde themes opslaan. Snel wisselen via Alt+Shift
 
 ### 10.2 My Flow (cross-device clipboard)
 - Desktop Opera ↔ Opera Touch (iOS/Android)
-- QR code koppeling (geen account nodig!)
+- QR code koppeling (no account needed!)
 - End-to-end encrypted
-- Stuur: links, notities, bestanden, afbeeldingen
+- Stuur: links, notes, files, images
 - Real-time sync
 
 ---
@@ -352,27 +352,27 @@ Je kan de laatste 10 geconfigureerde themes opslaan. Snel wisselen via Alt+Shift
 ## 11. OVERIGE FEATURES
 
 ### Continue Booking / Continue Shopping
-- Browser herkent als je op reis/product pagina bent
-- Toont reminder als je terugkomt naar dezelfde soort pagina
-- "Je was bezig met vlucht boeken naar Barcelona..."
+- Browser herkent if you op reis/product page bent
+- Shows reminder if you terugkomt to the same soort page
+- "You was bezig with vlucht boeken to Barcelona..."
 
-### Crypto Wallet (ingebouwd)
+### Crypto Wallet (inbuilt)
 - DeFi wallet
-- Meerdere netwerken
-- Geen extensie nodig
+- Multiple netwerken
+- No extensie nodig
 
 ### Opera Cashback
 - Automatisch cashback bij online shoppen
 - Browser detecteert webshops
-- Deals/coupons worden automatisch toegepast
+- Deals/coupons be automatisch toegepast
 
 ---
 
 ## 12. MOUSE GESTURES & SHORTCUTS
 
 ### Mouse Gestures
-- Ingebouwde gestures (geen extensie nodig)
-- Rechtermuisknop + beweging = actie
+- Inbuilte gestures (no extensie nodig)
+- Right-click + beweging = actie
 - Bv. rechts-omlaag = tab sluiten, rechts-links = terug
 
 ### Keyboard Shortcuts
@@ -387,8 +387,8 @@ Je kan de laatste 10 geconfigureerde themes opslaan. Snel wisselen via Alt+Shift
 
 ## 13. DEVELOPER TOOLS
 
-Standaard Chromium DevTools + extra:
-- Experiments pagina (feature flags)
+Default Chromium DevTools + extra:
+- Experiments page (feature flags)
 - Proxy settings (per-browser instellbaar)
 - Source code viewer
 
@@ -396,120 +396,120 @@ Standaard Chromium DevTools + extra:
 
 # ANALYSE: WAT KAN TANDEM HIERVAN LEREN?
 
-## 🔴 Hoge prioriteit — Dit moet Tandem ook hebben
+## 🔴 Hoge prioriteit — Dit must Tandem also hebben
 
 ### 1. Tab Islands (automatische tab groepering)
-Opera's beste UI innovatie. Tabs die vanuit dezelfde parent geopend zijn, horen bij elkaar en Opera laat dat zien. Dit is extreem intuïtief. Tandem zou tabs die via wingman-navigatie geopend zijn als "wingman session" kunnen groeperen.
+Opera's beste UI innovatie. Tabs that vanuit the same parent geopend are, belong bij elkaar and Opera shows that zien. Dit is extreem intuitive. Tandem zou tabs that via wingman-navigatie geopend are if "wingman session" can group.
 
-**Implementatie:** Track `opener` tab ID voor elke nieuwe tab in Electron. Automatisch in tab bar groeperen met visuele connector.
+**Implementatie:** Track `opener` tab ID for elke new tab in Electron. Automatisch in tab bar group with visual connector.
 
 ### 2. Workspaces (virtual tab desktops) ⭐⭐⭐
-Dit is een perfecte match voor Tandem's use case. Stel je voor:
-- Workspace "Research" — Wingman werkt hier autonoom
+Dit is a perfecte match for Tandem's use case. Stel you for:
+- Workspace "Research" — Wingman works hier autonoom
 - Workspace "Work" — Robin's dagelijkse tabs
-- Workspace "Projects" — per project een workspace
+- Workspace "Projects" — per project a workspace
 
-**Al deels aanwezig:** `/sessions/create` in Tandem doet iets vergelijkbaars maar is niet visueel in de browser UI. Dit verbeteren naar echte visuele workspaces.
+**Al deels aanwezig:** `/sessions/create` in Tandem doet iets vergelijkbaars but is not visual in the browser UI. Dit verbeteren to echte visual workspaces.
 
-### 3. Tab Preview (hover om content te zien)
-Snel even zien wat er in een tab staat zonder te switchen. Electron kan dit met `webContents.capturePage()` + thumbnail in shell.
+### 3. Tab Preview (hover to content te zien)
+Snel even zien wat er in a tab staat without te switchen. Electron can this with `webContents.capturePage()` + thumbnail in shell.
 
 ### 4. Search in Tabs
 Ctrl+Space → alle open tabs doorzoeken. Trivial te implementeren in Tandem's shell UI.
 
 ### 5. Video Popout
-Floating video player die boven alles zweeft. Electron kan dit via `BrowserWindow` met `alwaysOnTop: true` + WebContents capture.
+Floating video player that boven alles zweeft. Electron can this via `BrowserWindow` with `alwaysOnTop: true` + WebContents capture.
 
-### 6. Snapshot met annotaties — ⚠️ AANWEZIG MAAR WORK IN PROGRESS
-Tandem heeft de tool (pen, rechthoek, cirkel, freehand, tekst, kleuren, blur/pixelate), maar of die ook lekker werkt is een tweede zaak. Staat op de TODO om te verbeteren/afmaken.
+### 6. Snapshot with annotaties — ⚠️ AANWEZIG MAAR WORK IN PROGRESS
+Tandem has the tool (pen, rechthoek, cirkel, freehand, text, kleuren, blur/pixelate), but or that also lekker works is a second zaak. Staat op the TODO to te verbeteren/afmaken.
 
 ---
 
 ## 🟡 Medium prioriteit — Goede inspiratie
 
 ### 7. Easy Setup Quick Panel ⭐
-Opera's quick settings panel rechtsbovenaan is heel slim. Tandem heeft een settings panel maar die is verborgen. Een "Quick Panel" knop in de toolbar met de meest gebruikte opties (security shield, wingman panel toggle, new workspace, snapshot) zou de UX enorm verbeteren.
+Opera's quick settings panel rechtsbovenaan is heel slim. Tandem has a settings panel but that is hidden. A "Quick Panel" knop in the toolbar with the meest gebruikte opties (security shield, wingman panel toggle, new workspace, snapshot) zou the UX enorm verbeteren.
 
 ### 8. ~~Lucid Mode~~ — NIET BOUWEN
-Sharpening filter op video. Complete onzin voor Tandem — wij zijn geen media browser. Bestaat, oninteressant, nooit meer over nadenken.
+Sharpening filter op video. Complete onzin for Tandem — we are no media browser. Exists, oninteressant, nooit meer over nadenken.
 
 ### 9. Paste Protection
-Clipboard monitoring voor IBAN/creditcard nummers. Past perfect bij Tandem's security-first aanpak! 
+Clipboard monitoring for IBAN/creditcard nummers. Past perfect bij Tandem's security-first approach! 
 
 **Implementatie:** Electron `clipboard` module + listener + alert.
 
 ### 10. Tab Emojis
-Leuke manier om tabs te identificeren. Snel te implementeren, verbetert UX significant.
+Leuke manier to tabs te identificeren. Snel te implementeren, verbetert UX significant.
 
 ### 11. Music Player (detachable module)
-Opera's music player kan losgemaakt worden als floating module. Tandem's Wingman panel kan ook detachable worden gemaakt als floating widget — voor snellere toegang zonder sidebar te openen.
+Opera's music player can losgemaakt be if floating module. Tandem's Wingman panel can also detachable be made if floating widget — for snellere toegang without sidebar te openen.
 
 ### 12. Battery Saver
-Reduce background tab activity. Relevant voor Tandem — als Wingman tabs in background houdt, kunnen die "sleeping" gemaakt worden om RAM/CPU te besparen.
+Reduce background tab activity. Relevant for Tandem — if Wingman tabs in background houdt, can that "sleeping" made be to RAM/CPU te besparen.
 
 ---
 
 ## 🟢 Lage prioriteit — Nice to have
 
-### 13. Tab Snoozing (al in TODO!)
-Snoze een tab voor later. Opera heeft het, Tandem TODO heeft het ook al staan.
+### 13. Tab Snoozing (already in TODO!)
+Snooze a tab for later. Opera has it, and the Tandem TODO already includes it as well.
 
 ### 14. Duplicate Tabs Highlighter
-Detecteer als je dezelfde URL al open hebt. Trivial te bouwen, nuttiger dan je denkt.
+Detecteer if you the same URL already open hebt. Trivial te bouwen, nuttiger then you denkt.
 
 ### 15. Tab Emojis
-Visuele tabherkenning via emoji. Snel te implementeren.
+Visual tabherkenning via emoji. Snel te implementeren.
 
 ### 16. Personal News op start page
-Tandem's new tab pagina is nu leeg. Een gecureerd nieuwsoverzicht (RSS feeds?) zou het nuttiger maken.
+Tandem's new tab page is nu leeg. A gecureerd nieuwsoverzicht (RSS feeds?) zou the nuttiger maken.
 
 ### 17. Save All Tabs as Collection
-Sla alle open tabs op als named collection. Opera doet dit in Speed Dial folders. Tandem equivalent: "Research Session opslaan" als named set van URLs.
+Sla alle open tabs op if named collection. Opera doet this in Speed Dial folders. Tandem equivalent: "Research Session save" if named set or URLs.
 
 ---
 
 ## 💡 ORIGINELE TANDEM IDEEËN geïnspireerd door Opera
 
 ### Idee A: "Wingman Workspace"
-Speciale workspace voor Wingman's autonomous browsing — gescheiden van Robin's eigen tabs. Wingman opent tabs in zijn eigen workspace, Robin ziet ze maar ze storen zijn workflow niet.
+Speciale workspace for Wingman's autonomous browsing — separated or Robin's own tabs. Wingman opens tabs in are own workspace, Robin sees ze but ze storen are workflow not.
 
-### Idee B: "Flow voor Tandem" — Robin ↔ Kees file sync
-Opera's Flow stuurt links/bestanden tussen devices. Tandem equivalent: Robin stuurt een URL naar Kees via de browser chat, Kees pakt hem op en navigeert er naartoe. We hebben al de chat, maar geen "push URL" functie.
+### Idee B: "Flow for Tandem" — Robin ↔ Kees file sync
+Opera's Flow stuurt links/files between devices. Tandem equivalent: Robin stuurt a URL to Kees via the browser chat, Kees pakt hem op and navigeert er naartoe. We hebben already the chat, but no "push URL" function.
 
-### Idee C: Tab Islands voor Wingman Sessions
-Alle tabs die Kees opent in een taak-sessie → automatisch in een "island" met de taaknaam. Zo zie je altijd overzichtelijk: "dit zijn Kees' research tabs voor LinkedIn analysis".
+### Idee C: Tab Islands for Wingman Sessions
+Alle tabs that Kees opens in a taak-session → automatisch in a "island" with the taaknaam. Zo zie you always organized: "this are Kees' research tabs for LinkedIn analysis".
 
 ### Idee D: Quick Panel in toolbar (Opera-stijl Easy Setup)
-Één knop in de toolbar rechtsbovenaan die de meest gebruikte Tandem-functies toont:
+Één knop in the toolbar rechtsbovenaan that the meest gebruikte Tandem-functies shows:
 - Security shield status + toggle
-- Nieuwe workspace
+- New workspace
 - Screenshot nemen
 - Wingman task starten
 - Recent notes/links (Flow)
 
 ### Idee E: Paste Protection + Clipboard AI
-Tandem heeft het security voordeel. Uitbreiden: als Robin iets kopieert dat op een verdachte site staat, clipboard monitoren en waarschuwen. Of: Kees kan clipboard als context gebruiken ("ik zie je hebt dit gekopieerd, wil je dat ik het analyseer?").
+Tandem has the security voordeel. Uitbreiden: if Robin iets kopieert that op a verdachte site staat, clipboard monitoren and waarschuwen. Or: Kees can clipboard if context use ("ik zie you hebt this gekopieerd, wil you that ik the analyseer?").
 
 ---
 
 ## CONCLUSIE
 
-Opera is de meest feature-rijke consumer browser en heeft 30 jaar productontwikkeling. De kernlessen voor Tandem:
+Opera is the meest feature-rijke consumer browser and has 30 jaar productontwikkeling. The kernlessen for Tandem:
 
-1. **Tab management is hun sterkste punt** — Tab Islands + Workspaces zijn briljant. Tandem moet dit bouwen.
-2. **Sidebar als command center** — Opera's sidebar is informatie-dicht maar overzichtelijk. Tandem heeft dit maar kan het verbeteren (badges, quick panel).
-3. **Detachable components** — floating windows (video, music player) zijn enorm nuttig voor productiviteit. Tandem's Wingman panel zou ook detachable moeten zijn.
-4. **Security als feature, niet als hinder** — Paste Protection is genius: security die je helpt zonder je te blokkeren. Exact de Tandem filosofie.
-5. **Cross-device sync (Flow)** — wij hebben Kees↔Robin communicatie maar geen "push URL/file to device" feature. Dat is een gat.
+1. **Tab management is hun sterkste punt** — Tab Islands + Workspaces are briljant. Tandem must this bouwen.
+2. **Sidebar if command center** — Opera's sidebar is informatie-dicht but organized. Tandem has this but can the verbeteren (badges, quick panel).
+3. **Detachable components** — floating windows (video, music player) are enorm nuttig for productiviteit. Tandem's Wingman panel zou also detachable must are.
+4. **Security if feature, not if hinder** — Paste Protection is genius: security that you helpt without you te blokkeren. Exact the Tandem filosofie.
+5. **Cross-device sync (Flow)** — we hebben Kees↔Robin communicatie but no "push URL/file to device" feature. That is a gat.
 
-**Grootste kansen voor Tandem:**
-- Visuele Workspaces (UI voor bestaande `/sessions`)
-- Tab Islands (automatisch groeperen)
+**Grootste kansen for Tandem:**
+- Visual Workspaces (UI for existing `/sessions`)
+- Tab Islands (automatisch group)
 - Video Popout (floating media player)  
 - Paste Protection (security win)
 - Easy Setup Quick Panel (discoverability)
 
 ---
 
-*Rapport gemaakt door Kees — 28 februari 2026*  
-*Bronnen: help.opera.com/en/latest/ + opera.com/features*
+*Rapport made door Kees — 28 februari 2026*  
+*Bronnen: help.opera.com/and/latest/ + opera.com/features*

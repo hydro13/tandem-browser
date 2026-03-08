@@ -1,19 +1,19 @@
-# Private Browsing Window — START HIER
+# Private Browsing Window — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Cmd+Shift+N opent een privé-venster met in-memory sessie die automatisch wordt gewist bij sluiten
-> **Volgorde:** Fase 1 (één sessie, compleet)
+> **Goal:** Cmd+Shift+N opens a private-window with in-memory session that automatisch is gewist bij sluiten
+> **Order:** Phase 1 (één session, compleet)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Robin wil soms iets opzoeken zonder sporen achter te laten — een verrassing voor iemand, een gevoelige zoekopdracht, of simpelweg inloggen met een ander account. Tandem heeft wel session-isolatie (`POST /sessions/create`), maar dat is een handmatig proces met persistente data. Een privé-venster met één toetscombinatie dat alles automatisch wist bij sluiten is de standaard verwachting van elke browser. Zie `docs/research/gap-analysis.md` sectie "Private Browsing" voor de Opera vergelijking.
+Robin wil soms iets opzoeken without sporen achter te laten — a verrassing for iemand, a gevoelige zoekopdracht, or simpelweg inloggen with a ander account. Tandem has indeed session-isolatie (`POST /sessions/create`), but that is a handmatig proces with persistente data. A private-window with één toetscombinatie that alles automatisch wist bij sluiten is the default verwachting or elke browser. Zie `docs/research/gap-analysis.md` section "Private Browsing" for the Opera comparison.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
   Cmd+Shift+N
@@ -22,10 +22,10 @@ Robin wil soms iets opzoeken zonder sporen achter te laten — een verrassing vo
   main.ts: createPrivateWindow()
        │
        ├──► new BrowserWindow({ partition: 'private-[uuid]' })
-       │    └── GEEN 'persist:' prefix = in-memory only
+       │    └── NO 'persist:' prefix = in-memory only
        │
-       ├──► Shell laadt met ?private=true query param
-       │    └── Shell toont paarse header + 🔒 indicator
+       ├──► Shell loads with ?private=true query param
+       │    └── Shell shows paarse header + 🔒 indicator
        │
        └──► win.on('closed') → session.clearStorageData()
             └── Alles gewist: cookies, cache, localStorage, indexedDB
@@ -33,51 +33,51 @@ Robin wil soms iets opzoeken zonder sporen achter te laten — een verrassing vo
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, `BrowserWindow` creatie, keyboard shortcuts | `createWindow()`, `startAPI()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
 _(zie fase-1-private-window.md)_
 
 ---
 
-## Regels voor deze feature
+## Rules for this feature
 
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
+> These are the HARD rules in addition to the general AGENTS.md rules.
 
-1. **In-memory partition** — gebruik `session.fromPartition('private-[uuid]')` ZONDER `persist:` prefix. Dit is de Electron-standaard voor ephemere sessies.
-2. **Unieke partition per venster** — elk privé-venster krijgt een eigen UUID-gebaseerde partition. Twee privé-vensters delen GEEN cookies.
-3. **Cleanup on close** — bij het sluiten van het venster: `session.clearStorageData()` aanroepen als extra zekerheid, hoewel de in-memory sessie al verdwijnt.
-4. **Stealth patches actief** — verifieer dat Tandem's anti-detect patches (UA, fingerprint, etc.) ook in de privé-partition actief zijn.
-5. **Functienamen > regelnummers** — verwijs naar `function createWindow()` of `function registerBrowserRoutes()`, nooit regelnummers.
+1. **In-memory partition** — use `session.fromPartition('private-[uuid]')` WITHOUT the `persist:` prefix. This is Electron's standard for ephemeral sessions.
+2. **Unique partition per window** — each private window gets its own UUID-based partition. Two private windows share NO cookies.
+3. **Cleanup on close** — bij the sluiten or the window: `session.clearStorageData()` aanroepen if extra zekerheid, hoewel the in-memory session already disappears.
+4. **Stealth patches actief** — verifieer that Tandem's anti-detect patches (UA, fingerprint, etc.) also in the private-partition actief are.
+5. **Functienamen > regelnummers** — verwijs to `function createWindow()` or `function registerBrowserRoutes()`, nooit regelnummers.
 
 ---
 
-## Manager Wiring — geen nieuwe manager nodig
+## Manager Wiring — no new manager nodig
 
-Private Browsing maakt een nieuw `BrowserWindow` aan met een andere partition. Er is **geen nieuwe manager** nodig — de logica zit in `src/main.ts`.
+Private Browsing maakt a new `BrowserWindow` about with a andere partition. Er is **no new manager** nodig — the logica zit in `src/main.ts`.
 
 ### Toe te voegen:
 
-1. `src/main.ts` → nieuwe functie `createPrivateWindow()` (gebaseerd op bestaande `createWindow()`, maar met ephemere partition)
-2. `src/main.ts` → Cmd+Shift+N accelerator registreren via `globalShortcut` of menu
+1. `src/main.ts` → new function `createPrivateWindow()` (gebaseerd op existing `createWindow()`, but with ephemere partition)
+2. `src/main.ts` → Cmd+Shift+N accelerator registreren via `globalShortcut` or menu
 3. `src/api/routes/browser.ts` → `function registerBrowserRoutes()` → `POST /window/private` endpoint
-4. `shell/index.html` → detecteer `?private=true` en activeer paarse styling
+4. `shell/index.html` → detecteer `?private=true` and activeer paarse styling
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // In function registerBrowserRoutes():
@@ -93,22 +93,22 @@ router.post('/window/private', async (_req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-private-window.md` | Volledige implementatie: venster, partition, cleanup, shortcut, UI indicator | 📋 Klaar om te starten |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-private-window.md` | Volledige implementatie: window, partition, cleanup, shortcut, UI indicator | 📋 Ready to start |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -126,10 +126,10 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Private window (in-memory partition + API + UI) | ⏳ niet gestart | — |
+| 1 | Private window (in-memory partition + API + UI) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

@@ -1,6 +1,6 @@
 # Security Fixes — Implementation Status
 
-> Read this file FIRST at the start of every Claude Code session.
+> Read this file FIRST at the start or every Claude Code session.
 
 ## Current State
 

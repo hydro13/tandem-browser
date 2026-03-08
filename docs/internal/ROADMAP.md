@@ -1,79 +1,79 @@
 # Tandem Browser — Feature Roadmap
 
-> **Beheerd door:** Kees (bijhouden) + Robin (beslissingen)
-> **Bijgewerkt:** 2026-02-28
+> **Maintained by:** Kees (tracking) + Robin (decisions)
+> **Updated:** 2026-02-28
 
 ---
 
-## Hoe status tracking werkt
+## How status tracking works
 
-| Wie | Waar | Wat |
+| Who | Where | What |
 |-----|------|-----|
-| **Kees** | Dit bestand (ROADMAP.md) | Groot overzicht: welke feature in welk stadium |
-| **Kees** | `docs/internal/STATUS.md` | Dagelijkse voortgang: wat loopt, wat geblokkeerd |
-| **Claude Code** | `docs/implementations/{feature}/LEES-MIJ-EERST.md` | Per-feature fase-status: welke fases klaar, welke volgende |
+| **Kees** | This file (ROADMAP.md) | High-level overview: which feature is in which stage |
+| **Kees** | `docs/internal/STATUS.md` | Daily progress: what is active, what is blocked |
+| **Claude Code** | `docs/implementations/{feature}/LEES-MIJ-EERST.md` | Per-feature phase status: which phases are done, which comes next |
 
-### Fase-status in LEES-MIJ-EERST.md
-Elke `LEES-MIJ-EERST.md` heeft bovenaan een tabel:
+### Phase status in LEES-MIJ-EERST.md
+Each `LEES-MIJ-EERST.md` has a table at the top:
 ```
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Backend + API | ✅ klaar | abc1234 |
-| 2 | Shell UI | ⏳ volgende | — |
+| 1 | Backend + API | ✅ done | abc1234 |
+| 2 | Shell UI | ⏳ next | — |
 ```
-Claude Code werkt dit bij na elke fase. Kees kopieert de commit naar ROADMAP.md.
+Claude Code updates this after each phase. Kees copies the commit into ROADMAP.md.
 
 ---
 
-## Werkwijze
+## Workflow
 
-1. **Robin kiest feature** → Kees markeert als 🔴 ACTIEF
-2. **Claude Code voert fase 1 uit** → commit → Robin + Kees reviewen diff
-3. **Claude Code markeert fase als ✅** in LEES-MIJ-EERST.md
-4. **Kees werkt ROADMAP.md bij** met commit hash
-5. **Volgende fase of volgende feature**
+1. **Robin chooses a feature** → Kees marks it as 🔴 ACTIVE
+2. **Claude Code executes phase 1** → commit → Robin + Kees review the diff
+3. **Claude Code marks the phase as ✅** in LEES-MIJ-EERST.md
+4. **Kees updates ROADMAP.md** with the commit hash
+5. **Next phase or next feature**
 
 ---
 
-## Feature Status — Overzicht
+## Feature Status — Overview
 
-> ⚠️ **Besluit 2026-02-28:** Sidebar infrastructuur is het fundament voor Workspaces, Messengers, Pinboards, Personal News, Bookmarks, History, Downloads. Dit komt EERST.
+> ⚠️ **Decision 2026-02-28:** Sidebar infrastructure is the foundation for Workspaces, Messengers, Pinboards, Personal News, Bookmarks, History, and Downloads. This comes FIRST.
 
-**Definitieve sidebar (links):** Workspaces · Messengers · Personal News · Pinboards · Bookmarks · History · Downloads
-**Rechts blijft (wingman panel):** AI Chat · Activity · Screenshots · ClaroNote
+**Final sidebar (left):** Workspaces · Messengers · Personal News · Pinboards · Bookmarks · History · Downloads
+**Right side remains (Wingman panel):** AI Chat · Activity · Screenshots · ClaroNote
 
-| Feature | Effort | Design doc | Impl docs | Fase status |
+| Feature | Effort | Design doc | Impl docs | Phase status |
 |---------|--------|-----------|-----------|-------------|
-| **Sidebar Infrastructuur** | Medium (3-5d) | ✅ plans/sidebar-infra-design.md | ⏳ schrijven | ⏳ wacht op Robin go |
-| Workspaces UI | Medium (3-5d) | ✅ plans/workspaces-ui-design.md | ✅ 2 fases | ⏳ wacht op sidebar infra |
-| Sidebar Chat (Messengers) | Hard (1-2 wk) | ✅ plans/sidebar-chat-design.md | ✅ 3 fases | ⏳ wacht op sidebar infra |
-| Personal News | Medium (3-5d) | ⏳ schrijven | ⏳ schrijven | ⏳ wacht op sidebar infra |
-| Pinboards | Hard (1-2 wk) | ✅ plans/pinboards-design.md | ✅ 3 fases | ⏳ wacht op sidebar infra |
-| Bookmarks sidebar | Easy (1-2d) | ⏳ schrijven | ⏳ schrijven | ⏳ wacht op sidebar infra |
-| History sidebar | Easy (1-2d) | ⏳ schrijven | ⏳ schrijven | ⏳ wacht op sidebar infra |
-| Downloads sidebar | Easy (1-2d) | ⏳ schrijven | ⏳ schrijven | ⏳ wacht op sidebar infra |
-| Tab Islands | Medium (3-5d) | ✅ plans/tab-islands-design.md | ✅ 2 fases | ⏳ niet gestart |
-| Split Screen | Medium (3-5d) | ✅ plans/split-screen-design.md | ✅ 2 fases | ⏳ niet gestart |
-| Tab Emojis | Easy (1-2d) | ✅ plans/tab-emojis-design.md | ✅ 1 fase | ⏳ niet gestart |
-| Search in Tabs | Easy (1-2d) | ✅ plans/search-in-tabs-design.md | ✅ 1 fase | ⏳ niet gestart |
-| Ad Blocker | Medium (3-5d) | ✅ plans/ad-blocker-design.md | ✅ 2 fases | ⏳ niet gestart |
-| Tab Snoozing | Medium (3-5d) | ✅ plans/tab-snoozing-design.md | ✅ 2 fases | ⏳ niet gestart |
-| Private Browsing | Easy (1-2d) | ✅ plans/private-browsing-design.md | ✅ 1 fase | ⏳ niet gestart |
+| **Sidebar Infrastructure** | Medium (3-5d) | ✅ plans/sidebar-infra-design.md | ⏳ writing | ⏳ waiting for Robin go-ahead |
+| Workspaces UI | Medium (3-5d) | ✅ plans/workspaces-ui-design.md | ✅ 2 phases | ⏳ waiting for sidebar infra |
+| Sidebar Chat (Messengers) | Hard (1-2 wk) | ✅ plans/sidebar-chat-design.md | ✅ 3 phases | ⏳ waiting for sidebar infra |
+| Personal News | Medium (3-5d) | ⏳ writing | ⏳ writing | ⏳ waiting for sidebar infra |
+| Pinboards | Hard (1-2 wk) | ✅ plans/pinboards-design.md | ✅ 3 phases | ⏳ waiting for sidebar infra |
+| Bookmarks sidebar | Easy (1-2d) | ⏳ writing | ⏳ writing | ⏳ waiting for sidebar infra |
+| History sidebar | Easy (1-2d) | ⏳ writing | ⏳ writing | ⏳ waiting for sidebar infra |
+| Downloads sidebar | Easy (1-2d) | ⏳ writing | ⏳ writing | ⏳ waiting for sidebar infra |
+| Tab Islands | Medium (3-5d) | ✅ plans/tab-islands-design.md | ✅ 2 phases | ⏳ not started |
+| Split Screen | Medium (3-5d) | ✅ plans/split-screen-design.md | ✅ 2 phases | ⏳ not started |
+| Tab Emojis | Easy (1-2d) | ✅ plans/tab-emojis-design.md | ✅ 1 phase | ⏳ not started |
+| Search in Tabs | Easy (1-2d) | ✅ plans/search-in-tabs-design.md | ✅ 1 phase | ⏳ not started |
+| Ad Blocker | Medium (3-5d) | ✅ plans/ad-blocker-design.md | ✅ 2 phases | ⏳ not started |
+| Tab Snoozing | Medium (3-5d) | ✅ plans/tab-snoozing-design.md | ✅ 2 phases | ⏳ not started |
+| Private Browsing | Easy (1-2d) | ✅ plans/private-browsing-design.md | ✅ 1 phase | ⏳ not started |
 
 ---
 
-## Actief bezig
+## Actively In Progress
 
-> Niets actief — wachten op Robin's keuze voor eerste feature.
+> Nothing active — waiting for Robin's choice for the first feature.
 
 ---
 
-## Backlog (later)
+## Backlog (Later)
 
-| Feature | Prio | Afhankelijk van |
+| Feature | Priority | Depends on |
 |---------|------|----------------|
-| Tracker Blocker (actief) | 🟡 MED | — |
-| Security Badges adresbalk | 🟡 MED | — |
+| Tracker Blocker (active) | 🟡 MED | — |
+| Security Badges address bar | 🟡 MED | — |
 | Tab Traces (recency glow) | 🟡 MED | — |
 | Duplicate Tabs Highlighter | 🟡 MED | — |
 | Tab Preview on Hover | 🟡 MED | — |
@@ -86,26 +86,26 @@ Claude Code werkt dit bij na elke fase. Kees kopieert de commit naar ROADMAP.md.
 
 ---
 
-## Niet bouwen ❌
+## Do Not Build ❌
 
 Lucid Mode • Facebook Messenger • VK • Crypto Wallet • Cashback • Flow (cross-device) • Speed Dial • Extensions sidebar • Music Player
 
 ---
 
-## Voltooide Features
+## Completed Features
 
-| Feature | Afgerond | Commits |
+| Feature | Completed | Commits |
 |---------|----------|---------|
-| Opera research + gap analyse | 2026-02-28 | 488029e |
+| Opera research + gap analysis | 2026-02-28 | 488029e |
 | Project management setup | 2026-02-28 | 488029e |
-| Alle design + impl docs (10 features) | 2026-02-28 | cfa0e1b |
-| Cross-device Sync (SyncManager) — fase 1 | 2026-03-01 | ✅ |
+| All design + implementation docs (10 features) | 2026-02-28 | cfa0e1b |
+| Cross-device Sync (SyncManager) — phase 1 | 2026-03-01 | ✅ |
 
 ---
 
-## Regels
+## Rules
 
-- Statuswaarden: ✅ klaar · ⏳ niet gestart · 🔴 actief · ❌ geblokkeerd · 🚫 geannuleerd
-- Robin beslist prio-volgorde
-- Kees werkt bij na elke fase
-- Nooit regelnummers — altijd functienamen
+- Status values: ✅ done · ⏳ not started · 🔴 active · ❌ blocked · 🚫 canceled
+- Robin decides priority order
+- Kees updates after each phase
+- Never line numbers — always function names

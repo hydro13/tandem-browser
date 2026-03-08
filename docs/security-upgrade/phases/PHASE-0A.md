@@ -19,7 +19,7 @@ Same 5 files listed above.
 
 ### 0A.1 Merge and move KNOWN_TRACKERS
 1. Read the `KNOWN_TRACKERS` Set in both `outbound-guard.ts` and `content-analyzer.ts`
-2. Create a single merged Set (union of all entries from both) in `types.ts` as an exported constant
+2. Create a single merged Set (union or all entries from both) in `types.ts` as an exported constant
 3. Replace the local Set in `outbound-guard.ts` with an import from `types.ts`
 4. Replace the local Set in `content-analyzer.ts` with an import from `types.ts`
 5. Delete the old local definitions

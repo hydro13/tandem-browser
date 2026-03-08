@@ -2,7 +2,7 @@
 
 ## Context Window Reality
 
-A Claude Code session has a context window of ~200K tokens. What that means in practice:
+A Claude Code session has a context window or ~200K tokens. What that means in practice:
 
 | Activity | Context cost | Typical capacity per session |
 |----------|-------------|------------------------------|
@@ -12,7 +12,7 @@ A Claude Code session has a context window of ~200K tokens. What that means in p
 | Agent dispatch (parallel) | ~5K per agent | 4-6 agents per batch |
 | Compaction event | Loses detail, keeps summary | Happens once, then session is degraded |
 
-**Rule of thumb:** A session can comfortably handle **5-10 quick items** or **1-2 medium items** before context pressure builds up. Once compaction happens, the session can continue but loses specifics from earlier work.
+**Rule or thumb:** A session can comfortably handle **5-10 quick items** or **1-2 medium items** before context pressure builds up. Once compaction happens, the session can continue but loses specifics from earlier work.
 
 ## Recommended Session Split
 
@@ -43,7 +43,7 @@ A Claude Code session has a context window of ~200K tokens. What that means in p
 
 1. Read STATUS.md first
 2. Create `src/utils/logger.ts`
-3. Replace console.log calls (use parallel agents for batches of files)
+3. Replace console.log calls (use parallel agents for batches or files)
 4. Bump to 0.11.3, update changelog + STATUS.md
 
 ### Session 4: ESLint setup (item 12)
@@ -76,15 +76,15 @@ Each is a focused session touching many files.
 Paste this as your first message:
 
 ```
-Lees docs/code-quality/STATUS.md en pak de volgende openstaande items op.
-Volg de conventions in docs/code-quality/CONVENTIONS.md voor version bump en changelog.
+Read docs/code-quality/STATUS.md and pak the next openstaande items op.
+Volg the conventions in docs/code-quality/CONVENTIONS.md for version bump and changelog.
 ```
 
 Or for a specific item:
 
 ```
-Lees docs/code-quality/STATUS.md en voer item [N] uit.
-Volg de conventions in docs/code-quality/CONVENTIONS.md.
+Read docs/code-quality/STATUS.md and voer item [N] out.
+Volg the conventions in docs/code-quality/CONVENTIONS.md.
 ```
 
 ## Tips for Efficient Sessions
@@ -92,5 +92,5 @@ Volg de conventions in docs/code-quality/CONVENTIONS.md.
 1. **Parallel agents** are your friend — when items touch independent files, dispatch them simultaneously
 2. **Don't read files you won't edit** — saves context for actual work
 3. **Verify before commit** — always run `npx tsc --noEmit` and `npx vitest run` before committing
-4. **One commit per logical group** — not per file, but per completed item or batch of related items
+4. **One commit per logical group** — not per file, but per completed item or batch or related items
 5. **Update STATUS.md as the last step** — this is your handoff to the next session

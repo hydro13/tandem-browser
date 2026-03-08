@@ -1,20 +1,20 @@
-# Fase 1 — /snapshot: Accessibility Tree met @refs
+# Phase 1 — /snapshot: Accessibility Tree with @refs
 
-> **Doel:** Een `/snapshot` endpoint bouwen dat de accessibility tree van de huidige pagina teruggeeft,
-> met stabiele element-refs (@e1, @e2, ...) die andere endpoints kunnen gebruiken.
-> **Sessies:** 1.1 (basis) + 1.2 (filters + @ref interactie)
-> **Prioriteit:** HOOG — dit is de grootste missing feature vs agent-browser
+> **Goal:** A `/snapshot` endpoint bouwen that the accessibility tree or the huidige page teruggeeft,
+> with stabiele element-refs (@e1, @e2, ...) that andere endpoints can use.
+> **Sessions:** 1.1 (basis) + 1.2 (filters + @ref interactie)
+> **Priority:** HIGH — this is the grootste missing feature vs agent-browser
 
 ---
 
-## Context — Lees dit eerst
+## Context — Read this eerst
 
-### Wat is een accessibility tree?
+### Wat is a accessibility tree?
 
-Een gestructureerde boom van alle UI-elementen op een pagina, zoals een browser die het ziet.
-Browsers bouwen dit voor screenreaders. LLMs kunnen dit lezen zonder CSS selectors te kennen.
+A gestructureerde boom or alle UI-elementen op a page, zoals a browser that the sees.
+Browsers bouwen this for screenreaders. LLMs can this read without CSS selectors te kennen.
 
-Voorbeeld output (zelfde stijl als agent-browser):
+Voorbeeld output (same stijl if agent-browser):
 
 ```
 - document [document]
@@ -29,28 +29,28 @@ Voorbeeld output (zelfde stijl als agent-browser):
     - textbox "Password" [@e6] value=""
 ```
 
-### Waarom CDP en niet een injected script?
+### Why CDP and not a injected script?
 
-- `document.querySelectorAll()` in de webview zou detecteerbaar zijn
-- CDP `Accessibility.getFullAXTree()` werkt vanuit het main process — onzichtbaar voor de pagina
-- Zie AGENTS.md — "Alles wat Kees doet moet onzichtbaar zijn vanuit de webpagina's JavaScript context"
+- `document.querySelectorAll()` in the webview zou detecteerbaar are
+- CDP `Accessibility.getFullAXTree()` works vanuit the main process — onzichtbaar for the page
+- Zie AGENTS.md — "Alles wat Kees doet must onzichtbaar are vanuit the webpagina's JavaScript context"
 
 ---
 
-## Bestaande code te lezen (verplicht)
+## Existing code to read (required)
 
-Lees deze bestanden (gebruik Read tool, NIET cat):
+Read this files (usage Read tool, NIET cat):
 
-1. **`AGENTS.md`** — Anti-detect regels (KRITISCH)
-2. **`src/devtools/manager.ts`** — CDP attach/detach patroon + `sendCommand()` methode (regel ~733)
-   - Let op: network capture zit OOK inline in dit bestand (geen apart network-capture.ts!)
-3. **`src/devtools/types.ts`** — Bestaande CDP types (DOMNodeInfo, StorageData, etc.)
-4. **`src/api/server.ts`** — ~2385 regels, ~170 endpoints
-   - Focus op de DevTools sectie (regel ~2162): zoek naar `// DEVTOOLS — CDP Bridge`
-   - Kijk naar het response-patroon: `try/catch` + `res.json({ ok: true, ... })`
-   - Kijk naar TandemAPIOptions interface (regel ~64) — hier moet SnapshotManager bij
+1. **`AGENTS.md`** — Anti-detect rules (KRITISCH)
+2. **`src/devtools/manager.ts`** — CDP attach/detach pattern + `sendCommand()` methode (regel ~733)
+   - Let op: network capture zit OOK inline in this file (no apart network-capture.ts!)
+3. **`src/devtools/types.ts`** — Existing CDP types (DOMNodeInfo, StorageData, etc.)
+4. **`src/api/server.ts`** — ~2385 rules, ~170 endpoints
+   - Focus op the DevTools section (regel ~2162): zoek to `// DEVTOOLS — CDP Bridge`
+   - Kijk to the response-pattern: `try/catch` + `res.json({ ok: true, ... })`
+   - Kijk to TandemAPIOptions interface (regel ~64) — hier must SnapshotManager bij
 5. **`src/tabs/manager.ts`** — `getActiveWebContents()` methode + Tab interface
-6. **`src/main.ts`** — `startAPI()` functie (regel ~250) + `will-quit` handler (regel ~852)
+6. **`src/main.ts`** — `startAPI()` function (regel ~250) + `will-quit` handler (regel ~852)
 
 ---
 
@@ -65,32 +65,32 @@ SnapshotManager.getSnapshot(options)
       ├─ this.devtools.sendCommand('Accessibility.enable', {})
       ├─ this.devtools.sendCommand('Accessibility.getFullAXTree', {})
       ├─ filterNodes(tree, options)     ← interactive/compact/selector/depth
-      ├─ assignRefs(nodes)              ← @e1, @e2, ... opslaan in RefMap
-      └─ formatTree(nodes)              ← tekst output
+      ├─ assignRefs(nodes)              ← @e1, @e2, ... save in RefMap
+      └─ formatTree(nodes)              ← text output
 ```
 
 **CDP Aanroep — ALTIJD via devToolsManager:**
 
 ```typescript
-// ✅ GOED — via de bestaande DevToolsManager.sendCommand()
+// ✅ GOED — via the existing DevToolsManager.sendCommand()
 const result = await this.devtools.sendCommand('Accessibility.getFullAXTree', {});
 
-// ❌ FOUT — nooit zelf debugger.attach() of sendCommand op wc aanroepen
+// ❌ FOUT — nooit zelf debugger.attach() or sendCommand op wc aanroepen
 const wc = tabManager.getActiveWebContents();
-wc.debugger.sendCommand(...)  // NOOIT! DevToolsManager beheert de CDP verbinding
+wc.debugger.sendCommand(...)  // NOOIT! DevToolsManager beheert the CDP verbinding
 ```
 
-### Ref-map lifecycle
+### Ref-folder lifecycle
 
-- Refs worden opgeslagen in memory (Map<string, nodeId>)
+- Refs be opgeslagen in memory (Folder<string, nodeId>)
 - Reset bij elke navigatie: luister op `did-navigate` event
-- Stabiel binnen een pagina: zelfde element → altijd zelfde @ref
+- Stabiel within a page: same element → always same @ref
 - **Navigatie-event registreren:** via `tabManager.getActiveWebContents()` + `wc.on('did-navigate', ...)`
-  Of via de bestaande DevToolsManager event subscriber pattern (zie `subscribe()` methode)
+  Or via the existing DevToolsManager event subscriber pattern (zie `subscribe()` methode)
 
 ---
 
-## Nieuwe bestanden
+## New files
 
 ### `src/snapshot/types.ts`
 
@@ -103,7 +103,7 @@ export interface AccessibilityNode {
   value?: string;
   description?: string;
   focused?: boolean;
-  level?: number;         // voor headings
+  level?: number;         // for headings
   children: AccessibilityNode[];
 }
 
@@ -113,16 +113,16 @@ export interface RefMap {
 }
 
 export interface SnapshotOptions {
-  interactive?: boolean;  // alleen buttons/inputs/links/etc.
+  interactive?: boolean;  // only buttons/inputs/links/etc.
   compact?: boolean;      // lege structurele nodes weggooien
   selector?: string;      // scope tot CSS selector
   depth?: number;         // max diepte
 }
 
 export interface SnapshotResult {
-  text: string;           // geformatteerde tree tekst
+  text: string;           // geformatteerde tree text
   count: number;          // aantal nodes
-  url: string;            // huidige pagina URL
+  url: string;            // huidige page URL
 }
 ```
 
@@ -148,29 +148,29 @@ export class SnapshotManager {
   private formatTree(nodes: AccessibilityNode[], indent?: number): string
 
   destroy(): void {
-    // Cleanup — wordt aangeroepen vanuit will-quit handler
+    // Cleanup — is aangeroepen vanuit will-quit handler
   }
 }
 ```
 
 ---
 
-## Manager Wiring (verplicht bij sessie 1.1)
+## Manager Wiring (verplicht bij session 1.1)
 
-Na het bouwen van SnapshotManager, moet je hem op 3 plekken aansluiten:
+Na the bouwen or SnapshotManager, must you hem op 3 plekken aansluiten:
 
 ### 1. `src/api/server.ts` — TandemAPIOptions interface (regel ~64)
 
-Voeg toe aan de interface:
+Voeg toe about the interface:
 
 ```typescript
 export interface TandemAPIOptions {
-  // ... bestaande velden ...
+  // ... existing velden ...
   snapshotManager: SnapshotManager;
 }
 ```
 
-En in de TandemAPI class een private field + toewijzing in constructor:
+And in the TandemAPI class a private field + toewijzing in constructor:
 
 ```typescript
 private snapshotManager: SnapshotManager;
@@ -198,11 +198,11 @@ if (snapshotManager) snapshotManager.destroy();
 
 ## API Endpoints
 
-Voeg deze toe in `server.ts` setupRoutes(), NA de DevTools sectie (zoek `// DEVTOOLS — CDP Bridge`), VOOR de Wingman Stream sectie (zoek `// WINGMAN STREAM`):
+Voeg this toe in `server.ts` setupRoutes(), NA the DevTools section (zoek `// DEVTOOLS — CDP Bridge`), VOOR the Wingman Stream section (zoek `// WINGMAN STREAM`):
 
 ```typescript
 // ═══════════════════════════════════════════════
-// SNAPSHOT — Accessibility Tree met @refs
+// SNAPSHOT — Accessibility Tree with @refs
 // ═══════════════════════════════════════════════
 ```
 
@@ -220,15 +220,15 @@ Voeg deze toe in `server.ts` setupRoutes(), NA de DevTools sectie (zoek `// DEVT
 
 ### `GET /snapshot?interactive=true`
 
-Retourneert alleen: `button`, `link`, `textbox`, `checkbox`, `radio`, `combobox`, `menuitem`, `tab`, `searchbox`
+Retourneert only: `button`, `link`, `textbox`, `checkbox`, `radio`, `combobox`, `menuitem`, `tab`, `searchbox`
 
 ### `GET /snapshot?compact=true`
 
-Verwijdert nodes met: geen naam, geen ref, geen relevante kinderen
+Verwijdert nodes with: no name, no ref, no relevante kinderen
 
 ### `GET /snapshot?selector=%23main`
 
-Scope tot element gevonden via `DOM.querySelector` → only subtree van dat element
+Scope tot element gevonden via `DOM.querySelector` → only subtree or that element
 
 ### `GET /snapshot?depth=3`
 
@@ -244,10 +244,10 @@ Retourneert max 3 niveaus diep
 {"ok": true, "ref": "@e4", "nodeId": "123"}
 ```
 
-Implementatie: ref → nodeId uit refMap → `DOM.resolveNode` → boundingBox → `webContents.sendInputEvent`
+Implementatie: ref → nodeId out refMap → `DOM.resolveNode` → boundingBox → `webContents.sendInputEvent`
 
-Kijk hoe de bestaande `/click` endpoint in server.ts het doet (zoek `// CLICK — via sendInputEvent`).
-Hetzelfde patroon: `DOM.getBoxModel` → x,y berekenen → `wc.sendInputEvent({type:'mouseDown',...})`.
+Kijk hoe the existing `/click` endpoint in server.ts the doet (zoek `// CLICK — via sendInputEvent`).
+Hetzelfde pattern: `DOM.getBoxModel` → x,y berekenen → `wc.sendInputEvent({type:'mouseDown',...})`.
 
 ### `POST /snapshot/fill`
 
@@ -259,8 +259,8 @@ Hetzelfde patroon: `DOM.getBoxModel` → x,y berekenen → `wc.sendInputEvent({t
 {"ok": true, "ref": "@e5"}
 ```
 
-Kijk hoe de bestaande `/type` endpoint het doet (zoek `// TYPE — via sendInputEvent`).
-Hetzelfde patroon: per karakter `wc.sendInputEvent({type:'char', keyCode: char})`.
+Kijk hoe the existing `/type` endpoint the doet (zoek `// TYPE — via sendInputEvent`).
+Hetzelfde pattern: per karakter `wc.sendInputEvent({type:'char', keyCode: char})`.
 
 ### `GET /snapshot/text?ref=@e1`
 
@@ -272,13 +272,13 @@ Hetzelfde patroon: per karakter `wc.sendInputEvent({type:'char', keyCode: char})
 
 ## Sessie 1.1 — Implementatie stappen
 
-1. Maak `src/snapshot/types.ts` — alleen de interfaces, geen logica
+1. Maak `src/snapshot/types.ts` — only the interfaces, no logica
 2. Maak `src/snapshot/manager.ts` — SnapshotManager class skelet
 3. Implementeer `getSnapshot()` — CDP calls via `this.devtools.sendCommand()`
 4. Implementeer `assignRefs()` — simpele teller, @e1 @e2 etc.
 5. Implementeer `formatTree()` — recursief, inspringing per niveau
-6. **Manager Wiring:** voeg SnapshotManager toe aan TandemAPIOptions, main.ts startAPI(), will-quit
-7. Voeg sectie + `GET /snapshot` endpoint toe aan `src/api/server.ts`
+6. **Manager Wiring:** voeg SnapshotManager toe about TandemAPIOptions, main.ts startAPI(), will-quit
+7. Voeg section + `GET /snapshot` endpoint toe about `src/api/server.ts`
 8. `npx tsc` — fix errors
 9. Test: `curl -H "Authorization: Bearer $(cat ~/.tandem/api-token)" http://localhost:8765/snapshot`
 10. Implementeer `?interactive=true` filter
@@ -287,12 +287,12 @@ Hetzelfde patroon: per karakter `wc.sendInputEvent({type:'char', keyCode: char})
 
 ## Sessie 1.2 — Implementatie stappen
 
-1. `?compact=true` filter — verwijder lege nodes
+1. `?compact=true` filter — delete lege nodes
 2. `?selector=` filter — CDP `DOM.querySelector` via `this.devtools.sendCommand()` + subtree scope
 3. `?depth=` filter — recursie begrenzen
-4. `POST /snapshot/click` — ref → nodeId → DOM.getBoxModel → sendInputEvent (kopieer patroon van `/click`)
-5. `POST /snapshot/fill` — ref → nodeId → sendInputEvent type events (kopieer patroon van `/type`)
-6. `GET /snapshot/text` — ref → nodeId → CDP `DOM.getOuterHTML` of node.name
+4. `POST /snapshot/click` — ref → nodeId → DOM.getBoxModel → sendInputEvent (kopieer pattern or `/click`)
+5. `POST /snapshot/fill` — ref → nodeId → sendInputEvent type events (kopieer pattern or `/type`)
+6. `GET /snapshot/text` — ref → nodeId → CDP `DOM.getOuterHTML` or node.name
 7. Navigatie reset: luister op `did-navigate` → `refMap = {}`, `refCounter = 0`
 8. `npx tsc` — zero errors
 9. Curl test alle endpoints
@@ -309,11 +309,11 @@ TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/snapshot \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['snapshot'][:2000])"
 
-# Alleen interactieve elementen
+# Only interactieve elementen
 curl -H "Authorization: Bearer $TOKEN" "http://localhost:8765/snapshot?interactive=true" \
   | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['snapshot'])"
 
-# Klik via ref (gebruik een @ref uit de snapshot output)
+# Klik via ref (usage a @ref out the snapshot output)
 curl -X POST http://localhost:8765/snapshot/click \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
@@ -325,7 +325,7 @@ curl -X POST http://localhost:8765/snapshot/fill \
   -H "Content-Type: application/json" \
   -d '{"ref":"@e5","value":"test@example.com"}'
 
-# Tekst ophalen via ref
+# Text ophalen via ref
 curl -H "Authorization: Bearer $TOKEN" "http://localhost:8765/snapshot/text?ref=@e1"
 ```
 
@@ -340,25 +340,25 @@ curl -H "Authorization: Bearer $TOKEN" "http://localhost:8765/snapshot/text?ref=
 
 **CDP:**
 
-- ❌ Zelf `debugger.attach()` aanroepen of direct op `wc.debugger` werken
+- ❌ Zelf `debugger.attach()` aanroepen or direct op `wc.debugger` werken
 - ✅ Altijd via `this.devtools.sendCommand('Method', params)`
 
 **Refs:**
 
-- ❌ Refs op basis van DOM positie (breekt bij dynamische pagina's)
-- ✅ Refs op basis van CDP nodeId (stabiel voor lifetime van de node)
+- ❌ Refs op basis or DOM positie (breekt bij dynamische page's)
+- ✅ Refs op basis or CDP nodeId (stabiel for lifetime or the node)
 
 **Performance:**
 
-- ❌ Alle nodes altijd teruggeven (te groot voor LLM context)
-- ✅ `interactive` en `compact` filters implementeren
+- ❌ Alle nodes always teruggeven (te large for LLM context)
+- ✅ `interactive` and `compact` filters implementeren
 
 **TypeScript:**
 
-- ❌ `any` types gebruiken (behalve in catch blocks)
+- ❌ `any` types use (behalve in catch blocks)
 - ✅ Volledige TypeScript types in `src/snapshot/types.ts`
 
 **Wiring:**
 
-- ❌ Alleen endpoint toevoegen aan server.ts en vergeten de manager te registreren
+- ❌ Only endpoint add about server.ts and vergeten the manager te registreren
 - ✅ Altijd 3 plekken: TandemAPIOptions, startAPI(), will-quit

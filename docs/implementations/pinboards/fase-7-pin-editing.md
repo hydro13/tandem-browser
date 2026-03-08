@@ -1,27 +1,27 @@
-# Fase 7 — Pin Editing: Hover Actions + Edit Modal
+# Phase 7 — Pin Editing: Hover Actions + Edit Modal
 
-> **Afhankelijk van:** Fase 1-6 ✅
-> **Parallel met:** Hydra Editor IIFE build (fase A)
-
----
-
-## Doel
-
-Pins kunnen editen zoals Opera doet: hover over een kaart → "✏️ Edit" / "🗑️ Remove" popup.
-Klik Edit → inline edit form met Headline + tekst.
+> **Depends on:** Phase 1-6 ✅
+> **Parallel with:** Hydra Editor IIFE build (phase A)
 
 ---
 
-## Deel 1: Backend — PUT endpoint voor item updates
+## Goal
+
+Pins can editen zoals Opera doet: hover over a card → "✏️ Edit" / "🗑️ Remove" popup.
+Klik Edit → inline edit form with Headline + text.
+
+---
+
+## Deel 1: Backend — PUT endpoint for item updates
 
 ### In `src/api/routes/pinboards.ts`
 
-Het PUT endpoint voor items bestaat al:
+The PUT endpoint for items exists already:
 ```
 PUT /pinboards/:id/items/:itemId  →  updateItem(boardId, itemId, { title, note, content })
 ```
 
-Breid `updateItem()` in `src/pinboards/manager.ts` uit om ook `title` en `description` te updaten:
+Breid `updateItem()` in `src/pinboards/manager.ts` out to also `title` and `description` te updaten:
 
 ```typescript
 updateItem(boardId: string, itemId: string, updates: {
@@ -33,8 +33,8 @@ updateItem(boardId: string, itemId: string, updates: {
 }): PinboardItem | null
 ```
 
-Voeg `title`, `description`, `thumbnail` toe aan de updates naast `note` en `content`.
-De huidige implementatie updatet alleen `title`, `note`, `content` — check of `description` ook al werkt.
+Voeg `title`, `description`, `thumbnail` toe about the updates next to `note` and `content`.
+The huidige implementatie updatet only `title`, `note`, `content` — check or `description` also already works.
 
 ---
 
@@ -42,8 +42,8 @@ De huidige implementatie updatet alleen `title`, `note`, `content` — check of 
 
 ### CSS: hover overlay op `.pb-card`
 
-Bij hover over een kaart: rechtsboven een kleine popup met Edit + Remove knoppen.
-Opera-stijl: verschijnt bij hover, verdwijnt als muis weggaat.
+Bij hover over a card: rechtsboven a kleine popup with Edit + Remove knoppen.
+Opera-stijl: appears bij hover, disappears if muis weggaat.
 
 ```css
 .pb-card-actions {
@@ -76,7 +76,7 @@ Opera-stijl: verschijnt bij hover, verdwijnt als muis weggaat.
 .pb-card-action-btn.danger:hover { background: rgba(239,68,68,0.2); color: #ef4444; }
 ```
 
-### HTML: voeg actions div toe aan elke kaart in `pbRenderItems()`
+### HTML: voeg actions div toe about elke card in `pbRenderItems()`
 
 ```html
 <div class="pb-card-actions">
@@ -85,7 +85,7 @@ Opera-stijl: verschijnt bij hover, verdwijnt als muis weggaat.
 </div>
 ```
 
-Verwijder de bestaande "×" delete button — vervang door de nieuwe Remove knop in de actions popup.
+Delete the existing "×" delete button — vervang door the new Remove knop in the actions popup.
 
 ### Event handlers in `pbRenderItems()`
 
@@ -100,12 +100,12 @@ container.querySelectorAll('.pb-edit-btn').forEach(btn => {
   });
 });
 
-// Remove buttons (vervang bestaande delete handler)
+// Remove buttons (vervang existing delete handler)
 container.querySelectorAll('.pb-remove-btn').forEach(btn => {
   btn.addEventListener('click', async (e) => {
     e.stopPropagation();
     const itemId = btn.dataset.itemId;
-    // ... bestaande delete logica
+    // ... existing delete logica
   });
 });
 ```
@@ -114,18 +114,18 @@ container.querySelectorAll('.pb-remove-btn').forEach(btn => {
 
 ## Deel 3: Edit Modal
 
-### Functie `pbOpenEditModal(item, boardId)`
+### Function `pbOpenEditModal(item, boardId)`
 
-Toont een modal overlay met:
+Shows a modal overlay with:
 - **Headline** input (= item.title)
-- **Tekst** textarea (= item.content of item.note)
-- Bestaande preview (thumbnail als die er is)
-- Opslaan / Annuleren knoppen
+- **Text** textarea (= item.content or item.note)
+- Existing preview (thumbnail if that er is)
+- Save / Annuleren knoppen
 
 ```javascript
 async function pbOpenEditModal(item, boardId) {
-  // Gebruik showPrompt/showConfirm patroon NIET — bouw custom modal
-  // Voeg een overlay div toe aan body
+  // Usage showPrompt/showConfirm pattern NIET — bouw custom modal
+  // Voeg a overlay div toe about body
   const overlay = document.createElement('div');
   overlay.className = 'pb-edit-overlay';
   overlay.innerHTML = `
@@ -170,7 +170,7 @@ async function pbOpenEditModal(item, boardId) {
 
 ---
 
-## CSS voor edit modal/overlay
+## CSS for edit modal/overlay
 
 ```css
 .pb-edit-overlay {
@@ -227,11 +227,11 @@ async function pbOpenEditModal(item, boardId) {
 ## Acceptatiecriteria
 
 ```
-1. Hover over pin kaart → "✏️ Edit" + "🗑️ Remove" zichtbaar rechtsboven
-2. Klik Edit → modal opent met huidige titel en tekst
-3. Wijzigen + Save → pin geüpdated, board ververst
-4. Klik Remove → pin verwijderd (bestaande delete logica)
-5. Klik buiten modal of Cancel → sluit zonder opslaan
+1. Hover over pin card → "✏️ Edit" + "🗑️ Remove" visible rechtsboven
+2. Klik Edit → modal opens with huidige title and text
+3. Change + Save → pin geüpdated, board ververst
+4. Klik Remove → pin removed (existing delete logica)
+5. Klik buiten modal or Cancel → closes without save
 6. npx tsc — zero errors
 ```
 
@@ -241,18 +241,18 @@ async function pbOpenEditModal(item, boardId) {
 
 ### Bij start:
 ```
-1. Lees docs/implementations/pinboards/LEES-MIJ-EERST.md
-2. Lees dit bestand volledig
+1. Read docs/implementations/pinboards/LEES-MIJ-EERST.md
+2. Read this file fully
 3. npx tsc && git status
-4. Lees shell/index.html → zoek pbRenderItems() en de bestaande delete handler
-5. Lees shell/css/main.css → zoek pb-card CSS sectie
+4. Read shell/index.html → zoek pbRenderItems() and the existing delete handler
+5. Read shell/css/main.css → zoek pb-card CSS section
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors
-2. CHANGELOG.md bijwerken
+2. Update CHANGELOG.md
 3. git commit -m "feat: pin hover actions (Edit/Remove) + edit modal"
 4. git push
-5. openclaw system event --text "Done: Pin edit/remove hover actions klaar" --mode now
+5. openclaw system event --text "Done: Pin edit/remove hover actions complete" --mode now
 ```

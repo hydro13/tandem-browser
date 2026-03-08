@@ -3,52 +3,52 @@
 
 ## Methodologie
 
-Volledige broncode gelezen van:
-- Alle 13 security-bestanden in Tandem (`src/security/`)
-- De volledige azul-bedrock repo (Go + Python plugin framework, YARA rules, identify pipeline, event systeem)
+Volledige broncode gelezen or:
+- Alle 13 security-files in Tandem (`src/security/`)
+- The full azul-bedrock repo (Go + Python plugin framework, YARA rules, identify pipeline, event system)
 - CyberChef's core architectuur + 25+ security-relevante operations (regexes, file signatures, entropy)
-- Ghidra's analyzer pipeline, BSim fingerprinting engine, call graph, ML classifier, en constraint systeem
+- Ghidra's analyzer pipeline, BSim fingerprinting engine, call graph, ML classifier, and constraint system
 
 ---
 
-## Deel 1: Review van Kees's Rapport
+## Deel 1: Review or Kees's Rapport
 
-Kees heeft goed werk gedaan maar er zijn punten waar ik afwijk of correcties heb:
+Kees has goed werk gedaan but er are punten waar ik afwijk or correcties heb:
 
-### Waar Kees gelijk heeft:
-- **YARA-style rules (#1)** — Correct: ContentAnalyzer gebruikt nu alleen DOM/CSS heuristieken (hidden iframes, forms, mixed content, typosquatting). Er is GEEN statische JavaScript source-analyse. Dit is een gat.
+### Waar Kees gelijk has:
+- **YARA-style rules (#1)** — Correct: `ContentAnalyzer` currently uses only DOM/CSS heuristics (hidden iframes, forms, mixed content, typosquatting). There is NO static JavaScript source analysis. This is a gap.
 - **Trusted MIME whitelist (#2)** — Goed idee, correct geidentificeerd.
-- **Plugin Architecture (#3)** — Het concept is juist, maar Kees schrijft het toe aan Azul terwijl Ghidra's `Analyzer` interface eigenlijk een beter model is.
+- **Plugin Architecture (#3)** — The concept is juist, but Kees schrijft the toe about Azul terwijl Ghidra's `Analyzer` interface eigenlijk a beter model is.
 
-### Waar Kees te kort door de bocht gaat:
+### Waar Kees te kort door the bocht gaat:
 
-**1. De YARA patterns die Kees noemt komen NIET uit Azul's YARA rules.**
-Azul's `yara_rules.yar` bevat 40+ regels voor **bestandstype identificatie** (is dit JavaScript? VBScript? PowerShell?), niet voor **threat detection**. De `code_javascript` YARA rule identificeert of een bestand JavaScript is — met patterns als `eval()`, `ActiveXObject`, `createElement()` — maar scoort geen dreigingsniveau. Kees heeft de Azul-patterns vertaald naar dreigingsregels, wat een goede adaptatie is, maar het is niet "direct overgenomen van Azul."
+**1. The YARA patterns that Kees noemt komen NIET out Azul's YARA rules.**
+Azul's `yara_rules.yar` contains 40+ rules for **file-type identification** (is this JavaScript? VBScript? PowerShell?), not for **threat detection**. The `code_javascript` YARA rule identifies whether a file is JavaScript, with patterns such as `eval()`, `ActiveXObject`, and `createElement()`, but it does not score a threat level. Kees translated the Azul patterns into threat rules, which is a good adaptation, but it is not "directly taken from Azul."
 
-**2. Cross-domain script fingerprinting (#4) — Tandem heeft dit al half.**
-`ScriptGuard` tracked al script URL+hash per domein in de `script_fingerprints` tabel, en detecteert nieuwe scripts op bekende domeinen. Wat ontbreekt is de **cross-domein correlatie** (dezelfde hash op meerdere domeinen). Kees presenteert het alsof het helemaal nieuw moet, maar het is een extensie van bestaande functionaliteit.
+**2. Cross-domain script fingerprinting (#4) — Tandem has this already half.**
+`ScriptGuard` tracked already script URL+hash per domain in the `script_fingerprints` tabel, and detecteert new scripts op bekende domains. Wat ontbreekt is the **cross-domain correlatie** (the same hash op multiple domains). Kees presenteert the alsof the helemaal new must, but the is a extensie or existing functionaliteit.
 
 **3. CyberChef pipeline (#5) — Verkeerde metafoor.**
-CyberChef is een **data transformatie** pipeline (input -> decode -> extract -> output). Tandem's security is een **event-driven decision** pipeline (request -> check -> score -> allow/block). Je "transformeert" geen pagina door security operations — je analyseert en beslist. De CyberChef regexes en detectie-logica zijn waardevol, maar de pipeline-architectuur zelf past niet.
+CyberChef is a **data transformatie** pipeline (input -> decode -> extract -> output). Tandem's security is a **event-driven decision** pipeline (request -> check -> score -> allow/block). You "transformeert" no page door security operations — you analyseert and beslist. The CyberChef regexes and detection-logica are waardevol, but the pipeline-architectuur zelf past not.
 
-**4. Ghidra (#6) — Kees mist het meest waardevolle.**
-Kees zegt "call graphs voor BehaviorMonitor, ver weg." Maar het werkelijk waardevolle uit Ghidra is **BSim's iteratieve graph-hashing** voor obfuscatie-resistente fingerprints. Dit is een concreet algoritme dat vertaalbaar is naar JavaScript AST-analyse. Daarnaast: Ghidra's `AnalysisPriority` model (confidence-gewogen pipeline) en de Random Forest ML classifier zijn direct toepasbaar.
+**4. Ghidra (#6) — Kees mist the meest waardevolle.**
+Kees zegt "call graphs for BehaviorMonitor, ver weg." Maar the werkelijk waardevolle out Ghidra is **BSim's iteratieve graph-hashing** for obfuscatie-resistente fingerprints. Dit is a concreet algoritme that vertaalbaar is to JavaScript AST-analyse. Daarnaast: Ghidra's `AnalysisPriority` model (confidence-gewogen pipeline) and the Random Forest ML classifier are direct toepasbaar.
 
-### Wat Kees helemaal gemist heeft:
+### Wat Kees helemaal gemist has:
 
-1. **Shannon Entropy analyse** (CyberChef) — High entropy in script content = sterke obfuscatie indicator. Tandem meet dit nergens.
-2. **CyberChef's Magic auto-detect systeem** — Speculatieve executie die encoding/obfuscatie automatisch herkent.
-3. **CyberChef's battle-tested regex patterns** — URL, domein, IP, email extractie regexes gebruikt door de hele security community.
-4. **Bestaande bugs/zwakheden in Tandem** die de reference repos blootleggen (duplicate lijsten, cookie_count=0, correlateEvents() nooit aangeroepen, geen blocklist scheduling).
+1. **Shannon Entropy analyse** (CyberChef) — High entropy in script content = sterke obfuscatie indicator. Tandem meet this nergens.
+2. **CyberChef's Magic auto-detect system** — Speculatieve executie that encoding/obfuscatie automatisch herkent.
+3. **CyberChef's battle-tested regex patterns** — URL, domain, IP, email extractie regexes uses door the hele security community.
+4. **Existing bugs/zwakheden in Tandem** that the reference repos blootleggen (duplicate lijsten, cookie_count=0, correlateEvents() nooit aangeroepen, no blocklist scheduling).
 5. **Azul's depth-limiting** — Bescherming tegen recursive extraction bombs.
 
 ---
 
 ## Deel 2: Tandem's Huidige Staat
 
-### 5-Fase Security Systeem
+### 5-Phase Security System
 
-| Fase | Modules | Werkt op |
+| Phase | Modules | Works op |
 |------|---------|----------|
 | 1 - Network | Guardian + NetworkShield | Elke HTTP request (sync, <5ms) |
 | 2 - Outbound | OutboundGuard | POST/PUT/PATCH requests |
@@ -56,9 +56,9 @@ Kees zegt "call graphs voor BehaviorMonitor, ver weg." Maar het werkelijk waarde
 | 4 - AI Bridge | GatekeeperWebSocket | Async AI agent decisies |
 | 5 - Learning | EvolutionEngine + ThreatIntel + BlocklistUpdater | Baselines + rapportage |
 
-### Bestanden
+### Files
 
-| Bestand | Functie |
+| File | Function |
 |---------|---------|
 | `src/security/security-manager.ts` | Orchestrator (32 API routes, lifecycle management) |
 | `src/security/security-db.ts` | SQLite persistence (6 tabellen, 40+ prepared statements) |
@@ -76,18 +76,18 @@ Kees zegt "call graphs voor BehaviorMonitor, ver weg." Maar het werkelijk waarde
 
 ### Sterke punten
 - Layered defense — vijf lagen vangen elk andere dreigingsvectoren
-- Non-blocking AI integration — Gatekeeper is async, geen latency impact
-- CDP-level monitor injection — onzichtbaar voor pagina-scripts via `Runtime.addBinding`
+- Non-blocking AI integration — Gatekeeper is async, no latency impact
+- CDP-level monitor injection — onzichtbaar for page-scripts via `Runtime.addBinding`
 - Asymmetrische trust — langzaam omhoog (+1/visit), snel omlaag (-10/-15 op anomalie)
 - Prepared statement performance — alle DB hot paths pre-compiled
 
 ### Zwakheden
-1. **Geen statische script-analyse** — ScriptGuard tracked scripts maar analyseert de inhoud niet
-2. **Duplicate hardcoded lijsten** — KNOWN_TRACKERS en URL_LIST_SAFE_DOMAINS elk in 2 bestanden
-3. **cookie_count altijd 0** — veld bestaat maar wordt nooit gevuld
-4. **correlateEvents() nooit aangeroepen** — code bestaat maar wordt niet getriggerd
-5. **Geen blocklist update scheduling** — moet handmatig via API getriggerd worden
-6. **Monitor injection race condition** — scripts die laden voor CDP command compleet is worden gemist
+1. **No statische script-analyse** — ScriptGuard tracked scripts but analyseert the inhoud not
+2. **Duplicate hardcoded lijsten** — KNOWN_TRACKERS and URL_LIST_SAFE_DOMAINS elk in 2 files
+3. **cookie_count always 0** — field exists but is nooit gevuld
+4. **correlateEvents() nooit aangeroepen** — code exists but is not getriggerd
+5. **No blocklist update scheduling** — must handmatig via API getriggerd be
+6. **Monitor injection race condition** — scripts that laden for CDP command compleet is be gemist
 
 ---
 
@@ -95,51 +95,51 @@ Kees zegt "call graphs voor BehaviorMonitor, ver weg." Maar het werkelijk waarde
 
 ### HOGE PRIORITEIT
 
-#### 1. Declaratief Rule Systeem voor Script Content Analyse
+#### 1. Declaratief Rule System for Script Content Analyse
 **Bron:** Azul YARA rule structuur (aangepast) + CyberChef check patterns
 **Effort:** 1-2 dagen | **Impact:** Hoog
 
-Rule engine die draait op script source code via CDP `Debugger.getScriptSource`. Bevat compound patterns (bv. `document.cookie` + `fetch()` binnen proximity = critical) naast single patterns. Rules zijn declaratief en uitbreidbaar zonder code-wijzigingen.
+Rule engine that draait op script source code via CDP `Debugger.getScriptSource`. Contains compound patterns (bv. `document.cookie` + `fetch()` within proximity = critical) next to single patterns. Rules are declaratief and uitbreidbaar without code-wijzigingen.
 
 #### 2. Shannon Entropy Check op Script Content
 **Bron:** CyberChef `Entropy.mjs`
 **Effort:** Uur | **Impact:** Medium-Hoog
 
-Vangt geobfusceerde scripts die specifiek ontworpen zijn om regex-rules te ontwijken. Normale JS = 4.5-5.5 bits, obfuscated = 5.8-6.5 bits, encrypted = 7.5-8.0 bits.
+Vangt geobfusceerde scripts that specifiek ontworpen are to regex-rules te ontwijken. Normale JS = 4.5-5.5 bits, obfuscated = 5.8-6.5 bits, encrypted = 7.5-8.0 bits.
 
-#### 3. Trusted Content-Type Whitelist voor OutboundGuard
+#### 3. Trusted Content-Type Whitelist for OutboundGuard
 **Bron:** Azul `trusted_mime.yaml` concept
 **Effort:** Uur | **Impact:** Medium
 
-Skip body scanning voor media uploads (image/*, audio/*, video/*, font/*). NIET voor application/json of x-www-form-urlencoded.
+Skip body scanning for media uploads (image/*, audio/*, video/*, font/*). NIET for application/json or x-www-form-urlencoded.
 
-#### 4. Fix Bestaande Zwakheden
+#### 4. Fix Existing Zwakheden
 **Effort:** 1 dag | **Impact:** Hoog
 
-- Dedupliceer KNOWN_TRACKERS en URL_LIST_SAFE_DOMAINS naar types.ts
+- Dedupliceer KNOWN_TRACKERS and URL_LIST_SAFE_DOMAINS to types.ts
 - Wire cookie_count via Guardian's analyzeResponseHeaders()
-- Auto-trigger correlateEvents() (per 100 events of per uur)
+- Auto-trigger correlateEvents() (per 100 events or per uur)
 - Blocklist update scheduling (setInterval elke 24 uur)
 
 ### MEDIUM PRIORITEIT
 
 #### 5. Cross-Domein Script Correlatie
-**Bron:** Azul feature model + Tandem's bestaande script_fingerprints
+**Bron:** Azul feature model + Tandem's existing script_fingerprints
 **Effort:** 2-3 dagen | **Impact:** Hoog
 
-Extend bestaande fingerprinting met cross-domein lookup: als een script hash verschijnt die ook op geblokkeerde domeinen staat -> automatisch hoge score.
+Extend existing fingerprinting with cross-domain lookup: if a script hash appears that also op geblokkeerde domains staat -> automatisch hoge score.
 
 #### 6. CyberChef Regex Patterns Overnemen
 **Bron:** CyberChef Extract.mjs, ExtractIPAddresses.mjs
 **Effort:** 1-2 dagen | **Impact:** Medium
 
-Battle-tested URL, domein, IP extractie regexes. Inclusief octal IP detectie (evasie techniek).
+Battle-tested URL, domain, IP extractie regexes. Inclusief octal IP detection (evasie techniek).
 
 #### 7. Confidence-Gewogen Pipeline Ordering
 **Bron:** Ghidra AnalysisPriority
 **Effort:** 1 dag | **Impact:** Medium
 
-Numerieke confidence levels per detection type. Blocklist=100, credential exfil=200, heuristic=700, speculative=900. Bepaalt of iets lokaal resolved wordt of naar Gatekeeper AI gaat.
+Numerieke confidence levels per detection type. Blocklist=100, credential exfil=200, heuristic=700, speculative=900. Bepaalt or iets local resolved is or to Gatekeeper AI gaat.
 
 ### LANGE TERMIJN
 
@@ -147,13 +147,13 @@ Numerieke confidence levels per detection type. Blocklist=100, credential exfil=
 **Bron:** Ghidra BSim signature.hh — iteratieve graph hashing
 **Effort:** Week+ | **Impact:** Hoog
 
-Parse JS naar AST (Acorn), hash structurele vorm onafhankelijk van variabelnamen/constanten. Twee semantisch identieke maar syntactisch verschillende obfuscaties produceren dezelfde fingerprint.
+Parse JS to AST (Acorn), hash structurele vorm onafhankelijk or variabelnamen/constanten. Twee semantisch identieke but syntactisch verschillende obfuscaties produceren the same fingerprint.
 
 #### 9. Security Plugin Architectuur
 **Bron:** Ghidra Analyzer interface
 **Effort:** Week+ | **Impact:** Schaalbaarheid
 
-Event-driven, priority-ordered SecurityAnalyzer interface. Community kan analyzers bijdragen als losse bestanden.
+Event-driven, priority-ordered SecurityAnalyzer interface. Community can analyzers bijdragen if losse files.
 
 ---
 
@@ -161,14 +161,14 @@ Event-driven, priority-ordered SecurityAnalyzer interface. Community kan analyze
 
 | # | Wat | Bron | Effort | Impact | Kees? |
 |---|-----|------|--------|--------|-------|
-| 1 | Declaratief rule systeem voor JS content | Azul YARA + eigen | 1-2 dagen | Hoog | Ja, maar te simpel |
+| 1 | Declaratief rule system for JS content | Azul YARA + own | 1-2 dagen | Hoog | Ja, but te simpel |
 | 2 | Shannon entropy check | CyberChef | Uur | Medium-Hoog | Nee |
 | 3 | Trusted Content-Type whitelist | Azul concept | Uur | Medium | Ja |
-| 4 | Fix bestaande zwakheden | Eigen analyse | 1 dag | Hoog | Nee |
-| 5 | Cross-domein script correlatie | Azul + bestaand | 2-3 dagen | Hoog | Deels |
+| 4 | Fix existing zwakheden | Own analyse | 1 dag | Hoog | Nee |
+| 5 | Cross-domain script correlatie | Azul + bestaand | 2-3 dagen | Hoog | Deels |
 | 6 | CyberChef regex patterns overnemen | CyberChef | 1-2 dagen | Medium | Nee |
 | 7 | Confidence-gewogen pipeline | Ghidra | 1 dag | Medium | Nee |
 | 8 | AST-based script fingerprinting | Ghidra BSim | Week+ | Hoog | Nee |
 | 9 | Security plugin architectuur | Ghidra Analyzer | Week+ | Schaal | Verkeerde bron |
 
-**Advies:** #4 + #2 + #3 als quick wins. Dan #1 en #5 als high-impact features. #6 en #7 parallel daarna. #8 als moonshot.
+**Advies:** #4 + #2 + #3 if quick wins. Then #1 and #5 if high-impact features. #6 and #7 parallel after that. #8 if moonshot.

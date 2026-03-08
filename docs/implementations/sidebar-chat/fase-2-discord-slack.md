@@ -1,88 +1,88 @@
-# Fase 2 — Discord + Slack Panels
+# Phase 2 — Discord + Slack Panels
 
 > **Feature:** Sidebar Chat Clients
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Fase 1 klaar (sidebar framework + WhatsApp werkt)
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** Phase 1 complete (sidebar framework + WhatsApp works)
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Voeg Discord en Slack toe als sidebar panels. Hetzelfde patroon als WhatsApp (fase 1), maar met service-specifieke aandachtspunten: Discord kan CAPTCHAs tonen bij eerste login, en Slack heeft workspace-specifieke URLs die Robin moet kunnen configureren.
+Voeg Discord and Slack toe if sidebar panels. Hetzelfde pattern if WhatsApp (phase 1), but with service-specific aandachtspunten: Discord can CAPTCHAs tonen bij first login, and Slack has workspace-specific URLs that Robin must can configureren.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `LEES-MIJ-EERST.md` (deze map) | — (lees volledig) | Context en regels |
-| `src/sidebar/manager.ts` | `class SidebarManager`, `DEFAULT_SERVICES`, `SidebarConfig` | Bestaande sidebar manager uit fase 1 |
-| `shell/index.html` | `// === SIDEBAR CHAT ===` | Bestaande sidebar HTML uit fase 1 |
-| `shell/js/main.js` of `shell/js/sidebar.js` | Sidebar click handlers, `toggleSidebarPanel()` | Bestaande sidebar JS uit fase 1 |
-| `shell/css/sidebar.css` | `.sidebar-icon`, `.sidebar-panel-container` | Bestaande sidebar styling |
+| `LEES-MIJ-EERST.md` (this folder) | — (read fully) | Context and rules |
+| `src/sidebar/manager.ts` | `class SidebarManager`, `DEFAULT_SERVICES`, `SidebarConfig` | Existing sidebar manager out phase 1 |
+| `shell/index.html` | `// === SIDEBAR CHAT ===` | Existing sidebar HTML out phase 1 |
+| `shell/js/main.js` or `shell/js/sidebar.js` | Sidebar click handlers, `toggleSidebarPanel()` | Existing sidebar JS out phase 1 |
+| `shell/css/sidebar.css` | `.sidebar-icon`, `.sidebar-panel-container` | Existing sidebar styling |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Verifieer dat Discord en Slack al in de service-definitie staan
+### Step 1: Verifieer that Discord and Slack already in the service-definitie stand
 
-**Wat:** In fase 1 zijn alle 6 services al gedefinieerd in `DEFAULT_SERVICES` in `SidebarManager`. Discord (`persist:discord`) en Slack (`persist:slack`) staan er al in. Verifieer dat de icon strip al knoppen heeft voor Discord en Slack.
+**Wat:** In phase 1 are alle 6 services already gedefinieerd in `DEFAULT_SERVICES` in `SidebarManager`. Discord (`persist:discord`) and Slack (`persist:slack`) stand er already in. Verifieer that the icon strip already knoppen has for Discord and Slack.
 
-**Bestand:** `src/sidebar/manager.ts`
+**File:** `src/sidebar/manager.ts`
 
-**Zoek naar:** `DEFAULT_SERVICES` array
+**Zoek to:** `DEFAULT_SERVICES` array
 
-Discord en Slack moeten hier al staan:
+Discord and Slack must hier already stand:
 ```typescript
 { id: 'discord', name: 'Discord', url: 'https://discord.com/app', partition: 'persist:discord', icon: '🎮' },
 { id: 'slack', name: 'Slack', url: 'https://app.slack.com', partition: 'persist:slack', icon: '💼' },
 ```
 
-Als het goed is hoeft hier niets aan — de sidebar infrastructure uit fase 1 ondersteunt al meerdere services. Het klikken op Discord/Slack iconen zou al een panel moeten openen.
+If the goed is hoeft hier nothing in it — the sidebar infrastructure out phase 1 ondersteunt already multiple services. The clicking op Discord/Slack icons zou already a panel must openen.
 
-### Stap 2: Discord-specifieke aanpassingen
+### Step 2: Discord-specific aanpassingen
 
-**Wat:** Discord heeft twee aandachtspunten:
+**Wat:** Discord has twee aandachtspunten:
 
-1. **Minimum breedte:** Discord's web app heeft een minimum breedte van ~420px. Als het panel smaller is, breekt de layout. Zorg dat het panel minimaal 420px breed is wanneer Discord actief is.
+1. **Minimum width:** Discord's web app has a minimum width or ~420px. If the panel smaller is, breekt the layout. Zorg that the panel minimum 420px breed is wanneer Discord actief is.
 
-2. **CAPTCHA bij eerste login:** Discord kan een hCaptcha tonen bij login vanuit een nieuw browser profiel. Dit is een eenmalig probleem — na succesvolle login wordt de sessie opgeslagen in `persist:discord`.
+2. **CAPTCHA bij first login:** Discord can a hCaptcha tonen bij login vanuit a new browser profiel. Dit is a eenmalig probleem — na succesvolle login is the session opgeslagen in `persist:discord`.
 
-**Bestand:** `src/sidebar/manager.ts`
+**File:** `src/sidebar/manager.ts`
 
-**Toevoegen aan:** Service configuratie of `openPanel()` methode
+**Add about:** Service configuration or `openPanel()` methode
 
 ```typescript
 // Per-service minimum width
 const SERVICE_MIN_WIDTHS: Record<string, number> = {
   discord: 420,
-  // andere services: 360 (standaard)
+  // andere services: 360 (default)
 };
 ```
 
-**Bestand:** `shell/js/sidebar.js` (of waar sidebar JS staat)
+**File:** `shell/js/sidebar.js` (or waar sidebar JS staat)
 
-Bij het openen van een Discord panel, stel minimum breedte in:
+Bij the openen or a Discord panel, stel minimum width in:
 ```javascript
 function openSidebarPanel(serviceId) {
   const minWidth = SERVICE_MIN_WIDTHS[serviceId] || 360;
   const panelWidth = Math.max(currentPanelWidth, minWidth);
-  // pas panel breedte aan
+  // pas panel width about
 }
 ```
 
-### Stap 3: Slack workspace URL configuratie
+### Step 3: Slack workspace URL configuration
 
-**Wat:** Slack gebruikt workspace-specifieke URLs. De standaard `https://app.slack.com` werkt als redirect naar de juiste workspace, maar sommige workspaces vereisen een directe URL (bv. `https://myteam.slack.com`). Robin moet dit kunnen configureren.
+**Wat:** Slack uses workspace-specific URLs. The default `https://app.slack.com` works if redirect to the juiste workspace, but sommige workspaces vereisen a directe URL (bv. `https://myteam.slack.com`). Robin must this can configureren.
 
-**Bestand:** `src/sidebar/manager.ts`
+**File:** `src/sidebar/manager.ts`
 
-**Toevoegen aan:** `SidebarConfig` interface en `openPanel()` methode
+**Add about:** `SidebarConfig` interface and `openPanel()` methode
 
 ```typescript
 export interface SidebarConfig {
@@ -90,29 +90,29 @@ export interface SidebarConfig {
     enabled: boolean;
     muted: boolean;
     width: number;
-    customUrl?: string;  // ← voor Slack workspace URL
+    customUrl?: string;  // ← for Slack workspace URL
   }>;
   // ...
 }
 ```
 
-Bij het openen van een Slack panel, gebruik `customUrl` als die geconfigureerd is:
+Bij the openen or a Slack panel, usage `customUrl` if that geconfigureerd is:
 
 ```typescript
 openPanel(serviceId: string): SidebarService {
   const service = this.getService(serviceId);
   const panelConfig = this.config.panels[serviceId];
   const url = panelConfig?.customUrl || service.url;
-  // maak webview aan met deze url
+  // maak webview about with this url
 }
 ```
 
-**Bestand:** `src/api/routes/sidebar.ts`
+**File:** `src/api/routes/sidebar.ts`
 
-**Toevoegen:** Endpoint voor workspace URL configuratie
+**Add:** Endpoint for workspace URL configuration
 
 ```typescript
-// POST /sidebar/config — pas panel configuratie aan
+// POST /sidebar/config — pas panel configuration about
 router.post('/sidebar/config', async (req: Request, res: Response) => {
   try {
     const { service, customUrl, width } = req.body;
@@ -125,30 +125,30 @@ router.post('/sidebar/config', async (req: Request, res: Response) => {
 });
 ```
 
-### Stap 4: Notification badge parsing voor Discord en Slack
+### Step 4: Notification badge parsing for Discord and Slack
 
-**Wat:** Verifieer dat de badge detectie correct werkt voor Discord en Slack title patronen.
+**Wat:** Verifieer that the badge detection correct works for Discord and Slack title patterns.
 
-**Discord title patroon:** `(5) Discord | #general - Server Name` → extract `5`
+**Discord title pattern:** `(5) Discord | #general - Server Name` → extract `5`
 
-**Slack title patroon:** Slack gebruikt verschillende patronen:
-- `* Slack - Workspace` → ongelezen berichten (sterretje), badge = generiek indicator
-- `(3) Slack - Workspace` → sommige Slack versies gebruiken getal in titel
-- Geen getal → `*` als indicator → toon een punt-badge (geen getal)
+**Slack title pattern:** Slack uses verschillende patterns:
+- `* Slack - Workspace` → unread berichten (sterretje), badge = generiek indicator
+- `(3) Slack - Workspace` → sommige Slack versies use getal in title
+- No getal → `*` if indicator → toon a punt-badge (no getal)
 
-**Bestand:** `shell/js/sidebar.js` (of waar badge detectie staat)
+**File:** `shell/js/sidebar.js` (or waar badge detection staat)
 
-Pas de badge parser aan om Slack's sterretje-patroon te herkennen:
+Pas the badge parser about to Slack's sterretje-pattern te herkennen:
 
 ```javascript
 function parseBadgeCount(serviceId, title) {
-  // Standaard: zoek (N) patroon
+  // Default: zoek (N) pattern
   const numMatch = title.match(/\((\d+)\)/);
   if (numMatch) return parseInt(numMatch[1], 10);
 
-  // Slack-specifiek: * prefix = ongelezen (geen specifiek getal)
+  // Slack-specifiek: * prefix = unread (no specifiek getal)
   if (serviceId === 'slack' && title.startsWith('*')) {
-    return -1; // -1 = "er zijn ongelezen berichten" (toon stip, geen getal)
+    return -1; // -1 = "er are unread berichten" (toon stip, no getal)
   }
 
   return 0;
@@ -162,7 +162,7 @@ function updateBadge(serviceId, count) {
     badge.textContent = count.toString();
     badge.style.display = 'flex';
   } else if (count === -1) {
-    badge.textContent = '•';  // stip voor "ongelezen maar geen getal"
+    badge.textContent = '•';  // stip for "unread but no getal"
     badge.style.display = 'flex';
   } else {
     badge.style.display = 'none';
@@ -170,13 +170,13 @@ function updateBadge(serviceId, count) {
 }
 ```
 
-### Stap 5: Test Discord en Slack panels
+### Stap 5: Test Discord and Slack panels
 
-**Wat:** Handmatig testen dat beide panels correct laden, login werkt, en sessie bewaard blijft.
+**Wat:** Handmatig testen that beide panels correct laden, login works, and session bewaard blijft.
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 # Test 1: Open Discord panel
@@ -201,12 +201,12 @@ curl -H "Authorization: Bearer $TOKEN" \
   -d '{"service": "slack", "customUrl": "https://myteam.slack.com"}'
 # Verwacht: {"ok":true}
 
-# Test 4: Verifieer configuratie opgeslagen
+# Test 4: Verifieer configuration opgeslagen
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/sidebar/list
-# Verwacht: slack service met customUrl in de output
+# Verwacht: slack service with customUrl in the output
 
-# Test 5: Toggle werkt voor alle drie
+# Test 5: Toggle works for alle drie
 for svc in whatsapp discord slack; do
   curl -s -H "Authorization: Bearer $TOKEN" \
     -X POST http://localhost:8765/sidebar/toggle \
@@ -218,15 +218,15 @@ done
 ```
 
 **UI verificatie:**
-- [ ] Discord icoon (🎮) klikken opent Discord web app in sidebar panel
-- [ ] Discord login scherm verschijnt, login is mogelijk
-- [ ] Na login: sessie blijft bewaard na browser herstart (persist:discord)
-- [ ] Slack icoon (💼) klikken opent Slack in sidebar panel
-- [ ] Slack workspace login werkt
-- [ ] Als `customUrl` geconfigureerd is, laadt Slack die specifieke workspace URL
-- [ ] Notification badges verschijnen voor Discord en Slack bij ongelezen berichten
-- [ ] Schakelen tussen WhatsApp, Discord en Slack werkt soepel (vorige verbergt, nieuwe verschijnt)
-- [ ] Alle drie panels onthouden hun scroll-positie en chat-state
+- [ ] Discord icon (🎮) clicking opens Discord web app in sidebar panel
+- [ ] Discord login scherm appears, login is mogelijk
+- [ ] Na login: session blijft bewaard na browser herstart (persist:discord)
+- [ ] Slack icon (💼) clicking opens Slack in sidebar panel
+- [ ] Slack workspace login works
+- [ ] If `customUrl` geconfigureerd is, loads Slack that specific workspace URL
+- [ ] Notification badges verschijnen for Discord and Slack bij unread berichten
+- [ ] Schakelen between WhatsApp, Discord and Slack works soepel (vorige verbergt, new appears)
+- [ ] Alle drie panels onthouden hun scroll-positie and chat-state
 
 ---
 
@@ -234,35 +234,35 @@ done
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-2-discord-slack.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-2-discord-slack.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🗨️ feat: sidebar Discord + Slack panels"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-3-telegram-instagram-x.md
+   ## Next session start bij fase-3-telegram-instagram-x.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Discord minimum breedte (420px) — panel mag niet smaller worden
-- [ ] Discord CAPTCHA bij eerste login — dit is eenmalig, persist:discord onthoudt de sessie daarna
-- [ ] Slack workspace URL — standaard `https://app.slack.com` redirect naar juiste workspace, maar sommige setups vereisen directe URL
-- [ ] Slack badge patroon anders dan andere services — `*` prefix ipv `(N)` getal
-- [ ] TypeScript strict mode — geen `any` buiten catch
-- [ ] Vergeet niet het nieuwe `/sidebar/config` endpoint ook te testen
+- [ ] Discord minimum width (420px) — panel mag not smaller be
+- [ ] Discord CAPTCHA bij first login — this is eenmalig, persist:discord onthoudt the session after that
+- [ ] Slack workspace URL — default `https://app.slack.com` redirect to juiste workspace, but sommige setups vereisen directe URL
+- [ ] Slack badge pattern anders then andere services — `*` prefix ipv `(N)` getal
+- [ ] TypeScript strict mode — no `any` buiten catch
+- [ ] Vergeet not the new `/sidebar/config` endpoint also te testen

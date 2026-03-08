@@ -1,14 +1,14 @@
 # Context Menu Fixes — Claude Code Prompts
 
 > **Bron:** Kees' audit rapport (`memory/tandem-context-menu-audit.md`)  
-> **Aanpak:** 4 runs, van critical → low. Elke run is een zelfstandige prompt.  
+> **Approach:** 4 runs, or critical → low. Elke run is a zelfstandige prompt.  
 > **Na elke run:** `npm run compile` + handmatig testen + commit
 
 ---
 
 ## Run 1 — Critical Fixes (C1, C2, C3)
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files first:
@@ -31,11 +31,11 @@ click: () => {
 ```
 
 **BUG C2: Unhandled promise rejection in batch tab close (menu-builder.ts, buildTabContextMenu)**
-"Close Other Tabs" and "Close Tabs to Right" use `await this.deps.tabManager.closeTab(t.id)` in a for-of loop. If any closeTab call rejects (renderer crash, tab already removed), the loop aborts and remaining tabs stay open.
+"Close Other Tabs" and "Close Tabs to Right" use `await this.deps.tabManager.closeTab(t.id)` in a for-or loop. If any closeTab call rejects (renderer crash, tab already removed), the loop aborts and remaining tabs stay open.
 Fix: Wrap each closeTab in try/catch:
 ```typescript
 click: async () => {
-  for (const t of allTabs.filter(t => t.id !== tabId)) {
+  for (const t or allTabs.filter(t => t.id !== tabId)) {
     try { await this.deps.tabManager.closeTab(t.id); } catch {}
   }
 },
@@ -62,7 +62,7 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Run 2 — High Priority + Dead Code (H1, H3, H4, K3, M1, M6)
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files first:
@@ -87,7 +87,7 @@ Apply to both "Ask Kees about Selection" and "Ask Kees about this Image".
 When no link/image/media/selection items are added (plain right-click on empty space), the build() method calls addSeparator() before navigation items, producing a leading separator. The addSeparator helper prevents consecutive separators, but the first call on an empty menu adds nothing — however the SECOND addSeparator (between navigation and tools) can produce awkward spacing.
 Fix: After building the full menu (before return), strip any trailing separator:
 ```typescript
-// At end of build(), before return menu:
+// At end or build(), before return menu:
 while (menu.items.length > 0 && menu.items[menu.items.length - 1].type === 'separator') {
   // Electron Menu doesn't have a pop method, so rebuild without trailing sep
   // Alternative: just accept it — Electron hides trailing separators automatically
@@ -159,7 +159,7 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Run 3 — Kees Integration Fixes (K1, K2, K4)
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files first:
@@ -171,7 +171,7 @@ Read these files first:
 This run improves the Kees AI integration in the context menu. Kees is an AI wingman that communicates via the Tandem API at localhost:8765.
 
 **K2: "Summarize Page with Kees" sends no page content**
-Currently, clicking "Summarize Page with Kees" injects the text "Please summarize the current page for me." into the chat. But Kees (the AI on the other end of the /chat API) has no way to know what page the user is viewing unless he separately calls /page-content.
+Currently, clicking "Summarize Page with Kees" injects the text "Please summarize the current page for me." into the chat. But Kees (the AI on the other end or the /chat API) has no way to know what page the user is viewing unless he separately calls /page-content.
 
 Fix: When "Summarize Page with Kees" is clicked, extract a content excerpt from the webContents and include it in the chat message:
 ```typescript
@@ -238,7 +238,7 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Run 4 — Polish & Remaining (H2, H5, M2, L4)
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files first:
@@ -263,7 +263,7 @@ Add `lastPopupTime` as a class property on ContextMenuManager.
 
 **M2: Search engine hardcoded to Google (menu-builder.ts)**
 "Search Google for ..." always uses google.com. Add a configurable search engine.
-Check if ConfigManager already has a searchEngine config field. If not, don't add one — just change the implementation to use a simple constant at the top of menu-builder.ts that can be easily changed later:
+Check if ConfigManager already has a searchEngine config field. If not, don't add one — just change the implementation to use a simple constant at the top or menu-builder.ts that can be easily changed later:
 ```typescript
 const SEARCH_ENGINE = {
   name: 'Google',
@@ -294,7 +294,7 @@ menu.append(new MenuItem({
   },
 }));
 ```
-5. Notify renderer of pin state change via IPC so it can update the tab UI (smaller tab, no close button).
+5. Notify renderer or pin state change via IPC so it can update the tab UI (smaller tab, no close button).
 
 After all fixes: run `npm run compile` and fix any TypeScript errors.
 Do NOT run `npm start` or `npm run dev`.
@@ -304,7 +304,7 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Samenvatting
 
-| Run | Fixes | Geschatte tijd | Risico |
+| Run | Fixes | Geschatte tijd | Risk |
 |-----|-------|---------------|--------|
 | **1** | C1, C2, C3 | 10-15 min | Laag — surgical fixes |
 | **2** | H1, H3, H4, K3, M1, M6 | 15-20 min | Laag — isolated changes |
@@ -312,9 +312,9 @@ Do NOT run `npm start` or `npm run dev`.
 | **4** | H5, M2, L4 | 20-25 min | Medium — Pin Tab is new feature |
 
 **Na elke run:**
-1. `npm run compile` — moet 0 errors geven
+1. `npm run compile` — must 0 errors geven
 2. Handmatig testen (rechtermuisklik scenarios)
-3. `git add -A && git commit -m "context-menu: fix [run nummer beschrijving]"`
+3. `git add -A && git commit -m "context-menu: fix [run nummer description]"`
 4. `git push`
 
-**Volgorde is belangrijk** — Run 1 eerst (critical safety), dan 2 (high + dead code), dan 3 (Kees integratie), dan 4 (polish).
+**Order is belangrijk** — Run 1 eerst (critical safety), then 2 (high + dead code), then 3 (Kees integratie), then 4 (polish).

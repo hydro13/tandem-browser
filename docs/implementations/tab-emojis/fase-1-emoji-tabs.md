@@ -1,56 +1,56 @@
-# Fase 1 — Emoji Tabs: Volledige implementatie
+# Phase 1 — Emoji Tabs: Volledige implementatie
 
 > **Feature:** Tab Emojis
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de volledige Tab Emojis feature in één sessie: uitbreiding van het `Tab` data model met een emoji-veld, API endpoints om emoji's te zetten en verwijderen, persistentie in `~/.tandem/tab-emojis.json`, en een emoji picker popup in de shell tab bar.
+Bouw the full Tab Emojis feature in één session: uitbreiding or the `Tab` data model with a emoji-field, API endpoints to emoji's te zetten and verwijderen, persistentie in `~/.tandem/tab-emojis.json`, and a emoji picker popup in the shell tab bar.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/tabs/manager.ts` | `class TabManager`, `interface Tab`, `openTab()`, `updateTab()`, `constructor()` | Hier komt het emoji-veld en persistentie-logica bij |
-| `src/api/routes/tabs.ts` | `function registerTabRoutes()` | Hier komen de emoji endpoints bij |
-| `shell/index.html` | Tab bar HTML (`#tab-bar`), tab creatie JS (`createTab`), tab element structuur (`.tab` div met kinderen) | Hier komt de emoji badge en picker popup bij |
-| `shell/css/main.css` | `.tab`, `.tab-favicon`, `.tab-title`, `.tab-source` | Snap de bestaande tab-element layout voor badge positioning |
-| `AGENTS.md` | — (lees volledig) | Anti-detect regels en code stijl |
+| `src/tabs/manager.ts` | `class TabManager`, `interface Tab`, `openTab()`, `updateTab()`, `constructor()` | Hier comes the emoji-field and persistentie-logica bij |
+| `src/api/routes/tabs.ts` | `function registerTabRoutes()` | Hier komen the emoji endpoints bij |
+| `shell/index.html` | Tab bar HTML (`#tab-bar`), tab creatie JS (`createTab`), tab element structuur (`.tab` div with kinderen) | Hier comes the emoji badge and picker popup bij |
+| `shell/css/main.css` | `.tab`, `.tab-favicon`, `.tab-title`, `.tab-source` | Snap the existing tab-element layout for badge positioning |
+| `AGENTS.md` | — (read fully) | Anti-detect rules and code stijl |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Tab interface uitbreiden met emoji veld
+### Step 1: Tab interface uitbreiden with emoji field
 
-**Wat:** Voeg een optioneel `emoji` veld toe aan de `Tab` interface.
+**Wat:** Voeg a optional `emoji` field toe about the `Tab` interface.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
 **Aanpassen in:** `interface Tab`
 
 ```typescript
 export interface Tab {
-  // ... bestaande velden ...
-  emoji?: string;  // Optioneel emoji-badge voor visuele identificatie
+  // ... existing velden ...
+  emoji?: string;  // Optioneel emoji-badge for visual identificatie
 }
 ```
 
-### Stap 2: Emoji persistentie — laden en opslaan
+### Step 2: Emoji persistentie — laden and save
 
-**Wat:** Voeg methodes toe aan `TabManager` om emoji's op te slaan in `~/.tandem/tab-emojis.json` en te laden bij initialisatie. Emoji's worden opgeslagen per genormaliseerde URL (hostname + pathname).
+**Wat:** Voeg methodes toe about `TabManager` to emoji's op te slaan in `~/.tandem/tab-emojis.json` and te laden bij initialisatie. Emoji's be opgeslagen per genormaliseerde URL (hostname + pathname).
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager`
+**Add about:** `class TabManager`
 
 ```typescript
 import fs from 'fs';
@@ -58,11 +58,11 @@ import path from 'path';
 import { tandemDir } from '../utils/paths';
 
 // In class TabManager:
-private emojiMap: Map<string, string> = new Map(); // normalizedUrl → emoji
+private emojiMap: Folder<string, string> = new Folder(); // normalizedUrl → emoji
 
 constructor(win: BrowserWindow) {
   this.win = win;
-  this.loadEmojis();  // ← toevoegen aan bestaande constructor
+  this.loadEmojis();  // ← add about existing constructor
 }
 
 private getEmojiFilePath(): string {
@@ -74,7 +74,7 @@ private loadEmojis(): void {
     const filePath = this.getEmojiFilePath();
     if (fs.existsSync(filePath)) {
       const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      this.emojiMap = new Map(Object.entries(data));
+      this.emojiMap = new Folder(Object.entries(data));
     }
   } catch (e) {
     // Silently ignore — file doesn't exist yet or is corrupt
@@ -102,13 +102,13 @@ private normalizeUrl(url: string): string {
 }
 ```
 
-### Stap 3: setEmoji() en clearEmoji() methodes
+### Step 3: setEmoji() and clearEmoji() methodes
 
-**Wat:** Publieke methodes om emoji op een tab te zetten of te verwijderen. Slaat automatisch op en stuurt IPC event naar de shell.
+**Wat:** Publieke methodes to emoji op a tab te zetten or te verwijderen. Slaat automatisch op and stuurt IPC event to the shell.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager`
+**Add about:** `class TabManager`
 
 ```typescript
 setEmoji(tabId: string, emoji: string): boolean {
@@ -162,11 +162,11 @@ restoreEmojiForUrl(tabId: string, url: string): void {
 }
 ```
 
-### Stap 4: Emoji herstellen bij navigatie
+### Step 4: Emoji herstellen bij navigatie
 
-**Wat:** Wanneer `updateTab()` wordt aangeroepen met een nieuwe URL, check of er een opgeslagen emoji is voor die URL.
+**Wat:** Wanneer `updateTab()` is aangeroepen with a new URL, check or er a opgeslagen emoji is for that URL.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
 **Aanpassen in:** `updateTab()` methode
 
@@ -186,11 +186,11 @@ updateTab(tabId: string, updates: Partial<Pick<Tab, 'title' | 'url' | 'favicon'>
 
 ### Stap 5: API endpoints
 
-**Wat:** Twee nieuwe endpoints: POST om emoji te zetten, DELETE om te verwijderen.
+**Wat:** Twee new endpoints: POST to emoji te zetten, DELETE to te verwijderen.
 
-**Bestand:** `src/api/routes/tabs.ts`
+**File:** `src/api/routes/tabs.ts`
 
-**Toevoegen aan:** `function registerTabRoutes()`
+**Add about:** `function registerTabRoutes()`
 
 ```typescript
 // === TAB EMOJIS ===
@@ -220,20 +220,20 @@ router.delete('/tabs/:id/emoji', async (req: Request, res: Response) => {
 
 ### Stap 6: Shell — emoji badge in tab element
 
-**Wat:** Voeg een emoji-badge `<span>` toe aan elk tab element, vóór de favicon. Luister naar het `tab-emoji-changed` IPC event om de badge te updaten.
+**Wat:** Voeg a emoji-badge `<span>` toe about elk tab element, vóór the favicon. Luister to the `tab-emoji-changed` IPC event to the badge te updaten.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Aanpassen in:** Tab creatie functie (zoek naar waar `.tab` div wordt opgebouwd met `tab-source`, `group-dot`, `tab-favicon`, etc.)
+**Aanpassen in:** Tab creatie function (zoek to waar `.tab` div is opbuilt with `tab-source`, `group-dot`, `tab-favicon`, etc.)
 
 ```javascript
-// In de tab creatie functie, na tab-source span:
+// In the tab creatie function, na tab-source span:
 const emojiEl = document.createElement('span');
 emojiEl.className = 'tab-emoji';
 emojiEl.style.display = 'none';
 tabEl.insertBefore(emojiEl, tabEl.querySelector('.tab-favicon'));
 
-// IPC listener voor emoji updates:
+// IPC listener for emoji updates:
 window.electronAPI.on('tab-emoji-changed', (event, { tabId, emoji }) => {
   const entry = tabs.get(tabId);
   if (!entry) return;
@@ -250,19 +250,19 @@ window.electronAPI.on('tab-emoji-changed', (event, { tabId, emoji }) => {
 
 ### Stap 7: Shell — emoji picker popup
 
-**Wat:** Voeg een emoji picker toe die verschijnt wanneer de gebruiker op een "+" knop hoverd/klikt op een tab. De picker is een simpel grid van populaire emoji's.
+**Wat:** Voeg a emoji picker toe that appears wanneer the user op a "+" knop hoverd/clicks op a tab. The picker is a simpel grid or populaire emoji's.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Toevoegen aan:** Na de tab bar HTML, een hidden popup element + JS logica
+**Add about:** Na the tab bar HTML, a hidden popup element + JS logica
 
 ```html
 <!-- Emoji Picker Popup -->
 <div id="emoji-picker" class="emoji-picker" style="display:none;">
   <div class="emoji-picker-grid">
-    <!-- Populaire emoji's — wordt gevuld door JS -->
+    <!-- Populaire emoji's — is gevuld door JS -->
   </div>
-  <button class="emoji-picker-remove" title="Verwijder emoji">✕ Verwijder</button>
+  <button class="emoji-picker-remove" title="Delete emoji">✕ Delete</button>
 </div>
 ```
 
@@ -280,7 +280,7 @@ const pickerGrid = pickerEl.querySelector('.emoji-picker-grid');
 let pickerTargetTabId = null;
 
 // Vul grid
-for (const emoji of POPULAR_EMOJIS) {
+for (const emoji or POPULAR_EMOJIS) {
   const btn = document.createElement('button');
   btn.className = 'emoji-picker-btn';
   btn.textContent = emoji;
@@ -297,7 +297,7 @@ for (const emoji of POPULAR_EMOJIS) {
   pickerGrid.appendChild(btn);
 }
 
-// Verwijder-knop
+// Delete-knop
 pickerEl.querySelector('.emoji-picker-remove').addEventListener('click', () => {
   if (pickerTargetTabId) {
     fetch(`/tabs/${pickerTargetTabId}/emoji`, { method: 'DELETE' });
@@ -318,7 +318,7 @@ function hideEmojiPicker() {
   pickerTargetTabId = null;
 }
 
-// Sluit picker bij klik buiten
+// Closes picker bij click buiten
 document.addEventListener('click', (e) => {
   if (!pickerEl.contains(e.target) && !e.target.closest('.tab-emoji-trigger')) {
     hideEmojiPicker();
@@ -328,14 +328,14 @@ document.addEventListener('click', (e) => {
 
 ### Stap 8: Emoji trigger knop op tab hover
 
-**Wat:** Voeg een kleine "+" knop toe aan elk tab element die verschijnt op hover. Klikken opent de emoji picker.
+**Wat:** Voeg a kleine "+" knop toe about elk tab element that appears op hover. Klikken opens the emoji picker.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Aanpassen in:** Tab creatie functie
+**Aanpassen in:** Tab creatie function
 
 ```javascript
-// In de tab creatie functie:
+// In the tab creatie function:
 const emojiTrigger = document.createElement('button');
 emojiTrigger.className = 'tab-emoji-trigger';
 emojiTrigger.textContent = '+';
@@ -349,11 +349,11 @@ tabEl.insertBefore(emojiTrigger, tabEl.querySelector('.tab-close'));
 
 ### Stap 9: CSS styling
 
-**Wat:** Styling voor de emoji badge, trigger knop, en picker popup.
+**Wat:** Styling for the emoji badge, trigger knop, and picker popup.
 
-**Bestand:** `shell/css/main.css`
+**File:** `shell/css/main.css`
 
-**Toevoegen aan:** Na de bestaande `.tab` styling
+**Add about:** Na the existing `.tab` styling
 
 ```css
 /* === TAB EMOJIS === */
@@ -446,12 +446,12 @@ tabEl.insertBefore(emojiTrigger, tabEl.querySelector('.tab-close'));
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Open een tab
+# Test 1: Open a tab
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/open \
   -H "Content-Type: application/json" \
@@ -468,14 +468,14 @@ curl -H "Authorization: Bearer $TOKEN" \
 # Test 3: Verifieer emoji in tab list
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/list
-# Verwacht: tab-2 heeft "emoji": "🔥"
+# Verwacht: tab-2 has "emoji": "🔥"
 
-# Test 4: Verwijder emoji
+# Test 4: Delete emoji
 curl -H "Authorization: Bearer $TOKEN" \
   -X DELETE http://localhost:8765/tabs/tab-2/emoji
 # Verwacht: {"ok":true}
 
-# Test 5: Emoji op niet-bestaande tab
+# Test 5: Emoji op not-existing tab
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/fake-id/emoji \
   -H "Content-Type: application/json" \
@@ -484,16 +484,16 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 # Test 6: Persistentie check
 cat ~/.tandem/tab-emojis.json
-# Verwacht: JSON object met URL → emoji mappings
+# Verwacht: JSON object with URL → emoji mappings
 ```
 
 **UI verificatie:**
-- [ ] Emoji badge zichtbaar vóór de favicon in de tab
-- [ ] Hover op tab → "+" knop verschijnt
-- [ ] Klik op "+" → emoji picker popup opent onder de tab
-- [ ] Klik op emoji → badge verschijnt, picker sluit
-- [ ] "Verwijder" knop in picker → emoji verdwijnt
-- [ ] Na app herstart → emoji's zijn terug (persistentie werkt)
+- [ ] Emoji badge visible vóór the favicon in the tab
+- [ ] Hover op tab → "+" knop appears
+- [ ] Klik op "+" → emoji picker popup opens under the tab
+- [ ] Klik op emoji → badge appears, picker closes
+- [ ] "Delete" knop in picker → emoji disappears
+- [ ] Na app herstart → emoji's are terug (persistentie works)
 
 ---
 
@@ -501,20 +501,20 @@ cat ~/.tandem/tab-emojis.json
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-emoji-tabs.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-emoji-tabs.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. Visuele verificatie: neem screenshots van emoji badges op tabs
-5. npx vitest run — alle bestaande tests blijven slagen
-6. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. Visual verificatie: neem screenshots or emoji badges op tabs
+5. npx vitest run — alle existing tests blijven slagen
+6. Update CHANGELOG.md with korte entry
 7. git commit -m "😀 feat: tab emojis — badge, picker, persistence"
 8. git push
 9. Rapport:
@@ -528,8 +528,8 @@ cat ~/.tandem/tab-emojis.json
 
 ## Bekende valkuilen
 
-- [ ] TypeScript: `fs` en `path` imports moeten bovenaan `manager.ts` staan — check of ze al geïmporteerd zijn (waarschijnlijk niet, want de huidige manager gebruikt geen filesystem)
-- [ ] `tandemDir()` functie importeren uit `../utils/paths` — check dat dit pad klopt vanuit `src/tabs/manager.ts`
-- [ ] Emoji picker positionering: als de tab helemaal rechts staat, kan de picker buiten het scherm vallen — voeg bounds-checking toe
-- [ ] `Tab` interface wijzigt (nieuw veld `emoji?`) — bestaande code die `Tab` objecten aanmaakt (bv. `registerInitialTab()`) moet geen errors krijgen (het veld is optional, dus dit is veilig)
-- [ ] `saveEmojis()` bij elk setEmoji/clearEmoji kan veel disk I/O zijn bij snel klikken — overweeg debouncing, maar voor v1 is sync write acceptabel
+- [ ] TypeScript: `fs` and `path` imports must at the top `manager.ts` stand — check or ze already geïmporteerd are (waarschijnlijk not, want the huidige manager uses no filesystem)
+- [ ] `tandemDir()` function importeren out `../utils/paths` — check that this pad klopt vanuit `src/tabs/manager.ts`
+- [ ] Emoji picker positionering: if the tab helemaal rechts staat, can the picker buiten the scherm vallen — voeg bounds-checking toe
+- [ ] `Tab` interface wijzigt (new field `emoji?`) — existing code that `Tab` objecten aanmaakt (bv. `registerInitialTab()`) must no errors krijgen (the field is optional, dus this is veilig)
+- [ ] `saveEmojis()` bij elk setEmoji/clearEmoji can veel disk I/O are bij snel clicking — overweeg debouncing, but for v1 is sync write acceptabel

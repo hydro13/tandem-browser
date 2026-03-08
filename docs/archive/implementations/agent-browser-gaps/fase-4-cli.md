@@ -1,22 +1,22 @@
-# Fase 4 — tandem CLI: Command Line Wrapper
+# Phase 4 — tandem CLI: Command Line Wrapper
 
-> **Doel:** Thin CLI wrapper rond de Tandem REST API.
-> Zelfde developer UX als agent-browser, maar dan naar jouw eigen Tandem.
-> **Sessies:** 1
-> **Vereist:** Fase 1-3 compleet (snapshot + sessions)
+> **Goal:** Thin CLI wrapper rond the Tandem REST API.
+> Zelfde developer UX if agent-browser, but then to jouw own Tandem.
+> **Sessions:** 1
+> **Requires:** Phase 1-3 compleet (snapshot + sessions)
 
 ---
 
-## Bestaande code te lezen (verplicht)
+## Existing code to read (required)
 
-Lees deze bestanden (gebruik Read tool, NIET cat):
+Read this files (usage Read tool, NIET cat):
 
-1. **`README.md`** — Alle bestaande API endpoints + beschrijvingen
-2. **`package.json`** — Naam, versie, dependencies van het hoofdproject
-3. **`tsconfig.json`** — TypeScript config van het hoofdproject
+1. **`README.md`** — Alle existing API endpoints + beschrijvingen
+2. **`package.json`** — Name, versie, dependencies or the hoofdproject
+3. **`tsconfig.json`** — TypeScript config or the hoofdproject
    - **LET OP:** `rootDir: ./src` → CLI zit BUITEN src/
-   - CLI heeft een **eigen** tsconfig.json nodig
-   - Root tsconfig moet `cli/` **excluden** om conflicten te voorkomen
+   - CLI has a **own** tsconfig.json nodig
+   - Root tsconfig must `cli/` **excluden** to conflicten te voorkomen
 
 ---
 
@@ -38,12 +38,12 @@ cli/client.ts
   })
       │
       ▼
-stdout: de accessibility tree tekst
+stdout: the accessibility tree text
 ```
 
 ### Token ophalen
 
-API token staat in `~/.tandem/api-token` — zelfde bestand als de server gebruikt.
+API token staat in `~/.tandem/api-token` — same file if the server uses.
 
 ---
 
@@ -52,7 +52,7 @@ API token staat in `~/.tandem/api-token` — zelfde bestand als de server gebrui
 ```
 cli/
 ├── package.json          ← apart package: @hydro13/tandem-cli
-├── tsconfig.json         ← EIGEN tsconfig, output naar cli/dist/
+├── tsconfig.json         ← OWN tsconfig, output to cli/dist/
 ├── index.ts              ← entry point, commander setup + #!/usr/bin/env node
 ├── client.ts             ← HTTP client, token laden
 └── commands/
@@ -70,15 +70,15 @@ cli/
 
 ## tsconfig conflict oplossen
 
-De root `tsconfig.json` heeft `rootDir: ./src`. De CLI zit in `cli/` (buiten src/).
-Je moet de root tsconfig aanpassen om `cli/` te excluden:
+The root `tsconfig.json` has `rootDir: ./src`. The CLI zit in `cli/` (buiten src/).
+You must the root tsconfig aanpassen to `cli/` te excluden:
 
 ```json
-// In root tsconfig.json, voeg toe aan "exclude":
+// In root tsconfig.json, voeg toe about "exclude":
 "exclude": ["cli", "node_modules", "dist"]
 ```
 
-En maak een aparte `cli/tsconfig.json`:
+And maak a aparte `cli/tsconfig.json`:
 
 ```json
 {
@@ -118,21 +118,21 @@ tandem snapshot -i -c -d 5             # combinaties
 
 # Interactie
 tandem click "#submit"
-tandem click @e4                       # via @ref uit snapshot
+tandem click @e4                       # via @ref out snapshot
 tandem fill "#email" "test@x.com"
 tandem fill @e5 "test@x.com"
 tandem eval "document.title"
 tandem eval "window.location.href"
 
 # Media
-tandem screenshot                      # print pad naar stdout
-tandem screenshot ./page.png           # opslaan op pad
+tandem screenshot                      # print pad to stdout
+tandem screenshot ./page.png           # save op pad
 
 # Cookies
 tandem cookies                         # alle cookies (JSON)
 tandem cookies set session_id abc123
 
-# Sessies (fase 3)
+# Sessions (phase 3)
 tandem session list
 tandem session create agent1
 tandem session switch agent1
@@ -229,23 +229,23 @@ export async function api(
 ## Implementatie stappen
 
 1. Maak `cli/package.json` + `cli/tsconfig.json`
-2. **Root tsconfig aanpassen:** voeg `"cli"` toe aan exclude array
+2. **Root tsconfig aanpassen:** voeg `"cli"` toe about exclude array
 3. `cd cli && npm install`
 4. Maak `cli/client.ts` — token laden + fetch wrapper
 5. Maak `cli/index.ts` — commander setup + globale `--session` optie
-   - **BELANGRIJK:** Eerste regel moet `#!/usr/bin/env node` zijn
-6. Per command (begin met de meest gebruikte):
+   - **BELANGRIJK:** First regel must `#!/usr/bin/env node` are
+6. Per command (begin with the meest gebruikte):
    - `open.ts` → `POST /navigate`
-   - `snapshot.ts` → `GET /snapshot` met query params
-   - `click.ts` → `POST /snapshot/click` (als @ref) of `POST /click`
-   - `fill.ts` → `POST /snapshot/fill` (als @ref) of `POST /type`
+   - `snapshot.ts` → `GET /snapshot` with query params
+   - `click.ts` → `POST /snapshot/click` (if @ref) or `POST /click`
+   - `fill.ts` → `POST /snapshot/fill` (if @ref) or `POST /type`
    - `eval.ts` → `POST /devtools/evaluate`
    - `screenshot.ts` → `GET /screenshot` → base64 → `fs.writeFileSync(path, Buffer.from(base64, 'base64'))`
-   - `cookies.ts` → `GET /cookies` of `POST /devtools/cdp` Network.setCookie
+   - `cookies.ts` → `GET /cookies` or `POST /devtools/cdp` Network.setCookie
    - `session.ts` → `/sessions/*` endpoints
 7. `cd cli && npx tsc` — zero errors
-8. Verifieer dat root `npx tsc` ook nog werkt (geen conflict met cli/)
-9. `cd cli && npm link` voor globale `tandem` command
+8. Verifieer that root `npx tsc` also still works (no conflict with cli/)
+9. `cd cli && npm link` for globale `tandem` command
 10. Test alle commands (zie verificatie hieronder)
 11. Commit
 
@@ -269,8 +269,8 @@ tandem snapshot -i
 tandem snapshot -i -c
 tandem snapshot --selector "main"
 
-# Klik via @ref (gebruik een @ref uit snapshot output)
-tandem snapshot -i   # kijk welke @refs er zijn
+# Klik via @ref (usage a @ref out snapshot output)
+tandem snapshot -i   # kijk welke @refs er are
 tandem click @e1
 
 # Fill
@@ -282,7 +282,7 @@ tandem eval "document.title"
 # Screenshot
 tandem screenshot /tmp/page.png && open /tmp/page.png
 
-# Sessies
+# Sessions
 tandem session list
 tandem session create test
 tandem --session test open https://example.com
@@ -299,25 +299,25 @@ tandem cookies
 
 **Node.js:**
 
-- ❌ `fetch` is niet beschikbaar in Node.js < 18
-- ✅ Electron 40 bundelt Node.js 20+. Als de CLI ook standalone draait, check Node versie
+- ❌ `fetch` is not beschikbaar in Node.js < 18
+- ✅ Electron 40 bundelt Node.js 20+. If the CLI also standalone draait, check Node versie
 
 **Binary permissions:**
 
-- ❌ `npm link` geeft EACCES op de binary
-- ✅ Eerste regel van `index.ts`: `#!/usr/bin/env node` + na build: `chmod +x dist/index.js`
+- ❌ `npm link` geeft EACCES op the binary
+- ✅ First regel or `index.ts`: `#!/usr/bin/env node` + na build: `chmod +x dist/index.js`
 
 **Screenshot:**
 
-- ❌ Screenshot base64 data direct als string opslaan
+- ❌ Screenshot base64 data direct if string save
 - ✅ `fs.writeFileSync(path, Buffer.from(base64, 'base64'))`
 
 **tsconfig:**
 
-- ❌ CLI bestanden compileren met de root tsconfig (rootDir conflict)
+- ❌ CLI files compileren with the root tsconfig (rootDir conflict)
 - ✅ Aparte `cli/tsconfig.json` + root tsconfig excludet `cli/`
 
-**@ref detectie:**
+**@ref detection:**
 
-- ❌ `@e4` als CSS selector sturen naar `/click`
-- ✅ Detecteer @-prefix: als argument begint met `@`, gebruik `/snapshot/click` endpoint; anders `/click`
+- ❌ `@e4` if CSS selector sturen to `/click`
+- ✅ Detecteer @-prefix: if argument begint with `@`, usage `/snapshot/click` endpoint; anders `/click`

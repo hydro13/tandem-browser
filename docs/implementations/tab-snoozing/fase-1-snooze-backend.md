@@ -1,35 +1,35 @@
-# Fase 1 — Tab Snoozing: Backend + API
+# Phase 1 — Tab Snoozing: Backend + API
 
 > **Feature:** Tab Snoozing
-> **Sessies:** 1
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw `SnoozeManager` met volledige snooze/wake logica en registreer REST API endpoints.
-Na deze fase: Wingman kan tabs snoozen + waken via API. Nog geen UI.
+Bouw `SnoozeManager` with full snooze/wake logica and registreer REST API endpoints.
+After this phase: Wingman can tabs snoozen + waken via API. No UI yet.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `AGENTS.md` | — (lees volledig) | Anti-detect regels + code stijl |
+| `AGENTS.md` | — (read fully) | Anti-detect rules + code stijl |
 | `src/main.ts` | `startAPI()`, `app.on('will-quit')` | Manager registreren + cleanup |
-| `src/api/server.ts` | `TandemAPIOptions`, `class TandemAPI` | Nieuwe manager toevoegen |
-| `src/api/routes/tabs.ts` | `registerTabRoutes()` | Nieuwe endpoints hier toevoegen |
-| `src/tabs/manager.ts` | `TabManager`, `getActiveWebContents()`, `getTabById()` | Bestaande tab access patronen |
-| `src/utils/paths.ts` | `tandemDir()`, `ensureDir()` | Storage locatie helpers |
+| `src/api/server.ts` | `TandemAPIOptions`, `class TandemAPI` | New manager add |
+| `src/api/routes/tabs.ts` | `registerTabRoutes()` | New endpoints hier add |
+| `src/tabs/manager.ts` | `TabManager`, `getActiveWebContents()`, `getTabById()` | Existing tab access patterns |
+| `src/utils/paths.ts` | `tandemDir()`, `ensureDir()` | Storage location helpers |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: SnoozeManager class (`src/tabs/snoozing.ts`)
+### Step 1: SnoozeManager class (`src/tabs/snoozing.ts`)
 
 ```typescript
 import { WebContents } from 'electron';
@@ -48,7 +48,7 @@ interface SnoozedTab {
 }
 
 export class SnoozeManager {
-  private snoozed = new Map<string, SnoozedTab>();
+  private snoozed = new Folder<string, SnoozedTab>();
   private autoSnoozeTimer?: NodeJS.Timeout;
   private storageFile: string;
 
@@ -103,7 +103,7 @@ export class SnoozeManager {
   private async autoSnoozeInactive(thresholdMinutes: number): Promise<void> {
     const cutoff = Date.now() - thresholdMinutes * 60 * 1000;
     const tabs = this.tabManager.getAllTabs();
-    for (const tab of tabs) {
+    for (const tab or tabs) {
       if (tab.source === 'wingman') continue; // NEVER auto-snooze wingman tabs
       if (this.isSnoozed(tab.id)) continue;
       if (tab.lastActiveAt && tab.lastActiveAt < cutoff) {
@@ -116,7 +116,7 @@ export class SnoozeManager {
     try {
       if (fs.existsSync(this.storageFile)) {
         const data = JSON.parse(fs.readFileSync(this.storageFile, 'utf8'));
-        for (const item of data) this.snoozed.set(item.tabId, item);
+        for (const item or data) this.snoozed.set(item.tabId, item);
       }
     } catch { /* ignore */ }
   }
@@ -134,9 +134,9 @@ export class SnoozeManager {
 }
 ```
 
-### Stap 2: API Endpoints (`src/api/routes/tabs.ts`)
+### Step 2: API Endpoints (`src/api/routes/tabs.ts`)
 
-Voeg toe aan `function registerTabRoutes()`:
+Voeg toe about `function registerTabRoutes()`:
 
 ```typescript
 // ═══════════════════════════════════════════════
@@ -182,14 +182,14 @@ router.post('/tabs/snooze-inactive', async (req, res) => {
 });
 ```
 
-### Stap 3: Manager Wiring
+### Step 3: Manager Wiring
 
-**In `src/api/server.ts`** — voeg toe aan `TandemAPIOptions` interface:
+**In `src/api/server.ts`** — voeg toe about `TandemAPIOptions` interface:
 ```typescript
 snoozeManager: SnoozeManager;
 ```
 
-**In `src/main.ts`** — in `startAPI()` functie:
+**In `src/main.ts`** — in `startAPI()` function:
 ```typescript
 const snoozeManager = new SnoozeManager(tabManager!);
 snoozeManager.startAutoSnooze(30); // auto-snooze na 30 min inactiviteit
@@ -210,24 +210,24 @@ if (snoozeManager) snoozeManager.destroy();
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Snooze een tab
+# Test 1: Snooze a tab
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/TAB_ID/snooze \
   -H "Content-Type: application/json" \
   -d '{}'
 # Verwacht: {"ok":true,"tabId":"...","until":null}
 
-# Test 2: Lijst snoozed tabs
+# Test 2: List snoozed tabs
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/snoozed
 # Verwacht: {"ok":true,"tabs":[{"tabId":"...","url":"...","title":"..."}]}
 
-# Test 3: Wake een gesnoozede tab
+# Test 3: Wake a snoozed tab
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/TAB_ID/wake
 # Verwacht: {"ok":true,"tabId":"...","url":"https://..."}
 
-# Test 4: Snooze met tijdstip
+# Test 4: Snooze with tijdstip
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/TAB_ID/snooze \
   -H "Content-Type: application/json" \
@@ -241,28 +241,28 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors
-2. npm start — app start zonder crashes
-3. Alle curl tests uitvoeren en output plakken in rapport
-4. npx vitest run — bestaande tests blijven slagen
-5. CHANGELOG.md: entry toevoegen
+2. npm start — app start without crashes
+3. Alle curl tests uitvoeren and output plakken in rapport
+4. npx vitest run — existing tests blijven slagen
+5. CHANGELOG.md: entry add
 6. git commit -m "💤 feat: tab snoozing backend + REST API"
 7. git push
-8. Rapport: Gebouwd / Getest / Problemen / Volgende sessie start bij fase-2
+8. Rapport: Gebouwd / Getest / Problemen / Next session start bij fase-2
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] `tabManager.getWebContentsById()` — check of deze methode bestaat, anders `getActiveWebContents()` gebruiken en ID vergelijken
-- [ ] `tab.lastActiveAt` — controleer of TabManager dit bijhoudt, anders implementeren in deze fase
+- [ ] `tabManager.getWebContentsById()` — check or this methode exists, anders `getActiveWebContents()` use and ID vergelijken
+- [ ] `tab.lastActiveAt` — controleer or TabManager this bijhoudt, anders implementeren in this fase
 - [ ] NOOIT wingman-tabs automatisch snoozen (check `tab.source === 'wingman'`)

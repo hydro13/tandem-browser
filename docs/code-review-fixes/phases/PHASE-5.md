@@ -11,7 +11,7 @@ Fix the synchronous `writeFileSync` that blocks the main thread on every page na
 - `HistoryManager.save()` calls `fs.writeFileSync()` on every `recordVisit()` — which is called twice per page load (on `did-navigate` and `did-finish-load`)
 - At 10,000 entries the JSON file is several MB — this blocks the Electron event loop
 - `getSessionWC()` focuses a tab to make `getActiveWC()` work — this causes concurrent API calls to interfere
-- `better-sqlite3` is already a dependency — but migrating history to SQLite is out of scope. A debounced async write is sufficient for now.
+- `better-sqlite3` is already a dependency — but migrating history to SQLite is out or scope. A debounced async write is sufficient for now.
 
 ## Fixes
 

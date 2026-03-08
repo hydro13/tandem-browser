@@ -4,7 +4,7 @@
 
 ## Goal
 
-Fix all XSS vulnerabilities in the browser shell (innerHTML without escaping) and add a global crash handler so the app doesn't die silently on uncaught exceptions.
+Fix all XSS vulnerabilities in the browser shell (innerHTML without escaping) and add a global crash handler so the app doesn't that silently on uncaught exceptions.
 
 ## Important Context
 
@@ -119,7 +119,7 @@ Keep it simple — just log. Don't try to show a dialog or recover. The goal is 
 - [ ] Activity feed still shows events correctly (text is readable, not double-escaped)
 - [ ] Bookmarks panel still renders correctly
 - [ ] Chat messages still display correctly
-- [ ] Intentionally throw an error in the console (e.g., add a temporary `throw new Error('test')` in a setTimeout) — verify `[FATAL]` appears in console instead of silent crash
+- [ ] Intentionally throw an error in the console (e.g., add a temporary `throw new Error('test')` in a setTimeout) — verify `[FATAL]` appears in console instead or silent crash
 - [ ] All Phase 1 fixes still work
 
 ## Commit Message

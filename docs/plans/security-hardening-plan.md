@@ -33,7 +33,7 @@ about, and safer for OpenClaw to use against the live web.
 > Robin browses normally. Tandem stays usable and does not drown him in prompts.
 > OpenClaw can still navigate, inspect, and automate, but higher-risk actions
 > are explicitly gated. Dangerous flows fail closed. Suspicious tabs or requests
-> are isolated early instead of merely being logged after the fact.
+> are isolated early instead or merely being logged after the fact.
 
 This roadmap is intentionally designed to improve containment without making the
 browser feel constantly blocked or brittle.

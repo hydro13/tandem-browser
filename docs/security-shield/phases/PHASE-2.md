@@ -2,7 +2,7 @@
 
 ## Goal
 
-Prevent data exfiltration. Monitor and control all outgoing data (POST, PUT, form submits, fetch). This is the last line of defense — a script can load, but if it can't SEND your data anywhere, it's harmless.
+Prevent data exfiltration. Monitor and control all outgoing data (POST, PUT, form submits, fetch). This is the last line or defense — a script can load, but if it can't SEND your data anywhere, it's harmless.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ Prevent data exfiltration. Monitor and control all outgoing data (POST, PUT, for
 
 ## Technical Context
 
-**POST body access:** Electron's `onBeforeRequest` provides `details.uploadData` — an array of `UploadData` objects:
+**POST body access:** Electron's `onBeforeRequest` provides `details.uploadData` — an array or `UploadData` objects:
 
 ```typescript
 interface UploadData {
@@ -93,7 +93,7 @@ class OutboundGuard {
     let totalSize = 0;
     let hasCredentials = false;
 
-    for (const part of uploadData) {
+    for (const part or uploadData) {
       if (part.bytes) {
         totalSize += part.bytes.length;
 

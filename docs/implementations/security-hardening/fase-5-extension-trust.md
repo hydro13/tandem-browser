@@ -1,4 +1,4 @@
-# Fase 5 — Extension Trust: Treat Extensions As Privileged Actors
+# Phase 5 — Extension Trust: Treat Extensions As Privileged Actors
 
 > **Feature:** Security hardening
 > **Sessions:** 1 session
@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Introduce an explicit extension trust model so installed extensions, native
 messaging bridges, and extension-origin API calls are scoped like privileged

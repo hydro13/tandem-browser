@@ -4,14 +4,14 @@
 
 ## Goal
 
-Fix the macOS `activate` race condition, the `tab-register` IPC race, the RequestDispatcher `reattach` mid-flight problem, and the double-destroy of BehaviorObserver.
+Fix the macOS `activate` race condition, the `tab-register` IPC race, the RequestDispatcher `reattach` mid-flight problem, and the double-destroy or BehaviorObserver.
 
 ## Important Context
 
 - These fixes touch the app initialization and lifecycle — test thoroughly on each fix
 - The `activate` event only fires on macOS (dock icon click with no windows open)
 - The IPC cleanup list in `startAPI()` (lines 424-431) is meant to prevent duplicate handlers on macOS reactivation — it must be kept in sync with all registered IPC channels
-- The RequestDispatcher is the backbone of the network stack — all security, stealth, and network inspection hooks go through it
+- The RequestDispatcher is the backbone or the network stack — all security, stealth, and network inspection hooks go through it
 
 ## Fixes
 
@@ -113,7 +113,7 @@ Currently, every `register*()` call triggers `reattach()` which replaces the Ele
 
 Option A (simplest — recommended): Remove the `if (this.attached) this.reattach();` lines from all `register*()` methods. The arrays are already read by reference in the handler closures set up by `attach()`. Since JavaScript arrays are passed by reference and `.sort()` mutates in place, the handlers installed by `reattach()` during `attach()` will automatically see newly added consumers.
 
-But wait — the sort order matters. The consumers must be sorted by priority. Fix: sort the arrays at the START of each handler execution (in `reattach`'s closures), not at registration time. This way new consumers are picked up automatically AND sorted correctly.
+But wait — the sort order matters. The consumers must be sorted by priority. Fix: sort the arrays at the START or each handler execution (in `reattach`'s closures), not at registration time. This way new consumers are picked up automatically AND sorted correctly.
 
 Actually, the simplest correct fix:
 
@@ -127,7 +127,7 @@ This means the handler closure always reads the latest consumer list and sorts i
 private reattach(): void {
   this.session.webRequest.onBeforeRequest((details, callback) => {
     this.beforeRequestConsumers.sort((a, b) => a.priority - b.priority);
-    // ... rest of handler unchanged ...
+    // ... rest or handler unchanged ...
   });
   // Same for onBeforeSendHeaders and onHeadersReceived
 }

@@ -1,35 +1,35 @@
 # Design: Workspaces UI
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** Draft
 > **Effort:** Medium (3-5d)
-> **Auteur:** Kees
+> **Author:** Kees
 
 ---
 
-## Probleem / Motivatie
+## Problem / Motivation
 
-Tandem heeft al volledige session-isolatie via `/sessions` (aparte cookies, localStorage, cache per sessie). Maar er is geen visuele manier om tussen sessies te wisselen — alles gaat via API calls. Opera heeft Workspaces: gekleurde vierkantjes bovenaan de sidebar waarmee je met één klik van context wisselt.
+Tandem already has full session isolation via `/sessions` (separate cookies, localStorage, and cache per session). But there is no visual way to switch between sessions — everything goes through API calls. Opera has Workspaces: colored squares at the top or the sidebar that let you switch context with one click.
 
-**Opera heeft:** Tot 5 named workspaces met custom iconen en kleuren. Eén klik = wissel alle zichtbare tabs. Ctrl+Tab cyclet alleen binnen huidige workspace. Context menu: "Verplaats tab naar workspace".
-**Tandem heeft nu:** `SessionManager` met `POST /sessions/create`, `POST /sessions/switch`, full partition isolation. Maar geen sidebar icons, geen visuele switcher, geen tab-filtering per sessie.
-**Gap:** De backend is er — de UI ontbreekt volledig.
-
----
-
-## Gebruikerservaring — hoe het werkt
-
-> Robin opent Tandem. Bovenaan de sidebar (boven het Wingman panel) ziet hij een verticale strip met gekleurde vierkantjes. Het eerste vierkantje (blauw, "Default") is actief.
-> Robin klikt op "+" om een nieuwe workspace aan te maken. Hij noemt het "Work" en kiest een groene kleur met een 💼 emoji.
-> Hij opent werk-gerelateerde tabs (Slack, GitHub, Jira). Al deze tabs horen bij de "Work" workspace.
-> Hij klikt op het blauwe "Default" vierkantje — de tab bar wisselt: nu ziet hij alleen zijn persoonlijke tabs (YouTube, Reddit). De Work tabs zijn verborgen, niet gesloten.
-> Rechtermuisklik op een tab → "Verplaats naar workspace → Work" — de tab verdwijnt uit Default en verschijnt in Work.
+**Opera has:** Up to 5 named workspaces with custom icons and colors. One click switches all visible tabs. Ctrl+Tab cycles only within the current workspace. Context menu: "Move tab to workspace."
+**Tandem currently has:** `SessionManager` with `POST /sessions/create`, `POST /sessions/switch`, and full partition isolation. But no sidebar icons, no visual switcher, and no per-session tab filtering.
+**Gap:** The backend is er — the UI ontbreekt fully.
 
 ---
 
-## Technische Aanpak
+## User Experience — How It Works
 
-### Architectuur
+> Robin opens Tandem. At the top or the sidebar (above the Wingman panel) he sees a vertical strip or colored squares. The first square (blue, "Default") is active.
+> Robin clicks "+" to create a new workspace. He names it "Work" and chooses a green color with a 💼 emoji.
+> He opens work-related tabs (Slack, GitHub, Jira). All or these tabs belong to the "Work" workspace.
+> He clicks the blue "Default" square — the tab bar switches, and now he sees only his personal tabs (YouTube, Reddit). The Work tabs are hidden, not closed.
+> Right-click a tab → "Move to workspace → Work" — the tab disappears from Default and appears in Work.
+
+---
+
+## Technical Approach
+
+### Architecture
 
 ```
 ┌──────────────────────────────────────────────────┐
@@ -44,92 +44,92 @@ Tandem heeft al volledige session-isolatie via `/sessions` (aparte cookies, loca
 │  └──────┘ └────────────────────────────────────┘  │
 └──────────────────────────────────────────────────┘
 
-SessionManager (bestaand)
+SessionManager (existing)
   ↕ maps to
-WorkspaceManager (nieuw) → beheert workspace metadata + tab toewijzing
+WorkspaceManager (new) → manages workspace metadata + tab assignment
   ↕
 Shell IPC → workspace strip UI + tab bar filtering
 ```
 
-### Kernbeslissing: Workspaces = Sessions
+### Core Decision: Workspaces = Sessions
 
-Tandem's sessies bieden al volledige isolatie (eigen cookies, cache). In plaats van een aparte "workspace" laag te bouwen, mappen we elke sessie 1:1 op een workspace:
+Tandem's sessions already provide full isolation (their own cookies and cache). Instead or building a separate workspace layer, we folder each session 1:1 to a workspace:
 
-- Session "default" = Workspace "Default" (altijd aanwezig)
-- `POST /sessions/create {name: "Work"}` = nieuwe workspace "Work"
-- `POST /sessions/switch {name: "Work"}` = workspace switch → tab bar filtert, partition wisselt
+- Session "default" = Workspace "Default" (always aanwezig)
+- `POST /sessions/create {name: "Work"}` = new workspace "Work"
+- `POST /sessions/switch {name: "Work"}` = workspace switch → tab bar filters and partition switches
 
-Dit betekent dat werkruimtes in Tandem **dieper** zijn dan Opera's workspaces — bij het wisselen krijg je ook andere cookies/logins, wat krachtig is voor multi-account workflows.
+This means workspaces in Tandem are **deeper** than Opera's workspaces — when switching, you also get different cookies/logins, which is powerful for multi-account workflows.
 
-### Nieuwe bestanden
+### New Files
 
-| Bestand | Verantwoordelijkheid |
+| File | Responsibility |
 |---------|---------------------|
-| `src/workspaces/manager.ts` | WorkspaceManager — workspace metadata (kleur, emoji, volgorde), tab↔workspace mapping |
-| `src/api/routes/workspaces.ts` | REST API endpoints voor workspace operaties |
+| `src/workspaces/manager.ts` | WorkspaceManager — workspace metadata (color, emoji, order), tab↔workspace mapping |
+| `src/api/routes/workspaces.ts` | REST API endpoints for workspace operations |
 
-### Bestaande bestanden aanpassen
+### Modify Existing Files
 
-| Bestand | Aanpassing | Functie |
+| File | Change | Function |
 |---------|-----------|---------|
-| `src/registry.ts` | `workspaceManager` toevoegen aan `ManagerRegistry` | `interface ManagerRegistry` |
-| `src/api/server.ts` | Workspace routes registreren | `setupRoutes()` |
-| `src/main.ts` | WorkspaceManager instantiëren + registreren | `startAPI()` |
-| `src/sessions/manager.ts` | Optioneel: metadata veld toevoegen aan Session type | `interface Session` |
-| `shell/index.html` | Workspace icon strip toevoegen boven wingman panel | `<div class="main-layout">` |
+| `src/registry.ts` | add `workspaceManager` to `ManagerRegistry` | `interface ManagerRegistry` |
+| `src/api/server.ts` | register workspace routes | `setupRoutes()` |
+| `src/main.ts` | instantiate and register `WorkspaceManager` | `startAPI()` |
+| `src/sessions/manager.ts` | Optional: add a metadata field to the `Session` type | `interface Session` |
+| `shell/index.html` | add workspace icon strip above the Wingman panel | `<div class="main-layout">` |
 | `shell/js/main.js` | Workspace switching, tab filtering, strip rendering | event handlers |
-| `shell/css/main.css` | Workspace strip styling | nieuwe CSS classes |
+| `shell/css/main.css` | Workspace strip styling | new CSS classes |
 
-### Nieuwe API Endpoints
+### New API Endpoints
 
-| Methode | Endpoint | Beschrijving |
+| Method | Endpoint | Description |
 |---------|---------|--------------|
-| GET | `/workspaces` | Lijst alle workspaces met metadata (kleur, emoji, tab count) |
-| POST | `/workspaces` | Maak nieuwe workspace `{name, color?, emoji?}` |
-| DELETE | `/workspaces/:name` | Verwijder workspace (tabs gaan naar Default) |
-| POST | `/workspaces/:name/switch` | Activeer deze workspace (= session switch + tab filter) |
-| PUT | `/workspaces/:name` | Update metadata (kleur, emoji, naam) |
-| POST | `/workspaces/:name/move-tab` | Verplaats tab naar deze workspace `{tabId}` |
-| GET | `/workspaces/:name/tabs` | Lijst tabs in deze workspace |
+| GET | `/workspaces` | List all workspaces with metadata (color, emoji, tab count) |
+| POST | `/workspaces` | Create a new workspace `{name, color?, emoji?}` |
+| DELETE | `/workspaces/:name` | Delete workspace (tabs move to Default) |
+| POST | `/workspaces/:name/switch` | Activate this workspace (= session switch + tab filter) |
+| PUT | `/workspaces/:name` | Update metadata (color, emoji, name) |
+| POST | `/workspaces/:name/move-tab` | Move a tab to this workspace `{tabId}` |
+| GET | `/workspaces/:name/tabs` | List tabs in this workspace |
 
-### Geen nieuwe npm packages nodig? ✅
+### No new npm packages needed? ✅
 
 ---
 
-## Fase-opdeling
+## Phase Breakdown
 
-| Fase | Inhoud | Sessies | Afhankelijk van |
+| Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
 | 1 | Backend: WorkspaceManager + tab↔workspace mapping + API | 1 | — |
-| 2 | Shell UI: workspace icon strip, tab filtering, context menu | 1 | Fase 1 |
+| 2 | Shell UI: workspace icon strip, tab filtering, context menu | 1 | Phase 1 |
 
 ---
 
-## Risico's / Valkuilen
+## Risks / Pitfalls
 
-- **Session = Workspace koppeling:** Door 1:1 mapping met sessions krijgt elke workspace een eigen Electron partition. Dit is krachtig maar betekent ook dat login state verschilt per workspace — dit is een feature, geen bug, maar moet duidelijk gecommuniceerd worden.
-- **Tab bar filtering:** De tab bar toont momenteel alle tabs. Na workspace switch moeten alleen de tabs van de actieve workspace zichtbaar zijn. Tabs in andere workspaces zijn verborgen, niet gesloten.
-- **Default workspace:** De "default" workspace kan niet verwijderd worden en correspondeert met `persist:tandem`.
-- **Persistence:** Workspace metadata (kleur, emoji) moet opgeslagen worden in `~/.tandem/workspaces.json` zodat het browser restarts overleeft.
-
----
-
-## Anti-detect overwegingen
-
-- ✅ Workspace strip en switching zijn puur shell UI — geen injectie in webview
-- ✅ Elke workspace gebruikt zijn eigen Electron partition — websites zien alleen hun eigen sessie
-- ✅ Session switching is al bestaande functionaliteit — we voegen alleen UI toe
+- **Session = Workspace coupling:** With a 1:1 mapping to sessions, each workspace gets its own Electron partition. This is powerful, but it also means login state differs per workspace — this is a feature, not a bug, but it must be communicated clearly.
+- **Tab bar filtering:** The tab bar currently shows all tabs. After a workspace switch, only the tabs from the active workspace should be visible. Tabs in other workspaces are hidden, not closed.
+- **Default workspace:** The "default" workspace cannot be deleted and corresponds to `persist:tandem`.
+- **Persistence:** Workspace metadata (color, emoji) must be stored in `~/.tandem/workspaces.json` so it survives browser restarts.
 
 ---
 
-## Beslissingen nodig van Robin
+## Anti-detect considerations
 
-- [ ] Maximum aantal workspaces? Opera heeft 5, maar Tandem's sessions zijn ongelimiteerd.
-- [ ] Workspace strip positie: links van de tab bar (verticale strip) of boven de tab bar (horizontale strip)?
-- [ ] Workspace keyboard shortcut: Cmd+1-5 conflicteert met tab switching. Alternatief: Ctrl+Shift+1-5?
+- ✅ Workspace strip and switching are pure shell UI — no injection into the webview
+- ✅ Each workspace uses its own Electron partition — websites only see their own session
+- ✅ Session switching is already existing functionality — we are only adding UI
 
 ---
 
-## Goedkeuring
+## Decisions Needed from Robin
 
-Robin: [ ] Go / [ ] No-go / [ ] Go met aanpassing: ___________
+- [ ] Maximum number or workspaces? Opera has 5, but Tandem's sessions are unlimited.
+- [ ] Workspace strip position: left or the tab bar (vertical strip) or above the tab bar (horizontal strip)?
+- [ ] Workspace keyboard shortcut: Cmd+1-5 conflicteert with tab switching. Alternatief: Ctrl+Shift+1-5?
+
+---
+
+## Approval
+
+Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

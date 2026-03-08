@@ -20,7 +20,7 @@
 - [ ] Bookmark this Page → toggles bookmark, star updates
 
 ### TC2: Links
-- [ ] Right-click on link → link items at top of menu
+- [ ] Right-click on link → link items at top or menu
 - [ ] Open Link in New Tab opens a new tab with the link URL
 - [ ] Copy Link Address → verify clipboard content
 - [ ] Copy Link Text → verify clipboard content

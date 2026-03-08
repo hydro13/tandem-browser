@@ -1,34 +1,34 @@
 # Design: Tab Snoozing
 
-> **Datum:** 2026-02-28
-> **Status:** Ter review
-> **Effort:** Medium (3-5 dagen)
-> **Auteur:** Kees
+> **Date:** 2026-02-28
+> **Status:** Under review
+> **Effort:** Medium (3-5 days)
+> **Author:** Kees
 
 ---
 
-## Probleem / Motivatie
+## Problem / Motivation
 
-Bij intensief browsen stapelen tabs op die niet actief gebruikt worden maar wel geheugen innemen. Elke open tab met webcontents gebruikt 50-200MB RAM. Bij 20+ tabs loopt dit snel op.
+Bij intensief browsen stapelen tabs op that not actief uses be but indeed geheugen innemen. Elke open tab with webcontents uses 50-200MB RAM. Bij 20+ tabs runs this snel op.
 
-**Opera heeft:** automatische tab-suspending na X minuten inactiviteit + manuele snooze via right-click. Sluimerende tabs bewaren hun URL maar geven RAM vrij.
-**Tandem heeft nu:** resource monitoring via `GET /security/monitor/resources` maar geen tab-suspending.
-**Gap:** geen geheugenoptimalisatie voor inactieve tabs.
-
----
-
-## Gebruikerservaring
-
-> Robin heeft 25 tabs open na een research sessie. Tandem gebruikt 3GB RAM.
-> Hij right-clickt op een groep oudere tabs → "Snooze all" → ze krijgen een 💤 icoon.
-> RAM daalt naar 1.2GB. Later klikt hij op een slapende tab → die laadt opnieuw.
-> Of: hij snoozt een tab "tot morgen" → het herinnert hem er de volgende dag aan.
+**Opera has:** automatische tab-suspending na X minuten inactiviteit + manuele snooze via right-click. Sluimerende tabs bewaren hun URL but geven RAM vrij.
+**Tandem currently has:** resource monitoring via `GET /security/monitor/resources` but no tab-suspending.
+**Gap:** no geheugenoptimalisatie for inactieve tabs.
 
 ---
 
-## Technische Aanpak
+## User Experience
 
-### Architectuur
+> Robin has 25 tabs open na a research session. Tandem uses 3GB RAM.
+> He right-clickt op a group oudere tabs → "Snooze all" → ze krijgen a 💤 icon.
+> RAM drops to 1.2GB. Later he clicks a sleeping tab → it loads again.
+> Or: he snoozt a tab "tot morgen" → the herinnert hem er the next dag about.
+
+---
+
+## Technical Approach
+
+### Architecture
 
 ```
 TabSnoozingManager
@@ -44,58 +44,58 @@ TabSnoozingManager
   └── autoSnoozeCheck() — elke 5 min, snooze tabs inactief >30 min
 ```
 
-### Nieuwe bestanden
+### New Files
 
-| Bestand | Verantwoordelijkheid |
+| File | Responsibility |
 |---------|---------------------|
 | `src/tabs/snoozing.ts` | `TabSnoozingManager` class |
 
-### Bestaande bestanden aanpassen
+### Modify Existing Files
 
-| Bestand | Aanpassing | Functie |
+| File | Change | Function |
 |---------|-----------|---------|
 | `src/api/server.ts` | `TandemAPIOptions` uitbreiden | `class TandemAPI` / `TandemAPIOptions` |
 | `src/main.ts` | Manager instantiëren, timer starten, cleanup | `startAPI()`, `app.on('will-quit')` |
-| `src/api/routes/tabs.ts` | Nieuwe snooze endpoints | `function registerTabRoutes()` |
-| `shell/index.html` | 💤 visueel + right-click menu | `// === CONTEXT MENU ===`, tab bar render |
+| `src/api/routes/tabs.ts` | New snooze endpoints | `function registerTabRoutes()` |
+| `shell/index.html` | 💤 visual + right-click menu | `// === CONTEXT MENU ===`, tab bar render |
 
-### Nieuwe API Endpoints
+### New API Endpoints
 
-| Methode | Endpoint | Beschrijving |
+| Method | Endpoint | Description |
 |---------|---------|--------------|
-| POST | `/tabs/:id/snooze` | Snooze tab. Body: `{until?: string}` (ISO timestamp, optioneel) |
-| POST | `/tabs/:id/wake` | Herstel gesnoozede tab |
-| GET | `/tabs/snoozed` | Lijst alle gesnoozede tabs |
-| POST | `/tabs/snooze-inactive` | Snooze alle tabs inactief langer dan X minuten |
+| POST | `/tabs/:id/snooze` | Snooze tab. Body: `{until?: string}` (ISO timestamp, optional) |
+| POST | `/tabs/:id/wake` | Herstel snoozed tab |
+| GET | `/tabs/snoozed` | List alle snoozed tabs |
+| POST | `/tabs/snooze-inactive` | Snooze alle tabs inactief langer then X minuten |
 
 ---
 
-## Fase-opdeling
+## Phase Breakdown
 
-| Fase | Inhoud | Sessies | Afhankelijk van |
+| Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
 | 1 | TabSnoozingManager + REST API | 1 | — |
-| 2 | Shell UI (💤 badge + right-click menu + auto-snooze config) | 1 | Fase 1 |
+| 2 | Shell UI (💤 badge + right-click menu + auto-snooze config) | 1 | Phase 1 |
 
 ---
 
-## Risico's / Valkuilen
+## Risks / Pitfalls
 
-- **webContents verloren:** als tabId verandert na reload → sla ook de webContentsId op
-- **Electron webContents.discard():** mooier dan loadURL('about:blank'), maar beschikbaarheid controleren in Electron 40
-- **Auto-snooze en wingman tabs:** NOOIT wingman-beheerde tabs automatisch snoozen — check de tab source marker
-
----
-
-## Anti-detect overwegingen
-
-✅ Alles via Electron main process — geen DOM manipulatie in webview.
-⚠️ Snoozed tabs die herladen na wake kunnen cookie/session state verliezen op sommige sites — acceptabel gedrag, documenteren.
+- **webContents verloren:** if tabId verandert na reload → sla also the webContentsId op
+- **Electron webContents.discard():** mooier then loadURL('about:blank'), but beschikbaarheid controleren in Electron 40
+- **Auto-snooze and wingman tabs:** NOOIT wingman-beheerde tabs automatisch snoozen — check the tab source marker
 
 ---
 
-## Beslissingen nodig van Robin
+## Anti-detect considerations
 
-- [ ] Wil je auto-snooze aan of uit by default?
+✅ Alles via Electron main process — no DOM manipulation in webview.
+⚠️ Snoozed tabs that herladen na wake can cookie/session state verliezen op sommige sites — acceptabel behavior, documenteren.
+
+---
+
+## Decisions Needed from Robin
+
+- [ ] Wil you auto-snooze about or out by default?
 - [ ] Drempelwaarde inactiviteit: 30 min? Configureerbaar?
-- [ ] Mogen wingman-tabs gesnoozed worden? (Aanbeveling: nee)
+- [ ] Mogen wingman-tabs snoozed be? (Aanbeveling: nee)

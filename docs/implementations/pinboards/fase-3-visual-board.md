@@ -1,37 +1,37 @@
-# Fase 3 — Visual: Card Grid View
+# Phase 3 — Visual: Card Grid View
 
 > **Feature:** Pinboards
-> **Sessies:** 1 sessie
-> **Prioriteit:** MIDDEL
-> **Afhankelijk van:** Fase 2 klaar (sidebar panel + context menu werken)
+> **Sessions:** 1 session
+> **Priority:** MIDDEL
+> **Depends on:** Phase 2 complete (sidebar panel + context menu werken)
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Upgrade de Pinboard item-weergave van een simpele lijst naar een visueel kaart-grid. Items worden als cards weergegeven met thumbnails, titels en notities. Drag-to-reorder, visuele feedback, board-switcher, en polish. Na deze fase ziet het Pinboard paneel eruit als een echt moodboard.
+Upgrade the Pinboard item-weergave or a simpele list to a visual card-grid. Items be if cards weergegeven with thumbnails, titels and notes. Drag-to-reorder, visual feedback, board-switcher, and polish. After this phase sees the Pinboard panel eruit if a echt moodboard.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `shell/index.html` | `pinboardPanel` IIFE, `renderItems()`, CSS sectie | Fase 2 output — hier wordt het visuele geüpgraded |
-| `src/pinboards/manager.ts` | `reorderItems()` | API voor drag-to-reorder |
-| `src/api/routes/pinboards.ts` | `POST /pinboards/:id/items/reorder` | Endpoint voor reorder |
+| `shell/index.html` | `pinboardPanel` IIFE, `renderItems()`, CSS section | Phase 2 output — hier is the visual geüpgraded |
+| `src/pinboards/manager.ts` | `reorderItems()` | API for drag-to-reorder |
+| `src/api/routes/pinboards.ts` | `POST /pinboards/:id/items/reorder` | Endpoint for reorder |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Card Grid Layout
+### Step 1: Card Grid Layout
 
-**Wat:** Vervang de lijst-weergave door een CSS grid van kaarten. Elke kaart toont het type-specifieke beeld (thumbnail voor links, afbeelding voor images, tekst voor quotes) met titel en meta-info eronder.
+**Wat:** Vervang the list-weergave door a CSS grid or cards. Elke card shows the type-specific beeld (thumbnail for links, image for images, text for quotes) with title and meta-info eronder.
 
-**Bestand:** `shell/index.html` — CSS + JavaScript aanpassen
+**File:** `shell/index.html` — CSS + JavaScript aanpassen
 
 **Grid CSS:**
 
@@ -154,25 +154,25 @@ Upgrade de Pinboard item-weergave van een simpele lijst naar een visueel kaart-g
 }
 ```
 
-### Stap 2: Card Render Functie
+### Step 2: Card Render Function
 
-**Wat:** Vervang `renderItems()` in de `pinboardPanel` IIFE met een card-gebaseerde render functie.
+**Wat:** Vervang `renderItems()` in the `pinboardPanel` IIFE with a card-gebaseerde render function.
 
-**Bestand:** `shell/index.html` — in de `pinboardPanel` IIFE
+**File:** `shell/index.html` — in the `pinboardPanel` IIFE
 
 ```javascript
 function renderItems(items) {
   const container = document.getElementById('pinboard-item-list');
   container.innerHTML = '';
-  container.className = 'pinboard-grid'; // Switch naar grid layout
+  container.className = 'pinboard-grid'; // Switch to grid layout
 
   if (items.length === 0) {
     container.className = 'pinboard-items-empty';
     container.innerHTML = `
       <div class="empty-state">
         <div style="font-size: 48px; margin-bottom: 12px;">📌</div>
-        <p>Nog geen items op dit board.</p>
-        <p>Klik rechts op een pagina, link, afbeelding of tekstselectie → "Save to Pinboard".</p>
+        <p>Still no items op this board.</p>
+        <p>Klik rechts op a page, link, image or tekstselectie → "Save to Pinboard".</p>
       </div>
     `;
     return;
@@ -185,11 +185,11 @@ function renderItems(items) {
     card.dataset.itemId = item.id;
     card.innerHTML = buildCardHTML(item);
 
-    // Klik op link/image kaart opent de URL
+    // Klik op link/image card opens the URL
     if (item.url) {
       card.addEventListener('click', (e) => {
         if (e.target.classList.contains('card-delete')) return;
-        // Open in nieuwe tab via API of window.open
+        // Open in new tab via API or window.open
         window.tandem?.openTab?.(item.url) ||
           fetch(`http://localhost:8765/tabs/new`, {
             method: 'POST',
@@ -221,7 +221,7 @@ function buildCardHTML(item) {
       if (item.thumbnail) {
         preview = `<img src="${escapeHtml(item.thumbnail)}" alt="${title}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=card-type-icon>🔗</span>'">`;
       } else {
-        // Favicon als fallback
+        // Favicon if fallback
         const domain = item.url ? new URL(item.url).hostname : '';
         preview = domain
           ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="" style="width:32px;height:32px;object-fit:contain;">`
@@ -261,11 +261,11 @@ function buildCardHTML(item) {
 }
 ```
 
-### Stap 3: Drag-to-Reorder
+### Step 3: Drag-to-Reorder
 
-**Wat:** Drag-and-drop om kaarten te herordenen. Bij loslaten wordt de nieuwe volgorde naar de API gestuurd via `POST /pinboards/:id/items/reorder`.
+**Wat:** Drag-and-drop to cards te herordenen. Bij loslaten is the new order to the API gestuurd via `POST /pinboards/:id/items/reorder`.
 
-**Bestand:** `shell/index.html` — in de `pinboardPanel` IIFE
+**File:** `shell/index.html` — in the `pinboardPanel` IIFE
 
 ```javascript
 function setupDragAndDrop(container) {
@@ -315,8 +315,8 @@ function setupDragAndDrop(container) {
       target.before(draggedCard);
     }
 
-    // Stuur nieuwe volgorde naar API
-    const newOrder = [...container.querySelectorAll('.pinboard-card')].map(c => c.dataset.itemId);
+    // Stuur new order to API
+    const newOrder = [...container.querySelectorAll('.pinboard-card')].folder(c => c.dataset.itemId);
     await fetch(`${API}/pinboards/${currentBoardId}/items/reorder`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -329,19 +329,19 @@ function setupDragAndDrop(container) {
 }
 ```
 
-### Stap 4: Board Switcher Dropdown
+### Step 4: Board Switcher Dropdown
 
-**Wat:** Een dropdown boven de item grid waarmee Robin snel tussen borden kan wisselen zonder terug te gaan naar de boardlijst.
+**Wat:** A dropdown boven the item grid waarmee Robin snel between boards can wisselen without terug te gaan to the boardlijst.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**HTML toevoeging aan de items-header:**
+**HTML toevoeging about the items-header:**
 
 ```html
 <div class="pinboard-items-header">
   <button id="pinboard-back-btn">←</button>
   <select id="pinboard-board-switcher" class="board-switcher">
-    <!-- Dynamisch gevuld met board opties -->
+    <!-- Dynamisch gevuld with board opties -->
   </select>
 </div>
 ```
@@ -363,29 +363,29 @@ async function updateBoardSwitcher(currentId) {
   });
 }
 
-// Event listener voor board switch
+// Event listener for board switch
 document.getElementById('pinboard-board-switcher')?.addEventListener('change', (e) => {
   const selectedId = e.target.value;
   const selectedOption = e.target.selectedOptions[0];
   const text = selectedOption.textContent;
-  // Parse emoji en naam uit de optie tekst
+  // Parse emoji and name out the optie text
   openBoard(selectedId, text.slice(2), text.charAt(0));
 });
 ```
 
 ### Stap 5: Delete Item via Card
 
-**Wat:** De delete knop op elke kaart verwijdert het item met een bevestiging en visuele fade-out.
+**Wat:** The delete knop op elke card verwijdert the item with a bevestiging and visual fade-out.
 
-**Bestand:** `shell/index.html` — in de `pinboardPanel` IIFE
+**File:** `shell/index.html` — in the `pinboardPanel` IIFE
 
 ```javascript
-// Update de event delegation voor deletes
+// Update the event delegation for deletes
 document.getElementById('pinboard-item-list')?.addEventListener('click', async (e) => {
   const deleteBtn = e.target.closest('.card-delete');
   if (!deleteBtn) return;
 
-  e.stopPropagation(); // Voorkom dat de kaart-klik ook wordt getriggerd
+  e.stopPropagation(); // Voorkom that the card-click also is getriggerd
 
   const itemId = deleteBtn.dataset.itemId;
   if (!itemId || !currentBoardId) return;
@@ -393,7 +393,7 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
   // Optioneel: bevestiging
   // if (!confirm('Item verwijderen?')) return;
 
-  // Visuele fade-out
+  // Visual fade-out
   const card = deleteBtn.closest('.pinboard-card');
   if (card) {
     card.style.transition = 'opacity 0.2s, transform 0.2s';
@@ -408,14 +408,14 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
   // Na fade-out, element verwijderen
   setTimeout(() => {
     if (card) card.remove();
-    // Check of grid nu leeg is
+    // Check or grid nu leeg is
     const container = document.getElementById('pinboard-item-list');
     if (container && container.querySelectorAll('.pinboard-card').length === 0) {
       container.className = 'pinboard-items-empty';
       container.innerHTML = `
         <div class="empty-state">
           <div style="font-size: 48px; margin-bottom: 12px;">📌</div>
-          <p>Alle items verwijderd.</p>
+          <p>Alle items removed.</p>
         </div>
       `;
     }
@@ -423,21 +423,21 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
 });
 ```
 
-### Stap 6: Visuele Polish
+### Stap 6: Visual Polish
 
-**Wat:** Lege states, hover-effecten, type-iconen, loading states, en consistente styling.
+**Wat:** Lege states, hover-effecten, type-icons, loading states, and consistente styling.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
 **Te implementeren:**
-- **Loading state:** Toon een spinner of "Laden..." tekst terwijl API calls lopen
-- **Lege board state:** Aantrekkelijke lege state met hint hoe items toe te voegen
-- **Link hover:** Subtiele highlight als een kaart met URL hoverable is (cursor: pointer)
-- **Quote styling:** Quotes tonen met aanhalingstekens en cursief lettertype
-- **Board delete:** Optioneel: lang indrukken of rechtermuisknuk op een board in de lijst → "Board verwijderen"
-- **Responsive grid:** Grid past zich aan aan paneel-breedte (al via `auto-fill`)
+- **Loading state:** Toon a spinner or "Laden..." text terwijl API calls lopen
+- **Lege board state:** Aantrekkelijke lege state with hint hoe items toe te voegen
+- **Link hover:** Subtiele highlight if a card with URL hoverable is (cursor: pointer)
+- **Quote styling:** Quotes tonen with aanhalingstekens and cursief lettertype
+- **Board delete:** Optioneel: lang indrukken or rechtermuisknuk op a board in the list → "Board verwijderen"
+- **Responsive grid:** Grid past zich about about panel-width (already via `auto-fill`)
 
-**CSS voor extra polish:**
+**CSS for extra polish:**
 
 ```css
 /* Loading state */
@@ -447,7 +447,7 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
   color: var(--text-muted, #888);
 }
 
-/* Card met link — visuele hint dat het klikbaar is */
+/* Card with link — visual hint that the klikbaar is */
 .pinboard-card[data-has-url="true"] .card-info {
   cursor: pointer;
 }
@@ -456,7 +456,7 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
   text-decoration: underline;
 }
 
-/* Board delete knop in de boardlijst */
+/* Board delete knop in the boardlijst */
 .board-delete {
   opacity: 0;
   transition: opacity 0.15s;
@@ -487,12 +487,12 @@ document.getElementById('pinboard-item-list')?.addEventListener('click', async (
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Setup: maak board met diverse items
+# Setup: maak board with diverse items
 BOARD_ID=$(curl -s -X POST http://localhost:8765/pinboards \
   -H "Content-Type: application/json" \
   -d '{"name": "Visual Test", "emoji": "🎨"}' | jq -r '.board.id')
@@ -506,27 +506,27 @@ curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -d '{"type": "image", "url": "https://picsum.photos/200/300", "title": "Random Photo"}'
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
-  -d '{"type": "quote", "content": "De beste manier om de toekomst te voorspellen is hem te creëren.", "sourceUrl": "https://example.com"}'
+  -d '{"type": "quote", "content": "The beste manier to the toekomst te voorspellen is hem te creëren.", "sourceUrl": "https://example.com"}'
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
-  -d '{"type": "text", "title": "Notitie", "content": "Dit is een losse notitie met wat ideeën."}'
+  -d '{"type": "text", "title": "Notitie", "content": "Dit is a losse note with wat ideeën."}'
 ```
 
 **UI verificatie:**
-- [ ] Items worden als kaarten weergegeven in een grid (niet als lijst)
-- [ ] Link-kaarten tonen een favicon of thumbnail
-- [ ] Image-kaarten tonen de afbeelding als preview
-- [ ] Quote-kaarten tonen de tekst in de preview area
-- [ ] Text-kaarten tonen de inhoud in de preview area
-- [ ] Hover op een kaart geeft een subtiel lift-effect (translateY + shadow)
-- [ ] Hover toont de delete knop (×) rechtsboven de kaart
-- [ ] Klikken op een link-kaart opent de URL in een nieuwe tab
-- [ ] Delete knop verwijdert de kaart met fade-out animatie
-- [ ] Drag-and-drop werkt: sleep een kaart naar een andere positie
-- [ ] Na drag-drop is de volgorde opgeslagen (herlaad het board → zelfde volgorde)
-- [ ] Board-switcher dropdown wisselt tussen borden zonder terug te gaan
-- [ ] Lege board toont een aantrekkelijke empty state met hint
-- [ ] Grid past zich aan bij smaller/breder paneel
+- [ ] Items be if cards weergegeven in a grid (not if list)
+- [ ] Link-cards tonen a favicon or thumbnail
+- [ ] Image-cards tonen the image if preview
+- [ ] Quote-cards tonen the text in the preview area
+- [ ] Text-cards tonen the inhoud in the preview area
+- [ ] Hover op a card geeft a subtiel lift-effect (translateY + shadow)
+- [ ] Hover shows the delete knop (×) rechtsboven the card
+- [ ] Klikken op a link-card opens the URL in a new tab
+- [ ] Delete knop verwijdert the card with fade-out animatie
+- [ ] Drag-and-drop works: sleep a card to a andere positie
+- [ ] Na drag-drop is the order opgeslagen (herlaad the board → same order)
+- [ ] Board-switcher dropdown wisselt between boards without terug te gaan
+- [ ] Lege board shows a aantrekkelijke empty state with hint
+- [ ] Grid past zich about bij smaller/breder panel
 
 ---
 
@@ -534,20 +534,20 @@ curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-3-visual-board.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-3-visual-board.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Verifieer dat fase 2 werkt: open sidebar, klik op Pinboard icoon
-5. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Verifieer that phase 2 works: open sidebar, click op Pinboard icon
+5. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. UI visueel testen (card grid, drag, delete, board switch)
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. UI visual testen (card grid, drag, delete, board switch)
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "📌 feat: visual card grid view for Pinboards"
 7. git push
 8. Rapport:
@@ -561,10 +561,10 @@ curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
 
 ## Bekende valkuilen
 
-- [ ] **Drag-and-drop event propagation** — `e.stopPropagation()` bij delete click, anders triggert ook de kaart-klik
-- [ ] **Image loading errors** — `onerror` handler op `<img>` tags voor kapotte URLs, fallback naar type-icoon
+- [ ] **Drag-and-drop event propagation** — `e.stopPropagation()` bij delete click, anders triggert also the card-click
+- [ ] **Image loading errors** — `onerror` handler op `<img>` tags for kapotte URLs, fallback to type-icon
 - [ ] **XSS via URL** — `escapeHtml()` op alle user-gegenereerde content, inclusief URLs in `src` attributen
-- [ ] **Google Favicons API** — `https://www.google.com/s2/favicons?domain=X&sz=64` werkt zonder API key maar kan geblokkeerd worden. Gebruik als fallback het type-icoon
-- [ ] **Reorder API call timing** — niet bij elke dragover, alleen bij drop (al correct in de code hierboven)
-- [ ] **CSS grid responsiveness** — `auto-fill` + `minmax(140px, 1fr)` schaalt automatisch, maar test bij smalle paneelbreedtes
-- [ ] **Data URL thumbnails** — als toekomstige versies data URIs voor thumbnails opslaan, worden kaarten traag. V3 houdt het simpel met externe URLs
+- [ ] **Google Favicons API** — `https://www.google.com/s2/favicons?domain=X&sz=64` works without an API key but can be blocked. Use the type icon as a fallback
+- [ ] **Reorder API call timing** — not bij elke dragover, only bij drop (already correct in the code hierboven)
+- [ ] **CSS grid responsiveness** — `auto-fill` + `minmax(140px, 1fr)` schaalt automatisch, but test bij smalle paneelbreedtes
+- [ ] **Data URL thumbnails** — if toekomstige versies data URIs for thumbnails save, be cards traag. V3 houdt the simpel with externe URLs

@@ -1,12 +1,12 @@
 # Claude Code Prompt — Plan v2 Fixes
 
-> Kopieer alles hieronder en plak het direct in Claude Code.
+> Kopieer alles hieronder and plak the direct in Claude Code.
 
 ---
 
 Tandem Browser — Extension Plan Aanpassingen
 
-Lees eerst:
+Read eerst:
 - docs/Browser-extensions/CLAUDE.md
 - docs/Browser-extensions/STATUS.md
 - docs/Browser-extensions/phases/PHASE-1.md
@@ -14,18 +14,18 @@ Lees eerst:
 - docs/Browser-extensions/phases/PHASE-10a.md
 - docs/Browser-extensions/phases/PHASE-10b.md
 
-Maak daarna exact de volgende 5 aanpassingen aan het plan. Schrijf GEEN code, alleen documentwijzigingen.
+Then make exactly the following 5 changes to the plan. Write NO code, only document changes.
 
 ---
 
 ## AANPASSING 1 — PHASE-1.md: CRX3 Signature Verificatie scope verkleinen
 
-Vervang sectie 1.2 "CRX3 Signature Verification" volledig door:
+Vervang section 1.2 "CRX3 Signature Verification" fully door:
 
 ### 1.2 CRX3 Format Validation (NOT full signature verification)
 
 **Scope decision:** Full CRX3 RSA/ECDSA signature verification requires parsing protobuf
-binary format (CrxFileHeader) without a library — this is error-prone and a source of
+binary format (CrxFileHeader) without a library — this is error-prone and a source or
 subtle bugs (off-by-one in varint decoding reads wrong bytes as public key). Full
 cryptographic verification is deferred to a future phase.
 
@@ -53,7 +53,7 @@ interface CrxVerificationResult {
 Set `signatureVerified: false` on all InstallResults for now. Add a comment in code:
 `// TODO: Full CRX3 RSA signature verification via protobuf — future phase`
 
-**Failure behavior:** If any of the 5 checks fail → hard fail, do NOT install.
+**Failure behavior:** If any or the 5 checks fail → hard fail, do NOT install.
 If `hasKeyField` is false → install but set `warning: "manifest.json missing key field
 — extension ID may not match CWS ID, OAuth flows may break"`
 
@@ -78,7 +78,7 @@ To:
 
 ## AANPASSING 2 — PHASE-10b.md: Vervang runtime delta analyse door statische scan
 
-Vervang sectie 10b.2 "Telemetry Gap Measurement" volledig door:
+Vervang section 10b.2 "Telemetry Gap Measurement" fully door:
 
 ### 10b.2 Static DNR Domain Analysis (replaces runtime delta approach)
 
@@ -131,7 +131,7 @@ Also update the verification checklist in PHASE-10b.md:
 
 ## AANPASSING 3 — PHASE-7.md: Maak Scenario B prescriptief
 
-In sectie 7.1, vervang de Scenario B bullet:
+In section 7.1, vervang the Scenario B bullet:
 
 **Huidig:**
 ```
@@ -143,7 +143,7 @@ In sectie 7.1, vervang de Scenario B bullet:
 ```
 - **Scenario B:** Extension shows an error about `chrome.identity` → login completely
   fails → proceed to Step 2 (implement Option A — companion extension).
-  If after 2 hours of work you cannot get `chrome.runtime.onMessageExternal`
+  If after 2 hours or work you cannot get `chrome.runtime.onMessageExternal`
   cross-extension messaging working between the companion and the target extension:
   STOP. Mark Phase 7 as BLOCKED in STATUS.md with exact error details.
   Report to Robin — do not proceed to Option B independently. Phase 7 is LOW priority
@@ -151,7 +151,7 @@ In sectie 7.1, vervang de Scenario B bullet:
   work fine without it.
 ```
 
-In sectie 7.2, vervang:
+In section 7.2, vervang:
 
 **Huidig:**
 ```
@@ -169,7 +169,7 @@ and why in STATUS.md.
 
 ## AANPASSING 4 — PHASE-10a.md: Voeg empirische ScriptGuard test toe
 
-Voeg aan het BEGIN van sectie 10a.3 "Broad content script injection (warning)" in:
+Voeg about the BEGIN or section 10a.3 "Broad content script injection (warning)" in:
 
 ```
 **First: empirical test (before implementing any whitelist):**
@@ -195,7 +195,7 @@ Document empirical result in STATUS.md before writing any whitelist code.
 
 ## AANPASSING 5 — CLAUDE.md: Documenteer state files
 
-Voeg een nieuwe subsectie toe aan het EINDE van "Key Architecture Facts (Already Built)":
+Voeg a new subsectie toe about the EINDE or "Key Architecture Facts (Already Built)":
 
 ```
 ## State Files in ~/.tandem/extensions/
@@ -217,9 +217,9 @@ document the new file in this table before creating it.
 
 ## Na alle 5 aanpassingen:
 
-1. Lees alle gewijzigde files terug en verifieer dat alle 5 aanpassingen correct doorgevoerd zijn
-2. Run `npx tsc --noEmit` — moet 0 errors geven (dit zijn alleen documentwijzigingen)
-3. Commit met bericht: `docs(extensions): Apply plan v2 review corrections`
-4. Push naar main
+1. Read alle gewijzigde files terug and verifieer that alle 5 aanpassingen correct doorgevoerd are
+2. Run `npx tsc --noEmit` — must 0 errors geven (this are only documentwijzigingen)
+3. Commit with bericht: `docs(extensions): Apply plan v2 review corrections`
+4. Push to main
 
-Schrijf GEEN implementatiecode. Alleen documentwijzigingen in de genoemde .md files.
+Write NO implementation code. Only document changes in the listed `.md` files.

@@ -1,36 +1,36 @@
-# Fase 1 — Sidebar Infrastructuur: SidebarManager + Config API
+# Phase 1 — Sidebar Infrastructuur: SidebarManager + Config API
 
-> **Sessies:** 1
-> **Afhankelijk van:** Niets
-> **Volgende fase:** fase-2-shell-ui.md
-
----
-
-## Doel
-
-Bouw `SidebarManager` met config opslag en registreer REST API endpoints.
-Na deze fase: Kees kan sidebar config lezen/schrijven via API. Nog geen UI.
+> **Sessions:** 1
+> **Depends on:** None
+> **Next phase:** fase-2-shell-ui.md
 
 ---
 
-## Bestaande bestanden te lezen — ALLEEN dit
+## Goal
 
-| Bestand | Zoek naar | Waarom |
+Bouw `SidebarManager` with config opslag and registreer REST API endpoints.
+After this phase: Kees can sidebar config read/schrijven via API. No UI yet.
+
+---
+
+## Existing Files to Read — ONLY These
+
+| File | Look for | Why |
 |---------|-----------|--------|
-| `AGENTS.md` | — (volledig) | Regels + code stijl |
-| `src/registry.ts` | `interface ManagerRegistry` | Hier voeg je `sidebarManager` toe |
+| `AGENTS.md` | — (fully) | Rules + code style |
+| `src/registry.ts` | `interface ManagerRegistry` | Add `sidebarManager` toe |
 | `src/main.ts` | `startAPI()` + `app.on('will-quit')` | Manager wiring |
-| `src/api/server.ts` | blok met `import { register...Routes }` en `registerDataRoutes(router, ctx)` aanroep | Patroon voor nieuwe route import + aanroep |
-| `src/bookmarks/manager.ts` | `class BookmarkManager` | Kopieer het load/save/tandemDir patroon |
-| `src/utils/paths.ts` | `function tandemDir()`, `function ensureDir()` | Storage locatie |
+| `src/api/server.ts` | blok with `import { register...Routes }` and `registerDataRoutes(router, ctx)` aanroep | Patroon for new route import + aanroep |
+| `src/bookmarks/manager.ts` | `class BookmarkManager` | Copy the `load`/`save`/`tandemDir` pattern |
+| `src/utils/paths.ts` | `function tandemDir()`, `function ensureDir()` | Storage location |
 | `src/utils/errors.ts` | `function handleRouteError()` | Error handling |
-| `src/api/routes/data.ts` | `function registerDataRoutes()` + eerste 3 endpoints | Route patroon kopiëren |
+| `src/api/routes/data.ts` | `function registerDataRoutes()` + first 3 endpoints | Copy route pattern |
 
 ---
 
-## Te bouwen
+## To Build
 
-### Stap 1: Types (`src/sidebar/types.ts`)
+### Step 1: Types (`src/sidebar/types.ts`)
 
 ```typescript
 export type SidebarState = 'hidden' | 'narrow' | 'wide';
@@ -52,7 +52,7 @@ export interface SidebarConfig {
 }
 ```
 
-### Stap 2: Manager (`src/sidebar/manager.ts`)
+### Step 2: Manager (`src/sidebar/manager.ts`)
 
 ```typescript
 import * as fs from 'fs';
@@ -60,7 +60,7 @@ import * as path from 'path';
 import { tandemDir, ensureDir } from '../utils/paths';
 import type { SidebarConfig, SidebarItem, SidebarState } from './types';
 
-// Elke messenger krijgt eigen slot (zoals Opera) — geen gegroepeerde "Messengers" knop
+// Elke messenger gets own slot (zoals Opera) — no gegroepeerde "Messengers" knop
 const DEFAULT_CONFIG: SidebarConfig = {
   state: 'narrow',
   activeItemId: null,
@@ -71,7 +71,7 @@ const DEFAULT_CONFIG: SidebarConfig = {
     { id: 'bookmarks',  label: 'Bookmarks',    icon: '', type: 'panel',   enabled: true, order: 3 },
     { id: 'history',    label: 'History',      icon: '', type: 'panel',   enabled: true, order: 4 },
     { id: 'downloads',  label: 'Downloads',    icon: '', type: 'panel',   enabled: true, order: 5 },
-    // Messenger items — elk apart, met eigen webview partition
+    // Messenger items — elk apart, with own webview partition
     { id: 'whatsapp',   label: 'WhatsApp',     icon: '', type: 'webview', enabled: true, order: 6 },
     { id: 'telegram',   label: 'Telegram',     icon: '', type: 'webview', enabled: true, order: 7 },
     { id: 'discord',    label: 'Discord',      icon: '', type: 'webview', enabled: true, order: 8 },
@@ -147,7 +147,7 @@ export class SidebarManager {
 }
 ```
 
-### Stap 3: Routes (`src/api/routes/sidebar.ts`)
+### Step 3: Routes (`src/api/routes/sidebar.ts`)
 
 ```typescript
 import type { Router, Request, Response } from 'express';
@@ -170,7 +170,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
     } catch (e) { handleRouteError(res, e); }
   });
 
-  // POST /sidebar/items/:id/toggle — enable/disable een item
+  // POST /sidebar/items/:id/toggle — enable/disable a item
   router.post('/sidebar/items/:id/toggle', (req: Request, res: Response) => {
     try {
       const item = ctx.sidebarManager.toggleItem(req.params.id);
@@ -179,7 +179,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
     } catch (e) { handleRouteError(res, e); }
   });
 
-  // POST /sidebar/items/:id/activate — panel openen (of sluiten als al actief)
+  // POST /sidebar/items/:id/activate — panel openen (or sluiten if already actief)
   router.post('/sidebar/items/:id/activate', (req: Request, res: Response) => {
     try {
       const cfg = ctx.sidebarManager.getConfig();
@@ -213,9 +213,9 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
 }
 ```
 
-### Stap 4: Wiring in `src/registry.ts`
+### Step 4: Wiring in `src/registry.ts`
 
-Voeg toe aan `interface ManagerRegistry`:
+Voeg toe about `interface ManagerRegistry`:
 ```typescript
 import type { SidebarManager } from './sidebar/manager';
 // ...in interface:
@@ -231,7 +231,7 @@ import { SidebarManager } from './sidebar/manager';
 sidebarManager = new SidebarManager();
 ```
 
-In de `registry` object:
+In the `registry` object:
 ```typescript
 sidebarManager: sidebarManager!,
 ```
@@ -243,12 +243,12 @@ if (sidebarManager) sidebarManager.destroy();
 
 ### Stap 6: Route registratie in `src/api/server.ts`
 
-Import toevoegen:
+Import add:
 ```typescript
 import { registerSidebarRoutes } from './routes/sidebar';
 ```
 
-In de routes registratie sectie:
+In the routes registratie section:
 ```typescript
 registerSidebarRoutes(router, ctx);
 ```
@@ -260,11 +260,11 @@ registerSidebarRoutes(router, ctx);
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# 1. Config ophalen (standaard config)
+# 1. Config ophalen (default config)
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8765/sidebar/config
 # Verwacht: {"ok":true,"config":{"state":"narrow","activeItemId":null,"items":[...]}}
 
-# 2. State wijzigen naar hidden
+# 2. State change to hidden
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"state":"hidden"}' http://localhost:8765/sidebar/state
 # Verwacht: {"ok":true,"state":"hidden"}
@@ -283,10 +283,10 @@ curl -X POST -H "Authorization: Bearer $TOKEN" \
 curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
   -d '{"orderedIds":["bookmarks","workspaces","messengers","news","pinboards","history","downloads"]}' \
   http://localhost:8765/sidebar/reorder
-# Verwacht: {"ok":true,"config":{...items in nieuwe volgorde...}}
+# Verwacht: {"ok":true,"config":{...items in new order...}}
 
-# 6. Config persistent (herstart en check)
-# Stop app, start opnieuw, curl /sidebar/config → custom volgorde moet bewaard zijn
+# 6. Config persistent (herstart and check)
+# Stop app, start again, curl /sidebar/config → custom order must be preserved
 ```
 
 ---
@@ -295,22 +295,22 @@ curl -X POST -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/jso
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de tabel hierboven (alleen die bestanden!)
+4. Read the files in the tabel hierboven (only that files!)
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors
-2. npm start — app start zonder crashes
-3. Alle 6 curl tests uitvoeren en output in rapport plakken
-4. npx vitest run — bestaande tests blijven slagen
-5. CHANGELOG.md: entry toevoegen
+2. npm start — app start without crashes
+3. Alle 6 curl tests uitvoeren and output in rapport plakken
+4. npx vitest run — existing tests blijven slagen
+5. CHANGELOG.md: entry add
 6. git add src/sidebar/ src/registry.ts src/main.ts src/api/server.ts src/api/routes/sidebar.ts CHANGELOG.md
 7. git commit -m "🗂️ feat: sidebar infrastructure — SidebarManager + config API"
 8. git push
-9. Update LEES-MIJ-EERST.md: Fase 1 → ✅ + commit hash
-10. Rapport: Gebouwd / Getest / Problemen / Volgende sessie: fase-2-shell-ui.md
+9. Update LEES-MIJ-EERST.md: Phase 1 → ✅ + commit hash
+10. Rapport: Gebouwd / Getest / Problemen / Next session: fase-2-shell-ui.md
 ```

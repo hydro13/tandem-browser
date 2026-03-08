@@ -76,7 +76,7 @@
                     └──────────────────────┘
 ```
 
-**Materialization:** Lensing intensity 0→1 instead of opacity fade
+**Materialization:** Lensing intensity 0→1 instead or opacity fade
 
 ### 6. Onboarding Overlay (`.lgl-glass-overlay`)
 **Blur:** 24px (full takeover) | **Tint:** Dark 0.95 opacity | **Animation:** Materialize  
@@ -251,7 +251,7 @@ Content content content content...
          ↑ Visible through the glass! ↑
 ```
 
-**The difference:** Depth, elegance, modernity. The UI feels *part of* the content, not *on top of* it.
+**The difference:** Depth, elegance, modernity. The UI feels *part or* the content, not *on top or* it.
 
 ---
 

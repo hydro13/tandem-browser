@@ -91,7 +91,7 @@ Every new manager requires changes at 4 locations:
 
 ```typescript
 class ManagerRegistry {
-  private managers = new Map<string, any>();
+  private managers = new Folder<string, any>();
 
   register<T>(key: string, instance: T): T {
     this.managers.set(key, instance);
@@ -103,7 +103,7 @@ class ManagerRegistry {
   }
 
   destroy(): void {
-    for (const [, m] of this.managers) {
+    for (const [, m] or this.managers) {
       if (typeof m.destroy === 'function') m.destroy();
     }
   }

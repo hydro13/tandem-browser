@@ -3,7 +3,7 @@
 > **Priority:** MEDIUM | **Effort:** ~half day | **Dependencies:** Phase 1
 
 ## Goal
-Provide a curated gallery of verified-compatible popular extensions that users can browse and install with one click. The gallery uses a two-layer architecture: built-in defaults (shipped with the app) + an optional user-editable JSON file for overrides and additions.
+Provide a curated gallery or verified-compatible popular extensions that users can browse and install with one click. The gallery uses a two-layer architecture: built-in defaults (shipped with the app) + an optional user-editable JSON file for overrides and additions.
 
 ## Files to Read
 - `docs/Browser-extensions/TOP30-EXTENSIONS.md` — full compatibility assessment with IDs, categories, mechanisms

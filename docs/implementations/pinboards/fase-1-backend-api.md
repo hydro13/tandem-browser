@@ -1,42 +1,42 @@
-# Fase 1 — Backend: PinboardManager + REST API
+# Phase 1 — Backend: PinboardManager + REST API
 
 > **Feature:** Pinboards
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de complete backend voor Pinboards: een `PinboardManager` class die borden en items beheert met JSON-opslag, plus alle REST API endpoints. Na deze fase zijn alle CRUD-operaties bruikbaar via `curl`. De UI komt in fase 2.
+Bouw the complete backend for Pinboards: a `PinboardManager` class that boards and items beheert with JSON-opslag, plus alle REST API endpoints. After this phase are alle CRUD-operaties bruikbaar via `curl`. The UI comes in phase 2.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/bookmarks/manager.ts` | `class BookmarkManager`, `load()`, `save()`, `generateId()` | Exact hetzelfde storage patroon kopiëren |
-| `src/api/routes/data.ts` | `registerDataRoutes()` | Route patroon kopiëren (try/catch, handleRouteError, response format) |
-| `src/registry.ts` | `interface ManagerRegistry` | Hier `pinboardManager` toevoegen |
-| `src/api/server.ts` | `setupRoutes()` | Hier `registerPinboardRoutes()` importeren en aanroepen |
-| `src/main.ts` | `startAPI()`, `app.on('will-quit')` | Manager instantiëren en registreren |
-| `src/utils/paths.ts` | `tandemDir()`, `ensureDir()` | Voor storage pad (`~/.tandem/pinboards/`) |
-| `src/utils/errors.ts` | `handleRouteError()` | Voor error handling in routes |
-| `src/api/context.ts` | `type RouteContext` | Begrijpen hoe routes context ontvangen |
+| `src/bookmarks/manager.ts` | `class BookmarkManager`, `load()`, `save()`, `generateId()` | Exact hetzelfde storage pattern kopiëren |
+| `src/api/routes/data.ts` | `registerDataRoutes()` | Copy route pattern (try/catch, handleRouteError, response format) |
+| `src/registry.ts` | `interface ManagerRegistry` | Hier `pinboardManager` add |
+| `src/api/server.ts` | `setupRoutes()` | Hier `registerPinboardRoutes()` importeren and aanroepen |
+| `src/main.ts` | `startAPI()`, `app.on('will-quit')` | Instantiate and register the manager |
+| `src/utils/paths.ts` | `tandemDir()`, `ensureDir()` | For storage path (`~/.tandem/pinboards/`) |
+| `src/utils/errors.ts` | `handleRouteError()` | For error handling in routes |
+| `src/api/context.ts` | `type RouteContext` | Understand how routes receive context |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: PinboardManager class
+### Step 1: PinboardManager class
 
-**Wat:** Core data manager die borden en items beheert. JSON opslag in `~/.tandem/pinboards/boards.json`. Volg exact het patroon van `BookmarkManager`: constructor laadt data, elke mutatie roept `save()` aan.
+**Wat:** Core data manager that boards and items beheert. JSON opslag in `~/.tandem/pinboards/boards.json`. Follow the exact pattern or `BookmarkManager`: constructor loads data, elke mutatie roept `save()` about.
 
-**Bestand:** `src/pinboards/manager.ts`
+**File:** `src/pinboards/manager.ts`
 
 ```typescript
 import path from 'path';
@@ -84,43 +84,43 @@ export class PinboardManager {
   }
 
   private load(): PinboardStore {
-    // Laad bestaand bestand of maak leeg store object
-    // Zie BookmarkManager.load() voor exact patroon
+    // Laad bestaand file or maak leeg store object
+    // Zie BookmarkManager.load() for exact pattern
   }
 
   private save(): void {
-    // Update lastModified, schrijf JSON naar disk
-    // Zie BookmarkManager.save() voor exact patroon
+    // Update lastModified, schrijf JSON to disk
+    // Zie BookmarkManager.save() for exact pattern
   }
 
   private generateId(): string {
-    // Zelfde patroon als BookmarkManager:
+    // Zelfde pattern if BookmarkManager:
     // Date.now().toString(36) + Math.random().toString(36).substring(2, 8)
   }
 
   // --- Board CRUD ---
 
   listBoards(): Array<{ id: string; name: string; emoji: string; itemCount: number; createdAt: string; updatedAt: string }> {
-    // Retourneer alle borden ZONDER items (voor sidebar lijst)
-    // Voeg itemCount toe als computed veld
+    // Return all boards WITHOUT items (for the sidebar list)
+    // Voeg itemCount toe if computed field
   }
 
   getBoard(boardId: string): Pinboard | null {
-    // Retourneer één bord MET alle items
+    // Retourneer één board MET alle items
   }
 
   createBoard(name: string, emoji?: string): Pinboard {
-    // Maak nieuw bord, default emoji "📌"
+    // Maak new board, default emoji "📌"
     // save() aanroepen
   }
 
   updateBoard(boardId: string, updates: { name?: string; emoji?: string }): Pinboard | null {
-    // Update naam en/of emoji, updatedAt bijwerken
+    // Update name and/or emoji, updatedAt update
     // save() aanroepen
   }
 
   deleteBoard(boardId: string): boolean {
-    // Verwijder bord en alle items
+    // Delete board and alle items
     // save() aanroepen
   }
 
@@ -128,42 +128,42 @@ export class PinboardManager {
 
   getItems(boardId: string): PinboardItem[] | null {
     // Retourneer items gesorteerd op position
-    // null als board niet bestaat
+    // null if board not exists
   }
 
   addItem(boardId: string, item: Omit<PinboardItem, 'id' | 'createdAt' | 'position'>): PinboardItem | null {
-    // Voeg item toe aan bord, genereer id/createdAt/position
-    // position = huidige items.length (toevoegen aan einde)
+    // Voeg item toe about board, genereer id/createdAt/position
+    // position = huidige items.length (add about einde)
     // save() aanroepen
-    // null als board niet bestaat
+    // null if board not exists
   }
 
   updateItem(boardId: string, itemId: string, updates: { title?: string; note?: string; content?: string }): PinboardItem | null {
-    // Update item velden, board updatedAt bijwerken
+    // Update item velden, board updatedAt update
     // save() aanroepen
   }
 
   deleteItem(boardId: string, itemId: string): boolean {
-    // Verwijder item, herbereken positions van overige items
+    // Delete item, herbereken positions or overige items
     // save() aanroepen
   }
 
   reorderItems(boardId: string, itemIds: string[]): boolean {
-    // Zet positions op basis van volgorde in itemIds array
+    // Zet positions op basis or order in itemIds array
     // save() aanroepen
   }
 
   destroy(): void {
-    // Cleanup (momenteel noop — geen file watchers of timers)
+    // Cleanup (currently noop — no file watchers or timers)
   }
 }
 ```
 
-### Stap 2: API Routes
+### Step 2: API Routes
 
-**Wat:** REST endpoints voor alle CRUD-operaties. Volg exact het patroon van `registerDataRoutes()` in `src/api/routes/data.ts`.
+**Wat:** REST endpoints for alle CRUD-operaties. Follow the exact pattern or `registerDataRoutes()` in `src/api/routes/data.ts`.
 
-**Bestand:** `src/api/routes/pinboards.ts`
+**File:** `src/api/routes/pinboards.ts`
 
 ```typescript
 import type { Router, Request, Response } from 'express';
@@ -175,7 +175,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
   // PINBOARDS — Content Curation Boards
   // ═══════════════════════════════════════════════
 
-  // GET /pinboards — lijst van alle borden (zonder items)
+  // GET /pinboards — list or alle boards (without items)
   router.get('/pinboards', (req: Request, res: Response) => {
     try {
       const boards = ctx.pinboardManager.listBoards();
@@ -185,7 +185,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // POST /pinboards — nieuw bord aanmaken
+  // POST /pinboards — new board aanmaken
   router.post('/pinboards', (req: Request, res: Response) => {
     try {
       const { name, emoji } = req.body;
@@ -197,7 +197,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // GET /pinboards/:id — bord ophalen met items
+  // GET /pinboards/:id — board ophalen with items
   router.get('/pinboards/:id', (req: Request, res: Response) => {
     try {
       const board = ctx.pinboardManager.getBoard(req.params.id);
@@ -208,7 +208,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // PUT /pinboards/:id — bord bijwerken
+  // PUT /pinboards/:id — board update
   router.put('/pinboards/:id', (req: Request, res: Response) => {
     try {
       const { name, emoji } = req.body;
@@ -220,7 +220,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // DELETE /pinboards/:id — bord verwijderen
+  // DELETE /pinboards/:id — board verwijderen
   router.delete('/pinboards/:id', (req: Request, res: Response) => {
     try {
       const deleted = ctx.pinboardManager.deleteBoard(req.params.id);
@@ -231,7 +231,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // GET /pinboards/:id/items — items van een bord
+  // GET /pinboards/:id/items — items or a board
   router.get('/pinboards/:id/items', (req: Request, res: Response) => {
     try {
       const items = ctx.pinboardManager.getItems(req.params.id);
@@ -242,7 +242,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // POST /pinboards/:id/items — item toevoegen
+  // POST /pinboards/:id/items — item add
   router.post('/pinboards/:id/items', (req: Request, res: Response) => {
     try {
       const { type, url, title, content, thumbnail, note, sourceUrl } = req.body;
@@ -260,7 +260,7 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
     }
   });
 
-  // PUT /pinboards/:id/items/:itemId — item bijwerken
+  // PUT /pinboards/:id/items/:itemId — item update
   router.put('/pinboards/:id/items/:itemId', (req: Request, res: Response) => {
     try {
       const { title, note, content } = req.body;
@@ -302,25 +302,25 @@ export function registerPinboardRoutes(router: Router, ctx: RouteContext): void 
 }
 ```
 
-### Stap 3: Registry Wiring
+### Step 3: Registry Wiring
 
-**Wat:** `PinboardManager` registreren in de centrale registry zodat routes en context menu er bij kunnen.
+**Wat:** `PinboardManager` registreren in the centrale registry zodat routes and context menu er bij can.
 
-**Bestand: `src/registry.ts`**
+**File: `src/registry.ts`**
 
-Voeg toe aan de imports:
+Voeg toe about the imports:
 ```typescript
 import type { PinboardManager } from './pinboards/manager';
 ```
 
-Voeg toe aan `interface ManagerRegistry`:
+Voeg toe about `interface ManagerRegistry`:
 ```typescript
 pinboardManager: PinboardManager;
 ```
 
-**Bestand: `src/api/server.ts`**
+**File: `src/api/server.ts`**
 
-Voeg toe aan de imports:
+Voeg toe about the imports:
 ```typescript
 import { registerPinboardRoutes } from './routes/pinboards';
 ```
@@ -330,15 +330,15 @@ Voeg toe in `setupRoutes()`:
 registerPinboardRoutes(router, ctx);
 ```
 
-**Bestand: `src/main.ts`**
+**File: `src/main.ts`**
 
-Zoek naar het blok waar managers worden geïnstantieerd (bij `startAPI()` of in het registry-object). Voeg toe:
+Zoek to the blok waar managers be geïnstantieerd (bij `startAPI()` or in the registry-object). Voeg toe:
 ```typescript
 import { PinboardManager } from './pinboards/manager';
 
 const pinboardManager = new PinboardManager();
 
-// In het registry object:
+// In the registry object:
 pinboardManager,
 ```
 
@@ -349,12 +349,12 @@ pinboardManager.destroy();
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Lijst borden (leeg)
+# Test 1: List boards (leeg)
 curl -s http://localhost:8765/pinboards | jq .
 # Verwacht: {"ok":true,"boards":[]}
 
@@ -363,12 +363,12 @@ curl -s -X POST http://localhost:8765/pinboards \
   -H "Content-Type: application/json" \
   -d '{"name": "Research Project", "emoji": "🔬"}' | jq .
 # Verwacht: {"ok":true,"board":{"id":"...","name":"Research Project","emoji":"🔬",...}}
-# ⬆️ Sla het board ID op voor volgende tests:
+# ⬆️ Sla the board ID op for next tests:
 BOARD_ID=$(curl -s -X POST http://localhost:8765/pinboards \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Board", "emoji": "🧪"}' | jq -r '.board.id')
 
-# Test 3: Lijst borden (niet leeg)
+# Test 3: List boards (not leeg)
 curl -s http://localhost:8765/pinboards | jq .
 # Verwacht: {"ok":true,"boards":[{"id":"...","name":"...","emoji":"...","itemCount":0,...}]}
 
@@ -376,25 +376,25 @@ curl -s http://localhost:8765/pinboards | jq .
 curl -s http://localhost:8765/pinboards/$BOARD_ID | jq .
 # Verwacht: {"ok":true,"board":{"id":"...","items":[],...}}
 
-# Test 5: Bord bijwerken
+# Test 5: Bord update
 curl -s -X PUT http://localhost:8765/pinboards/$BOARD_ID \
   -H "Content-Type: application/json" \
   -d '{"name": "Updated Board", "emoji": "✅"}' | jq .
 # Verwacht: {"ok":true,"board":{"name":"Updated Board","emoji":"✅",...}}
 
-# Test 6: Link item toevoegen
+# Test 6: Link item add
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
   -d '{"type": "link", "url": "https://example.com", "title": "Example Site"}' | jq .
 # Verwacht: {"ok":true,"item":{"id":"...","type":"link","url":"https://example.com",...}}
 
-# Test 7: Quote item toevoegen
+# Test 7: Quote item add
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
-  -d '{"type": "quote", "content": "Dit is een interessant citaat", "sourceUrl": "https://article.com"}' | jq .
-# Verwacht: {"ok":true,"item":{"id":"...","type":"quote","content":"Dit is een interessant citaat",...}}
+  -d '{"type": "quote", "content": "Dit is a interessant citaat", "sourceUrl": "https://article.com"}' | jq .
+# Verwacht: {"ok":true,"item":{"id":"...","type":"quote","content":"Dit is a interessant citaat",...}}
 
-# Test 8: Image item toevoegen
+# Test 8: Image item add
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
   -d '{"type": "image", "url": "https://example.com/photo.jpg", "title": "Mooie foto"}' | jq .
@@ -404,16 +404,16 @@ curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
 curl -s http://localhost:8765/pinboards/$BOARD_ID/items | jq .
 # Verwacht: {"ok":true,"items":[...3 items gesorteerd op position...]}
 
-# Test 10: Item bijwerken (notitie toevoegen)
+# Test 10: Item update (note add)
 ITEM_ID=$(curl -s http://localhost:8765/pinboards/$BOARD_ID/items | jq -r '.items[0].id')
 curl -s -X PUT http://localhost:8765/pinboards/$BOARD_ID/items/$ITEM_ID \
   -H "Content-Type: application/json" \
-  -d '{"note": "Hier later naar kijken"}' | jq .
-# Verwacht: {"ok":true,"item":{"note":"Hier later naar kijken",...}}
+  -d '{"note": "Review this later"}' | jq .
+# Expect: {"ok":true,"item":{"note":"Review this later",...}}
 
 # Test 11: Items herordenen
 ITEM_IDS=$(curl -s http://localhost:8765/pinboards/$BOARD_ID/items | jq '[.items[].id]')
-# Draai de volgorde om:
+# Draai the order to:
 REVERSED=$(echo $ITEM_IDS | jq 'reverse')
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items/reorder \
   -H "Content-Type: application/json" \
@@ -428,25 +428,25 @@ curl -s -X DELETE http://localhost:8765/pinboards/$BOARD_ID/items/$ITEM_ID | jq 
 curl -s -X DELETE http://localhost:8765/pinboards/$BOARD_ID | jq .
 # Verwacht: {"ok":true}
 
-# Test 14: Niet-bestaand bord
+# Test 14: Not-bestaand board
 curl -s http://localhost:8765/pinboards/nonexistent | jq .
-# Verwacht: {"error":"Board not found"} met status 404
+# Verwacht: {"error":"Board not found"} with status 404
 
-# Test 15: Validatie — ontbrekend veld
+# Test 15: Validatie — ontbrekend field
 curl -s -X POST http://localhost:8765/pinboards \
   -H "Content-Type: application/json" \
   -d '{}' | jq .
-# Verwacht: {"error":"name required"} met status 400
+# Verwacht: {"error":"name required"} with status 400
 
 # Test 16: Validatie — ongeldig type
 curl -s -X POST http://localhost:8765/pinboards/$BOARD_ID/items \
   -H "Content-Type: application/json" \
   -d '{"type": "video"}' | jq .
-# Verwacht: {"error":"type must be link, image, text, or quote"} met status 400
+# Verwacht: {"error":"type must be link, image, text, or quote"} with status 400
 
-# Test 17: Storage check — bestand bestaat
+# Test 17: Storage check — file exists
 ls -la ~/.tandem/pinboards/boards.json
-# Verwacht: bestand bestaat met JSON inhoud
+# Verwacht: file exists with JSON inhoud
 ```
 
 ---
@@ -455,35 +455,35 @@ ls -la ~/.tandem/pinboards/boards.json
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-backend-api.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-backend-api.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "📌 feat: PinboardManager + REST API endpoints"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-2-ui-panel.md
+   ## Next session start bij fase-2-ui-panel.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] **Vergeet niet `ensureDir()`** — de `~/.tandem/pinboards/` directory moet bestaan voor eerste schrijf
-- [ ] **Vergeet niet registry wiring** — 3 plekken: `registry.ts`, `main.ts` (instantiëren + will-quit), `server.ts` (routes)
-- [ ] **Position herberekenen bij delete** — als item met position 1 wordt verwijderd, moeten items met position 2+ naar beneden schuiven
-- [ ] **TypeScript strict mode** — geen `any` buiten catch blocks. Gebruik `handleRouteError()` in plaats van `(e: any) => res.status(500).json()`
-- [ ] **Lege emoji default** — als geen emoji wordt meegegeven, gebruik "📌" als default
-- [ ] **JSON encoding** — `JSON.stringify(store, null, 2)` voor leesbare opslag (zelfde als BookmarkManager)
+- [ ] **Vergeet not `ensureDir()`** — the `~/.tandem/pinboards/` directory must bestaan for first schrijf
+- [ ] **Vergeet not registry wiring** — 3 plekken: `registry.ts`, `main.ts` (instantiëren + will-quit), `server.ts` (routes)
+- [ ] **Position herberekenen bij delete** — if item with position 1 is removed, must items with position 2+ to beneden schuiven
+- [ ] **TypeScript strict mode** — no `any` buiten catch blocks. Usage `handleRouteError()` in plaats or `(e: any) => res.status(500).json()`
+- [ ] **Lege emoji default** — if no emoji is meegegeven, usage "📌" if default
+- [ ] **JSON encoding** — `JSON.stringify(store, null, 2)` for leesbare opslag (same if BookmarkManager)

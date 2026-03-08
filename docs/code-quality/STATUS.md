@@ -70,7 +70,7 @@
 - **Items completed:** #17
 - **Version bumped to:** 0.12.0
 - **Commit(s):** `20ffdf3`
-- **Notes:** Added supertest-based integration tests for all 13 route files (12 standard + security). 739 new tests: tabs (20), snapshots (35), network (32), sessions (36), devtools (37), content (41), agents (41), data (50), extensions (57), media (62), browser (50), misc (162), security (116). Shared test helper with `createMockContext()` factory stubbing all 34 managers. Total: 941 tests (up from 202), 0 TS errors. ~9500 lines of test code.
+- **Notes:** Added supertest-based integration tests for all 13 route files (12 standard + security). 739 new tests: tabs (20), snapshots (35), network (32), sessions (36), devtools (37), content (41), agents (41), data (50), extensions (57), media (62), browser (50), misc (162), security (116). Shared test helper with `createMockContext()` factory stubbing all 34 managers. Total: 941 tests (up from 202), 0 TS errors. ~9500 lines or test code.
 
 ### 2026-02-27 — Session 3: Item 12 (ESLint setup)
 

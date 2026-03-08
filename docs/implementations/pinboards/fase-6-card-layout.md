@@ -1,10 +1,10 @@
-# Fase 6 — Card Layout: Masonry + Auto-height
+# Phase 6 — Card Layout: Masonry + Auto-height
 
-> **Afhankelijk van:** Fase 5 ✅
+> **Depends on:** Phase 5 ✅
 
-## Doel
+## Goal
 
-Kaarten die nu uitgerekt zijn over de volledige panelhoogte → compact, auto-height, masonry layout zoals Opera.
+Kaarten that nu uitgerekt are over the full panelhoogte → compact, auto-height, masonry layout zoals Opera.
 
 ---
 
@@ -22,7 +22,7 @@ Kaarten die nu uitgerekt zijn over de volledige panelhoogte → compact, auto-he
 .pb-card {
   break-inside: avoid;
   margin-bottom: 8px;
-  height: auto;        /* GEEN vaste hoogte — kritisch! */
+  height: auto;        /* NO fixed height — critical! */
   min-height: unset;
 }
 ```
@@ -53,23 +53,23 @@ Kaarten die nu uitgerekt zijn over de volledige panelhoogte → compact, auto-he
 
 ---
 
-## Layout thema's (optioneel, Opera heeft 3)
+## Layout thema's (optional, Opera has 3)
 
-Voeg een toggle toe bovenaan het board:
+Voeg a toggle toe at the top the board:
 - **Compact** (3 kolommen)
 - **Normal** (2 kolommen) — default
-- **Spacious** (1 kolom, grotere afbeeldingen)
+- **Spacious** (1 kolom, grotere images)
 
-Opgeslagen per board in `boards.json` als `layout: 'compact' | 'normal' | 'spacious'`.
+Opgeslagen per board in `boards.json` if `layout: 'compact' | 'normal' | 'spacious'`.
 
 ---
 
 ## Acceptatiecriteria
 
 ```
-1. Kaarten zijn nooit groter dan hun inhoud
-2. 2-kolom masonry layout zichtbaar
-3. Afbeeldingen laden correct (max 160px hoog)
-4. Geen horizontale overflow
+1. Kaarten are nooit groter then hun inhoud
+2. 2-kolom masonry layout visible
+3. Images laden correct (max 160px hoog)
+4. No horizontale overflow
 5. npx tsc — zero errors
 ```

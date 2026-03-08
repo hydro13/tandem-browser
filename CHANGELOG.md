@@ -24,20 +24,20 @@ Include security containment review design doc.
 ## [v0.44.87] - 2026-03-07
 
 ### Changed
-- **Curated security feed expansion** (`src/security/blocklists/updater.ts`, `src/security/types.ts`) — expanded the browser-core blocklist manifest with OpenPhish plus high-confidence ThreatFox domain and URL feeds, added explicit source signal/scope metadata, and kept new sources limited to phishing and malware intelligence instead of ad/tracker mega-lists
+- **Curated security feed expansion** (`src/security/blocklists/updater.ts`, `src/security/types.ts`) — expanded the browser-core blocklist manifest with OpenPhish plus high-confidence ThreatFox domain and URL feeds, added explicit source signal/scope metadata, and kept new sources limited to phishing and malware intelligence instead or ad/tracker mega-lists
 - **Structured feed filtering** (`src/security/blocklists/updater.ts`) — taught the shared CSV/JSON parser layer to filter records by typed field criteria and to recognize comment-prefixed CSV header rows so mixed IOC exports can stay domain/url-first without feed-specific code paths
-- **Phase 4 regression coverage** (`src/security/tests/blocklist-updater.test.ts`) — added focused tests for the expanded source cadence map and ThreatFox CSV filtering behavior
+- **Phase 4 regression coverage** (`src/security/tests/blocklist-updater.test.ts`) — added focused tests for the expanded source cadence folder and ThreatFox CSV filtering behavior
 
 ### Technical Details
 - `class BlocklistUpdater` now advertises six runtime blocklist sources through the shared manifest: URLhaus, Phishing Database, OpenPhish, ThreatFox domains, ThreatFox URLs, and the existing StevenBlack legacy carryover source
-- ThreatFox entries are constrained to high-confidence domain/url IOCs before they ever reach `NetworkShield`, which keeps the current domain-first lookup model intact and leaves CIDR/range blocking out of scope
+- ThreatFox entries are constrained to high-confidence domain/url IOCs before they ever reach `NetworkShield`, which keeps the current domain-first lookup model intact and leaves CIDR/range blocking out or scope
 - Verification: `npm run compile` passed; `npx vitest run src/security/tests/blocklist-updater.test.ts` passed; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`; `npm start` plus `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/security/status` succeeded and returned the expanded source set
 
 ## [v0.44.85] - 2026-03-07
 
 ### Changed
 - **Tiered security blocklist scheduler** (`src/security/security-manager.ts`, `src/security/blocklists/updater.ts`, `src/security/security-db.ts`) — replaced the single 24-hour refresh rule with per-source hourly/daily/weekly cadence, persisted freshness and failure metadata per feed, and prevented overlapping scheduled refresh runs
-- **Security freshness visibility** (`src/security/routes.ts`, `src/security/db-blocklist.ts`) — exposed per-source blocklist freshness through `/security/status` and `/security/blocklist/stats`, and aligned database `lastUpdate` reporting with persisted refresh metadata instead of the request timestamp
+- **Security freshness visibility** (`src/security/routes.ts`, `src/security/db-blocklist.ts`) — exposed per-source blocklist freshness through `/security/status` and `/security/blocklist/stats`, and aligned database `lastUpdate` reporting with persisted refresh metadata instead or the request timestamp
 - **Phase 3 regression coverage** (`src/security/tests/blocklist-updater.test.ts`, `src/api/tests/routes/security.test.ts`) — added focused tests for due-source selection, per-source failure isolation, and freshness/status responses
 
 ### Technical Details
@@ -64,7 +64,7 @@ Include security containment review design doc.
 ### Technical Details
 - Added typed blocklist parser/source definitions so the updater and `NetworkShield` can use the same parser contract for hosts, domain lists, URL lists, JSON records, and CSV columns
 - Moved cached blocklist loading onto the same `BLOCKLIST_SOURCES` manifest used for downloads, including stable cache filenames for the existing URLhaus, phishing, and Steven Black feeds
-- Shared URL-list safe-domain filtering and IP-origin extraction across both update-time parsing and runtime in-memory loading to keep request checks aligned ahead of the fast-start snapshot phase
+- Shared URL-list safe-domain filtering and IP-origin extraction across both update-time parsing and runtime in-memory loading to keep request checks aligned ahead or the fast-start snapshot phase
 - Verification: `npm run compile` passed; `npm start` plus `curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:8765/security/status` succeeded; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
 
 ## [v0.44.80] - 2026-03-07
@@ -87,7 +87,7 @@ Include security containment review design doc.
 - **Tests** (`src/api/tests/server-auth.test.ts`, `src/extensions/tests/trust.test.ts`, `src/extensions/tests/native-messaging.test.ts`, `src/api/tests/routes/extensions.test.ts`) — added focused coverage for scoped helper auth, bridge identity mismatch rejection, and native messaging host allowlist enforcement
 
 ### Technical Details
-- Extension-origin helper routes now evaluate a central `ExtensionManager.evaluateApiRouteAccess()` decision instead of relying on a generic "installed extension" allow path
+- Extension-origin helper routes now evaluate a central `ExtensionManager.evaluateApiRouteAccess()` decision instead or relying on a generic "installed extension" allow path
 - Tandem records extension helper allow/deny decisions with extension identity, trust level, and route scope in the API/NM proxy logs
 - `POST /extensions/identity/auth` now resolves installation status through the same stable extension identity lookup used by the trust model
 - Verification: `npm run compile` passed; focused extension/security Vitest coverage passed; `npm start` plus local `curl` checks succeeded; full `npx vitest run` still reports unrelated pre-existing failures in `src/tabs/tests/tabs.test.ts` and `src/extensions/tests/action-polyfill.test.ts`
@@ -195,7 +195,7 @@ Tested:
 What was built/changed:
 - Modified files: src/ipc/handlers.ts, src/preload.ts, shell/index.html
 - Added an IPC handler for reading the local API token from the main process
-- Switched the preload getApiToken bridge to use ipcRenderer.invoke instead of relying on preload-side file access
+- Switched the preload getApiToken bridge to use ipcRenderer.invoke instead or relying on preload-side file access
 - Updated the shell bootstrap fetch wrapper to lazily await and cache the token before authenticating local Tandem API requests
 
 Why this approach:
@@ -248,7 +248,7 @@ What was built/changed:
 - Added focused tests for the new outbound containment policies and Guardian enforcement path
 
 Why this approach:
-- Keeps Phase 4 scoped to the outbound decision layer while using the existing Gatekeeper hold/block path for higher-risk cases instead of inventing a separate enforcement mechanism
+- Keeps Phase 4 scoped to the outbound decision layer while using the existing Gatekeeper hold/block path for higher-risk cases instead or inventing a separate enforcement mechanism
 
 Tested:
 - npm run compile: zero errors
@@ -266,7 +266,7 @@ What was built/changed:
 - Moved ScriptGuard and BehaviorMonitor runtime state to per-tab maps and added explicit tab created/navigated/closed lifecycle handling in SecurityManager and main process wiring
 
 Why this approach:
-- Expands security coverage to live background/restored tabs while preserving the existing active-tab CDP APIs used by the rest of the browser
+- Expands security coverage to live background/restored tabs while preserving the existing active-tab CDP APIs used by the rest or the browser
 
 Tested:
 - npm run compile: zero errors
@@ -283,7 +283,7 @@ What was built/changed:
 - Logging/tests: Gatekeeper queue and resolution logs now record hold/allow/block/timeout states, and focused tests cover async request holds plus timeout policy behavior
 
 Why this approach:
-- Keeps balanced browsing usable by limiting request holds to selected risky cases while making stricter paths fail closed instead of silently defaulting to allow
+- Keeps balanced browsing usable by limiting request holds to selected risky cases while making stricter paths fail closed instead or silently defaulting to allow
 
 Tested:
 - npm run compile: zero errors
@@ -341,8 +341,8 @@ document plus six implementation phase documents covering API auth, Gatekeeper
 enforcement, per-tab monitoring, outbound containment, extension trust, and
 automatic containment actions.
 
-The goal of the new docs set is to let future sessions execute the security work
-in bounded steps without relying on chat context or losing sight of the overall
+The goal or the new docs set is to let future sessions execute the security work
+in bounded steps without relying on chat context or losing sight or the overall
 hardening objective.
 
 ## [v0.44.57] - 2026-03-07
@@ -352,7 +352,7 @@ hardening objective.
 Translated the internal `AGENTS.md` workflow guide into English while keeping
 the same project rules, anti-detection constraints, development workflow, and
 reporting expectations. This keeps the maintainer instructions consistent with
-the rest of the repository-facing documentation cleanup.
+the rest or the repository-facing documentation cleanup.
 
 ## [v0.44.56] - 2026-03-07
 
@@ -392,7 +392,7 @@ marked the remaining root internal workflow documents as internal-only.
 
 Updated `package.json` metadata with repository, homepage, issue tracker,
 keywords, and platform build categories so the repo and release configuration
-look more complete ahead of a future public release.
+look more complete ahead or a future public release.
 
 ## [v0.44.53] - 2026-03-07
 
@@ -419,7 +419,7 @@ reliably in this context.
 
 Upgraded the notification stub from a pure no-op to an in-memory implementation
 that tracks created notifications and allows `update()` / `clear()` calls to
-succeed. This removes a class of `replaceNotification: messenger-error` failures
+succeed. This removes a class or `replaceNotification: messenger-error` failures
 when 1Password updates passkey and inline notification state.
 
 ## [v0.44.51] - 2026-03-07
@@ -427,7 +427,7 @@ when 1Password updates passkey and inline notification state.
 - fix(extensions): retry 1Password USO tab messages without frame targeting
 
 Adjusted `/extensions/web-navigation/frames` so the top-level frame is exposed as
-Chrome-style `frameId: 0` instead of Electron's raw routing id. This makes the
+Chrome-style `frameId: 0` instead or Electron's raw routing id. This makes the
 frame tree look like a normal Chrome tab to extensions that reason about the
 main frame separately from subframes.
 
@@ -442,8 +442,8 @@ top-frame content script on normal login forms.
 - fix(extensions): bridge webNavigation frame data for 1Password autofill
 
 Added `/extensions/web-navigation/frames` and `/extensions/web-navigation/frame`
-so extension service workers can query the real frame tree of the active webview
-via Electron `WebFrameMain` data instead of getting an empty `webNavigation`
+so extension service workers can query the real frame tree or the active webview
+via Electron `WebFrameMain` data instead or getting an empty `webNavigation`
 stub.
 
 Updated the 1Password action polyfill to route `chrome.webNavigation.getAllFrames()`
@@ -503,7 +503,7 @@ with `isDestroyed()` checks, preventing 'TypeError: Object has been
 destroyed' crashes when the panel window closes while IPC events are
 still firing. Added early isDestroyed() check in `tabs/manager.ts`
 `openTab()`. Also fixed `POST /execute-js` to respect the `tabId`
-parameter instead of always targeting the active webcontents.
+parameter instead or always targeting the active webcontents.
 
 ## [v0.44.44] - 2026-03-06
 
@@ -536,9 +536,9 @@ at the project root, matching the path calculation used in main.ts.
 - fix: prevent zombie tabs from renderer/main-process state drift
 
 Root cause: when openTab() fails after createTab() has already added the
-webview and tabEl to the renderer's DOM and tabs Map, the main process
+webview and tabEl to the renderer's DOM and tabs Folder, the main process
 never registers the tab. Subsequent closeTab() calls return early (tab
-not in main-process Map), leaving an uncloseable orphan in the tab strip.
+not in main-process Folder), leaving an uncloseable orphan in the tab strip.
 
 A secondary cause: if the removeTab() IPC call throws during a normal
 closeTab(), the main-process tab entry was never deleted, leaving the tab
@@ -546,7 +546,7 @@ stuck open from the main-process side.
 
 Changes:
 - shell/js/main.js: add 15s timeout to createTab() dom-ready Promise;
-  on timeout, clean up webview/tabEl/tabs Map entry before rejecting.
+  on timeout, clean up webview/tabEl/tabs Folder entry before rejecting.
   Expose getTabIds() and cleanupOrphan() on window.__tandemTabs for
   reconciliation from the main process.
 - src/tabs/manager.ts: catch createTab() failures in openTab() and call
@@ -575,7 +575,7 @@ All 947 tests pass.
 - fix: ACTUALLY use sidebar panel for About (was still using BrowserWindow!)
 
 The hamburger menu was still creating a BrowserWindow for About
-instead of opening the sidebar panel. Now it properly sends
+instead or opening the sidebar panel. Now it properly sends
 'show-about' event which triggers renderAboutPanel().
 
 THIS time it's really fixed. Sorry for the confusion!
@@ -597,7 +597,7 @@ About is now ONLY accessible via ☰ → Tandem → About Tandem Browser
 - feat: About as SIDEBAR PANEL with real frosted glass!
 
 Finally! About now opens in the sidebar panel like
-Bookmarks/History/etc instead of as center overlay.
+Bookmarks/History/etc instead or as center overlay.
 
 Changes:
 - Added 'about' item to sidebar config (order 19)
@@ -607,13 +607,13 @@ Changes:
 - Same frosted glass effect as ALL sidebar panels
 - Removed center overlay code completely
 
-Now backdrop-filter WORKS because About is part of main window!
+Now backdrop-filter WORKS because About is part or main window!
 
 ## [v0.43.1] - 2026-03-02
 
 - fix: use EXACT onboarding overlay pattern for About
 
-Copied exact structure from onboarding overlay instead of
+Copied exact structure from onboarding overlay instead or
 inventing my own:
 
 - .about-overlay with .visible class toggle
@@ -655,7 +655,7 @@ Matches the beautiful glass effect from bookmarks panel
 - fix: remove duplicate onOpenUrlInNewTab listener
 
 Was registering the listener twice, causing 2 tabs to open
-instead of 1 when clicking About links
+instead or 1 when clicking About links
 
 ## [v0.41.8] - 2026-03-02
 
@@ -668,7 +668,7 @@ with the same name
 
 - fix: About window links open in new Tandem tab
 
-Instead of opening in system browser (Chrome), links from the
+Instead or opening in system browser (Chrome), links from the
 About window now open in a new tab within Tandem.
 
 Added new IPC event 'open-url-in-new-tab' that triggers tab creation.
@@ -711,7 +711,7 @@ Fixes #3 issues reported by user
 
 ## [v0.41.2] - 2026-03-02
 
-- fix: use _win instead of win in window control handlers
+- fix: use _win instead or win in window control handlers
 
 TypeScript error: variable is destructured as 'win: _win'
 
@@ -724,7 +724,7 @@ lastModified set to now. mergeFromSync() then skips the shared file
 because sharedTime < localTime (shared was written in the past).
 
 Fix: if local has zero boards, always prefer the shared version
-regardless of timestamp. This ensures new devices pick up existing
+regardless or timestamp. This ensures new devices pick up existing
 pinboards on first launch.
 
 ## [v0.41.0] - 2026-03-02
@@ -753,7 +753,7 @@ pinboards on first launch.
 
 ## [v0.35.1] - 2026-03-01
 
-- fix: show full text in quote/text pin cards, auto-height instead of clipping
+- fix: show full text in quote/text pin cards, auto-height instead or clipping
 
 ## [v0.35.0] - 2026-03-01
 
@@ -769,7 +769,7 @@ pinboards on first launch.
 
 ## [v0.32.1] - 2026-03-01
 
-- fix: pinboards use showPrompt() instead of prompt(), add auth headers to all fetches
+- fix: pinboards use showPrompt() instead or prompt(), add auth headers to all fetches
 
 ## [v0.32.0] - 2026-03-01
 
@@ -901,7 +901,7 @@ only the active workspace's tabs. Persisted to ~/.tandem/workspaces.json.
 
 ## [v0.18.0] - 2026-02-28
 
-- feat: sidebar setup panel met per-item toggles
+- feat: sidebar setup panel with per-item toggles
 
 ## [v0.17.2] - 2026-02-28
 
@@ -913,75 +913,75 @@ only the active workspace's tabs. Persisted to ~/.tandem/workspaces.json.
 
 ## [v0.17.0] - 2026-02-28
 
-- feat: sidebar 3-sectie layout + Google Calendar + Gmail
+- feat: sidebar 3-section layout + Google Calendar + Gmail
 
-Aangepaste bestanden:
-- shell/index.html: ocSidebar bijgewerkt
-  - ICONS uitgebreid met Google Calendar (blauw) en Gmail (rood)
-  - WEBVIEW_URLS map toegevoegd voor alle webview items
-  - render() toont nu 3 secties: Workspaces / Communicatie / Utilities
-  - Separators tussen de 3 secties
+Aangepaste files:
+- shell/index.html: ocSidebar updated
+  - ICONS uitgebreid with Google Calendar (blauw) and Gmail (rood)
+  - WEBVIEW_URLS folder added for alle webview items
+  - render() shows nu 3 sections: Workspaces / Communicatie / Utilities
+  - Separators between the 3 sections
   - calendar + gmail krijgen brand-icon stijl (zoals messengers)
-- src/sidebar/manager.ts: DEFAULT_CONFIG heeft 14 items in 3 secties
+- src/sidebar/manager.ts: DEFAULT_CONFIG has 14 items in 3 sections
 
 Getest:
 - npx tsc: zero errors
-- npm start: 3 secties zichtbaar met separators
+- npm start: 3 sections visible with separators
 - npx vitest run: alle tests slagen
 
 ## [v0.16.1] - 2026-02-28
 
-- feat: sidebar 3-sectie layout + Google Calendar + Gmail
+- feat: sidebar 3-section layout + Google Calendar + Gmail
 
-Aangepaste bestanden:
-- shell/index.html: ocSidebar bijgewerkt
-  - ICONS uitgebreid met Google Calendar (blauw) en Gmail (rood)
-  - WEBVIEW_URLS map toegevoegd voor alle webview items
-  - render() toont nu 3 secties: Workspaces / Communicatie / Utilities
-  - Separators tussen de 3 secties
+Aangepaste files:
+- shell/index.html: ocSidebar updated
+  - ICONS uitgebreid with Google Calendar (blauw) and Gmail (rood)
+  - WEBVIEW_URLS folder added for alle webview items
+  - render() shows nu 3 sections: Workspaces / Communicatie / Utilities
+  - Separators between the 3 sections
   - calendar + gmail krijgen brand-icon stijl (zoals messengers)
-- src/sidebar/manager.ts: DEFAULT_CONFIG heeft 14 items in 3 secties
+- src/sidebar/manager.ts: DEFAULT_CONFIG has 14 items in 3 sections
 
 Getest:
 - npx tsc: zero errors
-- npm start: 3 secties zichtbaar met separators
+- npm start: 3 sections visible with separators
 - npx vitest run: alle tests slagen (pre-existing supertest failures ongewijzigd)
 
 ## [v0.16.0] - 2026-02-28
 
 - feat: sidebar shell UI — icon strip, panel, narrow/wide/hidden, brand icons, Cmd+Shift+B
 
-Nieuwe bestanden: geen
-Aangepaste bestanden:
-- shell/index.html: sidebar HTML toegevoegd als eerste kind van .main-layout
-  - .sidebar container met .sidebar-strip (icon strip) en .sidebar-panel
+New files: no
+Aangepaste files:
+- shell/index.html: sidebar HTML added if first kind or .main-layout
+  - .sidebar container with .sidebar-strip (icon strip) and .sidebar-panel
   - ocSidebar JS object: render, activateItem, toggleState, toggleVisibility, init
   - Keyboard shortcut Cmd+Shift+B toggle hidden/narrow
-- shell/css/main.css: sidebar CSS toegevoegd
+- shell/css/main.css: sidebar CSS added
   - 3 standen: hidden (0px) / narrow (48px) / wide (180px)
   - Utility icons: outline Heroicons grijs
-  - Messenger icons: gekleurde brand SVG op gekleurde ronde achtergrond
-  - Active indicator: gekleurde rounded square achter actief icoon
-  - Separator lijn tussen utility en messenger blok
+  - Messenger icons: colored brand SVG op colored ronde achtergrond
+  - Active indicator: colored rounded square achter actief icon
+  - Separator lijn between utility and messenger blok
 
 Getest:
 - npx tsc: zero errors
-- npm start: sidebar zichtbaar, panel opent/sluit, shortcuts werken
+- npm start: sidebar visible, panel opens/closes, shortcuts werken
 - npx vitest run: alle tests slagen
 
 ## [v0.15.3] - 2026-02-28
 
-- fix: sidebar config gebruikt individuele messenger items + commit standaard
+- fix: sidebar config uses individuele messenger items + commit default
 
-Nieuwe bestanden: geen
-Aangepaste bestanden:
-- src/sidebar/manager.ts: DEFAULT_CONFIG bijgewerkt van 7 items (met 1 'messengers' groep)
-  naar 12 items (6 utility + 6 individuele messengers: whatsapp/telegram/discord/slack/instagram/x)
-- git-hooks/post-commit: emoji-stripping toegevoegd zodat emoji-prefixed commits
-  (bijv '🗂️ feat:') correct als 'feat:' herkend worden door auto-versioning
-- CHANGELOG.md: v0.15.2 entry uitgebreid met volledige details (bestanden, endpoints, architectuur)
-- AGENTS.md: commit message standaard toegevoegd met format, types, versie-regels en CHANGELOG format
-- package.json: versie gecorrigeerd naar 0.15.2 (was blijven staan op 0.15.1 door emoji-bug in hook)
+New files: no
+Aangepaste files:
+- src/sidebar/manager.ts: DEFAULT_CONFIG updated or 7 items (with 1 'messengers' group)
+  to 12 items (6 utility + 6 individuele messengers: whatsapp/telegram/discord/slack/instagram/x)
+- git-hooks/post-commit: emoji-stripping added zodat emoji-prefixed commits
+  (bijv '🗂️ feat:') correct if 'feat:' herkend be door auto-versioning
+- CHANGELOG.md: v0.15.2 entry uitgebreid with full details (files, endpoints, architectuur)
+- AGENTS.md: commit message default added with format, types, versie-rules and CHANGELOG format
+- package.json: versie gecorrigeerd to 0.15.2 (was blijven stand op 0.15.1 door emoji-bug in hook)
 
 Getest:
 - npx tsc: zero errors
@@ -989,31 +989,31 @@ Getest:
 
 ## [v0.15.2] - 2026-02-28
 
-### Toegevoegd
-- **Sidebar Infrastructuur** (`src/sidebar/`) — fundament voor alle sidebar features
+### Added
+- **Sidebar Infrastructuur** (`src/sidebar/`) — foundation for alle sidebar features
   - `src/sidebar/types.ts` — SidebarState ('hidden'|'narrow'|'wide'), SidebarItem, SidebarConfig types
-  - `src/sidebar/manager.ts` — SidebarManager class met load/save/getConfig/updateConfig/toggleItem/reorderItems/setState/setActiveItem
+  - `src/sidebar/manager.ts` — SidebarManager class with load/save/getConfig/updateConfig/toggleItem/reorderItems/setState/setActiveItem
   - `src/api/routes/sidebar.ts` — 6 REST endpoints:
-    - `GET  /sidebar/config` — volledige config ophalen
-    - `POST /sidebar/config` — config bijwerken (state, activeItemId)
+    - `GET  /sidebar/config` — full config ophalen
+    - `POST /sidebar/config` — config update (state, activeItemId)
     - `POST /sidebar/items/:id/toggle` — item enable/disable
-    - `POST /sidebar/items/:id/activate` — panel openen of sluiten
+    - `POST /sidebar/items/:id/activate` — panel openen or sluiten
     - `POST /sidebar/reorder` — drag-to-reorder (orderedIds array)
-    - `POST /sidebar/state` — sidebar state wijzigen (hidden/narrow/wide)
+    - `POST /sidebar/state` — sidebar state change (hidden/narrow/wide)
   - 12 default sidebar items: workspaces, personal news, pinboards, bookmarks, history, downloads + whatsapp, telegram, discord, slack, instagram, x
   - Config persistent in `~/.tandem/sidebar-config.json`
 
 ### Gewijzigd
-- `src/registry.ts` — `sidebarManager: SidebarManager` toegevoegd aan ManagerRegistry interface
+- `src/registry.ts` — `sidebarManager: SidebarManager` added about ManagerRegistry interface
 - `src/main.ts` — SidebarManager instantiatie in `startAPI()` + cleanup in `app.on('will-quit')`
-- `src/api/server.ts` — `registerSidebarRoutes(router, ctx)` toegevoegd
-- `src/api/tests/helpers.ts` — test helper bijgewerkt voor nieuwe manager
-- `git-hooks/post-commit` — emoji-prefix stripping zodat `🗂️ feat:` correct als `feat:` herkend wordt
+- `src/api/server.ts` — `registerSidebarRoutes(router, ctx)` added
+- `src/api/tests/helpers.ts` — test helper updated for new manager
+- `git-hooks/post-commit` — emoji-prefix stripping zodat `🗂️ feat:` correct if `feat:` herkend is
 
-### Architectuur
-- Elke messenger (WhatsApp/Telegram/Discord/Slack/Instagram/X) krijgt eigen slot in sidebar — niet gegroepeerd
-- Twee visuele stijlen in UI (fase 2): outline Heroicons voor utility, brand colored SVGs voor messengers
-- Active indicator: gekleurde rounded square achter actief icoon (Opera-stijl)
+### Architecture
+- Elke messenger (WhatsApp/Telegram/Discord/Slack/Instagram/X) gets own slot in sidebar — not grouped
+- Twee visual stijlen in UI (phase 2): outline Heroicons for utility, brand colored SVGs for messengers
+- Active indicator: colored rounded square achter actief icon (Opera-stijl)
 
 ## [v0.15.1] - 2026-02-28
 

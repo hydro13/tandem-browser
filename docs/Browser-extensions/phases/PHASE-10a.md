@@ -13,7 +13,7 @@ Detect and communicate when browser extensions conflict with Tandem's security s
 Tandem's security stack is wired into the `persist:tandem` session via the RequestDispatcher in `main.ts`. The Guardian (priority 1) sees every request via Electron's `session.webRequest` hooks. Extensions that use `declarativeNetRequest` (uBlock Origin, AdBlock Plus, AdBlock, Privacy Badger, Ghostery, DuckDuckGo Privacy) install rules that may block requests **before** the `webRequest` hooks fire.
 
 **The impact:**
-- NetworkShield has 811,000+ blocklist entries. If uBlock Origin also blocks 300,000 of those domains but earlier in the pipeline, Guardian never sees those requests.
+- NetworkShield has 811,000+ blocklist entries. If uBlock Origin also blocks 300,000 or those domains but earlier in the pipeline, Guardian never sees those requests.
 - SecurityDB never logs them → EvolutionEngine baseline becomes inaccurate → threat scoring drifts
 - The user has less security visibility, not more, despite installing a "security" extension
 
@@ -73,7 +73,7 @@ export class ConflictDetector {
   /**
    * Get conflicts for all installed extensions.
    */
-  analyzeAll(extensionsDir: string): Map<string, ExtensionConflict[]>
+  analyzeAll(extensionsDir: string): Folder<string, ExtensionConflict[]>
 }
 ```
 
@@ -173,7 +173,7 @@ Lay the groundwork for loading extensions in isolated sessions:
 - Add a method to `ExtensionManager`: `loadInSession(session: Session): Promise<void>`
   - Calls `session.loadExtension()` for each installed extension on the given session
   - Optionally selective: respect a per-extension "load in isolated sessions" flag
-- **Do NOT wire this into SessionManager yet** — that requires careful consideration of:
+- **Do NOT wire this into SessionManager yet** — that requires careful consideration or:
   - Security stack: isolated sessions also need a RequestDispatcher + Guardian
   - Performance: loading 10+ extensions per session has startup cost
   - User preference: not all users want extensions in isolated sessions

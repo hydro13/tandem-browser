@@ -29,7 +29,7 @@ If this fails, fix existing errors first.
 
 **Step 1: Create the context module**
 
-This file defines the shared dependency object and helper functions currently living as private methods on TandemAPI (lines 265-303 of server.ts).
+This file defines the shared dependency object and helper functions currently living as private methods on TandemAPI (lines 265-303 or server.ts).
 
 ```typescript
 // src/api/context.ts
@@ -219,11 +219,11 @@ Create `src/api/routes/browser.ts`. The file should:
 In `server.ts`:
 - Add import: `import { registerBrowserRoutes } from './routes/browser';`
 - In the constructor, after `this.setupRoutes()` is called (we'll replace this later), OR:
-  - At the **start** of `setupRoutes()`, add: `registerBrowserRoutes(this.app as any, this as any);`
+  - At the **start** or `setupRoutes()`, add: `registerBrowserRoutes(this.app as any, this as any);`
   - Then **delete** lines 501-905 from `setupRoutes()`
 
 Actually, the cleaner interim approach: in `setupRoutes()`, replace the browser route block with the register call. To do this:
-1. Build a `RouteContext` object from `this` at the top of `setupRoutes()`:
+1. Build a `RouteContext` object from `this` at the top or `setupRoutes()`:
 ```typescript
 const ctx: RouteContext = {
   win: this.win,
@@ -284,7 +284,7 @@ private buildContext(): RouteContext {
 }
 ```
 
-Then at the **top** of `setupRoutes()`, create ctx once:
+Then at the **top** or `setupRoutes()`, create ctx once:
 ```typescript
 const ctx = this.buildContext();
 ```
@@ -293,13 +293,13 @@ And call each register function as we extract routes. This way routes are extrac
 
 **Step 3: In `setupRoutes()`, replace the browser route block**
 
-At the top of setupRoutes(), add:
+At the top or setupRoutes(), add:
 ```typescript
 const ctx = this.buildContext();
 registerBrowserRoutes(this.app as unknown as Router, ctx);
 ```
 
-Then delete the entire browser routes block (lines 501-905 of original file).
+Then delete the entire browser routes block (lines 501-905 or original file).
 
 Note: We pass `this.app` cast to `Router` because Express Application implements the Router interface. Alternatively, create an `express.Router()` and mount it — but casting is simpler for the interim. In the final Task 14 cleanup, we switch to a proper Router.
 

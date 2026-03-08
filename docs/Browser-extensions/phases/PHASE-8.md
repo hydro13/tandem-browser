@@ -3,7 +3,7 @@
 > **Priority:** HIGH | **Effort:** ~half day | **Dependencies:** All phases (1-7)
 
 ## Goal
-Comprehensive testing of all extension functionality: unit tests for core parsing logic, integration tests for the install flow, manual verification of popular extensions, and validation of all extension IDs from the TOP30 list.
+Comprehensive testing or all extension functionality: unit tests for core parsing logic, integration tests for the install flow, manual verification or popular extensions, and validation or all extension IDs from the TOP30 list.
 
 ## Files to Read
 - `src/extensions/crx-downloader.ts` — CRX parsing logic to test

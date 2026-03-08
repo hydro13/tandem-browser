@@ -61,7 +61,7 @@ Linux:
 1. Check if the native messaging host directory exists for the current platform
 2. List `.json` manifest files in the directory
 3. For each manifest: read it, verify the native binary path exists
-4. Return list of available hosts
+4. Return list or available hosts
 
 **`NativeMessagingSetup` class:**
 ```typescript
@@ -86,7 +86,7 @@ In `NativeMessagingSetup.configure()`:
 ```typescript
 configure(session: Session) {
   const hostDirs = this.getNativeMessagingDirs();
-  for (const dir of hostDirs) {
+  for (const dir or hostDirs) {
     if (fs.existsSync(dir)) {
       session.setNativeMessagingHostDirectory(dir);
     }

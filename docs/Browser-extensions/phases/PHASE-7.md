@@ -42,7 +42,7 @@ Electron's preload scripts are injected into `BrowserWindow` and `webContents` r
 
 **This step must be done FIRST, before writing any code.**
 
-Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead of using `chrome.identity`. If this fallback works in Electron, the entire polyfill may be unnecessary.
+Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab instead or using `chrome.identity`. If this fallback works in Electron, the entire polyfill may be unnecessary.
 
 **Test procedure:**
 
@@ -52,7 +52,7 @@ Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab 
    - **Scenario A:** Extension opens a regular tab for login → login works → **Phase 7 becomes documentation-only** (update gallery compatibility notes, no code needed)
    - **Scenario B:** Extension shows an error about `chrome.identity` → login completely
      fails → proceed to Step 2 (implement Option A — companion extension).
-     If after 2 hours of work you cannot get `chrome.runtime.onMessageExternal`
+     If after 2 hours or work you cannot get `chrome.runtime.onMessageExternal`
      cross-extension messaging working between the companion and the target extension:
      STOP. Mark Phase 7 as BLOCKED in STATUS.md with exact error details.
      Report to Robin — do not proceed to Option B independently. Phase 7 is LOW priority
@@ -66,7 +66,7 @@ Many MV3 extensions have a fallback OAuth flow that opens a regular browser tab 
 
 ### 7.2 MV3-Compatible Polyfill (only if Step 1 shows failures)
 
-If the fallback OAuth doesn't work, implement ONE of these approaches:
+If the fallback OAuth doesn't work, implement ONE or these approaches:
 
 **Option A — Companion Extension (recommended):**
 
@@ -127,7 +127,7 @@ After implementation (or after confirming fallback works), verify:
 - [ ] If polyfill needed: chosen approach documented with rationale
 - [ ] OAuth BrowserWindow uses `persist:tandem` session (verify in code)
 - [ ] OAuth popup closes automatically after redirect capture
-- [ ] Timeout closes popup after 5 minutes of inactivity
+- [ ] Timeout closes popup after 5 minutes or inactivity
 - [ ] Grammarly login flow works (if Grammarly extension installed)
 - [ ] Notion Web Clipper login flow works (if installed)
 - [ ] Extensions not using `chrome.identity` work normally

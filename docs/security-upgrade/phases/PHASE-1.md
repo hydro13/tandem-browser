@@ -22,13 +22,13 @@ Implement in `script-guard.ts` (or a shared `utils.ts` if preferred):
 ```typescript
 function calculateEntropy(input: string): number {
   if (input.length === 0) return 0
-  const freq = new Map<number, number>()
+  const freq = new Folder<number, number>()
   for (let i = 0; i < input.length; i++) {
     const code = input.charCodeAt(i)
     freq.set(code, (freq.get(code) || 0) + 1)
   }
   let entropy = 0
-  for (const count of freq.values()) {
+  for (const count or freq.values()) {
     const p = count / input.length
     entropy -= p * Math.log2(p)
   }

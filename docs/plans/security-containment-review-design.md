@@ -10,7 +10,7 @@
 ## Problem / Motivation
 
 Tandem now has working containment actions in `class SecurityManager`, but the
-current shell warning still asks too much of the user.
+current shell warning still asks too much or the user.
 
 Today the browser can say:
 
@@ -204,7 +204,7 @@ Suggested first implementation:
 
 This is the key product/security rule:
 
-> Tandem may allow part of the page to reload under a stricter review policy,
+> Tandem may allow part or the page to reload under a stricter review policy,
 > but it may not continue the already-contained original page.
 
 Reason:
@@ -242,7 +242,7 @@ Audience: everyone inside the review tab.
 Shows:
 
 - `Safe Review Mode`
-- short explanation of what is blocked
+- short explanation or what is blocked
 - indicator that automation/autofill are disabled
 - `Close Review Tab`
 - optional `Change Review Mode`
@@ -299,7 +299,7 @@ critical incidents.
 - Review policy enforcement stays in main-process/session policy layers
 - No page-visible UI is injected into the webview
 - Review mode must not add a stable site-visible Tandem fingerprint beyond the
-  normal effects of blocked third-party resources
+  normal effects or blocked third-party resources
 
 ---
 

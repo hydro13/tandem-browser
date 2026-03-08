@@ -10,7 +10,7 @@
 ### 1.1 Tab Islands
 **Category:** Tab Organization
 **Description:** Automatically arranges tabs into separate, customizable groups by browsing context. Tabs opened from the same origin or session are visually connected into "islands" — color-coded clusters with named handles. Users can collapse islands to save space, drag tabs between islands, and use Shift+click to select and move multiple tabs simultaneously.
-**UI Location:** Tab bar (top of browser). Colored handles appear above grouped tabs.
+**UI Location:** Tab bar (top or browser). Colored handles appear above grouped tabs.
 **Visual Design:** Each island has a distinct color tag and optional custom name. Collapsed islands occupy minimal space. Tooltip preview on hover shows grouped tab thumbnails. Visual connections (subtle lines/shading) between grouped tabs.
 **Keyboard Shortcut:** Alt+T (new tab in current island)
 **Technical Notes:** Auto-creates islands on new browsing sessions. Works alongside Workspaces. Supports multi-tab drag-and-drop operations. Configurable via Settings > Features > User Interface > "Automatically create tab islands."
@@ -18,7 +18,7 @@
 
 ### 1.2 Workspaces
 **Category:** Tab Organization
-**Description:** Higher-level tab organization that lets users create up to 5 named workspace "buckets" (e.g., Work, Shopping, Research, Planning). Each workspace has its own set of tabs and tab islands. Switching workspaces instantly shows only that workspace's tabs; Ctrl+Tab cycles only within the current workspace.
+**Description:** Higher-level tab organization that lets users create up to 5 named workspace "buckets" (e.g., Work, Shopping, Research, Planning). Each workspace has its own set or tabs and tab islands. Switching workspaces instantly shows only that workspace's tabs; Ctrl+Tab cycles only within the current workspace.
 **UI Location:** Sidebar top — customizable workspace icons. Three-dot menu at sidebar bottom opens Sidebar setup panel.
 **Visual Design:** Customizable icons and names per workspace. Clean single-click switching.
 **Keyboard Shortcut:** Custom hotkeys configurable per workspace. Ctrl+Tab cycles within current workspace only.
@@ -49,13 +49,13 @@
 **UI Location:** Tab strip. Settings > Features > User Interface > "Show traces on most recently used tabs."
 **Visual Design:** Highlight brightness correlates with usage recency. Activates automatically with 8+ open tabs.
 **Keyboard Shortcut:** None.
-**Technical Notes:** Customizable activation threshold (minimum number of tabs before traces appear).
+**Technical Notes:** Customizable activation threshold (minimum number or tabs before traces appear).
 **Tandem Relevance:** **MEDIUM** — Subtle but useful visual cue for heavy tab users.
 
 ### 1.6 Search in Tabs
 **Category:** Tab Navigation
 **Description:** Real-time keyword search across all open tabs by title and URL. Results update dynamically with the most relevant tab on top. Also shows recently closed tabs for quick restoration.
-**UI Location:** Magnifying glass icon to the right of the tab bar. Keyboard shortcut Ctrl+Space.
+**UI Location:** Magnifying glass icon to the right or the tab bar. Keyboard shortcut Ctrl+Space.
 **Visual Design:** Dropdown list with site favicons, page titles, and web addresses. Clear visual hierarchy.
 **Keyboard Shortcut:** Ctrl+Space
 **Technical Notes:** Arrow keys navigate results, Enter selects. Searches both titles and URLs.
@@ -65,14 +65,14 @@
 **Category:** Tab Navigation
 **Description:** Thumbnail preview popup for cycling through open tabs. Shows visual previews rather than just text titles.
 **UI Location:** Popup overlay triggered by keyboard shortcut.
-**Visual Design:** Thumbnail grid/list of open tab previews.
+**Visual Design:** Thumbnail grid/list or open tab previews.
 **Keyboard Shortcut:** Hold Ctrl, then press Tab repeatedly to cycle; release Ctrl to switch to selected tab.
 **Technical Notes:** Requires Settings > Advanced > Browser > "Show tab previews" to be enabled.
 **Tandem Relevance:** **MEDIUM** — Nice-to-have visual tab switching.
 
 ### 1.8 Tab Preview on Hover
 **Category:** Tab Navigation
-**Description:** Hovering over a tab shows a thumbnail preview of the page content.
+**Description:** Hovering over a tab shows a thumbnail preview or the page content.
 **UI Location:** Tab bar hover tooltip.
 **Visual Design:** Thumbnail preview popup.
 **Technical Notes:** Enable via Settings > Advanced > Browser > "Show tab previews."
@@ -80,7 +80,7 @@
 
 ### 1.9 Pin Tabs
 **Category:** Tab Management
-**Description:** Pinned tabs move to the left side of the tab bar, show only the favicon (no title), and persist after browser restart. Prevents accidental closure.
+**Description:** Pinned tabs move to the left side or the tab bar, show only the favicon (no title), and persist after browser restart. Prevents accidental closure.
 **UI Location:** Right-click tab > "Pin Tab" / "Unpin Tab."
 **Visual Design:** Compact favicon-only display, pinned to the left.
 **Keyboard Shortcut:** None.
@@ -97,9 +97,9 @@
 
 ### 1.11 Duplicate Tabs Highlighter
 **Category:** Tab Management
-**Description:** Identifies and highlights duplicate tabs on hover. Bulk closure of all duplicates via right-click context menu.
+**Description:** Identifies and highlights duplicate tabs on hover. Bulk closure or all duplicates via right-click context menu.
 **UI Location:** Tab hover + right-click > "Close duplicate tabs."
-**Visual Design:** Hover-activated highlighting of duplicate tabs.
+**Visual Design:** Hover-activated highlighting or duplicate tabs.
 **Tandem Relevance:** **MEDIUM** — Useful cleanup utility.
 
 ### 1.12 Close Tab Variations
@@ -110,7 +110,7 @@
 
 ### 1.13 Save Tabs as Speed Dial Folder
 **Category:** Tab Management
-**Description:** Batch-save all open tabs or a selection of tabs as a Speed Dial folder for later access.
+**Description:** Batch-save all open tabs or a selection or tabs as a Speed Dial folder for later access.
 **UI Location:** Right-click tab bar > "Save all tabs as Speed Dial folder" or Ctrl+click multiple tabs > right-click > "Save tabs as Speed Dial folder."
 **Tandem Relevance:** **MEDIUM** — Session-saving concept is valuable.
 
@@ -121,7 +121,7 @@
 ### 2.1 Sidebar Layout & Customization
 **Category:** Browser Chrome / UI
 **Description:** Left-side panel providing quick access to Workspaces, Messengers, Speed Dials, Flow, bookmarks, personal news, tabs, history, extensions, downloads, and settings. Fully customizable — users can add, remove, reorder, pin, and hide individual panels.
-**UI Location:** Left side of browser window. Show/hide via Easy Setup > "Show sidebar." Customize via three-dot icon at sidebar bottom or Settings > Sidebar > Manage sidebar.
+**UI Location:** Left side or browser window. Show/hide via Easy Setup > "Show sidebar." Customize via three-dot icon at sidebar bottom or Settings > Sidebar > Manage sidebar.
 **Visual Design:** Narrow mode toggle available. Notification badges on messenger icons. Pinnable panels. Clean, icon-based navigation.
 **Keyboard Shortcut:** None dedicated (individual panels may have shortcuts).
 **Technical Notes:** Sidebar elements include: Workspaces, Facebook Messenger (SKIP), WhatsApp, Telegram, VK (SKIP), Instagram, Discord, Slack, X/Twitter, Spotify, My Flow, Speed Dial, Bookmarks, Personal News, Tabs, History, Downloads, Extensions, Settings.
@@ -233,7 +233,7 @@
 
 ### 5.2 Tracker Blocker
 **Category:** Privacy
-**Description:** Blocks online tracking from analytics scripts, tracking pixels, and other data collection methods. Displays count of blocked trackers.
+**Description:** Blocks online tracking from analytics scripts, tracking pixels, and other data collection methods. Displays count or blocked trackers.
 **UI Location:** Ad Blocker popup window toggle. Blue shield badge in address bar. Settings > Basic > Privacy protection.
 **Visual Design:** Badge displays blocked tracker count alongside ad count.
 **Technical Notes:** Manages exception and blocklist preferences. Works alongside ad blocker.
@@ -242,7 +242,7 @@
 ### 5.3 Free VPN
 **Category:** Privacy / Security
 **Description:** Built-in browser VPN — encrypts traffic, masks IP address, changes apparent location. Free, unlimited data, no login required, no-log policy (Deloitte-audited). AES-256 encryption. DNS leak protection. 100+ servers across 3 virtual regions.
-**UI Location:** VPN badge on left side of address bar. Click to open control panel with on/off toggle, data transfer stats, current location, virtual IP.
+**UI Location:** VPN badge on left side or address bar. Click to open control panel with on/off toggle, data transfer stats, current location, virtual IP.
 **Visual Design:** Badge with VPN status. Clean control panel showing real-time stats and location toggles.
 **Keyboard Shortcut:** None.
 **Technical Notes:** Browser-only protection (not device-wide; VPN Pro is paid upgrade for device-wide). Unlimited bandwidth. "Bypass VPN for default search engines" option. 3 general regions (free) vs 48 locations (Pro).
@@ -273,7 +273,7 @@
 
 ### 5.7 Phishing & Malware Protection
 **Category:** Security
-**Description:** Checks pages against blacklists of known phishing and malware sites. Warning page displays if site is blacklisted. Enabled by default, no loading delay.
+**Description:** Checks pages against blacklists or known phishing and malware sites. Warning page displays if site is blacklisted. Enabled by default, no loading delay.
 **UI Location:** Warning page interstitial.
 **Tandem Relevance:** **HIGH** — Essential security feature.
 
@@ -291,7 +291,7 @@
 
 ### 5.10 Clear Data on Exit
 **Category:** Privacy
-**Description:** Automated deletion of specified data categories every time Opera closes. Configurable per data type.
+**Description:** Automated deletion or specified data categories every time Opera closes. Configurable per data type.
 **UI Location:** Settings > Privacy and Security > Delete browsing data > "On exit" section.
 **Tandem Relevance:** **MEDIUM** — Useful privacy option.
 
@@ -316,7 +316,7 @@
 
 ### 6.2 Video Skip
 **Category:** Media
-**Description:** Jump to end of video with a single click. Button appears on hover over video player (two arrows icon).
+**Description:** Jump to end or video with a single click. Button appears on hover over video player (two arrows icon).
 **UI Location:** Video player hover menu. Settings > Advanced > Features.
 **Visual Design:** Button with two arrows icon appears on hover.
 **Technical Notes:** Works on supported sites. May bypass ad requirements on some sites. Auto-continues or pauses depending on site.
@@ -338,7 +338,7 @@
 ### 7.1 Snapshot (Screenshot + Annotations)
 **Category:** Productivity / Tools
 **Description:** Built-in screenshot tool with editing capabilities. Capture options: partial (drag selection), full screen, or save page as PDF. 8 editing tools: arrow, pencil/drawing, blur, highlight, text insertion, selfie camera overlay, sticker application, emoji annotations. Output: copy to clipboard, save as PNG, export as PDF.
-**UI Location:** Camera icon to the right of address bar. Keyboard shortcut activation.
+**UI Location:** Camera icon to the right or address bar. Keyboard shortcut activation.
 **Keyboard Shortcut:** Ctrl+Shift+5 (Windows/Linux) / Cmd+Shift+2 (Mac)
 **Visual Design:** Crop frame adjustment tool. Editing toolbar with 8 tools. Full-page PDF export option.
 **Technical Notes:** Saves as .png. "Copy and Close" pastes directly to clipboard. Compatible with integrated messengers for direct sharing. PDF export for full-page capture.
@@ -411,8 +411,8 @@
 
 ### 8.1 Speed Dial
 **Category:** Start Page
-**Description:** Visual grid of thumbnail entries linking to most visited sites or custom pages. Add entries via "+" button. Edit, rearrange (drag-and-drop), remove, create folders (drag one entry onto another). Folder management with editable titles.
-**UI Location:** Main area of start page. Grid layout of clickable thumbnails.
+**Description:** Visual grid or thumbnail entries linking to most visited sites or custom pages. Add entries via "+" button. Edit, rearrange (drag-and-drop), remove, create folders (drag one entry onto another). Folder management with editable titles.
+**UI Location:** Main area or start page. Grid layout or clickable thumbnails.
 **Visual Design:** Grid layout with thumbnail previews. Expandable folder interface.
 **Keyboard Shortcut:** None.
 **Tandem Relevance:** **HIGH** — Start page with quick access tiles is a core browser feature.
@@ -427,7 +427,7 @@
 ### 8.3 Easy Setup Panel
 **Category:** Start Page / Customization
 **Description:** Quick access panel for managing Opera's most prominent features. Change themes/wallpapers, pin sidebar, show bookmarks bar, toggle ad blocker, change download locations, clear browsing data, access full settings.
-**UI Location:** Top-right corner of start page.
+**UI Location:** Top-right corner or start page.
 **Visual Design:** Panel interface with toggle buttons and configuration options.
 **Tandem Relevance:** **MEDIUM** — Quick-setup onboarding panel concept is useful.
 
@@ -507,7 +507,7 @@
 ### 10.2 My Flow
 **Category:** Sync / Cross-Device / Sharing
 **Description:** Encrypted content-sharing space between Opera on desktop, Android, and iOS. Share links, YouTube videos, images, notes, and files (up to 10MB, auto-delete after 24–48 hours). QR code pairing — no login required. Drag-and-drop file upload. Media playback within Flow. Emergency reset function.
-**UI Location:** My Flow icon in sidebar. Easy Setup menu. opera://myflow. Share icon to right of address bar for one-click sharing.
+**UI Location:** My Flow icon in sidebar. Easy Setup menu. opera://myflow. Share icon to right or address bar for one-click sharing.
 **Visual Design:** QR code for device pairing. Notification badge. Device timestamp display. Preview images for shared content.
 **Keyboard Shortcut:** None.
 **Technical Notes:** End-to-end encryption. No cloud storage consumed. 24-hour auto-delete for files. Supports text highlighting > "Send to My Flow."
@@ -554,7 +554,7 @@
 ### 12.3 Crypto Wallet
 **Category:** Commerce / Crypto
 **Description:** Referenced in Opera's ecosystem but not a current prominent desktop feature page. Opera historically had a built-in crypto wallet for Ethereum-based tokens.
-**Tandem Relevance:** **SKIP** — Crypto wallet is out of scope.
+**Tandem Relevance:** **SKIP** — Crypto wallet is out or scope.
 
 ---
 
@@ -563,10 +563,10 @@
 ### 13.1 Battery Saver
 **Category:** Performance / Power Management
 **Description:** Extends laptop battery life by reducing background activity: pauses unused plugins, stops background animations, tweaks video playback parameters, reschedules JavaScript timers, reduces background tab activity. Browse "up to an hour longer." Automatic activation when unplugged. Low battery reminder at 20%.
-**UI Location:** Battery Saver icon appears to right of address bar when laptop unplugged. Settings (Alt+P) > Advanced > Features > Battery Saver.
+**UI Location:** Battery Saver icon appears to right or address bar when laptop unplugged. Settings (Alt+P) > Advanced > Features > Battery Saver.
 **Visual Design:** Icon with on/off switch and time remaining estimate.
 **Keyboard Shortcut:** None.
-**Technical Notes:** Automatic or manual activation. Toggleable display of Battery Saver icon.
+**Technical Notes:** Automatic or manual activation. Toggleable display or Battery Saver icon.
 **Tandem Relevance:** **MEDIUM** — Useful for Electron-based apps which tend to be power-hungry.
 
 ### 13.2 Tab Snoozing
@@ -600,13 +600,13 @@
 ### 15.1 Navigation Buttons
 **Category:** Core Browser
 **Description:** Back, Forward, Reload, Start Page (Speed Dial) buttons. Click-and-hold back/forward reveals tab browsing history dropdown.
-**UI Location:** Left side of address bar.
+**UI Location:** Left side or address bar.
 **Tandem Relevance:** **HIGH** — Fundamental browser navigation.
 
 ### 15.2 Combined Address & Search Bar
 **Category:** Core Browser
 **Description:** Unified input for URLs and search queries. Predictive search suggestions. Alternative search engine tabs in suggestion dropdown (Yahoo!, Amazon, Bing).
-**UI Location:** Center top of browser window.
+**UI Location:** Center top or browser window.
 **Tandem Relevance:** **HIGH** — Core browser feature.
 
 ### 15.3 Context Menus

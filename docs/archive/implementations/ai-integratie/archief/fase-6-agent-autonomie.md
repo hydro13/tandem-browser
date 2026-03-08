@@ -1,32 +1,32 @@
-# Fase 6: Agent Autonomie — Sessie Context
+# Phase 6: Agent Autonomie — Sessie Context
 
-## Wat is dit?
+## Wat is this?
 
-AI kan zelfstandig browsen en taken uitvoeren — met Robin's toestemming en oversight. Robin geeft een opdracht, AI voert het uit, rapporteert terug.
+AI can zelfstandig browsen and taken uitvoeren — with Robin's toestemming and oversight. Robin geeft a opdracht, AI voert the out, rapporteert terug.
 
 ## Voorbeeld Scenario's
 
 ### Research Agent
-> Robin: "Zoek de beste deals voor een MacBook Pro M4"
-> Kees: opent Google, zoekt, leest 5 winkels, vergelijkt prijzen, rapporteert
+> Robin: "Zoek the beste deals for a MacBook Pro M4"
+> Kees: opens Google, zoekt, leest 5 winkels, vergelijkt prijzen, rapporteert
 
 ### Monitoring Agent
-> Robin: "Check elke 30 minuten of er nieuwe vacatures op die LinkedIn pagina staan"
-> Kees: bezoekt periodiek, vergelijkt met vorige keer, meldt changes
+> Robin: "Check elke 30 minuten or er new vacatures op that LinkedIn page stand"
+> Kees: bezoekt periodiek, vergelijkt with vorige keer, meldt changes
 
 ### Form Agent
-> Robin: "Vul dit contactformulier in met mijn gegevens"
-> Kees: leest het formulier, toont Robin wat hij gaat invullen, wacht op goedkeuring
+> Robin: "Vul this contactformulier in with mijn gegevens"
+> Kees: leest the formulier, shows Robin wat he gaat invullen, wait op approval
 
-## Bestaande Referentie: X-Scout Agent
+## Existing Referentie: X-Scout Agent
 
-In `src/agents/x-scout.ts` staat een voorbeeld agent die:
-- Menselijke timing gebruikt (delays tussen acties)
-- State bijhoudt (wat al gezien, wat pending)
-- Approval systeem heeft (actions wachten op goedkeuring)
-- Via API communiceert (POST /chat voor rapportage)
+In `src/agents/x-scout.ts` staat a voorbeeld agent that:
+- Menselijke timing uses (delays between acties)
+- State bijhoudt (wat already gezien, wat pending)
+- Approval system has (actions wachten op approval)
+- Via API communiceert (POST /chat for rapportage)
 
-## Task Queue Systeem
+## Task Queue System
 
 ```typescript
 interface AITask {
@@ -44,9 +44,9 @@ interface AITask {
 
 interface TaskStep {
   id: string;
-  description: string;        // "Open Google en zoek"
+  description: string;        // "Open Google and zoek"
   action: BrowserAction;      // { type: 'navigate', url: '...' }
-  requiresApproval: boolean;  // true voor risico-acties
+  requiresApproval: boolean;  // true for risk-acties
   status: 'pending' | 'running' | 'done' | 'skipped';
   result?: any;
 }
@@ -57,26 +57,26 @@ interface BrowserAction {
 }
 ```
 
-## Approval Systeem
+## Approval System
 
-### Risico Niveaus
+### Risk Niveaus
 
 | Niveau | Acties | Default |
 |--------|--------|---------|
-| **Geen risico** | Lezen, screenshots, scrollen | Auto-approve |
-| **Laag risico** | Navigeren, tabs openen | Auto-approve (configureerbaar) |
-| **Medium risico** | Klikken, selecteren | Vraag bij onbekende sites |
-| **Hoog risico** | Typen, formulieren, bestellen | Altijd vragen |
+| **No risk** | Lezen, screenshots, scrollen | Auto-approve |
+| **Laag risk** | Navigeren, tabs openen | Auto-approve (configureerbaar) |
+| **Medium risk** | Klikken, selecteren | Question bij onbekende sites |
+| **Hoog risk** | Typen, formulieren, bestellen | Altijd questions |
 
 ### Approval UI
 
-In het Kees panel, als actie goedkeuring nodig heeft:
+In the Kees panel, if actie approval nodig has:
 
 ```
 ┌─────────────────────────────────────┐
-│ 🤖 Kees wil een actie uitvoeren:   │
+│ 🤖 Kees wil a actie uitvoeren:   │
 │                                     │
-│ ✏️ Tekst typen in zoekveld:        │
+│ ✏️ Text typen in zoekveld:        │
 │ "MacBook Pro M4 best price"         │
 │                                     │
 │ Op: google.com                      │
@@ -91,21 +91,21 @@ In het Kees panel, als actie goedkeuring nodig heeft:
 In settings UI:
 ```
 AI Autonomie:
-  ☑ Pagina's lezen zonder vragen
-  ☑ Navigeren zonder vragen
-  ☐ Klikken zonder vragen
-  ☐ Tekst typen zonder vragen
-  ☐ Formulieren invullen zonder vragen
+  ☑ Page's read without questions
+  ☑ Navigeren without questions
+  ☐ Klikken without questions
+  ☐ Text typen without questions
+  ☐ Formulieren invullen without questions
 
 Vertrouwde sites:
   + google.com
   + wikipedia.org
-  + [Toevoegen...]
+  + [Add...]
 ```
 
 ## Tab Ownership
 
-AI kan tabs "claimen" — visueel duidelijk voor Robin welke tabs door AI bestuurd worden:
+AI can tabs "claimen" — visual duidelijk for Robin welke tabs door AI bestuurd be:
 
 ```
 [🙂 Robin's Tab] [🤖 Kees: Google Zoeken] [🤖 Kees: Amazon]
@@ -113,21 +113,21 @@ AI kan tabs "claimen" — visueel duidelijk voor Robin welke tabs door AI bestuu
 
 ### Implementatie
 - `tabSource` property per tab: `'robin' | 'kees'`
-- Visuele indicator in tab header (icoon of kleur)
-- Bestaande `POST /tabs/source` endpoint gebruiken
-- Robin kan altijd een AI tab overnemen (klik = claim terug)
+- Visual indicator in tab header (icon or color)
+- Existing `POST /tabs/source` endpoint use
+- Robin can always a AI tab overnemen (click = claim terug)
 
 ## Menselijke Timing
 
-AI moet browsen als een mens — niet instant. Dit voorkomt bot-detectie.
+AI must browsen if a mens — not instant. Dit voorkomt bot-detection.
 
 ```typescript
 const HUMAN_TIMING = {
-  beforeNavigate:  { min: 500,  max: 2000 },    // Denktijd voor klik
-  afterPageLoad:   { min: 2000, max: 5000 },     // Pagina "lezen"
-  beforeType:      { min: 300,  max: 800 },      // Vingers naar toetsenbord
+  beforeNavigate:  { min: 500,  max: 2000 },    // Denktijd for click
+  afterPageLoad:   { min: 2000, max: 5000 },     // Page "read"
+  beforeType:      { min: 300,  max: 800 },      // Vingers to toetsenbord
   typingSpeed:     { min: 30,   max: 80 },        // ms per karakter
-  beforeClick:     { min: 200,  max: 600 },       // Muis bewegen naar element
+  beforeClick:     { min: 200,  max: 600 },       // Muis bewegen to element
   scrollPause:     { min: 1000, max: 3000 },      // Pauzeren na scroll
   betweenActions:  { min: 500,  max: 2000 },      // Algemene pauze
 };
@@ -140,7 +140,7 @@ function humanDelay(timing: { min: number, max: number }): Promise<void> {
 
 ## Activity Log
 
-Alles wat AI doet wordt gelogd:
+Alles wat AI doet is gelogd:
 
 ```typescript
 interface ActivityEntry {
@@ -151,16 +151,16 @@ interface ActivityEntry {
   action: string;          // 'navigate', 'click', 'type', etc.
   target?: string;         // URL, selector, etc.
   details?: string;        // Extra info
-  approved?: boolean;      // Was er goedkeuring nodig?
+  approved?: boolean;      // Was er approval nodig?
   approvedBy?: string;     // 'robin' | 'auto'
 }
 ```
 
-Zichtbaar in het Activity panel (bestaand in Kees panel).
+Zichtbaar in the Activity panel (bestaand in Kees panel).
 
-## Platform Overwegingen
+## Platform Considerations
 
 - Task queue: in-memory + file persistence (`~/.tandem/tasks/`)
 - Timing delays: `setTimeout` — cross-platform
-- Geen platform-specifieke code nodig
-- File paths via `path.join()` en `os.homedir()`
+- No platform-specific code needed
+- File paths via `path.join()` and `os.homedir()`

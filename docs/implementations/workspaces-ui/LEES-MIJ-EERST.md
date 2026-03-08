@@ -1,84 +1,84 @@
-# WORKSPACES UI — START HIER
+# WORKSPACES UI — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Visuele workspace switcher bovenop Tandem's bestaande /sessions — gekleurde iconen in sidebar, tab bar filtering per workspace
-> **Volgorde:** Fase 1 → 2 (elke fase is één sessie)
+> **Goal:** Visual workspace switcher on top or Tandem's existing `/sessions` — colored icons in the sidebar, tab bar filtering per workspace
+> **Order:** Phase 1 → 2 (each phase is one session)
 
 ---
 
-## Waarom deze feature?
+## Why This Feature?
 
-Tandem heeft al de krachtigste session-isolatie van alle browsers (volledige Electron partition per sessie). Maar er is geen visuele manier om te wisselen — alles gaat via `curl`. Opera's Workspaces tonen gekleurde vierkantjes bovenaan de sidebar waarmee je met één klik van context wisselt. Dit is de #5 prioriteit in de gap analyse (docs/research/gap-analysis.md). We bouwen de UI bovenop de bestaande SessionManager.
+Tandem already has the strongest session isolation or any browser (a full Electron partition per session). But there is no visual way to switch yet — everything goes through `curl`. Opera's Workspaces show colored squares at the top or the sidebar so you can switch context with one click. This is priority #5 in the gap analysis (`docs/research/gap-analysis.md`). We are building the UI on top or the existing `SessionManager`.
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 Seconds
 
 ```
-Klik op workspace icon in sidebar strip
+Click workspace icon in sidebar strip
        ↓
   Shell → IPC → WorkspaceManager.switch(name)
        ↓
   WorkspaceManager → SessionManager.setActive(name)
        ↓
-  IPC terug → Shell filtert tab bar: toon alleen tabs van actieve workspace
+  IPC back → Shell filters tab bar: show only tabs from the active workspace
        ↓
-  URL bar, webview, navigatie → alles wijst nu naar de nieuwe workspace/sessie
+  URL bar, webview, navigation → everything now points to the new workspace/session
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
-| `src/main.ts` | App startup, manager registratie | `startAPI()`, `createWindow()` |
-| `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
+| `AGENTS.md` | Anti-detect rules, code style, commit format | — (read fully) |
+| `src/main.ts` | App startup, manager registration | `startAPI()`, `createWindow()` |
+| `src/api/server.ts` | TandemAPI class, route registration | `class TandemAPI`, `setupRoutes()` |
 | `src/registry.ts` | ManagerRegistry interface | `interface ManagerRegistry` |
-| `src/sessions/manager.ts` | Bestaande SessionManager — WorkspaceManager bouwt hierop | `class SessionManager`, `create()`, `setActive()` |
-| `src/sessions/types.ts` | Session interface definitie | `interface Session` |
+| `src/sessions/manager.ts` | Existing `SessionManager` — `WorkspaceManager` builds on top or it | `class SessionManager`, `create()`, `setActive()` |
+| `src/sessions/types.ts` | Session interface definition | `interface Session` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **Workspaces = Sessions** — elke workspace correspondeert 1:1 met een SessionManager sessie. WorkspaceManager is een laag bovenop SessionManager, niet een vervanging.
-2. **Default workspace onverwijderbaar** — de "default" workspace (= `persist:tandem` sessie) kan nooit verwijderd worden.
-3. **Tab filtering, niet tab sluiting** — workspace switch verbergt tabs van andere workspaces in de tab bar, maar sluit ze niet. De webviews blijven bestaan.
-4. **Functienamen > regelnummers** — verwijs altijd naar `function registerWorkspaceRoutes()`, nooit naar "regel 42"
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — hoe nieuwe component registreren
+## Rules for This Feature
 
-Elke nieuwe manager moet op **3 plekken** worden aangesloten:
+> These are the HARD rules in addition to the general AGENTS.md rules.
+
+1. **Workspaces = Sessions** — each workspace maps 1:1 to a `SessionManager` session. `WorkspaceManager` is a layer on top or `SessionManager`, not a replacement.
+2. **Default workspace is undeletable** — the "default" workspace (= `persist:tandem` session) can never be removed.
+3. **Tab filtering, not tab closing** — workspace switching hides tabs from other workspaces in the tab bar, but does not close them. The webviews stay alive.
+4. **Function names > line numbers** — always refer to `function registerWorkspaceRoutes()`, never to "line 42"
+
+---
+
+## Manager Wiring — How to Register a New Component
+
+Each new manager must be wired into **3 places**:
 
 ### 1. `src/registry.ts` — `ManagerRegistry` interface
 
 ```typescript
 export interface ManagerRegistry {
-  // ... bestaande managers ...
-  workspaceManager: WorkspaceManager;  // ← toevoegen
+  // ... existing managers ...
+  workspaceManager: WorkspaceManager;  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
-// Na sessionManager aanmaak:
+// After creating sessionManager:
 const workspaceManager = new WorkspaceManager(sessionManager!, tabManager!);
 
 // In registry object:
@@ -93,7 +93,7 @@ if (workspaceManager) workspaceManager.destroy();
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // ═══════════════════════════════════════════════
@@ -110,28 +110,28 @@ router.get('/workspaces', (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` around EVERYTHING, catch as `(e: any)`
+- 400 for missing required fields
+- 404 for not-found resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-backend.md` | WorkspaceManager + API routes + tab↔workspace mapping | 📋 Klaar om te starten |
-| `fase-2-shell-ui.md` | Workspace icon strip in sidebar + tab bar filtering | ⏳ Wacht op fase 1 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-backend.md` | `WorkspaceManager` + API routes + tab↔workspace mapping | 📋 Ready to start |
+| `fase-2-shell-ui.md` | Workspace icon strip in sidebar + tab bar filtering | ⏳ Waiting for phase 1 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
-# App draait?
+# Is the app running?
 curl http://localhost:8765/status
 
 # TypeScript clean?
@@ -140,17 +140,17 @@ npx tsc
 # Git status clean?
 git status
 
-# Tests slagen?
+# Tests passing?
 npx vitest run
 ```
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Backend (tab↔workspace koppeling) | ⏳ niet gestart | — |
-| 2 | Shell UI (icon strip in sidebar) | ⏳ niet gestart | — |
+| 1 | Backend (tab↔workspace mapping) | ⏳ not started | — |
+| 2 | Shell UI (icon strip in sidebar) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: mark the phase as ✅ and add the commit hash after completion.

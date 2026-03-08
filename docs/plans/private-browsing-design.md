@@ -1,45 +1,45 @@
 # Design: Private Browsing Window
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** Draft
 > **Effort:** Easy (1-2d)
-> **Auteur:** Kees
+> **Author:** Kees
 
 ---
 
-## Probleem / Motivatie
+## Problem / Motivation
 
-Tandem heeft session-isolatie via `/sessions` (met `persist:` partities), maar geen écht privé venster dat automatisch alles wist bij sluiten. Robin moet handmatig een sessie aanmaken en daarna handmatig data wissen.
+Tandem has session isolation via `/sessions` (with `persist:` partitions), but no true private window that automatically wipes everything on close. Robin currently has to create a session manually and then clear the data manually.
 
-**Opera heeft:** Private Browsing — Cmd+Shift+N opent een nieuw venster dat geen history opslaat, geen cookies bewaart, en alles automatisch wist bij sluiten. Visueel herkenbaar door een donker thema.
+**Opera has:** Private Browsing — Cmd+Shift+N opens a new window that stores no history, keeps no cookies, and automatically clears everything on close. It is visually recognizable through a dark theme.
 
-**Tandem heeft nu:** `POST /sessions/create` en `POST /sessions/switch` via `function registerSessionRoutes()` in `src/api/routes/sessions.ts`. Sessions gebruiken `persist:[naam]` partities die wél data bewaren op disk.
+**Tandem currently has:** `POST /sessions/create` and `POST /sessions/switch` via `function registerSessionRoutes()` in `src/api/routes/sessions.ts`. Sessions use `persist:[name]` partitions that do persist data on disk.
 
-**Gap:** Geen ephemere (in-memory) sessie die automatisch opruimt. Geen Cmd+Shift+N shortcut. Geen visuele indicator voor privé-modus.
-
----
-
-## Gebruikerservaring — hoe het werkt
-
-> Robin wil snel iets opzoeken zonder dat het in zijn browsing history terechtkomt.
->
-> Hij drukt **Cmd+Shift+N**. Er opent een nieuw Tandem-venster met een opvallende donkerpaarse titelbalk/header. In de tab bar staat subtiel "🔒 Private" als indicator.
->
-> Robin browst normaal in dit venster — alles werkt hetzelfde, maar:
-> - Geen history wordt opgeslagen
-> - Cookies bestaan alleen in geheugen (verdwijnen bij sluiten)
-> - Geen autofill, geen form memory
-> - Downloads blijven wél staan (die zijn al naar disk geschreven)
->
-> Robin sluit het privé-venster (Cmd+W of ✕). Alle sessiedata (cookies, cache, localStorage) wordt automatisch gewist. Het is alsof het venster nooit bestond.
->
-> Het hoofdvenster van Tandem is onveranderd — zijn normale sessie, tabs, en history zijn intact.
+**Gap:** No ephemeral (in-memory) session that cleans itself up automatically. No Cmd+Shift+N shortcut. No visual indicator for private mode.
 
 ---
 
-## Technische Aanpak
+## User Experience — How It Works
 
-### Architectuur
+> Robin wants to look something up quickly without it ending up in his browsing history.
+>
+> He presses **Cmd+Shift+N**. A new Tandem window opens with a distinctive dark-purple title bar/header. The tab bar subtly shows "🔒 Private" as an indicator.
+>
+> Robin browses normally in this window — everything works the same, but:
+> - No history is stored
+> - Cookies exist only in memory (they disappear on close)
+> - No autofill, no form memory
+> - Downloads do remain (they have already been written to disk)
+>
+> Robin closes the private window (Cmd+W or ✕). All session data (cookies, cache, localStorage) is automatically cleared. It is as if the window never existed.
+>
+> Tandem's main window is unchanged — his normal session, tabs, and history remain intact.
+
+---
+
+## Technical Approach
+
+### Architecture
 
 ```
     Cmd+Shift+N
@@ -49,82 +49,82 @@ Tandem heeft session-isolatie via `/sessions` (met `persist:` partities), maar g
     │ createPrivateWindow()             │
     │                                   │
     │ new BrowserWindow({               │
-    │   partition: 'private-[uuid]'     │  ← GEEN 'persist:' prefix
+    │   partition: 'private-[uuid]'     │  ← NO 'persist:' prefix
     │ })                                │     = in-memory only
     │                                   │
     │ win.on('closed', () => {          │
-    │   session.clearStorageData()      │  ← wis alles bij sluiten
+    │   session.clearStorageData()      │  ← clear everything on close
     │ })                                │
     └───────────────────────────────────┘
 ```
 
-### Electron Session Partities
+### Electron Session Partitions
 
-Het verschil zit in de partition-string:
-- `persist:tandem` → data wordt opgeslagen op disk (normaal gedrag)
-- `private-abc123` → **geen `persist:` prefix** → data is in-memory only, verdwijnt automatisch
+The difference is in the partition string:
+- `persist:tandem` → data is stored on disk (normal behavior)
+- `private-abc123` → **no `persist:` prefix** → data is in-memory only and disappears automatically
 
-Electron's `session.fromPartition()` zonder `persist:` prefix creëert een ephemere sessie. Dit is precies wat we nodig hebben.
+Electron's `session.fromPartition()` without a `persist:` prefix creates an ephemeral session. That is exactly what we need.
 
-### Nieuwe bestanden
+### New Files
 
-| Bestand | Verantwoordelijkheid |
+| File | Responsibility |
 |---------|---------------------|
-| — | Geen — logica past in `main.ts` en bestaande modules |
+| — | None — the logic fits in `main.ts` and existing modules |
 
-### Bestaande bestanden aanpassen
+### Modify Existing Files
 
-| Bestand | Aanpassing | Functie |
+| File | Change | Function |
 |---------|-----------|---------|
-| `src/main.ts` | `createPrivateWindow()` functie + Cmd+Shift+N accelerator registratie | `createWindow()` (als referentie) |
+| `src/main.ts` | `createPrivateWindow()` function + Cmd+Shift+N accelerator registration | `createWindow()` (if referentie) |
 | `src/api/routes/browser.ts` | `POST /window/private` endpoint | `function registerBrowserRoutes()` |
-| `shell/index.html` | Privé-indicator in tab bar + paars thema detectie | Tab bar sectie |
-| `shell/css/main.css` | `.private-mode` klasse voor paarse header styling | Root variabelen |
+| `shell/index.html` | Private indicator in the tab bar + purple theme detection | Tab bar section |
+| `shell/css/main.css` | `.private-mode` class for purple header styling | Root variabelen |
 
-### Nieuwe API Endpoints
+### New API Endpoints
 
-| Methode | Endpoint | Beschrijving |
+| Method | Endpoint | Description |
 |---------|---------|--------------|
-| POST | `/window/private` | Open een nieuw privé-venster |
+| POST | `/window/private` | Open a new private window |
 
-### Geen nieuwe npm packages nodig? ✅
+### No new npm packages needed? ✅
 
 ---
 
-## Fase-opdeling
+## Phase Breakdown
 
-| Fase | Inhoud | Sessies | Afhankelijk van |
+| Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | Volledige implementatie: `createPrivateWindow()`, ephemere partition, cleanup on close, shortcut, visuele indicator, API endpoint | 1 | — |
+| 1 | Volledige implementatie: `createPrivateWindow()`, ephemere partition, cleanup on close, shortcut, visual indicator, API endpoint | 1 | — |
 
 ---
 
-## Risico's / Valkuilen
+## Risks / Pitfalls
 
-- **Meerdere privé-vensters:** Elk privé-venster moet zijn eigen unieke partition krijgen (`private-[uuid]`), anders delen ze cookies. Mitigatie: UUID per venster genereren.
-- **Wingman in privé-modus:** Moet de AI wingman beschikbaar zijn in privé-vensters? Opera schakelt Aria uit. Mitigatie: Robin laten beslissen — optioneel uitschakelen.
-- **Downloads:** Bestanden die gedownload worden in privé-modus blijven op disk staan — dat is verwacht gedrag (zoals in alle browsers), maar vermeld het aan Robin.
-- **Extensions:** Chrome extensions in privé-modus laden kan privacy schenden (extensions kunnen data loggen). Mitigatie: standaard geen extensions laden in privé, optioneel aan te zetten.
-
----
-
-## Anti-detect overwegingen
-
-- ✅ Ephemere partition is een standaard Electron feature — geen detecteerbaar verschil vanuit de webview
-- ⚠️ **Let op:** de User-Agent en fingerprint moeten identiek zijn aan het normale venster. Een andere partition mag geen ander fingerprint-profiel opleveren. Dit is standaard het geval in Electron (zelfde Chromium instance), maar verifieer dat Tandem's stealth patches ook in de nieuwe partition actief zijn.
-- ✅ Visuele indicator (paarse header) is shell-side, onzichtbaar voor websites
+- **Multiple private windows:** Each private window must get its own unique partition (`private-[uuid]`), otherwise they will share cookies. Mitigation: generate a UUID per window.
+- **Wingman in private mode:** Should the AI wingman be available in private windows? Opera disables Aria. Mitigation: let Robin decide — optionally disable it.
+- **Downloads:** Files downloaded in private mode remain on disk — that is expected behavior (as in all browsers), but it should be communicated to Robin.
+- **Extensions:** Loading Chrome extensions in private mode can violate privacy (extensions can log data). Mitigation: do not load extensions in private mode by default, with an optional opt-in.
 
 ---
 
-## Beslissingen nodig van Robin
+## Anti-detect considerations
 
-- [ ] Wingman beschikbaar in privé-venster? Opera schakelt Aria uit.
-- [ ] Extensions laden in privé-modus? Standaard uit, optioneel aan?
-- [ ] Moet privé-venster een eigen API port krijgen, of dezelfde 8765 gebruiken?
-- [ ] Visual: donkerpaarse header, of een andere kleur/indicator?
+- ✅ Ephemere partition is a default Electron feature — no detecteerbaar verschil vanuit the webview
+- ⚠️ **Note:** the User-Agent and fingerprint must be identical to the normal window. A different partition must not produce a different fingerprint profile. This is the default behavior in Electron (same Chromium instance), but verify that Tandem's stealth patches are also active in the new partition.
+- ✅ Visual indicator (paarse header) is shell-side, onzichtbaar for websites
 
 ---
 
-## Goedkeuring
+## Decisions Needed from Robin
 
-Robin: [ ] Go / [ ] No-go / [ ] Go met aanpassing: ___________
+- [ ] Wingman available in the private window? Opera disables Aria.
+- [ ] Load extensions in private mode? Default off, optionally enabled?
+- [ ] Should the private window get its own API port, or use the same 8765?
+- [ ] Visual: dark-purple header, or a different color/indicator?
+
+---
+
+## Approval
+
+Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

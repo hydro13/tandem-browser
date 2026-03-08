@@ -94,7 +94,7 @@ if (req.query.save) {
 }
 ```
 
-Note: `path` and `os` may already be imported at the top of the file. Check before adding duplicate imports. Use the existing imports if available.
+Note: `path` and `os` may already be imported at the top or the file. Check before adding duplicate imports. Use the existing imports if available.
 
 ---
 

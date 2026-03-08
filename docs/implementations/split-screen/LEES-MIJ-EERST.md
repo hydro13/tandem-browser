@@ -1,82 +1,82 @@
-# SPLIT SCREEN — START HIER
+# SPLIT SCREEN — START HERE
 
-> **Datum:** 2026-02-28
+> **Date:** 2026-02-28
 > **Status:** In progress
-> **Doel:** Twee websites naast elkaar bekijken in één Tandem venster met draggable divider
-> **Volgorde:** Fase 1 → 2 (elke fase is één sessie)
+> **Goal:** Twee websites next to elkaar bekijken in één Tandem window with draggable divider
+> **Order:** Phase 1 → 2 (elke phase is één session)
 
 ---
 
-## Waarom deze feature?
+## Why this feature?
 
-Power users willen twee pagina's naast elkaar zien — docs + app, vergelijken, video + notities. Opera heeft dit als Split Screen met drag-down gesture. Tandem heeft momenteel alleen single-webview, dus elke multi-pane workflow vereist nu twee vensters. Dit is de #4 prioriteit in de gap analyse (docs/research/gap-analysis.md).
+Power users willen twee page's next to elkaar zien — docs + app, vergelijken, video + notes. Opera has this if Split Screen with drag-down gesture. Tandem has currently only single-webview, dus elke multi-pane workflow requires nu twee vensters. Dit is the #4 prioriteit in the gap analyse (docs/research/gap-analysis.md).
 
 ---
 
-## Architectuur in 30 seconden
+## Architecture in 30 seconds
 
 ```
 POST /split/open {tabId1, tabId2, layout:'vertical'}
        ↓
   SplitScreenManager
        ↓
-  Shell: voegt tweede <webview> toe naast bestaande
+  Shell: voegt second <webview> toe next to existing
        ↓
-  Divider element tussen de twee webviews
+  Divider element between the twee webviews
        ↓
-  Active pane focus → toolbar stuurt de juiste webContents aan
+  Active pane focus → toolbar stuurt the juiste webContents about
 ```
 
 ---
 
-## Projectstructuur — relevante bestanden
+## Project Structure — Relevant Files
 
-> ⚠️ Lees ALLEEN de bestanden in de "Te lezen" tabel.
-> Ga NIET wandelen door de rest van de codebase.
+> ⚠️ Read ONLY the files in the "Files to read" table.
+> Do NOT wander through the rest or the codebase.
 
-### Te lezen voor ALLE fases
+### Read for ALL phases
 
-| Bestand | Wat staat erin | Zoek naar functie |
+| File | What it contains | Look for function |
 |---------|---------------|-------------------|
-| `AGENTS.md` | Anti-detect regels, code stijl, commit format | — (lees volledig) |
+| `AGENTS.md` | Anti-detect rules, code stijl, commit format | — (read fully) |
 | `src/main.ts` | App startup, manager registratie | `startAPI()`, `createWindow()` |
 | `src/api/server.ts` | TandemAPI class, route registratie | `class TandemAPI`, `setupRoutes()` |
 | `src/registry.ts` | ManagerRegistry interface | `interface ManagerRegistry` |
 
-### Per fase aanvullend te lezen
+### Additional reading per phase
 
-_(zie het relevante fase-bestand)_
-
----
-
-## Regels voor deze feature
-
-> Dit zijn de HARDE regels naast de algemene AGENTS.md regels.
-
-1. **Twee webviews in shell HTML** — de split screen gebruikt een tweede `<webview>` tag in de shell, geen Electron BrowserView API. Dit past bij het bestaande patroon.
-2. **Active pane state** — de shell houdt een `activePaneIndex` bij (0 of 1). De toolbar (URL bar, back/forward) stuurt altijd de actieve pane aan.
-3. **Functienamen > regelnummers** — verwijs altijd naar `function setupSplitRoutes()`, nooit naar "regel 287"
-4. **Geen nieuwe npm packages** — alles met bestaande Electron + Express tooling
+_(see the relevant phase file)_
 
 ---
 
-## Manager Wiring — hoe nieuwe component registreren
+## Rules for this feature
 
-Elke nieuwe manager moet op **3 plekken** worden aangesloten:
+> These are the HARD rules in addition to the general AGENTS.md rules.
+
+1. **Twee webviews in shell HTML** — the split screen uses a second `<webview>` tag in the shell, no Electron BrowserView API. Dit past bij the existing pattern.
+2. **Active pane state** — the shell houdt a `activePaneIndex` bij (0 or 1). The toolbar (URL bar, back/forward) stuurt always the actieve pane about.
+3. **Functienamen > regelnummers** — verwijs always to `function setupSplitRoutes()`, nooit to "regel 287"
+4. **No new npm packages** — alles with existing Electron + Express tooling
+
+---
+
+## Manager Wiring — How to Register a New Component
+
+Each new manager must be wired into **3 places**:
 
 ### 1. `src/registry.ts` — `ManagerRegistry` interface
 
 ```typescript
 export interface ManagerRegistry {
-  // ... bestaande managers ...
-  splitScreenManager: SplitScreenManager;  // ← toevoegen
+  // ... existing managers ...
+  splitScreenManager: SplitScreenManager;  // ← add
 }
 ```
 
-### 2. `src/main.ts` — `startAPI()` functie
+### 2. `src/main.ts` — `startAPI()` function
 
 ```typescript
-// Na aanmaken van aanverwante managers:
+// Na aanmaken or aanverwante managers:
 const splitScreenManager = new SplitScreenManager(win, tabManager!);
 
 // In registry object:
@@ -91,7 +91,7 @@ if (splitScreenManager) splitScreenManager.destroy();
 
 ---
 
-## API Endpoint Patroon — kopieer exact
+## API Endpoint Pattern — Copy Exactly
 
 ```typescript
 // ═══════════════════════════════════════════════
@@ -108,25 +108,25 @@ router.post('/split/open', async (req: Request, res: Response) => {
 });
 ```
 
-**Regels:**
-- `try/catch` rond ALLES, catch als `(e: any)`
-- 400 voor ontbrekende verplichte velden
-- 404 voor niet-gevonden resources
-- Success: altijd `{ ok: true, ...data }`
+**Rules:**
+- `try/catch` rond ALLES, catch if `(e: any)`
+- 400 for ontbrekende verplichte velden
+- 404 for not-gevonden resources
+- Success: always `{ ok: true, ...data }`
 
 ---
 
-## Documenten in deze map
+## Documents in This Folder
 
-| Bestand | Wat | Status |
+| File | What | Status |
 |---------|-----|--------|
-| `LEES-MIJ-EERST.md` | ← dit bestand | — |
-| `fase-1-browserviews.md` | Electron backend: SplitScreenManager + API routes | 📋 Klaar om te starten |
-| `fase-2-shell-ui.md` | Shell UI: divider drag, context menu, keyboard shortcuts | ⏳ Wacht op fase 1 |
+| `LEES-MIJ-EERST.md` | ← this file | — |
+| `fase-1-browserviews.md` | Electron backend: SplitScreenManager + API routes | 📋 Ready to start |
+| `fase-2-shell-ui.md` | Shell UI: divider drag, context menu, keyboard shortcuts | ⏳ Waiting for phase 1 |
 
 ---
 
-## Quick Status Check (altijd eerst uitvoeren)
+## Quick Status Check (always run first)
 
 ```bash
 # App draait?
@@ -144,11 +144,11 @@ npx vitest run
 
 ---
 
-## 📊 Fase Status — BIJWERKEN NA ELKE FASE
+## 📊 Phase Status — UPDATE AFTER EVERY PHASE
 
-| Fase | Titel | Status | Commit |
+| Phase | Title | Status | Commit |
 |------|-------|--------|--------|
-| 1 | Electron BrowserView splitting + API | ⏳ niet gestart | — |
-| 2 | Shell UI (drag-to-split + resize divider) | ⏳ niet gestart | — |
+| 1 | Electron BrowserView splitting + API | ⏳ not started | — |
+| 2 | Shell UI (drag-to-split + resize divider) | ⏳ not started | — |
 
-> Claude Code: markeer fase als ✅ + voeg commit hash toe na afronden.
+> Claude Code: markeer phase if ✅ + voeg commit hash toe na afronden.

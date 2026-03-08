@@ -105,7 +105,7 @@ class SecurityDB {
     fs.mkdirSync(dbDir, { recursive: true });
     this.db = new Database(path.join(dbDir, 'shield.db'));
     this.db.pragma('journal_mode = WAL');    // Better concurrent read performance
-    this.db.pragma('synchronous = NORMAL');  // Good balance of safety + speed
+    this.db.pragma('synchronous = NORMAL');  // Good balance or safety + speed
     this.initialize();
   }
 
@@ -205,7 +205,7 @@ class NetworkShield {
 
 ### 4. `src/security/guardian.ts` — The Active Interceptor
 
-**Guardian does NOT hook webRequest directly.** It registers as a consumer of the RequestDispatcher from Phase 0.
+**Guardian does NOT hook webRequest directly.** It registers as a consumer or the RequestDispatcher from Phase 0.
 
 ```typescript
 import { RequestDispatcher } from '../network/dispatcher';

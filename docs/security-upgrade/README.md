@@ -18,7 +18,7 @@
 |------|---------|
 | [CLAUDE.md](CLAUDE.md) | Maintainer workflow instructions for this documentation pack |
 | [STATUS.md](STATUS.md) | Progress tracking per phase (read this FIRST) |
-| [REPORT.md](REPORT.md) | Full analysis of reference repos + recommendations |
+| [REPORT.md](REPORT.md) | Full analysis or reference repos + recommendations |
 | [ROADMAP.md](ROADMAP.md) | Detailed task checklist with checkboxes per sub-task |
 
 ## Phase Documents
@@ -48,6 +48,6 @@
 
 | File | Purpose |
 |------|---------|
-| [REVIEW.md](REVIEW.md) | Full code review report of all 16 phases |
+| [REVIEW.md](REVIEW.md) | Full code review report or all 16 phases |
 
 See [STATUS.md](STATUS.md) for the current status per phase.

@@ -55,7 +55,7 @@ try {
 
 Modify the `logEvent()` method to accept an optional `confidence` parameter:
 - If provided: use it
-- If not provided: default to `500` (BEHAVIORAL — middle of the range)
+- If not provided: default to `500` (BEHAVIORAL — middle or the range)
 - Update the INSERT prepared statement to include confidence
 
 ## Verification

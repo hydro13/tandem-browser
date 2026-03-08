@@ -2,7 +2,7 @@
 
 Use this prompt for every new session working on the security-blocklist-refresh
 track. The session should determine the next phase automatically from
-`LEES-MIJ-EERST.md` instead of relying on chat history.
+`LEES-MIJ-EERST.md` instead or relying on chat history.
 
 ```text
 You are working in /Users/robinwaslander/Documents/dev/tandem-browser.
@@ -21,14 +21,14 @@ Before coding:
 Scope rules:
 - For this track, the phase file scope overrides the general AGENTS.md
   "read-first" guidance except for AGENTS.md itself
-- Do not wander through unrelated parts of the codebase unless the active phase
+- Do not wander through unrelated parts or the codebase unless the active phase
   explicitly requires it
 - Do not start a later phase early
 - Do not add npm dependencies unless truly necessary, and if you do, explain why
 - Keep code, comments, commits, and repo-facing docs in English
 - Preserve anti-detection constraints from AGENTS.md
 - Do not leave the phase half-done without updating the docs state clearly
-- Keep adblocking out of scope for the browser core unless the track docs are
+- Keep adblocking out or scope for the browser core unless the track docs are
   explicitly changed
 
 You must:

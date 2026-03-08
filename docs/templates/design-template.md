@@ -1,99 +1,99 @@
-# Design: [Feature Naam]
+# Design: [Feature Name]
 
-> **Datum:** YYYY-MM-DD
-> **Status:** Draft / Ter review / Goedgekeurd / Afgewezen
+> **Date:** YYYY-MM-DD
+> **Status:** Draft / Under review / Goedgekeurd / Afgewezen
 > **Effort:** Easy (1-2d) / Medium (3-5d) / Hard (1-2wk)
-> **Auteur:** Kees
+> **Author:** Kees
 
 ---
 
-## Probleem / Motivatie
+## Problem / Motivation
 
-[Waarom willen we dit bouwen? Welk probleem lost het op?
-Refereer naar gap analyse als relevant.]
+[Why willen we this bouwen? Welk probleem lost the op?
+Refereer to gap analyse if relevant.]
 
-**Opera heeft:** [beschrijving van Opera's implementatie]
-**Tandem heeft nu:** [wat we nu hebben of juist missen]
-**Gap:** [het verschil]
-
----
-
-## Gebruikerservaring — hoe het werkt
-
-[Vertel het verhaal vanuit Robin's perspectief]
-
-> Robin opent Tandem. Hij klikt op [X]. Er verschijnt [Y].
-> Hij kan nu [Z] doen zonder [pijnpunt].
+**Opera has:** [description or Opera's implementatie]
+**Tandem currently has:** [wat we nu hebben or juist missen]
+**Gap:** [the verschil]
 
 ---
 
-## Technische Aanpak
+## User Experience — How It Works
 
-### Architectuur
+[Vertel the verhaal vanuit Robin's perspectief]
+
+> Robin opens Tandem. He clicks op [X]. Er appears [Y].
+> He can nu [Z] doen without [pijnpunt].
+
+---
+
+## Technical Approach
+
+### Architecture
 
 ```
 [ASCII diagram]
 ```
 
-### Nieuwe bestanden
+### New Files
 
-| Bestand | Verantwoordelijkheid |
+| File | Responsibility |
 |---------|---------------------|
 | `src/[module]/manager.ts` | [Wat] |
 | `shell/[component].js` | [Wat] |
 
-### Bestaande bestanden aanpassen
+### Modify Existing Files
 
-| Bestand | Aanpassing | Functie |
+| File | Change | Function |
 |---------|-----------|---------|
 | `src/api/server.ts` | `TandemAPIOptions` uitbreiden | `class TandemAPI` |
 | `src/main.ts` | Manager instantiëren + registreren | `startAPI()` |
-| `shell/index.html` | UI toevoegen | `// === [SECTIE] ===` |
+| `shell/index.html` | UI add | `// === [SECTIE] ===` |
 
-### Nieuwe API Endpoints
+### New API Endpoints
 
-| Methode | Endpoint | Beschrijving |
+| Method | Endpoint | Description |
 |---------|---------|--------------|
-| GET | `/[endpoint]` | [wat doet het] |
-| POST | `/[endpoint]` | [wat doet het] |
+| GET | `/[endpoint]` | [wat doet the] |
+| POST | `/[endpoint]` | [wat doet the] |
 
-### Geen nieuwe npm packages nodig? ✅ / Nieuwe packages:
+### No new npm packages needed? ✅ / New packages:
 - `[package]@[version]` — [reden]
 
 ---
 
-## Fase-opdeling
+## Phase Breakdown
 
-| Fase | Inhoud | Sessies | Afhankelijk van |
+| Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
 | 1 | [Basis/backend] | 1 | — |
-| 2 | [UI/uitbreiding] | 1 | Fase 1 |
-| 3 | [Polish/tests] | 1 | Fase 2 |
+| 2 | [UI/uitbreiding] | 1 | Phase 1 |
+| 3 | [Polish/tests] | 1 | Phase 2 |
 
 ---
 
-## Risico's / Valkuilen
+## Risks / Pitfalls
 
-- **[Risico 1]:** [Hoe mitigeren]
-- **[Risico 2]:** [Hoe mitigeren]
+- **[Risk 1]:** [Hoe mitigeren]
+- **[Risk 2]:** [Hoe mitigeren]
 
 ---
 
-## Anti-detect overwegingen
+## Anti-detect considerations
 
-[Zijn er anti-detect implicaties? Bv. iets wat in de webview terechtkomt?]
-- ✅ Alles via Electron main process / shell — geen injectie in webview
+[Are er anti-detect implicaties? Bv. iets wat in the webview terechtkomt?]
+- ✅ Alles via Electron main process / shell — no injection into the webview
 - ⚠️ [Eventuele aandachtspunten]
 
 ---
 
-## Beslissingen nodig van Robin
+## Decisions Needed from Robin
 
-- [ ] [Vraag 1: bv. wil je X of Y als UI aanpak?]
-- [ ] [Vraag 2]
+- [ ] [Question 1: bv. wil you X or Y if UI approach?]
+- [ ] [Question 2]
 
 ---
 
-## Goedkeuring
+## Approval
 
-Robin: [ ] Go / [ ] No-go / [ ] Go met aanpassing: ___________
+Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

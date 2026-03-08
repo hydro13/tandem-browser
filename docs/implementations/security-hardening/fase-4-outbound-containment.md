@@ -1,4 +1,4 @@
-# Fase 4 — Outbound Containment: Strengthen POST, PUT, PATCH, And WebSocket Policy
+# Phase 4 — Outbound Containment: Strengthen POST, PUT, PATCH, And WebSocket Policy
 
 > **Feature:** Security hardening
 > **Sessions:** 1 session
@@ -7,7 +7,7 @@
 
 ---
 
-## Goal Of This Phase
+## Goal Or This Phase
 
 Improve outbound protection so suspicious mutating requests and unknown
 WebSocket flows are handled more consistently and more defensively.

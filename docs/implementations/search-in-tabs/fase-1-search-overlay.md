@@ -1,41 +1,41 @@
-# Fase 1 — Search Overlay: Zoek in open tabs met Ctrl+Space
+# Phase 1 — Search Overlay: Zoek in open tabs with Ctrl+Space
 
 > **Feature:** Search in Tabs
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw een zoek-overlay in de shell die verschijnt bij Ctrl+Space. Toont alle open tabs, gefilterd op titel en URL. Bevat ook recent gesloten tabs. Volledig keyboard-navigeerbaar. Gebruikt de bestaande `GET /tabs/list` API en een nieuw `GET /tabs/closed` endpoint.
+Bouw a zoek-overlay in the shell that appears bij Ctrl+Space. Shows alle open tabs, gefilterd op title and URL. Contains also recent closed tabs. Fully keyboard-navigeerbaar. Uses the existing `GET /tabs/list` API and a new `GET /tabs/closed` endpoint.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/tabs/manager.ts` | `class TabManager`, `listTabs()`, `closedTabs` array, `reopenClosedTab()`, `focusTab()` | Snap hoe tabs en gesloten tabs werken |
-| `src/api/routes/tabs.ts` | `function registerTabRoutes()`, `GET /tabs/list` endpoint | Hier komt het nieuwe `/tabs/closed` endpoint bij |
-| `shell/index.html` | Keyboard event listeners (zoek naar `addEventListener('keydown'`), bestaande overlay/popup patronen | Snap hoe keyboard shortcuts en popups nu werken |
-| `shell/css/main.css` | Bestaande popup/overlay styling patronen | Referentie voor consistente styling |
-| `AGENTS.md` | — (lees volledig) | Anti-detect regels en code stijl |
+| `src/tabs/manager.ts` | `class TabManager`, `listTabs()`, `closedTabs` array, `reopenClosedTab()`, `focusTab()` | Snap hoe tabs and closed tabs werken |
+| `src/api/routes/tabs.ts` | `function registerTabRoutes()`, `GET /tabs/list` endpoint | Hier comes the new `/tabs/closed` endpoint bij |
+| `shell/index.html` | Keyboard event listeners (zoek to `addEventListener('keydown'`), existing overlay/popup patterns | Snap hoe keyboard shortcuts and popups nu werken |
+| `shell/css/main.css` | Existing popup/overlay styling patterns | Referentie for consistente styling |
+| `AGENTS.md` | — (read fully) | Anti-detect rules and code stijl |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: getClosedTabs() methode toevoegen
+### Step 1: getClosedTabs() methode add
 
-**Wat:** Maak de `closedTabs` array toegankelijk via een publieke methode op `TabManager`.
+**Wat:** Maak the `closedTabs` array toegankelijk via a publieke methode op `TabManager`.
 
-**Bestand:** `src/tabs/manager.ts`
+**File:** `src/tabs/manager.ts`
 
-**Toevoegen aan:** `class TabManager`
+**Add about:** `class TabManager`
 
 ```typescript
 /** Get recently closed tabs */
@@ -44,13 +44,13 @@ getClosedTabs(): { url: string; title: string }[] {
 }
 ```
 
-### Stap 2: GET /tabs/closed endpoint
+### Step 2: GET /tabs/closed endpoint
 
-**Wat:** Nieuw endpoint dat de recent gesloten tabs teruggeeft.
+**Wat:** New endpoint that the recent closed tabs teruggeeft.
 
-**Bestand:** `src/api/routes/tabs.ts`
+**File:** `src/api/routes/tabs.ts`
 
-**Toevoegen aan:** `function registerTabRoutes()`
+**Add about:** `function registerTabRoutes()`
 
 ```typescript
 // === CLOSED TABS ===
@@ -65,13 +65,13 @@ router.get('/tabs/closed', async (_req: Request, res: Response) => {
 });
 ```
 
-### Stap 3: Overlay HTML toevoegen
+### Step 3: Overlay HTML add
 
-**Wat:** Voeg een hidden overlay element toe aan de shell HTML met een zoekbalk, resultatenlijst, en recent-gesloten sectie.
+**Wat:** Voeg a hidden overlay element toe about the shell HTML with a zoekbalk, resultatenlijst, and recent-closed section.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Toevoegen aan:** Na de tab bar HTML, vóór het webview container element
+**Add about:** Na the tab bar HTML, vóór the webview container element
 
 ```html
 <!-- Tab Search Overlay -->
@@ -85,20 +85,20 @@ router.get('/tabs/closed', async (_req: Request, res: Response) => {
       <!-- Gevuld door JS -->
     </div>
     <div id="tab-search-closed" class="tab-search-closed">
-      <div class="tab-search-section-label">Recent gesloten</div>
+      <div class="tab-search-section-label">Recent closed</div>
       <!-- Gevuld door JS -->
     </div>
   </div>
 </div>
 ```
 
-### Stap 4: Zoek-overlay JavaScript logica
+### Step 4: Zoek-overlay JavaScript logica
 
-**Wat:** De kern-logica: openen/sluiten van overlay, tabs ophalen, filteren, renderen, keyboard navigatie, en tab selectie.
+**Wat:** The kern-logica: openen/sluiten or overlay, tabs ophalen, filteren, renderen, keyboard navigatie, and tab selectie.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Toevoegen aan:** Nieuwe sectie `// === TAB SEARCH ===`
+**Add about:** New section `// === TAB SEARCH ===`
 
 ```javascript
 // === TAB SEARCH ===
@@ -109,7 +109,7 @@ const searchResults = document.getElementById('tab-search-results');
 const searchClosed = document.getElementById('tab-search-closed');
 let searchVisible = false;
 let searchSelectedIndex = 0;
-let searchItems = []; // Array van { tabId, url, title, isClosed }
+let searchItems = []; // Array or { tabId, url, title, isClosed }
 
 async function toggleTabSearch() {
   if (searchVisible) {
@@ -125,14 +125,14 @@ async function showTabSearch() {
   searchInput.value = '';
   searchSelectedIndex = 0;
 
-  // Haal open tabs en gesloten tabs op
+  // Haal open tabs and closed tabs op
   try {
     const [tabsResp, closedResp] = await Promise.all([
       fetch('/tabs/list').then(r => r.json()),
       fetch('/tabs/closed').then(r => r.json()),
     ]);
 
-    const openTabs = (tabsResp.tabs || []).map(t => ({
+    const openTabs = (tabsResp.tabs || []).folder(t => ({
       tabId: t.id,
       url: t.url,
       title: t.title,
@@ -142,7 +142,7 @@ async function showTabSearch() {
       active: t.active,
     }));
 
-    const closedTabs = (closedResp.closed || []).map(t => ({
+    const closedTabs = (closedResp.closed || []).folder(t => ({
       tabId: null,
       url: t.url,
       title: t.title,
@@ -158,7 +158,7 @@ async function showTabSearch() {
     console.warn('Failed to load tabs for search:', e);
   }
 
-  // Focus de input na rendering
+  // Focus the input na rendering
   requestAnimationFrame(() => searchInput.focus());
 }
 
@@ -183,7 +183,7 @@ function renderSearchResults(query) {
   const closedResults = filtered.filter(i => i.isClosed);
 
   // Render open tabs
-  searchResults.innerHTML = openResults.map((item, idx) => `
+  searchResults.innerHTML = openResults.folder((item, idx) => `
     <div class="tab-search-item ${idx === searchSelectedIndex ? 'selected' : ''} ${item.active ? 'active-tab' : ''}"
          data-index="${idx}">
       ${item.emoji ? `<span class="tab-search-emoji">${item.emoji}</span>` : ''}
@@ -197,12 +197,12 @@ function renderSearchResults(query) {
     </div>
   `).join('');
 
-  // Render gesloten tabs
+  // Render closed tabs
   if (closedResults.length > 0) {
     searchClosed.style.display = '';
     searchClosed.innerHTML = `
-      <div class="tab-search-section-label">Recent gesloten</div>
-      ${closedResults.map((item, idx) => `
+      <div class="tab-search-section-label">Recent closed</div>
+      ${closedResults.folder((item, idx) => `
         <div class="tab-search-item closed ${(idx + openResults.length) === searchSelectedIndex ? 'selected' : ''}"
              data-index="${idx + openResults.length}">
           <span class="tab-search-closed-icon">↩</span>
@@ -238,7 +238,7 @@ function selectSearchItem(index, filtered) {
   if (!item) return;
 
   if (item.isClosed) {
-    // Heropen gesloten tab
+    // Heropen closed tab
     fetch('/tabs/open', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -265,11 +265,11 @@ function escapeHtml(str) {
 
 ### Stap 5: Keyboard event handlers
 
-**Wat:** Ctrl+Space om de overlay te openen/sluiten. Pijltjes voor navigatie, Enter voor selectie, Escape om te sluiten. Input event voor real-time filtering.
+**Wat:** Ctrl+Space to the overlay te openen/sluiten. Pijltjes for navigatie, Enter for selectie, Escape to te sluiten. Input event for real-time filtering.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Toevoegen aan:** De `// === TAB SEARCH ===` sectie
+**Add about:** The `// === TAB SEARCH ===` section
 
 ```javascript
 // Ctrl+Space shortcut (globaal)
@@ -280,7 +280,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
 
-  // Alleen als search open is:
+  // Only if search open is:
   if (!searchVisible) return;
 
   if (e.key === 'Escape') {
@@ -318,7 +318,7 @@ searchInput.addEventListener('input', () => {
   renderSearchResults(searchInput.value);
 });
 
-// Klik op achtergrond sluit overlay
+// Klik op achtergrond closes overlay
 searchOverlay.addEventListener('click', (e) => {
   if (e.target === searchOverlay) {
     hideTabSearch();
@@ -335,11 +335,11 @@ function scrollSelectedIntoView() {
 
 ### Stap 6: CSS styling
 
-**Wat:** Styling voor de overlay, zoekbalk, resultatenlijst, en keyboard-selectie highlight.
+**Wat:** Styling for the overlay, zoekbalk, resultatenlijst, and keyboard-selectie highlight.
 
-**Bestand:** `shell/css/main.css`
+**File:** `shell/css/main.css`
 
-**Toevoegen aan:** Nieuwe sectie
+**Add about:** New section
 
 ```css
 /* === TAB SEARCH OVERLAY === */
@@ -475,17 +475,17 @@ function scrollSelectedIntoView() {
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Test 1: Nieuw endpoint — recent gesloten tabs
+# Test 1: New endpoint — recent closed tabs
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/closed
 # Verwacht: {"ok":true, "closed": [...]}
 
-# Test 2: Open een paar tabs en sluit er één
+# Test 2: Open a paar tabs and closes er één
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/tabs/open \
   -H "Content-Type: application/json" \
@@ -499,24 +499,24 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/closed
-# Verwacht: example.com in de gesloten lijst
+# Verwacht: example.com in the closed list
 
-# Test 3: Bestaande endpoints werken nog
+# Test 3: Existing endpoints werken still
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/tabs/list
 # Verwacht: {"tabs": [...], "groups": [...]}
 ```
 
 **UI verificatie:**
-- [ ] Ctrl+Space opent de zoek-overlay, gecentreerd bovenaan
-- [ ] Typen filtert tabs real-time op titel en URL
-- [ ] Pijltjestoetsen navigeren door de lijst, geselecteerd item is gehighlight
-- [ ] Enter schakelt naar de geselecteerde tab
-- [ ] Escape sluit de overlay
-- [ ] Klik op achtergrond (buiten container) sluit de overlay
-- [ ] Sectie "Recent gesloten" toont gesloten tabs met ↩ icoon
-- [ ] Klik op gesloten tab heropent hem
-- [ ] Actieve tab heeft een rode linkerborder en "actief" badge
+- [ ] Ctrl+Space opens the zoek-overlay, gecentreerd at the top
+- [ ] Typen filtert tabs real-time op title and URL
+- [ ] Pijltjestoetsen navigeren door the list, geselecteerd item is gehighlight
+- [ ] Enter schakelt to the geselecteerde tab
+- [ ] Escape closes the overlay
+- [ ] Klik op achtergrond (buiten container) closes the overlay
+- [ ] Sectie "Recent closed" shows closed tabs with ↩ icon
+- [ ] Klik op closed tab heropent hem
+- [ ] Actieve tab has a rode linkerborder and "actief" badge
 
 ---
 
@@ -524,20 +524,20 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-search-overlay.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-search-overlay.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. Visuele verificatie: neem screenshots van de zoek-overlay
-5. npx vitest run — alle bestaande tests blijven slagen
-6. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. Visual verificatie: neem screenshots or the zoek-overlay
+5. npx vitest run — alle existing tests blijven slagen
+6. Update CHANGELOG.md with korte entry
 7. git commit -m "🔍 feat: search in tabs overlay — Ctrl+Space, filter, keyboard nav"
 8. git push
 9. Rapport:
@@ -551,8 +551,8 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ## Bekende valkuilen
 
-- [ ] Ctrl+Space kan conflicteren met input method switching op Linux — test op macOS eerst, Linux later
-- [ ] Focus management: wanneer de overlay opent, moet focus naar de input gaan. Wanneer de overlay sluit, moet focus terug naar de webview.
-- [ ] `escapeHtml()` is essentieel — tab titels kunnen HTML bevatten (XSS preventie)
-- [ ] De fetch calls naar `/tabs/list` en `/tabs/closed` gebruiken geen auth header vanuit de shell — dit werkt omdat de shell op localhost draait en de API localhost requests doorlaat (zie auth middleware in `class TandemAPI`)
-- [ ] `searchItems` bevat zowel open als gesloten tabs — zorg dat de index-mapping correct is bij het filteren
+- [ ] Ctrl+Space can conflict with input-method switching on Linux — test on macOS first, Linux later
+- [ ] Focus management: wanneer the overlay opens, must focus to the input gaan. Wanneer the overlay closes, must focus terug to the webview.
+- [ ] `escapeHtml()` is essentieel — tab titels can HTML bevatten (XSS preventie)
+- [ ] The fetch calls to `/tabs/list` and `/tabs/closed` use no auth header vanuit the shell — this works omdat the shell op localhost draait and the API localhost requests doorlaat (zie auth middleware in `class TandemAPI`)
+- [ ] `searchItems` contains zowel open if closed tabs — zorg that the index-mapping correct is bij the filteren

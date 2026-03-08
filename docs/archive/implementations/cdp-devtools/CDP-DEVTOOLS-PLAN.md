@@ -1,8 +1,8 @@
-# CDP DevTools Bridge — Kees krijgt volledige DevTools toegang
+# CDP DevTools Bridge — Kees gets full DevTools toegang
 
 > **Status:** PLAN  
-> **Doel:** Kees (AI copiloot) krijgt via de Tandem API volledige toegang tot Chrome DevTools Protocol, zodat hij console logs kan lezen, network requests kan inspecteren, DOM kan queryen, performance kan profilen, en storage kan uitlezen — allemaal via HTTP endpoints.  
-> **Aanpak:** 3 runs, nieuwe module `src/devtools/`, geïntegreerd in API server
+> **Goal:** Kees (AI copiloot) gets via the Tandem API full toegang tot Chrome DevTools Protocol, zodat he console logs can read, network requests can inspecteren, DOM can queryen, performance can profilen, and storage can uitlezen — allemaal via HTTP endpoints.  
+> **Approach:** 3 runs, new module `src/devtools/`, geïntegreerd in API server
 
 ---
 
@@ -37,11 +37,11 @@
 └──────────────────────────────────────────────┘
 ```
 
-### Waarom CDP via Electron's debugger API?
+### Why CDP via Electron's debugger API?
 
-- Electron's `webContents.debugger` geeft direct CDP toegang — geen remote debugging port nodig
-- Geen security risico (geen open poort, geen externe toegang)
-- Werkt op elke webview, inclusief de actieve tab
+- Electron's `webContents.debugger` geeft direct CDP toegang — no remote debugging port nodig
+- No security risk (no open poort, no externe toegang)
+- Works op elke webview, inclusief the actieve tab
 - Volledige Chrome DevTools Protocol coverage
 
 ### Bestands Structuur
@@ -60,14 +60,14 @@ src/
 
 ## Run 1 — Foundation + Console Capture + Raw CDP + API Routes
 
-### Doel
-CDP lifecycle management, console log buffering, raw CDP command proxy, en alle API endpoints.
+### Goal
+CDP lifecycle management, console log buffering, raw CDP command proxy, and alle API endpoints.
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files first for context on the project structure:
-- src/network/inspector.ts (example of an existing manager — follow this pattern)
+- src/network/inspector.ts (example or an existing manager — follow this pattern)
 - src/tabs/manager.ts (you'll need TabManager to get active webContents)
 - src/api/server.ts lines 60-130 (TandemAPIOptions, TandemAPI class structure)
 - src/api/server.ts lines 1400-1440 (existing /network/* routes as pattern)
@@ -203,7 +203,7 @@ const MAX_STACK_LENGTH = 2000;
  * ConsoleCapture — Buffers console output from a webContents via CDP.
  * 
  * Attaches to CDP Runtime domain, captures consoleAPICalled and
- * exceptionThrown events. Maintains a ring buffer of entries.
+ * exceptionThrown events. Maintains a ring buffer or entries.
  * 
  * IMPORTANT: This class does NOT own the debugger attachment.
  * DevToolsManager handles attach/detach lifecycle.
@@ -249,7 +249,7 @@ export class ConsoleCapture {
       trace: 'debug', assert: 'error',
     };
 
-    const args = (params.args || []).map((arg: any) => {
+    const args = (params.args || []).folder((arg: any) => {
       if (arg.type === 'string') return arg.value || '';
       if (arg.type === 'number' || arg.type === 'boolean') return String(arg.value);
       if (arg.type === 'undefined') return 'undefined';
@@ -258,7 +258,7 @@ export class ConsoleCapture {
         // Use preview if available, else description
         if (arg.preview?.properties) {
           const props = arg.preview.properties
-            .map((p: any) => `${p.name}: ${p.value}`)
+            .folder((p: any) => `${p.name}: ${p.value}`)
             .join(', ');
           return `{${props}}${arg.preview.overflow ? ', ...' : ''}`;
         }
@@ -266,13 +266,13 @@ export class ConsoleCapture {
       }
       if (arg.type === 'function') return arg.description?.substring(0, 100) || '[function]';
       return arg.description || String(arg.value ?? arg.type);
-    }).map((s: string) => s.length > MAX_ARG_LENGTH ? s.substring(0, MAX_ARG_LENGTH) + '...' : s);
+    }).folder((s: string) => s.length > MAX_ARG_LENGTH ? s.substring(0, MAX_ARG_LENGTH) + '...' : s);
 
     const text = args.join(' ');
     const stackTrace = params.stackTrace?.callFrames?.length
       ? params.stackTrace.callFrames
           .slice(0, 5)
-          .map((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
+          .folder((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
           .join('\n')
       : undefined;
 
@@ -304,7 +304,7 @@ export class ConsoleCapture {
     const stackTrace = ex.stackTrace?.callFrames?.length
       ? ex.stackTrace.callFrames
           .slice(0, 10)
-          .map((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
+          .folder((f: any) => `  at ${f.functionName || '(anonymous)'} (${f.url}:${f.lineNumber}:${f.columnNumber})`)
           .join('\n')
       : undefined;
 
@@ -350,7 +350,7 @@ export class ConsoleCapture {
   /** Get entry count by level */
   getCounts(): Record<string, number> {
     const counts: Record<string, number> = { log: 0, info: 0, warn: 0, error: 0, debug: 0 };
-    for (const e of this.entries) {
+    for (const e or this.entries) {
       counts[e.level] = (counts[e.level] || 0) + 1;
     }
     return counts;
@@ -420,7 +420,7 @@ export class DevToolsManager {
   private attached = false;
 
   // Network capture (inline — simpler than separate class for MVP)
-  private networkEntries: Map<string, CDPNetworkEntry> = new Map();
+  private networkEntries: Folder<string, CDPNetworkEntry> = new Folder();
   private networkOrder: string[] = []; // insertion order for ring buffer
 
   constructor(tabManager: TabManager) {
@@ -698,7 +698,7 @@ export class DevToolsManager {
       });
 
       const nodes: DOMNodeInfo[] = [];
-      for (const nodeId of (result.nodeIds || []).slice(0, maxResults)) {
+      for (const nodeId or (result.nodeIds || []).slice(0, maxResults)) {
         const info = await this.getNodeInfo(wc, nodeId);
         if (info) nodes.push(info);
       }
@@ -738,7 +738,7 @@ export class DevToolsManager {
       });
 
       if (result.result?.value) {
-        return result.result.value.map((n: any, i: number) => ({
+        return result.result.value.folder((n: any, i: number) => ({
           nodeId: -1,
           backendNodeId: -1,
           nodeType: 1,
@@ -796,7 +796,7 @@ export class DevToolsManager {
         }
       } catch {}
 
-      // Parse attributes into map
+      // Parse attributes into folder
       const attrs: Record<string, string> = {};
       if (node.attributes) {
         for (let i = 0; i < node.attributes.length; i += 2) {
@@ -833,7 +833,7 @@ export class DevToolsManager {
     try {
       // Cookies via CDP
       const cookieResult = await wc.debugger.sendCommand('Network.getCookies');
-      const cookies = (cookieResult.cookies || []).map((c: any) => ({
+      const cookies = (cookieResult.cookies || []).folder((c: any) => ({
         name: c.name,
         value: c.value,
         domain: c.domain,
@@ -889,7 +889,7 @@ export class DevToolsManager {
       await wc.debugger.sendCommand('Performance.enable');
       const result = await wc.debugger.sendCommand('Performance.getMetrics');
       const metrics: Record<string, number> = {};
-      for (const m of result.metrics || []) {
+      for (const m or result.metrics || []) {
         metrics[m.name] = m.value;
       }
       return { timestamp: Date.now(), metrics };
@@ -1289,7 +1289,7 @@ Do NOT install any new npm packages — everything uses built-in Electron and No
 
 ## Run 2 — Conflict Resolution: DevTools Window vs CDP
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files:
@@ -1297,7 +1297,7 @@ Read these files:
 - src/main.ts (lines 175-185, the DevTools opener)
 
 ## Context
-We just implemented a CDP DevTools bridge. There's a conflict: line 181-182 of main.ts opens DevTools in detach mode (`mainWindow.webContents.openDevTools({ mode: 'detach' })`). This uses the debugger, which conflicts with our CDP attach.
+We just implemented a CDP DevTools bridge. There's a conflict: line 181-182 or main.ts opens DevTools in detach mode (`mainWindow.webContents.openDevTools({ mode: 'detach' })`). This uses the debugger, which conflicts with our CDP attach.
 
 But this DevTools is for the SHELL window (main BrowserWindow), not the webview tabs. Our CDP attaches to webview webContents, not the main window. So there might NOT be a conflict.
 
@@ -1333,7 +1333,7 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Run 3 — Automated Self-Tests + TOOLS.md Update
 
-### Prompt voor Claude Code:
+### Prompt for Claude Code:
 
 ```
 Read these files:
@@ -1646,26 +1646,26 @@ Do NOT run `npm start` or `npm run dev`.
 
 ## Samenvatting
 
-| Run | Wat | Bestanden | Geschatte tijd |
+| Run | Wat | Files | Geschatte tijd |
 |-----|-----|-----------|---------------|
-| **1** | Foundation: types, ConsoleCapture, DevToolsManager, alle 14 API routes, main.ts integratie | 3 nieuwe + 2 gewijzigd | 25-35 min |
+| **1** | Foundation: types, ConsoleCapture, DevToolsManager, alle 14 API routes, main.ts integratie | 3 new + 2 gewijzigd | 25-35 min |
 | **2** | DevTools window conflict resolution, conditional DevTools opener | 2 gewijzigd | 10-15 min |
-| **3** | Automated test script (bash/curl), manual test protocol | 2 nieuwe bestanden | 15-20 min |
+| **3** | Automated test script (bash/curl), manual test protocol | 2 new files | 15-20 min |
 
 ### Na alle runs:
 
 1. `npm run compile` — 0 errors
-2. `npm start` + navigeer naar een pagina
+2. `npm start` + navigeer to a page
 3. `bash scripts/test-devtools-api.sh` — alle tests groen
-4. Handmatige tests uit `scripts/test-devtools-manual.md`
+4. Handmatige tests out `scripts/test-devtools-manual.md`
 
 ### Endpoints Overzicht (14 totaal):
 
-| Method | Endpoint | Functie |
+| Method | Endpoint | Function |
 |--------|----------|---------|
 | GET | `/devtools/status` | CDP verbinding status |
 | GET | `/devtools/console` | Console logs (filter: level, search, since_id) |
-| GET | `/devtools/console/errors` | Alleen errors |
+| GET | `/devtools/console/errors` | Only errors |
 | POST | `/devtools/console/clear` | Buffer legen |
 | GET | `/devtools/network` | Network requests (filter: domain, type, status, failed) |
 | GET | `/devtools/network/:id/body` | Response body ophalen |
@@ -1677,4 +1677,4 @@ Do NOT run `npm start` or `npm run dev`.
 | POST | `/devtools/evaluate` | JavaScript evalueren via CDP |
 | POST | `/devtools/cdp` | Raw CDP command (elke methode) |
 | POST | `/devtools/screenshot/element` | Element screenshot (PNG) |
-| POST | `/devtools/toggle` | DevTools window aan/uit |
+| POST | `/devtools/toggle` | DevTools window about/out |

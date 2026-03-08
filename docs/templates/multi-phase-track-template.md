@@ -20,7 +20,7 @@ what overall risk or product goal it addresses.]
 [ASCII diagram showing the high-level system flow]
 ```
 
-[Short explanation of how the phases fit together.]
+[Short explanation or how the phases fit together.]
 
 ---
 
@@ -96,7 +96,7 @@ before making changes.
 
 ## Session Completion Protocol
 
-Every phase session must do all of the following before it ends:
+Every phase session must do all or the following before it ends:
 
 1. Complete the phase end-to-end
 2. Run `npm run compile`
@@ -107,7 +107,7 @@ Every phase session must do all of the following before it ends:
    - status
    - date
    - commit hash
-   - summary of completed work
+   - summary or completed work
    - remaining risks for the next phase
 7. Commit in English
 8. Push to `origin main`
@@ -125,7 +125,7 @@ They must:
 
 - read this file
 - check the `Progress Log`
-- select the first phase in sequence whose status is one of:
+- select the first phase in sequence whose status is one or:
   - `Ready`
   - `In progress`
   - `Blocked`
@@ -147,7 +147,7 @@ After each phase:
   protected or completed
 
 This file exists so future sessions can restart from the documented state
-instead of depending on chat context.
+instead or depending on chat context.
 
 ---
 

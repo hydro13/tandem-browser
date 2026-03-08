@@ -1,43 +1,43 @@
-# Fase 1 — Infrastructure: Sidebar Framework + WhatsApp Panel
+# Phase 1 — Infrastructure: Sidebar Framework + WhatsApp Panel
 
 > **Feature:** Sidebar Chat Clients
-> **Sessies:** 1-2 sessies
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Geen
+> **Sessions:** 1-2 sessions
+> **Priority:** HIGH
+> **Depends on:** None
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw het complete sidebar framework: icon strip, panel container, SidebarManager, API endpoints, en het eerste werkende panel (WhatsApp). Na deze fase kan Robin WhatsApp openen in een sidebar panel naast zijn browsercontent, met persistent sessie en notification badges.
+Bouw the complete sidebar framework: icon strip, panel container, SidebarManager, API endpoints, and the first werkende panel (WhatsApp). After this phase can Robin WhatsApp openen in a sidebar panel next to are browser content, with persistent session and notification badges.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `LEES-MIJ-EERST.md` (deze map) | — (lees volledig) | Context, regels, wiring instructies |
+| `LEES-MIJ-EERST.md` (this folder) | — (read fully) | Context, rules, wiring instructies |
 | `src/main.ts` | `startAPI()`, `createWindow()`, `app.on('will-quit')`, `app.on('web-contents-created')` | Manager registratie, stealth skip logic |
-| `src/api/server.ts` | `class TandemAPI`, `setupRoutes()` | Route registratie patroon |
-| `src/registry.ts` | `interface ManagerRegistry` | Manager registry — hier moet SidebarManager bij |
-| `src/api/context.ts` | `type RouteContext` | Automatisch afgeleid van ManagerRegistry |
-| `shell/index.html` | `<div class="main-layout">`, `<div class="wingman-panel">` | Waar sidebar HTML moet komen |
-| `shell/css/main.css` | `.main-layout`, `.browser-content`, `.wingman-panel` | Layout grid dat aangepast moet worden |
-| `src/api/routes/browser.ts` | `registerBrowserRoutes()` | Voorbeeld van hoe een route-bestand eruitziet |
-| `src/panel/manager.ts` | `class PanelManager` | Referentie voor panel-achtig management patroon |
+| `src/api/server.ts` | `class TandemAPI`, `setupRoutes()` | Route registratie pattern |
+| `src/registry.ts` | `interface ManagerRegistry` | Manager registry — hier must SidebarManager bij |
+| `src/api/context.ts` | `type RouteContext` | Automatisch afgeleid or ManagerRegistry |
+| `shell/index.html` | `<div class="main-layout">`, `<div class="wingman-panel">` | Waar sidebar HTML must komen |
+| `shell/css/main.css` | `.main-layout`, `.browser-content`, `.wingman-panel` | Layout grid that aangepast must be |
+| `src/api/routes/browser.ts` | `registerBrowserRoutes()` | Voorbeeld or hoe a route-file eruitziet |
+| `src/panel/manager.ts` | `class PanelManager` | Referentie for panel-achtig management pattern |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: SidebarManager class
+### Step 1: SidebarManager class
 
-**Wat:** Core manager die sidebar panels beheert — state, configuratie, notification tracking.
+**Wat:** Core manager that sidebar panels beheert — state, configuration, notification tracking.
 
-**Bestand:** `src/sidebar/manager.ts`
+**File:** `src/sidebar/manager.ts`
 
 ```typescript
 import { BrowserWindow } from 'electron';
@@ -54,7 +54,7 @@ export interface SidebarService {
   name: string;
   url: string;
   partition: string;
-  icon: string;         // emoji of SVG pad
+  icon: string;         // emoji or SVG pad
   enabled: boolean;
   muted: boolean;
   width: number;
@@ -66,13 +66,13 @@ export interface SidebarConfig {
     enabled: boolean;
     muted: boolean;
     width: number;
-    customUrl?: string;  // voor Slack workspace URL
+    customUrl?: string;  // for Slack workspace URL
   }>;
   lastActivePanel: string | null;
   sidebarVisible: boolean;
 }
 
-// Standaard services definitie
+// Default services definitie
 const DEFAULT_SERVICES: Omit<SidebarService, 'enabled' | 'muted' | 'width' | 'unreadCount'>[] = [
   { id: 'whatsapp', name: 'WhatsApp', url: 'https://web.whatsapp.com', partition: 'persist:whatsapp', icon: '💬' },
   { id: 'discord', name: 'Discord', url: 'https://discord.com/app', partition: 'persist:discord', icon: '🎮' },
@@ -102,7 +102,7 @@ export class SidebarManager extends EventEmitter {
   updateUnreadCount(serviceId: string, count: number): void { /* ... */ }
   mutePanel(serviceId: string, muted: boolean): void { /* ... */ }
 
-  // Sidebar webContents tracking (voor stealth skip)
+  // Sidebar webContents tracking (for stealth skip)
   registerWebContentsId(id: number): void { /* ... */ }
   isSidebarWebContents(id: number): boolean { /* ... */ }
 
@@ -116,20 +116,20 @@ export class SidebarManager extends EventEmitter {
 ```
 
 **Key methods:**
-- `getServices()` — retourneert alle 6 services met hun huidige status
+- `getServices()` — retourneert alle 6 services with hun huidige status
 - `togglePanel(serviceId)` — toggle panel open/dicht, emit `'panel-toggled'` event
-- `openPanel(serviceId)` — open specifiek panel, sluit ander actief panel
-- `closePanel()` — sluit actief panel
+- `openPanel(serviceId)` — open specifiek panel, closes ander actief panel
+- `closePanel()` — closes actief panel
 - `updateUnreadCount(serviceId, count)` — update badge count, emit `'badge-updated'` event
-- `isSidebarWebContents(id)` — check of een webContents ID bij een sidebar panel hoort (voor stealth skip)
+- `isSidebarWebContents(id)` — check or a webContents ID bij a sidebar panel belongs (for stealth skip)
 
-### Stap 2: API Route bestand
+### Step 2: API Route file
 
-**Wat:** REST endpoints voor sidebar panel management.
+**Wat:** REST endpoints for sidebar panel management.
 
-**Bestand:** `src/api/routes/sidebar.ts`
+**File:** `src/api/routes/sidebar.ts`
 
-**Patroon kopiëren van:** `registerBrowserRoutes()` in `src/api/routes/browser.ts`
+**Patroon kopiëren or:** `registerBrowserRoutes()` in `src/api/routes/browser.ts`
 
 ```typescript
 import type { Router, Request, Response } from 'express';
@@ -140,7 +140,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
   // SIDEBAR — Messenger panel management
   // ═══════════════════════════════════════════════
 
-  // GET /sidebar/list — lijst van beschikbare services
+  // GET /sidebar/list — list or beschikbare services
   router.get('/sidebar/list', async (req: Request, res: Response) => {
     try {
       const services = ctx.sidebarManager.getServices();
@@ -150,7 +150,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  // GET /sidebar/panels — alias voor /sidebar/list (backward compat)
+  // GET /sidebar/panels — alias for /sidebar/list (backward compat)
   router.get('/sidebar/panels', async (req: Request, res: Response) => {
     try {
       const services = ctx.sidebarManager.getServices();
@@ -160,7 +160,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  // POST /sidebar/open — open een specifiek panel
+  // POST /sidebar/open — open a specifiek panel
   router.post('/sidebar/open', async (req: Request, res: Response) => {
     try {
       const { service } = req.body;
@@ -172,7 +172,7 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  // POST /sidebar/close — sluit het actieve panel
+  // POST /sidebar/close — closes the actieve panel
   router.post('/sidebar/close', async (req: Request, res: Response) => {
     try {
       ctx.sidebarManager.closePanel();
@@ -220,24 +220,24 @@ export function registerSidebarRoutes(router: Router, ctx: RouteContext): void {
 }
 ```
 
-### Stap 3: Registry + Server wiring
+### Step 3: Registry + Server wiring
 
-**Wat:** SidebarManager registreren in de ManagerRegistry en route registration.
+**Wat:** SidebarManager registreren in the ManagerRegistry and route registration.
 
-**Bestand:** `src/registry.ts`
+**File:** `src/registry.ts`
 
-**Toevoegen aan:** `interface ManagerRegistry`
+**Add about:** `interface ManagerRegistry`
 
 ```typescript
 import type { SidebarManager } from './sidebar/manager';
 
-// In de interface:
+// In the interface:
 sidebarManager: SidebarManager;
 ```
 
-**Bestand:** `src/api/server.ts`
+**File:** `src/api/server.ts`
 
-**Toevoegen aan:** imports + `setupRoutes()`
+**Add about:** imports + `setupRoutes()`
 
 ```typescript
 import { registerSidebarRoutes } from './routes/sidebar';
@@ -246,14 +246,14 @@ import { registerSidebarRoutes } from './routes/sidebar';
 registerSidebarRoutes(router, ctx);
 ```
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Toevoegen aan:** `startAPI()` functie + registry object + will-quit handler
+**Add about:** `startAPI()` function + registry object + will-quit handler
 
 ```typescript
 import { SidebarManager } from './sidebar/manager';
 
-// Variabele bovenaan:
+// Variabele at the top:
 let sidebarManager: SidebarManager | null = null;
 
 // In startAPI():
@@ -266,24 +266,24 @@ sidebarManager: sidebarManager!,
 if (sidebarManager) sidebarManager.destroy();
 ```
 
-### Stap 4: Stealth skip voor sidebar webviews
+### Step 4: Stealth skip for sidebar webviews
 
-**Wat:** Voorkom dat stealth scripts geïnjecteerd worden in sidebar messenger panels.
+**Wat:** Voorkom that stealth scripts geïnjecteerd be in sidebar messenger panels.
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Toevoegen aan:** `app.on('web-contents-created')` handler, in de `dom-ready` callback
+**Add about:** `app.on('web-contents-created')` handler, in the `dom-ready` callback
 
-De `SidebarManager` houdt een `Set<number>` bij van sidebar webContents IDs. Bij stealth injection checken:
+The `SidebarManager` houdt a `Set<number>` bij or sidebar webContents IDs. Bij stealth injection checken:
 
 ```typescript
 contents.on('dom-ready', () => {
   const url = contents.getURL();
-  // Bestaande Google auth skip...
+  // Existing Google auth skip...
   if (url.includes('accounts.google.com') || url.includes('consent.google.com')) {
     return;
   }
-  // Skip stealth voor sidebar messenger panels
+  // Skip stealth for sidebar messenger panels
   if (sidebarManager && sidebarManager.isSidebarWebContents(contents.id)) {
     log.info('📱 Skipping stealth for sidebar panel:', url.substring(0, 60));
     return;
@@ -294,13 +294,13 @@ contents.on('dom-ready', () => {
 
 ### Stap 5: Shell HTML — Sidebar icon strip + panel container
 
-**Wat:** HTML structuur voor de sidebar, ingevoegd in `shell/index.html`.
+**Wat:** HTML structuur for the sidebar, ingevoegd in `shell/index.html`.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Zoek naar:** `<div class="main-layout">`
+**Zoek to:** `<div class="main-layout">`
 
-**Voeg toe BINNEN de main-layout div, als eerste child (vóór `<div class="browser-content">`):**
+**Voeg toe BINNEN the main-layout div, if first child (vóór `<div class="browser-content">`):**
 
 ```html
 <!-- === SIDEBAR CHAT === -->
@@ -333,14 +333,14 @@ contents.on('dom-ready', () => {
     </button>
   </div>
 
-  <!-- Panel container (webviews worden hier dynamisch aangemaakt) -->
+  <!-- Panel container (webviews be hier dynamisch aangemaakt) -->
   <div class="sidebar-panel-container" id="sidebar-panel-container" style="display:none;">
     <div class="sidebar-panel-header" id="sidebar-panel-header">
       <span class="sidebar-panel-title" id="sidebar-panel-title">WhatsApp</span>
       <button class="sidebar-panel-close" id="sidebar-panel-close" title="Sluiten">✕</button>
     </div>
     <div class="sidebar-panel-content" id="sidebar-panel-content">
-      <!-- <webview> tags worden hier dynamisch ingevoegd -->
+      <!-- <webview> tags be hier dynamisch ingevoegd -->
     </div>
   </div>
 </div>
@@ -349,42 +349,42 @@ contents.on('dom-ready', () => {
 
 ### Stap 6: Shell CSS — Sidebar styling
 
-**Wat:** CSS voor de sidebar icon strip en panel container.
+**Wat:** CSS for the sidebar icon strip and panel container.
 
-**Bestand:** `shell/css/sidebar.css` (nieuw bestand)
+**File:** `shell/css/sidebar.css` (new file)
 
-**Toevoegen aan `shell/index.html`:** `<link rel="stylesheet" href="css/sidebar.css">` (bij de andere CSS imports)
+**Add about `shell/index.html`:** `<link rel="stylesheet" href="css/sidebar.css">` (bij the andere CSS imports)
 
 Key styling:
 - `.sidebar-chat` — flex container, hoogte 100%
 - `.sidebar-icons` — verticale strip, 48px breed, centered icons
-- `.sidebar-icon` — 40x40px knoppen met hover effect
-- `.sidebar-badge` — rode cirkel met getal, absolute positioned
+- `.sidebar-icon` — 40x40px knoppen with hover effect
+- `.sidebar-badge` — rode cirkel with getal, absolute positioned
 - `.sidebar-panel-container` — 420px breed, flex column
-- `.sidebar-panel-content` — flex: 1, bevat de webview
+- `.sidebar-panel-content` — flex: 1, contains the webview
 - `.main-layout` grid aanpassen: voeg sidebar-chat kolom toe
 
-**Belangrijk:** `.main-layout` in `shell/css/main.css` moet worden aangepast van:
+**Belangrijk:** `.main-layout` in `shell/css/main.css` must be aangepast or:
 ```css
-.main-layout { display: flex; /* of grid */ }
+.main-layout { display: flex; /* or grid */ }
 ```
-naar een layout die de sidebar icon strip + panel meeneemt als linker kolommen.
+to a layout that the sidebar icon strip + panel meeneemt if linker kolommen.
 
 ### Stap 7: Shell JS — Sidebar interactie
 
-**Wat:** JavaScript voor sidebar click handlers, webview management, IPC communicatie, badge updates.
+**Wat:** JavaScript for sidebar click handlers, webview management, IPC communicatie, badge updates.
 
-**Bestand:** `shell/js/main.js` (bestaand bestand uitbreiden)
+**File:** `shell/js/main.js` (bestaand file uitbreiden)
 
-**Of nieuw bestand:** `shell/js/sidebar.js` (toevoegen als `<script>` in index.html)
+**Or new file:** `shell/js/sidebar.js` (add if `<script>` in index.html)
 
 Key functionaliteit:
 - Click handlers op `.sidebar-icon` knoppen
-- Dynamisch aanmaken van `<webview>` tags met juiste partition en URL
-- `page-title-updated` event listener op elke sidebar webview voor badge detectie
-- Standaard Chrome User-Agent instellen via `webview.setUserAgent()`
-- IPC communicatie met main process voor SidebarManager state sync
-- Panel resize handle (optioneel in fase 1, kan later)
+- Dynamisch aanmaken or `<webview>` tags with juiste partition and URL
+- `page-title-updated` event listener op elke sidebar webview for badge detection
+- Default Chrome User-Agent instellen via `webview.setUserAgent()`
+- IPC communicatie with main process for SidebarManager state sync
+- Panel resize handle (optional in phase 1, can later)
 
 ```javascript
 // Sidebar icon click handler
@@ -396,13 +396,13 @@ document.querySelectorAll('.sidebar-icon').forEach(btn => {
 });
 
 function toggleSidebarPanel(serviceId) {
-  // Check of webview al bestaat
+  // Check or webview already exists
   let webview = document.getElementById(`sidebar-wv-${serviceId}`);
   const container = document.getElementById('sidebar-panel-container');
   const content = document.getElementById('sidebar-panel-content');
 
   if (!webview) {
-    // Maak nieuwe webview aan
+    // Maak new webview about
     webview = document.createElement('webview');
     webview.id = `sidebar-wv-${serviceId}`;
     webview.setAttribute('partition', `persist:${serviceId}`);
@@ -411,7 +411,7 @@ function toggleSidebarPanel(serviceId) {
     webview.style.cssText = 'width:100%;height:100%;';
     content.appendChild(webview);
 
-    // Badge detectie via page title
+    // Badge detection via page title
     webview.addEventListener('page-title-updated', (e) => {
       const match = e.title.match(/\((\d+)\)/);
       updateBadge(serviceId, match ? parseInt(match[1], 10) : 0);
@@ -419,16 +419,16 @@ function toggleSidebarPanel(serviceId) {
   }
 
   // Toggle visibility
-  // ...verberg alle andere webviews, toon deze
+  // ...verberg alle andere webviews, toon this
 }
 ```
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
-# Test 1: Lijst van sidebar services
+# Test 1: List or sidebar services
 TOKEN=$(cat ~/.tandem/api-token)
 curl -H "Authorization: Bearer $TOKEN" \
   http://localhost:8765/sidebar/list
@@ -441,7 +441,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   -d '{"service": "whatsapp"}'
 # Verwacht: {"ok":true,"panel":{"id":"whatsapp","name":"WhatsApp","url":"https://web.whatsapp.com",...}}
 
-# Test 3: Sluit panel
+# Test 3: Closes panel
 curl -H "Authorization: Bearer $TOKEN" \
   -X POST http://localhost:8765/sidebar/close
 # Verwacht: {"ok":true}
@@ -467,12 +467,12 @@ curl -H "Authorization: Bearer $TOKEN" \
 ```
 
 **UI verificatie:**
-- [ ] Sidebar icon strip zichtbaar aan de linkerkant van het browservenster (6 emoji iconen verticaal)
-- [ ] Klikken op WhatsApp icoon opent een panel (~420px) naast de browsercontent
-- [ ] WhatsApp Web laadt in het panel (QR-code login scherm zichtbaar)
-- [ ] Nogmaals klikken op WhatsApp icoon sluit het panel
-- [ ] Na QR-code login: sessie blijft bewaard na browser herstart
-- [ ] Notification badge verschijnt op icoon wanneer ongelezen berichten binnenkomen
+- [ ] Sidebar icon strip visible about the linkerkant or the browser window (6 emoji icons vertical)
+- [ ] Klikken op WhatsApp icon opens a panel (~420px) next to the browser content
+- [ ] WhatsApp Web loads in the panel (QR-code login scherm visible)
+- [ ] Nogmaals clicking op WhatsApp icon closes the panel
+- [ ] Na QR-code login: session blijft bewaard na browser herstart
+- [ ] Notification badge appears op icon wanneer unread berichten binnenkomen
 
 ---
 
@@ -480,36 +480,36 @@ curl -H "Authorization: Bearer $TOKEN" \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-1-infrastructure-whatsapp.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-1-infrastructure-whatsapp.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. Alle curl tests uit "Acceptatiecriteria" uitvoeren
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. Alle curl tests out "Acceptatiecriteria" uitvoeren
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "🗨️ feat: sidebar chat infrastructure + WhatsApp panel"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (plak curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-2-discord-slack.md
+   ## Next session start bij fase-2-discord-slack.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] Vergeet niet `sidebarManager.destroy()` in de will-quit handler
-- [ ] Vergeet niet de `registerSidebarRoutes()` call in `setupRoutes()`
+- [ ] Vergeet not `sidebarManager.destroy()` in the will-quit handler
+- [ ] Vergeet not the `registerSidebarRoutes()` call in `setupRoutes()`
 - [ ] WhatsApp Web weigert non-Chrome UA — stel UA in via `webview.setUserAgent()`
-- [ ] TypeScript strict mode — geen `any` buiten catch
-- [ ] Test in `persist:tandem` sessie (niet in guest) — de sidebar panels gebruiken eigen partitions maar de hoofd-app moet op `persist:tandem` draaien
-- [ ] `createWindow()` stealth skip — zorg dat sidebar webContents IDs geregistreerd worden VOORDAT stealth injection plaatsvindt (timing!)
-- [ ] `.main-layout` CSS grid/flex aanpassen zodat sidebar er LINKS van de browsercontent bij komt (niet de bestaande layout breken!)
+- [ ] TypeScript strict mode — no `any` buiten catch
+- [ ] Test in `persist:tandem` session (not in guest) — the sidebar panels use own partitions but the hoofd-app must op `persist:tandem` draaien
+- [ ] `createWindow()` stealth skip — zorg that sidebar webContents IDs geregistreerd be VOORDAT stealth injection plaatsvindt (timing!)
+- [ ] `.main-layout` CSS grid/flex aanpassen zodat sidebar er LINKS or the browser content bij comes (not the existing layout breken!)

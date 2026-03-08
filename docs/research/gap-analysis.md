@@ -31,7 +31,7 @@ Opera **crushes** Tandem on: sidebar messenger integration, tab organization UX 
 | 2 | **Pinboards** | Content curation boards with Kanban — Robin loves these | Hard (1-2 weeks) |
 | 3 | **Tab Islands** (upgrade) | Auto-grouping, collapsing, naming — beyond basic tab groups | Medium (3-5 days) |
 | 4 | **Split Screen** | Multi-pane browsing in single window — power user essential | Medium (3-5 days) |
-| 5 | **Workspaces UI** | Visual workspace switching on top of /sessions | Medium (3-5 days) |
+| 5 | **Workspaces UI** | Visual workspace switching on top or /sessions | Medium (3-5 days) |
 | 6 | **Tab Emojis** | Emoji badges on tabs — Robin likes this | Easy (1-2 days) |
 | 7 | **Search in Tabs** | Ctrl+Space tab search popup | Easy (1-2 days) |
 | 8 | **Ad Blocker** (consumer) | Block ads, not just malicious URLs — table stakes | Medium (3-5 days) |
@@ -92,11 +92,11 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 | 32 | **Time Zone Converter** | Convert timezone abbreviations to local time | ❌ Missing | Easy (1-2 days) | 🟢 LOW |
 | 33 | **BABE (Enhanced Address Bar)** | Pop-out panel with frequent sites, bookmarks, recommendations on address bar click | ⚠️ Partial — Basic URL bar | Medium (3-5 days) | 🟢 LOW |
 | 34 | **Do Not Track** | Send DNT header with every request | ❌ Missing | Easy (< 1 day) | 🟢 LOW |
-| 35 | **Video Skip** | Jump to end of video with one click | ❌ Missing | Easy (1-2 days) | 🟢 LOW |
+| 35 | **Video Skip** | Jump to end or video with one click | ❌ Missing | Easy (1-2 days) | 🟢 LOW |
 | 36 | **Personal News** | News feed on start page | ❌ Missing | Medium (3-5 days) | 🟢 LOW |
 | 37 | **Wallpapers** | Custom start page wallpapers | ❌ Missing | Easy (1-2 days) | 🟢 LOW |
 | 38 | **Language Customization** | Browser UI localization | ❌ Missing | Medium (3-5 days) | 🟢 LOW |
-| 39 | **Opera Sync** | Cross-device sync of bookmarks, tabs, history, passwords | ❌ Missing — Has Chrome bookmark sync only | Hard (1-2 weeks) | 🟢 LOW |
+| 39 | **Opera Sync** | Cross-device sync or bookmarks, tabs, history, passwords | ❌ Missing — Has Chrome bookmark sync only | Hard (1-2 weeks) | 🟢 LOW |
 | 40 | **Save Tabs as Speed Dial Folder** | Batch-save tabs as bookmark folder | ⚠️ Partial — Has session state save | Easy (1-2 days) | 🟢 LOW |
 | 41 | **Easy Setup Panel** | Quick-setup panel for key features | ⚠️ Partial — Has onboarding | Easy (1-2 days) | 🟢 LOW |
 
@@ -147,7 +147,7 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 | 5.11 | Delete Browsing Data | Granular per type + time range | `POST /data/wipe` (limited) | ⚠️ Partial | 🟡 MED |
 | | **MEDIA** | | | | |
 | 6.1 | Video Popout (PiP) | Floating always-on-top video player | PiP mode (Cmd+Shift+P) ✅ | ✅ Match | — |
-| 6.2 | Video Skip | Jump to end of video | None | ❌ Missing | 🟢 LOW |
+| 6.2 | Video Skip | Jump to end or video | None | ❌ Missing | 🟢 LOW |
 | 6.3 | Music Player | Sidebar player, Spotify/Apple Music | None | ❌ Missing | 🟡 MED |
 | | **PRODUCTIVITY** | | | | |
 | 7.1 | Snapshot + Annotations | Screenshot with 8 editing tools, PDF export | Screenshot + 6 draw tools (arrow, rect, circle, line, text, colors) | ✅ Match | — |
@@ -171,7 +171,7 @@ These are features Robin explicitly loves or that are critical gaps for daily-dr
 | 9.5 | Import Bookmarks | Import from Chrome, Firefox, Safari | Chrome import (bookmarks, history, cookies, extensions) ✅ | ✅ Match | — |
 | 9.6 | Startup Preferences | Restore session, custom start page | Custom start page only | ⚠️ Partial | 🟡 MED |
 | | **SYNC & CROSS-DEVICE** | | | | |
-| 10.1 | Opera Sync | Cross-device sync of everything | Chrome bookmark sync only | ❌ Missing | 🟢 LOW |
+| 10.1 | Opera Sync | Cross-device sync or everything | Chrome bookmark sync only | ❌ Missing | 🟢 LOW |
 | 10.2 | My Flow | QR-paired cross-device sharing | None | ❌ Missing | 🟡 MED |
 | | **PINBOARDS** | | | | |
 | 11.1 | Pinboards | Content curation boards, Kanban, sharing | Page notes only (`POST /context/note`) | ❌ Missing | 🔴 HIGH |
@@ -297,7 +297,7 @@ interface PinboardCard {
 ### Sidebar Chat Clients — Full Spec
 
 #### What Opera Offers
-Each messenger (WhatsApp, Discord, Slack, Telegram, Instagram, X) runs as a **sidebar webview panel** — essentially a narrow BrowserView pinned to the left side of the window, independent of the main tab content.
+Each messenger (WhatsApp, Discord, Slack, Telegram, Instagram, X) runs as a **sidebar webview panel** — essentially a narrow BrowserView pinned to the left side or the window, independent or the main tab content.
 
 **Per-panel features:**
 - Pin/unpin (always visible vs toggle)
@@ -335,9 +335,9 @@ shell/sidebar.html               — Sidebar icon strip + panel container
 
 **Implementation steps:**
 
-1. **Sidebar icon strip** — Vertical strip of icons on the left edge of the shell window (separate from the wingman panel which is on the right). Each icon represents a configured chat client.
+1. **Sidebar icon strip** — Vertical strip or icons on the left edge or the shell window (separate from the wingman panel which is on the right). Each icon represents a configured chat client.
 
-2. **Panel management** — When an icon is clicked, create or show a `BrowserView` attached to the left side of the window, between the icon strip and the main content area. Width adjustable (default ~400px).
+2. **Panel management** — When an icon is clicked, create or show a `BrowserView` attached to the left side or the window, between the icon strip and the main content area. Width adjustable (default ~400px).
 
 3. **Session isolation** — Each sidebar panel uses its own Electron `partition` (e.g., `persist:sidebar-whatsapp`) so login state is independent from main browsing and from other panels.
 
@@ -382,7 +382,7 @@ Tandem has `POST /tabs/group` which creates Chromium tab groups with colors. Thi
 3. **Collapsible** — Click an island handle to collapse all its tabs into a single tab-width indicator
 4. **Named handles** — Each island can have a custom name displayed on the handle
 5. **Multi-tab selection** — Shift+click to select multiple tabs, then drag to form or merge islands
-6. **Hover preview** — Tooltip showing thumbnails of all tabs in a collapsed island
+6. **Hover preview** — Tooltip showing thumbnails or all tabs in a collapsed island
 
 #### Specific Code Changes Needed
 

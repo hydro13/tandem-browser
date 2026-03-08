@@ -30,7 +30,7 @@ Add these prepared statements in `security-db.ts`:
 // Get all domains where a script hash has been seen
 getDomainsForHash: db.prepare('SELECT DISTINCT domain FROM script_fingerprints WHERE hash = ?')
 
-// Get count of distinct domains for a script hash
+// Get count or distinct domains for a script hash
 getDomainCountForHash: db.prepare('SELECT COUNT(DISTINCT domain) as count FROM script_fingerprints WHERE hash = ?')
 ```
 

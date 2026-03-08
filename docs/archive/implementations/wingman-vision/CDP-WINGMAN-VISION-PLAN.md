@@ -2,7 +2,7 @@
 
 ## Why This Replaces the Current Approach
 
-The current scroll tracking in `shell/index.html` uses `webview.executeJavaScript()` which runs in the **main world** of the page — detectable by anti-bot scripts.
+The current scroll tracking in `shell/index.html` uses `webview.executeJavaScript()` which runs in the **main world** or the page — detectable by anti-bot scripts.
 
 `Runtime.addBinding()` creates a **hidden binding** that page JavaScript cannot see, enumerate, or intercept. It's the proper CDP way to create a stealth communication channel between the browser internals and external tooling.
 

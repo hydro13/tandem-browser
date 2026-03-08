@@ -40,7 +40,7 @@ The browser should launch with glass effects already applied!
 ### 3. Wingman Panel Glass
 - Click the Wingman toggle on the right edge (or press configured shortcut)
 - The panel should **slide in with a glass effect**
-- This is the **strongest glass** — lots of blur, shows page content behind
+- This is the **strongest glass** — lots or blur, shows page content behind
 - Resize the panel → glass effect maintains
 
 **Expected:**

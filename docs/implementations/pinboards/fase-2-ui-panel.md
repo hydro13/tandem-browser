@@ -1,63 +1,63 @@
-# Fase 2 — UI: Sidebar Panel + Context Menu
+# Phase 2 — UI: Sidebar Panel + Context Menu
 
 > **Feature:** Pinboards
-> **Sessies:** 1 sessie
-> **Prioriteit:** HOOG
-> **Afhankelijk van:** Fase 1 klaar (PinboardManager + API endpoints werken)
+> **Sessions:** 1 session
+> **Priority:** HIGH
+> **Depends on:** Phase 1 complete (PinboardManager + API endpoints werken)
 
 ---
 
-## Doel van deze fase
+## Goal or this fase
 
-Bouw de gebruikersinterface voor Pinboards: een sidebar-icoon dat een paneel opent met een lijst van borden en hun items, plus rechtermuisknop-integratie om content direct naar een Pinboard te saven. Na deze fase kan Robin via de UI borden bekijken en via de context menu content toevoegen.
+Bouw the gebruikersinterface for Pinboards: a sidebar-icon that a panel opens with a list or boards and hun items, plus right-click-integratie to content direct to a Pinboard te saven. After this phase can Robin via the UI boards bekijken and via the context menu content add.
 
 ---
 
-## Bestaande code te lezen — ALLEEN dit
+## Existing Code to Read — ONLY This
 
-> Lees NIETS anders. Geen wandering door de codebase.
+> Read NOTHING else. Do not wander through the codebase.
 
-| Bestand | Zoek naar functie/klasse | Waarom |
+| File | Look for function/class | Why |
 |---------|--------------------------|--------|
-| `src/pinboards/manager.ts` | `class PinboardManager` | Fase 1 output — de manager die we aanroepen |
-| `src/context-menu/types.ts` | `interface ContextMenuDeps` | Hier `pinboardManager` aan toevoegen |
-| `src/context-menu/menu-builder.ts` | `class ContextMenuBuilder`, `build()`, `addTandemItems()` | Hier "Save to Pinboard" items toevoegen |
-| `src/context-menu/manager.ts` | `class ContextMenuManager` | Begrijpen hoe deps worden doorgegeven |
-| `shell/index.html` | Sidebar sectie, `ocChat` IIFE | UI patroon voor panelen |
+| `src/pinboards/manager.ts` | `class PinboardManager` | Phase 1 output — the manager that we aanroepen |
+| `src/context-menu/types.ts` | `interface ContextMenuDeps` | Hier `pinboardManager` about add |
+| `src/context-menu/menu-builder.ts` | `class ContextMenuBuilder`, `build()`, `addTandemItems()` | Hier "Save to Pinboard" items add |
+| `src/context-menu/manager.ts` | `class ContextMenuManager` | Begrijpen hoe deps be doorgegeven |
+| `shell/index.html` | Sidebar section, `ocChat` IIFE | UI pattern for panels |
 | `src/main.ts` | `new ContextMenuManager(...)` | Hier `pinboardManager` meegeven in deps |
 
 ---
 
-## Te bouwen in deze fase
+## To Build in this fase
 
-### Stap 1: Context Menu — ContextMenuDeps uitbreiden
+### Step 1: Context Menu — ContextMenuDeps uitbreiden
 
-**Wat:** `PinboardManager` toevoegen aan de context menu dependencies zodat de builder er bij kan.
+**Wat:** `PinboardManager` add about the context menu dependencies zodat the builder er bij can.
 
-**Bestand:** `src/context-menu/types.ts`
+**File:** `src/context-menu/types.ts`
 
-**Toevoegen aan:** `interface ContextMenuDeps`
+**Add about:** `interface ContextMenuDeps`
 
 ```typescript
 import type { PinboardManager } from '../pinboards/manager';
 
 export interface ContextMenuDeps {
-  // ... bestaande deps ...
+  // ... existing deps ...
   pinboardManager: PinboardManager;
 }
 ```
 
-**Bestand:** `src/main.ts`
+**File:** `src/main.ts`
 
-**Zoek naar:** het blok waar `ContextMenuManager` wordt geïnstantieerd. Voeg `pinboardManager` toe aan het deps object.
+**Zoek to:** the blok waar `ContextMenuManager` is geïnstantieerd. Voeg `pinboardManager` toe about the deps object.
 
-### Stap 2: Context Menu — "Save to Pinboard" items
+### Step 2: Context Menu — "Save to Pinboard" items
 
-**Wat:** Drie context menu items afhankelijk van de klik-context: link saven, afbeelding saven, selectie saven. Elke optie toont een submenu met beschikbare borden.
+**What:** Three context-menu items depending on the click context: save link, save image, save selection. Each option shows a submenu with available boards.
 
-**Bestand:** `src/context-menu/menu-builder.ts`
+**File:** `src/context-menu/menu-builder.ts`
 
-**Nieuwe methode:** `addPinboardItems()`
+**New methode:** `addPinboardItems()`
 
 ```typescript
 /**
@@ -66,14 +66,14 @@ export interface ContextMenuDeps {
  */
 private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents): void {
   const boards = this.deps.pinboardManager.listBoards();
-  if (boards.length === 0) return; // Geen borden = geen menu items
+  if (boards.length === 0) return; // No boards = no menu items
 
   this.addSeparator(menu);
 
-  // Save page to Pinboard (altijd beschikbaar)
+  // Save page to Pinboard (always beschikbaar)
   menu.append(new MenuItem({
     label: 'Save Page to Pinboard',
-    submenu: boards.map(board => ({
+    submenu: boards.folder(board => ({
       label: `${board.emoji} ${board.name}`,
       click: () => {
         this.deps.pinboardManager.addItem(board.id, {
@@ -86,11 +86,11 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
     }))
   }));
 
-  // Save link to Pinboard (als er een link is)
+  // Save link to Pinboard (if er a link is)
   if (params.linkURL && isSafeURL(params.linkURL)) {
     menu.append(new MenuItem({
       label: 'Save Link to Pinboard',
-      submenu: boards.map(board => ({
+      submenu: boards.folder(board => ({
         label: `${board.emoji} ${board.name}`,
         click: () => {
           this.deps.pinboardManager.addItem(board.id, {
@@ -104,11 +104,11 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
     }));
   }
 
-  // Save image to Pinboard (als er een afbeelding is)
+  // Save image to Pinboard (if er a image is)
   if (params.mediaType === 'image' && params.srcURL) {
     menu.append(new MenuItem({
       label: 'Save Image to Pinboard',
-      submenu: boards.map(board => ({
+      submenu: boards.folder(board => ({
         label: `${board.emoji} ${board.name}`,
         click: () => {
           this.deps.pinboardManager.addItem(board.id, {
@@ -121,11 +121,11 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
     }));
   }
 
-  // Save selection to Pinboard (als er tekst geselecteerd is)
+  // Save selection to Pinboard (if er text geselecteerd is)
   if (params.selectionText) {
     menu.append(new MenuItem({
       label: 'Save Selection to Pinboard',
-      submenu: boards.map(board => ({
+      submenu: boards.folder(board => ({
         label: `${board.emoji} ${board.name}`,
         click: () => {
           this.deps.pinboardManager.addItem(board.id, {
@@ -140,15 +140,15 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
 }
 ```
 
-**Aanroepen vanuit `build()`:** Voeg `this.addPinboardItems(menu, params, wc)` toe na `this.addTandemItems()` (aan het einde van de `build()` methode).
+**Aanroepen vanuit `build()`:** Voeg `this.addPinboardItems(menu, params, wc)` toe na `this.addTandemItems()` (about the einde or the `build()` methode).
 
-### Stap 3: Sidebar Pinboard Icoon
+### Step 3: Sidebar Pinboard Icon
 
-**Wat:** Een pinboard-icoon in de sidebar die het pinboard-paneel opent/sluit. Dit is een toggle — klik opent het paneel, nogmaals klikken sluit het.
+**Wat:** A pinboard-icon in the sidebar that the pinboard-panel opens/closes. Dit is a toggle — click opens the panel, nogmaals clicking closes the.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Zoek naar:** de sidebar icon-strip sectie. Voeg een nieuw icoon toe:
+**Zoek to:** the sidebar icon-strip section. Voeg a new icon toe:
 
 ```html
 <!-- Pinboard sidebar icon -->
@@ -157,13 +157,13 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
 </button>
 ```
 
-**Stijl:** Volg exact het patroon van bestaande sidebar-iconen (dezelfde class, dezelfde hover/active states).
+**Stijl:** Volg exact the pattern or existing sidebar-icons (the same class, the same hover/active states).
 
-### Stap 4: Pinboard Paneel UI
+### Step 4: Pinboard Paneel UI
 
-**Wat:** Een paneel dat opent als het sidebar-icoon wordt geklikt. Toont een lijst van borden en de items van het geselecteerde bord. Haalt data op via `fetch()` naar de `/pinboards` API.
+**Wat:** A panel that opens if the sidebar-icon is geklikt. Shows a list or boards and the items or the geselecteerde board. Haalt data op via `fetch()` to the `/pinboards` API.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
 **Structuur:**
 
@@ -180,7 +180,7 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
     <!-- Dynamisch gevuld via JS -->
   </div>
 
-  <!-- Items van geselecteerd board -->
+  <!-- Items or geselecteerd board -->
   <div id="pinboard-items" class="pinboard-items" style="display:none;">
     <div class="pinboard-items-header">
       <button id="pinboard-back-btn">← Boards</button>
@@ -195,11 +195,11 @@ private addPinboardItems(menu: Menu, params: ContextMenuParams, wc: WebContents)
 
 ### Stap 5: Pinboard JavaScript (IIFE)
 
-**Wat:** Alle client-side logica voor het Pinboard paneel. Laadt borden via API, toont ze als lijst, handelt klikken af, toont items per bord.
+**Wat:** Alle client-side logica for the Pinboard panel. Loads boards via API, shows ze if list, handelt clicking af, shows items per board.
 
-**Bestand:** `shell/index.html`
+**File:** `shell/index.html`
 
-**Patroon:** Maak een IIFE sectie, vergelijkbaar met `ocChat`:
+**Patroon:** Maak a IIFE section, vergelijkbaar with `ocChat`:
 
 ```javascript
 // === Pinboard Panel ===
@@ -217,7 +217,7 @@ const pinboardPanel = (() => {
     const container = document.getElementById('pinboard-board-list');
     container.innerHTML = '';
     if (boards.length === 0) {
-      container.innerHTML = '<p class="empty-state">Nog geen boards. Klik + om er een te maken.</p>';
+      container.innerHTML = '<p class="empty-state">Still no boards. Klik + to er a te maken.</p>';
       return;
     }
     boards.forEach(board => {
@@ -248,7 +248,7 @@ const pinboardPanel = (() => {
     const container = document.getElementById('pinboard-item-list');
     container.innerHTML = '';
     if (items.length === 0) {
-      container.innerHTML = '<p class="empty-state">Geen items. Klik rechts op een pagina → "Save to Pinboard".</p>';
+      container.innerHTML = '<p class="empty-state">No items. Klik rechts op a page → "Save to Pinboard".</p>';
       return;
     }
     items.forEach(item => {
@@ -292,15 +292,15 @@ const pinboardPanel = (() => {
     return div.innerHTML;
   }
 
-  // Klik op link items opent URL in nieuwe tab
+  // Klik op link items opens URL in new tab
   // Klik op delete knop verwijdert item
-  // New board knop opent prompt voor naam
-  // Back knop gaat terug naar board lijst
+  // New board knop opens prompt for name
+  // Back knop gaat terug to board list
 
   async function createBoard() {
-    const name = prompt('Board naam:');
+    const name = prompt('Board name:');
     if (!name) return;
-    const emoji = prompt('Emoji (optioneel):', '📌') || '📌';
+    const emoji = prompt('Emoji (optional):', '📌') || '📌';
     await fetch(`${API}/pinboards`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -316,7 +316,7 @@ const pinboardPanel = (() => {
     });
     // Herlaad items
     openBoard(currentBoardId,
-      document.getElementById('pinboard-board-name').textContent.slice(2), // naam zonder emoji
+      document.getElementById('pinboard-board-name').textContent.slice(2), // name without emoji
       document.getElementById('pinboard-board-name').textContent.charAt(0) // emoji
     );
   }
@@ -338,7 +338,7 @@ const pinboardPanel = (() => {
     loadBoards();
   });
 
-  // Event delegation voor delete knoppen
+  // Event delegation for delete knoppen
   document.getElementById('pinboard-item-list')?.addEventListener('click', (e) => {
     if (e.target.classList.contains('item-delete')) {
       const itemId = e.target.dataset.itemId;
@@ -350,17 +350,17 @@ const pinboardPanel = (() => {
 })();
 ```
 
-### Stap 6: CSS voor Pinboard Paneel
+### Stap 6: CSS for Pinboard Paneel
 
-**Wat:** Styling voor het paneel, boardlijst, items. Volg de bestaande kleurpatronen en font-sizes van de shell.
+**Wat:** Styling for the panel, boardlijst, items. Volg the existing kleurpatronen and font-sizes or the shell.
 
-**Bestand:** `shell/index.html` (in de `<style>` sectie)
+**File:** `shell/index.html` (in the `<style>` section)
 
 ```css
 /* Pinboard Panel */
 #pinboard-panel {
   position: absolute;
-  /* Positioneer naast sidebar, vergelijkbaar met wingman panel */
+  /* Positioneer next to sidebar, vergelijkbaar with wingman panel */
   width: 320px;
   height: 100%;
   background: var(--bg-panel, #1e1e1e);
@@ -447,33 +447,33 @@ const pinboardPanel = (() => {
 
 ---
 
-## Acceptatiecriteria — dit moet werken na de sessie
+## Acceptatiecriteria — this must werken na the session
 
 ```bash
 TOKEN=$(cat ~/.tandem/api-token)
 
-# Prerequisite: zorg dat er minstens 1 board bestaat
+# Prerequisite: zorg that er minstens 1 board exists
 curl -s -X POST http://localhost:8765/pinboards \
   -H "Content-Type: application/json" \
   -d '{"name": "Test Board", "emoji": "🧪"}' | jq .
 ```
 
 **UI verificatie:**
-- [ ] Pinboard icoon (📌) is zichtbaar in de sidebar
-- [ ] Klikken op het icoon opent het Pinboard paneel
-- [ ] Paneel toont lijst van borden met emoji, naam, en item count
-- [ ] Klikken op een bord toont de items van dat bord
-- [ ] "← Boards" knop gaat terug naar de boardlijst
-- [ ] "+" knop opent prompt om nieuw bord aan te maken
-- [ ] Nieuw aangemaakt bord verschijnt in de lijst
+- [ ] Pinboard icon (📌) is visible in the sidebar
+- [ ] Klikken op the icon opens the Pinboard panel
+- [ ] Paneel shows list or boards with emoji, name, and item count
+- [ ] Klikken op a board shows the items or that board
+- [ ] "← Boards" knop gaat terug to the boardlijst
+- [ ] "+" knop opens prompt to new board about te maken
+- [ ] New aangemaakt board appears in the list
 
 **Context menu verificatie:**
-- [ ] Rechtsklik op een pagina toont "Save Page to Pinboard" met submenu van borden
-- [ ] Rechtsklik op een link toont "Save Link to Pinboard"
-- [ ] Rechtsklik op een afbeelding toont "Save Image to Pinboard"
-- [ ] Tekst selecteren + rechtsklikken toont "Save Selection to Pinboard"
-- [ ] Klikken op een bord in het submenu voegt het item toe (verifieer via API: `curl http://localhost:8765/pinboards/:id/items`)
-- [ ] Delete knop (×) verwijdert een item
+- [ ] Right-click op a page shows "Save Page to Pinboard" with submenu or boards
+- [ ] Right-click op a link shows "Save Link to Pinboard"
+- [ ] Right-click op a image shows "Save Image to Pinboard"
+- [ ] Text selecteren + rechtsklikken shows "Save Selection to Pinboard"
+- [ ] Klikken op a board in the submenu voegt the item toe (verifieer via API: `curl http://localhost:8765/pinboards/:id/items`)
+- [ ] Delete knop (×) verwijdert a item
 
 ---
 
@@ -481,37 +481,37 @@ curl -s -X POST http://localhost:8765/pinboards \
 
 ### Bij start:
 ```
-1. Lees LEES-MIJ-EERST.md
-2. Lees DIT bestand (fase-2-ui-panel.md) volledig
+1. Read LEES-MIJ-EERST.md
+2. Read DIT file (fase-2-ui-panel.md) fully
 3. Run: curl http://localhost:8765/status && npx tsc && git status
-4. Verifieer dat fase 1 werkt: curl http://localhost:8765/pinboards
-5. Lees de bestanden in de "Te lezen" tabel hierboven
+4. Verifieer that phase 1 works: curl http://localhost:8765/pinboards
+5. Read the files in the "Files to read" table above
 ```
 
 ### Bij einde:
 ```
 1. npx tsc — ZERO errors verplicht
-2. npm start — app start zonder crashes
-3. UI visueel testen (sidebar + context menu)
-4. npx vitest run — alle bestaande tests blijven slagen
-5. CHANGELOG.md bijwerken met korte entry
+2. npm start — app start without crashes
+3. UI visual testen (sidebar + context menu)
+4. npx vitest run — alle existing tests blijven slagen
+5. Update CHANGELOG.md with korte entry
 6. git commit -m "📌 feat: Pinboard sidebar panel + context menu integration"
 7. git push
 8. Rapport:
    ## Gebouwd
    ## Getest (screenshots + curl output)
    ## Problemen
-   ## Volgende sessie start bij fase-3-visual-board.md
+   ## Next session start bij fase-3-visual-board.md
 ```
 
 ---
 
 ## Bekende valkuilen
 
-- [ ] **ContextMenuDeps vergeten** — als `pinboardManager` niet in deps zit, crasht de builder bij `this.deps.pinboardManager`
-- [ ] **isSafeURL check** — gebruik de bestaande `isSafeURL()` helper in menu-builder.ts voor linkURL
-- [ ] **Submenu leeg** — als er geen boards zijn, toon geen "Save to Pinboard" items (check `boards.length === 0`)
-- [ ] **Shell CSS variabelen** — gebruik bestaande CSS custom properties (`--bg-panel`, `--border-color`, etc.) in plaats van hardcoded kleuren
-- [ ] **Panel positionering** — het pinboard paneel mag niet overlappen met het wingman paneel. Gebruik dezelfde positioneringslogica
-- [ ] **XSS in item content** — `escapeHtml()` gebruiken voor alle user-generated content (titels, quotes, notities)
-- [ ] **API port hardcoded** — gebruik dezelfde port constante als de rest van de shell (kijk hoe `ocChat` het doet)
+- [ ] **ContextMenuDeps vergeten** — if `pinboardManager` not in deps zit, crasht the builder bij `this.deps.pinboardManager`
+- [ ] **isSafeURL check** — usage the existing `isSafeURL()` helper in menu-builder.ts for linkURL
+- [ ] **Submenu leeg** — if er no boards are, toon no "Save to Pinboard" items (check `boards.length === 0`)
+- [ ] **Shell CSS variabelen** — usage existing CSS custom properties (`--bg-panel`, `--border-color`, etc.) in plaats or hardcoded kleuren
+- [ ] **Panel positionering** — the pinboard panel mag not overlappen with the wingman panel. Usage the same positioneringslogica
+- [ ] **XSS in item content** — `escapeHtml()` use for alle user-generated content (titels, quotes, notes)
+- [ ] **API port hardcoded** — usage the same port constante if the rest or the shell (kijk hoe `ocChat` the doet)

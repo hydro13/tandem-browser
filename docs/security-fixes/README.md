@@ -1,6 +1,6 @@
 # Security Fixes
 
-Targeted fixes for security gaps discovered during real-world testing of Tandem's 6-layer security system.
+Targeted fixes for security gaps discovered during real-world testing or Tandem's 6-layer security system.
 
 ## Phases
 

@@ -2,19 +2,19 @@
 
 ## Goal
 
-Tandem draait altijd in desktop Chromium formaat. Na deze phase kan Kees schakelen naar
-een mobiel apparaat — iPhone 15, Samsung Galaxy, iPad — met echte viewport, touch events,
-pixel density en user-agent. Emulatie overleeft navigatie (re-applied op did-finish-load)
-en is instelbaar via API of via preset device profielen.
+Tandem draait always in desktop Chromium formaat. Na this phase can Kees schakelen to
+a mobiel apparaat — iPhone 15, Samsung Galaxy, iPad — with echte viewport, touch events,
+pixel density and user-agent. Emulatie overleeft navigatie (re-applied op did-finish-load)
+and is instelbaar via API or via preset device profielen.
 
 ## Prerequisites
 
 - **Phase 1 + 2 MUST be COMPLETED** — check STATUS.md
-- Lees `src/main.ts` — begrijp hoe ScriptInjector (Phase 1) is aangesloten op did-finish-load
-  Device emulator volgt exact hetzelfde patroon
-- Lees Electron docs: `webContents.enableDeviceEmulation(parameters)` en `disableDeviceEmulation()`
-  Dit is een native Electron API — we gebruiken GEEN CDP `Emulation.*` commands
-- Lees `src/api/server.ts` — hoe `getSessionWC(req)` werkt
+- Read `src/main.ts` — begrijp hoe ScriptInjector (Phase 1) is aangesloten op did-finish-load
+  Device emulator follows exact hetzelfde pattern
+- Read Electron docs: `webContents.enableDeviceEmulation(parameters)` and `disableDeviceEmulation()`
+  This is a native Electron API — we use NO CDP `Emulation.*` commands
+- Read `src/api/server.ts` — hoe `getSessionWC(req)` works
 
 ## Deliverables
 
@@ -33,7 +33,7 @@ export interface DeviceProfile {
   userAgent: string;
 }
 
-// Ingebouwde device profielen
+// Inbuilte device profielen
 export const DEVICE_PROFILES: Record<string, DeviceProfile> = {
   'iPhone 15': {
     name: 'iPhone 15',
@@ -141,7 +141,7 @@ export class DeviceEmulator {
 
   async reset(wc: WebContents): Promise<void> {
     wc.disableDeviceEmulation();
-    // Reset user agent naar Electron default
+    // Reset user agent to Electron default
     wc.setUserAgent(wc.session.getUserAgent());
     this.state = { active: false };
   }
@@ -150,7 +150,7 @@ export class DeviceEmulator {
 
   /**
    * Geroepen vanuit main.ts na did-finish-load.
-   * Re-applyt de huidige emulatie als die actief is.
+   * Re-applyt the huidige emulatie if that actief is.
    */
   async reloadIntoTab(wc: WebContents): Promise<void> {
     if (!this.state.active) return;
@@ -188,22 +188,22 @@ export class DeviceEmulator {
     // User agent instellen
     wc.setUserAgent(profile.userAgent);
 
-    // Touch events activeren via JS (Electron enableDeviceEmulation doet dit niet altijd zelf)
+    // Touch events activeren via JS (Electron enableDeviceEmulation doet this not always zelf)
     if (profile.touch) {
       await wc.executeJavaScript(`
-        // Simuleer touch support voor sites die erop controleren
+        // Simuleer touch support for sites that erop controleren
         Object.defineProperty(navigator, 'maxTouchPoints', {
           get: () => 5, configurable: true
         });
-      `).catch(() => {}); // Silently fail als page nog niet klaar is
+      `).catch(() => {}); // Silently fail if page still not complete is
     }
   }
 }
 ```
 
-### 2. `src/main.ts` — Wire DeviceEmulator aan did-finish-load
+### 2. `src/main.ts` — Wire DeviceEmulator about did-finish-load
 
-Volg exact hetzelfde patroon als ScriptInjector (Phase 1):
+Volg exact hetzelfde pattern if ScriptInjector (Phase 1):
 
 ```typescript
 import { DeviceEmulator } from './device/emulator';
@@ -211,24 +211,24 @@ const deviceEmulator = new DeviceEmulator();
 
 // In startAPI() meegeven
 startAPI({
-  // ... bestaande opties
+  // ... existing opties
   scriptInjector,
-  deviceEmulator,  // ← nieuw
+  deviceEmulator,  // ← new
 });
 
-// In de activity-webview-event IPC handler, NAAST de scriptInjector call:
+// In the activity-webview-event IPC handler, NAAST the scriptInjector call:
 if (data.type === 'did-finish-load') {
   const tab = tabManager.getTab(data.tabId);
   if (tab?.webContents && !tab.webContents.isDestroyed()) {
     scriptInjector.reloadIntoTab(tab.webContents).catch(() => {});
-    deviceEmulator.reloadIntoTab(tab.webContents).catch(() => {}); // ← nieuw
+    deviceEmulator.reloadIntoTab(tab.webContents).catch(() => {}); // ← new
   }
 }
 ```
 
 ### 3. `src/api/server.ts` — Routes registreren
 
-Voeg `DeviceEmulator` toe aan `TandemAPIOptions` en registreer:
+Voeg `DeviceEmulator` toe about `TandemAPIOptions` and registreer:
 
 ```
 GET    /device/profiles              —                               → {profiles: [...]}
@@ -330,15 +330,15 @@ curl -s -X POST -H "$H" -H "Content-Type: application/json" \
 
 # Screenshot op mobiele dimensies
 curl -s -H "$H" http://127.0.0.1:8765/screenshot -o /tmp/mobile.png
-# Open /tmp/mobile.png — moet 393x852 (of 1179x2556 met 3x scale) zijn
+# Open /tmp/mobile.png — must 393x852 (or 1179x2556 with 3x scale) are
 
-# Navigeer — emulatie moet blijven
+# Navigeer — emulatie must blijven
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"url":"https://m.google.com"}' http://127.0.0.1:8765/navigate
 sleep 2
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
   -d '{"code":"navigator.userAgent"}' http://127.0.0.1:8765/execute-js | jq .result
-# → Nog steeds iPhone UA
+# → Still steeds iPhone UA
 
 # Custom dimensies
 curl -s -X POST -H "$H" -H "Content-Type: application/json" \
@@ -381,9 +381,9 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 git push origin main
 ```
 
-## Scope (1 Claude Code sessie)
+## Scope (1 Claude Code session)
 
-- `src/device/emulator.ts` — nieuw bestand
-- `src/main.ts` — DeviceEmulator init + did-finish-load hook (naast ScriptInjector)
+- `src/device/emulator.ts` — new file
+- `src/main.ts` — DeviceEmulator init + did-finish-load hook (next to ScriptInjector)
 - `src/api/server.ts` — TandemAPIOptions + 4 routes
 - TypeScript check + verificatie + commit

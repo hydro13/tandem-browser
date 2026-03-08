@@ -43,7 +43,7 @@ export interface ScriptAnalysisResult {
 
 ### 2A.2 Define the full rule set
 
-Export `JS_THREAT_RULES: ThreatRule[]` with these rules (include ALL of them):
+Export `JS_THREAT_RULES: ThreatRule[]` with these rules (include ALL or them):
 
 **Obfuscation:**
 - `eval_string`: `/\beval\s*\(\s*['"]/` — score 25, high

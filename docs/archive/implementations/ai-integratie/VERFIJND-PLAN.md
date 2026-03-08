@@ -1,201 +1,201 @@
 # Tandem Browser — Verfijnd AI Implementatie Plan
 
 > Audit & optimalisatie door Cowork (Claude Opus) — 12 februari 2026
-> Gebaseerd op cross-referentie van het originele plan tegen de werkelijke codebase.
-> **HERZIEN:** Architectuur aangepast voor Claude Max Pro (geen API key, MCP-only).
+> Gebaseerd op cross-referentie or the originele plan tegen the werkelijke codebase.
+> **HERZIEN:** Architectuur aangepast for Claude Max Pro (no API key, MCP-only).
 
 ---
 
 ## KRITIEKE ARCHITECTUURWIJZIGING
 
-Robin heeft een **Claude Max Pro account** ($200/maand). Dit betekent:
+Robin has a **Claude Max Pro account** ($200/maand). Dit betekent:
 
-- **GEEN Anthropic API key** — Claude werkt niet via directe API calls
-- **GEEN API kosten** — flat rate subscription, onbeperkt gebruik
-- **Claude werkt UITSLUITEND via Claude Code/Cowork** → MCP → Tandem API
-- **Fase 3 (Claude Direct Backend) VERVALT** — er is geen API om aan te roepen
+- **NO Anthropic API key** — Claude does not work through direct API calls
+- **NO API costs** — flat-rate subscription, unlimited usage
+- **Claude works UITSLUITEND via Claude Code/Cowork** → MCP → Tandem API
+- **Phase 3 (Claude Direct Backend) VERVALT** — er is no API to about te roepen
 
-**Nieuwe architectuur:**
+**New architectuur:**
 ```
 Robin spreekt/typt ──→ Cowork/Claude Code ──→ MCP Server ──→ Tandem API (:8765)
                                                     ↕
-Robin ziet resultaat ←── Kees Panel ←── OpenClaw Gateway (:18789)
+Robin sees resultaat ←── Kees Panel ←── OpenClaw Gateway (:18789)
                                                     +
-                             MCP tool calls verschijnen als activiteit in browser
+                             MCP tool calls verschijnen if activiteit in browser
 ```
 
-**MCP is DE primaire Claude-integratie.** Alles wat Claude doet met Tandem gaat via MCP tools. Het Kees panel blijft voor OpenClaw, met een activity feed die laat zien wat Claude/Cowork aan het doen is.
+**MCP is DE primaire Claude-integratie.** Alles wat Claude doet with Tandem gaat via MCP tools. The Kees panel blijft for OpenClaw, with a activity feed that shows zien wat Claude/Cowork about the doen is.
 
 ---
 
 ## Samenvatting
 
-Het originele plan (7 fases, 13 documenten) is **85% accuraat** voor API docs en architectuur. Maar de aanname dat Claude via directe API calls werkt is **fout** — Robin heeft geen API key en heeft die ook niet nodig.
+The originele plan (7 fases, 13 documenten) is **85% accuraat** for API docs and architectuur. Maar the aanname that Claude via directe API calls works is **fout** — Robin has no API key and has that also not nodig.
 
-Dit document bevat:
-1. Wat klopt en we behouden
-2. Wat fout is en we moeten fixen
-3. Wat ontbreekt en we moeten toevoegen
-4. De nieuwe fasevolgorde (5 fases in plaats van 7)
+Dit document contains:
+1. Wat klopt and we behouden
+2. Wat fout is and we must fixen
+3. Wat ontbreekt and we must add
+4. The new faseorder (5 fases in plaats or 7)
 5. Concrete aanbevelingen per fase
 
 ---
 
 ## 1. Wat klopt (behouden)
 
-**API endpoints:** Alle 118 endpoints zijn correct gedocumenteerd. De MCP server kan deze 1-op-1 wrappen.
+**API endpoints:** Alle 118 endpoints are correct gedocumenteerd. The MCP server can this 1-op-1 wrappen.
 
-**Twee-lagen architectuur:** De "webview is heilig terrein" filosofie is correct en cruciaal. AI-code hoort in Layer 2 (main process + shell), nooit in de webview.
+**Twee-lagen architectuur:** The "webview is heilig terrein" filosofie is correct and cruciaal. AI-code belongs in Layer 2 (main process + shell), nooit in the webview.
 
-**IPC bridge:** De `window.tandem.*` API heeft 25+ methodes en werkt. De preload bridge is volledig.
+**IPC bridge:** The `window.tandem.*` API has 25+ methodes and works. The preload bridge is fully.
 
-**Agent referentie:** `src/agents/x-scout.ts` bestaat als skeleton met goede timing-patronen die herbruikbaar zijn voor fase 4.
+**Agent referentie:** `src/agents/x-scout.ts` exists if skeleton with goede timing-patterns that herbruikbaar are for phase 4.
 
-**Chat locatie:** OpenClaw WebSocket code zit op regels 1681-1894 in `shell/index.html`. Protocol details (RPC, streaming states, reconnect) zijn accuraat.
+**Chat locatie:** OpenClaw WebSocket code zit op rules 1681-1894 in `shell/index.html`. Protocol details (RPC, streaming states, reconnect) are accuraat.
 
-**Cross-platform aanpak:** De focus op `path.join()`, `os.homedir()`, en platform checks is goed.
+**Cross-platform approach:** The focus op `path.join()`, `os.homedir()`, and platform checks is goed.
 
 ---
 
-## 2. Wat fout is (moet gefixed)
+## 2. Wat fout is (must gefixed)
 
-### 2.1 Auth middleware is permissiever dan gedocumenteerd
+### 2.1 Auth middleware is permissiever then gedocumenteerd
 
 **Plan zegt:** "Localhost requests exempt from auth"
 
-**Werkelijkheid:** De auth middleware in `server.ts` (regels 162-185) laat ALLE requests zonder `origin` header door:
+**Werkelijkheid:** The auth middleware in `server.ts` (rules 162-185) shows ALLE requests without `origin` header door:
 
 ```
 if (!origin) return next();
 ```
 
-Dit betekent dat **elke lokale process** (niet alleen localhost requests) de API kan aanroepen zonder token. Voor de MCP server is dit handig (MCP server stuurt geen origin header), maar het is een beveiligingsrisico als andere software op de machine draait.
+Dit betekent that **elke lokale process** (not only localhost requests) the API can aanroepen without token. For the MCP server is this handig (MCP server stuurt no origin header), but the is a beveiligingsrisico if andere software op the machine draait.
 
-**Aanbeveling:** Voor fase 1 is dit acceptabel (MCP server draait lokaal). Maar bij fase 4 (agent autonomie) moet dit strikter: ofwel altijd token vereisen, ofwel een whitelist van bekende callers.
+**Aanbeveling:** For phase 1 is this acceptabel (MCP server draait local). Maar bij phase 4 (agent autonomie) must this strikter: ofwel always token vereisen, ofwel a whitelist or bekende callers.
 
 ### 2.2 OpenClaw token is hardcoded
 
-**Plan documenteert:** `AUTH_TOKEN = 'de07381e...'` als hardcoded string in shell/index.html regel 1687.
+**Plan documenteert:** `AUTH_TOKEN = 'de07381e...'` if hardcoded string in shell/index.html regel 1687.
 
-**Probleem:** Dit token zou uit `~/.openclaw/openclaw.json` gelezen moeten worden. Bij een token-rotatie breekt de chat.
+**Probleem:** Dit token zou out `~/.openclaw/openclaw.json` gelezen must be. Bij a token-rotatie breekt the chat.
 
-**Aanbeveling:** Bij fase 3 (Chat Router refactoring) het token dynamisch laden via een API call of IPC bridge:
+**Aanbeveling:** Bij phase 3 (Chat Router refactoring) the token dynamisch laden via a API call or IPC bridge:
 ```
 GET /config/openclaw-token → leest ~/.openclaw/openclaw.json → gateway.auth.token
 ```
 
-### 2.3 Context Bridge bestaat al, maar plan negeert dit
+### 2.3 Context Bridge exists already, but plan negeert this
 
-**Plan zegt:** "src/context/manager.ts moet gebouwd worden"
+**Plan zegt:** "src/context/manager.ts must built be"
 
-**Werkelijkheid:** `src/bridge/context-bridge.ts` bestaat al (162 regels) met:
-- `recordSnapshot()` — pagina context opslaan
-- `getRecent()` — recente pagina's ophalen
+**Werkelijkheid:** `src/bridge/context-bridge.ts` exists already (162 rules) with:
+- `recordSnapshot()` — page context save
+- `getRecent()` — recente page's ophalen
 - `search()` — doorzoeken
-- `getPage()` — specifieke URL context
-- `addNote()` — handmatige notities
+- `getPage()` — specific URL context
+- `addNote()` — handmatige notes
 - Opslag in `~/.tandem/context/`
 
-**Aanbeveling:** Extend de bestaande ContextBridge, bouw niet from scratch.
+**Aanbeveling:** Extend the existing ContextBridge, bouw not from scratch.
 
-### 2.4 Voice is verder dan het plan denkt
+### 2.4 Voice is verder then the plan denkt
 
-**Plan zegt:** Hele fase nodig voor voice → AI pipeline
+**Plan zegt:** Hele phase nodig for voice → AI pipeline
 
-**Werkelijkheid:** Voice is al 80% klaar. Wat ontbreekt: alleen koppeling voice transcript → ChatRouter → actieve backend (~30 regels).
+**Werkelijkheid:** Voice is already 80% complete. Wat ontbreekt: only koppeling voice transcript → ChatRouter → actieve backend (~30 rules).
 
-**Aanbeveling:** Samenvoegen met Chat Router fase.
+**Aanbeveling:** Samenvoegen with Chat Router fase.
 
 ### 2.5 OUDE FASE 3 (Claude Direct Backend) IS ONMOGELIJK
 
-**Plan zegt:** Integreer de Anthropic Messages API direct als chat backend.
+**Plan zegt:** Integreer the Anthropic Messages API direct if chat backend.
 
-**Werkelijkheid:** Robin heeft geen API key. Hij heeft een Max Pro account. Claude werkt uitsluitend via Claude Code/Cowork → MCP.
+**Werkelijkheid:** Robin has no API key. He has a Max Pro account. Claude works uitsluitend via Claude Code/Cowork → MCP.
 
-**Oplossing:** Vervang de "Claude Direct Backend" met een **Claude Activity Feed** in het Kees panel. Dit toont wat Claude Code/Cowork aan het doen is wanneer het MCP tools gebruikt:
+**Oplossing:** Vervang the "Claude Direct Backend" with a **Claude Activity Feed** in the Kees panel. Dit shows wat Claude Code/Cowork about the doen is wanneer the MCP tools uses:
 
 ```
 [🤖 Claude via Cowork]
   → tandem_navigate("https://google.com")
   → tandem_read_page() — "Google Search Results..."
   → tandem_click("#result-1")
-  → "Ik heb het eerste resultaat geopend voor je."
+  → "Ik heb the first resultaat geopend for you."
 ```
 
-Dit geeft Robin zichtbaarheid in wat Claude doet, zonder directe API integratie.
+Dit geeft Robin zichtbaarheid in wat Claude doet, without directe API integratie.
 
-### 2.6 Geen API key management, geen token budget nodig
+### 2.6 No API key management, no token budget nodig
 
-De hele sectie over API key opslag (safeStorage), token budgettering, model selectie, en kosten-monitoring is **niet van toepassing**. Claude Max Pro is een vast bedrag. Robin gebruikt wat hij wil.
+The hele section over API key opslag (safeStorage), token budgettering, model selectie, and kosten-monitoring is **not or toepassing**. Claude Max Pro is a vast bedrag. Robin uses wat he wil.
 
-Content truncatie is WEL nog relevant — grote pagina's vullen Claude's context window op, ook via MCP.
+Content truncatie is WEL still relevant — grote page's vullen Claude's context window op, also via MCP.
 
 ---
 
-## 3. Wat ontbreekt (moet toegevoegd)
+## 3. Wat ontbreekt (must added)
 
 ### 3.1 MCP Activity Feed in Kees Panel
 
-Wanneer Claude Code/Cowork MCP tools aanroept, moet Robin dit ZIEN in het Kees panel. Dit is de "Claude" aanwezigheid in de browser.
+Wanneer Claude Code/Cowork MCP tools aanroept, must Robin this ZIEN in the Kees panel. Dit is the "Claude" aanwezigheid in the browser.
 
 **Implementatie:**
-- De MCP server logt elke tool call naar Tandem's chat API (`POST /chat`)
-- Kees panel toont deze als "[🤖 Claude] actie: navigeert naar google.com"
-- Robin kan reageren in het panel (bericht gaat naar chat history, Claude leest dit via MCP resource)
+- The MCP server logt elke tool call to Tandem's chat API (`POST /chat`)
+- Kees panel shows this if "[🤖 Claude] actie: navigeert to google.com"
+- Robin can reageren in the panel (bericht gaat to chat history, Claude leest this via MCP resource)
 
 **Bidirectioneel:**
 - Robin typt in Kees panel → opgeslagen in chat history
 - Claude Code leest chat via `tandem_get_chat_history()` MCP tool
 - Claude Code stuurt antwoord via `tandem_send_message()` MCP tool
-- Kees panel toont antwoord
+- Kees panel shows antwoord
 
-Dit creëert een **chat loop** tussen Robin (browser) en Claude (Cowork) ZONDER directe API calls.
+This creates a **chat loop** between Robin (browser) and Claude (Cowork) WITHOUT direct API calls.
 
 ### 3.2 Fallback & error recovery
 
-**Scenario's die niet gedekt zijn:**
-- OpenClaw gateway is down → chat panel toont alleen errors
-- Tandem API crash → MCP server krijgt connection refused
-- MCP tool execution timeout → Claude Code wacht
+**Scenario's that not gedekt are:**
+- OpenClaw gateway is down → chat panel shows only errors
+- Tandem API crash → MCP server gets connection refused
+- MCP tool execution timeout → Claude Code wait
 
-**Toevoegen:**
+**Add:**
 - Per-backend health check (ping elke 30s)
 - Tool execution timeout: 30s per tool call
-- Graceful degradation: duidelijke foutmelding als Tandem niet draait
+- Graceful degradation: duidelijke foutmelding if Tandem not draait
 - MCP server geeft context-rijke errors terug
 
 ### 3.3 MCP Server lifecycle
 
-Claude Code/Cowork starten de MCP server zelf via hun config. Tandem moet alleen draaien (API op :8765).
+Claude Code/Cowork starten the MCP server zelf via hun config. Tandem must only draaien (API op :8765).
 
 **Correct model:**
 ```
 1. Robin start Tandem Browser (npm start) → API draait op :8765
-2. Robin opent Cowork → Cowork leest MCP config → start tandem-mcp bridge
-3. tandem-mcp maakt HTTP calls naar localhost:8765
-4. Als Tandem niet draait → MCP server geeft foutmelding
+2. Robin opens Cowork → Cowork leest MCP config → start tandem-mcp bridge
+3. tandem-mcp maakt HTTP calls to localhost:8765
+4. If Tandem not draait → MCP server geeft foutmelding
 ```
 
-**Documenteer dit duidelijk** in de MCP setup guide.
+**Documenteer this duidelijk** in the MCP setup guide.
 
 ### 3.4 Slim content trunceren
 
-Pagina's kunnen 50.000+ woorden zijn. Ook via MCP vult dit Claude's context.
+Page's can 50.000+ woorden are. Also via MCP fills this Claude's context.
 
 **Strategie:**
-1. Gebruik de bestaande `ContentExtractor` (src/content/extractor.ts) voor structured extraction
-2. Prioriteer: titel → headings → main content → sidebar
+1. Usage the existing `ContentExtractor` (src/content/extractor.ts) for structured extraction
+2. Prioriteer: title → headings → main content → sidebar
 3. Strip navigatie, footer, ads
-4. `tandem_read_page` stuurt markdown, niet HTML (~60% minder tokens)
-5. `tandem_screenshot` resize naar max 1024px breed
+4. `tandem_read_page` stuurt markdown, not HTML (~60% minder tokens)
+5. `tandem_screenshot` resize to max 1024px breed
 
 ### 3.5 Cowork MCP config template
 
-Robin gebruikt primair Cowork. De MCP config moet daar juist ingesteld worden:
+Robin uses primair Cowork. The MCP config must daar juist ingesteld be:
 
-**Voor Cowork:** Configuratie via de Cowork plugin/MCP settings interface.
+**For Cowork:** Configuration via the Cowork plugin/MCP settings interface.
 
-**Voor Claude Code (backup):** `~/.claude/settings.json`:
+**For Claude Code (backup):** `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
@@ -209,237 +209,237 @@ Robin gebruikt primair Cowork. De MCP config moet daar juist ingesteld worden:
 
 ---
 
-## 4. Nieuwe fasevolgorde (5 fases)
+## 4. New faseorder (5 fases)
 
-De oude 7 fases zijn teruggebracht naar **5 fases** door:
-- Fase 3 (Claude Direct Backend) → **vervalt** (geen API key)
-- Fase 5 (Voice Flow) → **opgegaan** in fase 3 (Chat Router)
-- Fase 4 (Event Stream) → **naar voren** als fase 2
+The oude 7 fases are teruggebracht to **5 fases** door:
+- Phase 3 (Claude Direct Backend) → **vervalt** (no API key)
+- Phase 5 (Voice Flow) → **opgegaan** in phase 3 (Chat Router)
+- Phase 4 (Event Stream) → **to voren** if phase 2
 
 ```
 NIEUW PLAN (5 FASES):
 
-Fase 1: MCP Server                    [2-3 sessies]
-  → Claude Code/Cowork kan Tandem bedienen via MCP tools
-  → Activity feed naar Kees panel
+Phase 1: MCP Server                    [2-3 sessions]
+  → Claude Code/Cowork can Tandem bedienen via MCP tools
+  → Activity feed to Kees panel
   → Content truncatie
 
-Fase 2: Event Stream + Context        [1-2 sessies]
-  → Real-time browser events beschikbaar voor MCP
-  → Extend bestaande ContextBridge
+Phase 2: Event Stream + Context        [1-2 sessions]
+  → Real-time browser events beschikbaar for MCP
+  → Extend existing ContextBridge
   → MCP resource notifications
 
-Fase 3: Chat Router + Voice           [2-3 sessies]
-  → OpenClaw refactoring naar modulair systeem
-  → Claude Activity Backend (toont MCP activiteit)
+Phase 3: Chat Router + Voice           [2-3 sessions]
+  → OpenClaw refactoring to modulair system
+  → Claude Activity Backend (shows MCP activiteit)
   → Voice → router koppeling
   → OpenClaw token dynamisch laden
 
-Fase 4: Agent Autonomie               [2-3 sessies]
-  → Task queue + approval systeem
+Phase 4: Agent Autonomie               [2-3 sessions]
+  → Task queue + approval system
   → Autonomous browse via MCP
-  → Behavioral timing uit X-Scout patronen
+  → Behavioral timing out X-Scout patterns
 
-Fase 5: Multi-AI Coördinatie          [1-2 sessies]
+Phase 5: Multi-AI Coördinatie          [1-2 sessions]
   → OpenClaw + Claude parallel
   → @-mention routing
   → TabLockManager
 
-TOTAAL: 8-13 sessies
+TOTAAL: 8-13 sessions
 ```
 
-### Waarom 5 in plaats van 7?
+### Why 5 in plaats or 7?
 
-1. **Geen Claude API backend** = geen fase 3/4 uit oud plan
-2. **Voice is triviaal** = geen aparte fase, onderdeel van Chat Router
-3. **MCP is krachtiger** = vervangt de noodzaak voor directe API integratie
-4. **Robin's Max Pro account** = onbeperkt Claude via Cowork, geen kosten-optimalisatie nodig
+1. **No Claude API backend** = no phase 3/4 out oud plan
+2. **Voice is triviaal** = no aparte fase, onderdeel or Chat Router
+3. **MCP is krachtiger** = vervangt the noodzaak for directe API integratie
+4. **Robin's Max Pro account** = onbeperkt Claude via Cowork, no kosten-optimalisatie nodig
 
 ---
 
 ## 5. Concrete aanbevelingen per fase
 
-### Fase 1: MCP Server (2-3 sessies)
+### Phase 1: MCP Server (2-3 sessions)
 
-**Sessie 1.1: Basis MCP Server + Lees/Navigatie Tools**
+**Sessie 1.1: Basis MCP Server + Read/Navigatie Tools**
 
 Pre-checks:
 - [ ] Tandem draait op :8765 (`curl http://localhost:8765/status`)
 - [ ] `npm install @modelcontextprotocol/sdk` succesvol
-- [ ] API token bestaat (`cat ~/.tandem/api-token`)
+- [ ] API token exists (`cat ~/.tandem/api-token`)
 
 Taken:
-1. Maak `src/mcp/api-client.ts` — HTTP wrapper voor Tandem API
-   - Leest auth token uit `~/.tandem/api-token`
-   - Maar: auth middleware skipt no-origin requests, dus token is optioneel lokaal
-2. Maak `src/mcp/server.ts` — MCP server met stdio transport
-   - **BELANGRIJK:** Gebruik `console.error()` voor logging, NOOIT `console.log()` (stdout = MCP protocol)
+1. Maak `src/mcp/api-client.ts` — HTTP wrapper for Tandem API
+   - Leest auth token out `~/.tandem/api-token`
+   - Maar: auth middleware skipt no-origin requests, dus token is optional local
+2. Maak `src/mcp/server.ts` — MCP server with stdio transport
+   - **BELANGRIJK:** Usage `console.error()` for logging, NOOIT `console.log()` (stdout = MCP protocol)
 3. Implementeer tools:
    - `tandem_navigate(url)` — URL openen
    - `tandem_go_back()` / `tandem_go_forward()` / `tandem_reload()`
-   - `tandem_read_page()` — titel + URL + tekst als markdown (NIET HTML)
-   - `tandem_screenshot()` — base64 image met `image` content type
-   - `tandem_get_links()` — alle links op de pagina (NIEUW, niet in oud plan)
-   - `tandem_wait_for_load()` — wacht tot pagina geladen (NIEUW)
+   - `tandem_read_page()` — title + URL + text if markdown (NIET HTML)
+   - `tandem_screenshot()` — base64 image with `image` content type
+   - `tandem_get_links()` — alle links op the page (NIEUW, not in oud plan)
+   - `tandem_wait_for_load()` — wait tot page geladen (NIEUW)
 4. Voeg npm script toe: `"mcp": "node dist/mcp/server.js"`
-5. Update tsconfig als nodig
-6. **Activity logging:** Elke MCP tool call → `POST /chat` met from="claude", zodat Kees panel het toont
+5. Update tsconfig if nodig
+6. **Activity logging:** Elke MCP tool call → `POST /chat` with from="claude", zodat Kees panel the shows
 
 Verificatie:
-- [ ] MCP server start zonder errors
-- [ ] Cowork kan `tandem_read_page()` aanroepen
-- [ ] Cowork kan navigeren en pagina verandert in Tandem
+- [ ] MCP server start without errors
+- [ ] Cowork can `tandem_read_page()` aanroepen
+- [ ] Cowork can navigeren and page verandert in Tandem
 - [ ] Screenshot tool geeft zichtbare image terug
 - [ ] Tool calls verschijnen in Kees panel activity log
 - [ ] `npx tsc` — zero errors
 
 Mogelijke obstakels:
 - MCP SDK versie-incompatibiliteit → check latest docs, pin versie
-- Tandem moet draaien → duidelijke foutmelding als API niet beschikbaar
-- Screenshot formaat → gebruik MCP `image` content type
+- Tandem must draaien → duidelijke foutmelding if API not beschikbaar
+- Screenshot formaat → usage MCP `image` content type
 
 **Sessie 1.2: Interactie + Tabs + Chat Tools**
 
 Pre-checks:
-- [ ] Basis MCP server uit 1.1 werkt
-- [ ] Cowork kan verbinden met MCP server
+- [ ] Basis MCP server out 1.1 works
+- [ ] Cowork can verbinden with MCP server
 
 Taken:
 1. Interactie tools:
-   - `tandem_click(selector, text?)` — element klikken
-   - `tandem_type(selector, text)` — tekst typen
+   - `tandem_click(selector, text?)` — element clicking
+   - `tandem_type(selector, text)` — text typen
    - `tandem_scroll(direction, amount?)` — scrollen
-   - `tandem_execute_js(code)` — JavaScript uitvoeren op pagina
+   - `tandem_execute_js(code)` — JavaScript uitvoeren op page
 2. Tab tools:
-   - `tandem_list_tabs()` — alle tabs met URL/titel/source
-   - `tandem_open_tab(url?)` — nieuwe tab
+   - `tandem_list_tabs()` — alle tabs with URL/title/source
+   - `tandem_open_tab(url?)` — new tab
    - `tandem_close_tab(tabId)` — tab sluiten
    - `tandem_focus_tab(tabId)` — tab focussen
 3. Chat tools:
    - `tandem_send_message(text)` — bericht in Kees panel
-   - `tandem_get_chat_history(limit?)` — chat geschiedenis lezen
-4. Extra tools (niet in oud plan):
+   - `tandem_get_chat_history(limit?)` — chat geschiedenis read
+4. Extra tools (not in oud plan):
    - `tandem_search_bookmarks(query)` — bookmarks doorzoeken
    - `tandem_search_history(query)` — history doorzoeken
    - `tandem_get_context()` — alles in één call
 
 Verificatie:
-- [ ] Complete flow: navigeer → lees → klik → typ werkt end-to-end
-- [ ] Tab management werkt (open, focus, close)
+- [ ] Complete flow: navigeer → read → click → typ works end-to-end
+- [ ] Tab management works (open, focus, close)
 - [ ] Chat berichten verschijnen in Kees panel
-- [ ] Bookmarks/history search werkt
+- [ ] Bookmarks/history search works
 
 **Sessie 1.3: MCP Resources + Config + Documentatie**
 
 Taken:
 1. MCP resources:
-   - `tandem://page/current` — auto-updated pagina content
-   - `tandem://tabs/list` — actuele tab lijst
+   - `tandem://page/current` — auto-updated page content
+   - `tandem://tabs/list` — actuele tab list
    - `tandem://chat/history` — chat geschiedenis
-   - `tandem://context` — volledige browser context
+   - `tandem://context` — full browser context
 2. MCP config template:
-   - `tandem-mcp-config.json` voor Cowork
-   - `~/.claude/settings.json` voorbeeld voor Claude Code
+   - `tandem-mcp-config.json` for Cowork
+   - `~/.claude/settings.json` voorbeeld for Claude Code
 3. Setup documentatie:
    - Hoe Cowork configureren
    - Hoe Tandem + MCP testen
    - Troubleshooting guide
 4. Content truncatie in `tandem_read_page`:
-   - Gebruik ContentExtractor voor structured extraction
-   - Max 2000 woorden per pagina
-   - Markdown output (niet HTML)
+   - Usage ContentExtractor for structured extraction
+   - Max 2000 woorden per page
+   - Markdown output (not HTML)
 
 Verificatie:
 - [ ] Resources leesbaar vanuit Cowork
-- [ ] MCP config docs zijn duidelijk en werkend
-- [ ] Content truncatie werkt bij grote pagina's
+- [ ] MCP config docs are duidelijk and werkend
+- [ ] Content truncatie works bij grote page's
 
 ---
 
-### Fase 2: Event Stream + Context (1-2 sessies)
+### Phase 2: Event Stream + Context (1-2 sessions)
 
 **Sessie 2.1: EventStreamManager + SSE Endpoint**
 
 Pre-checks:
-- [ ] MCP server uit fase 1 werkt
-- [ ] Bestaande IPC events (`activity-webview-event`, `tab-update`, etc.) bestaan in main.ts
+- [ ] MCP server out phase 1 works
+- [ ] Existing IPC events (`activity-webview-event`, `tab-update`, etc.) bestaan in main.ts
 
 Taken:
 1. Maak `src/events/stream.ts` — EventStreamManager class
-2. Verzamel events uit bestaande IPC channels:
+2. Verzamel events out existing IPC channels:
    - `did-navigate` → navigation event
-   - `did-finish-load` → page-loaded event (met content summary)
+   - `did-finish-load` → page-loaded event (with content summary)
    - `tab-update` → tab-change event
    - `form-submitted` → form event
    - `activity-webview-event` → alle webview events
 3. SSE endpoint: `GET /events/stream` (HTTP Server-Sent Events)
-   - Geen WebSocket nodig — SSE is simpeler voor server→client push
+   - No WebSocket nodig — SSE is simpeler for server→client push
 4. Debounce strategie:
    - Navigation/page-loaded/tab-switch: direct
    - Scroll: max 1 per 5 seconden
-   - Click: alleen als het navigatie triggert
-5. MCP notifications: push `notifications/resources/updated` naar MCP server
+   - Click: only if the navigatie triggert
+5. MCP notifications: push `notifications/resources/updated` to MCP server
 
 Verificatie:
-- [ ] `curl http://localhost:8765/events/stream` toont events
+- [ ] `curl http://localhost:8765/events/stream` shows events
 - [ ] Navigatie events komen door in real-time
-- [ ] Tab switches worden gerapporteerd
-- [ ] Events bevatten nuttige data (URL, titel, etc.)
+- [ ] Tab switches be gerapporteerd
+- [ ] Events bevatten nuttige data (URL, title, etc.)
 
 **Sessie 2.2: ContextManager (extend ContextBridge)**
 
 Pre-checks:
-- [ ] Event stream uit 2.1 werkt
-- [ ] Bestaande `src/bridge/context-bridge.ts` is gelezen en begrepen
+- [ ] Event stream out 2.1 works
+- [ ] Existing `src/bridge/context-bridge.ts` is gelezen and begrepen
 
 Taken:
-1. Extend ContextBridge (NIET vervangen) met:
+1. Extend ContextBridge (NIET vervangen) with:
    - Real-time event subscriptions
-   - `getContextSummary()` — compact tekst voor MCP context resource (~500 tokens max)
-   - Periodic screenshot caching (alleen als MCP actief)
-2. Update MCP resources om ContextManager te gebruiken
-3. Integratie met event stream: context auto-updated bij events
+   - `getContextSummary()` — compact text for MCP context resource (~500 tokens max)
+   - Periodic screenshot caching (only if MCP actief)
+2. Update MCP resources to ContextManager te use
+3. Integratie with event stream: context auto-updated bij events
 
 Verificatie:
-- [ ] Context is altijd actueel na navigatie/tab switch
-- [ ] `tandem://context` MCP resource bevat actuele data
-- [ ] Geen merkbare performance impact op browsing
+- [ ] Context is always actueel na navigatie/tab switch
+- [ ] `tandem://context` MCP resource contains actuele data
+- [ ] No noticeable performance impact op browsing
 
 ---
 
-### Fase 3: Chat Router + Voice (2-3 sessies)
+### Phase 3: Chat Router + Voice (2-3 sessions)
 
-**⚠️ Dit is de riskantste fase — 200+ regels inline WebSocket code refactoren.**
+**⚠️ Dit is the riskantste phase — 200+ rules inline WebSocket code refactoren.**
 
 **Sessie 3.1: Interface + OpenClawBackend extractie**
 
 Pre-checks:
 - [ ] OpenClaw gateway draait (ws://127.0.0.1:18789)
-- [ ] Chat in Kees panel werkt normaal (test voor je begint!)
+- [ ] Chat in Kees panel works normaal (test for you begint!)
 
 Taken:
-1. **Stap 1: Interface definiëren** (laag risico)
+1. **Step 1: Interface definiëren** (laag risk)
    - Maak `ChatBackend` interface
    - Maak `ChatRouter` class structuur
-   - Nog NIETS wijzigen aan werkende code
+   - Change NOTHING in working code
 
-2. **Stap 2: OpenClawBackend extraheren** (HOOG risico)
-   - Kopieer WebSocket logica uit index.html (regels 1681-1894) naar `OpenClawBackend` class
-   - **Token dynamisch laden** uit `~/.openclaw/openclaw.json` (FIX voor punt 2.2)
-   - Test dat de class standalone werkt
-   - Pas DAN pas shell/index.html aan om de class te gebruiken
+2. **Step 2: OpenClawBackend extraheren** (HOOG risk)
+   - Kopieer WebSocket logica out index.html (rules 1681-1894) to `OpenClawBackend` class
+   - **Token dynamisch laden** out `~/.openclaw/openclaw.json` (FIX for punt 2.2)
+   - Test that the class standalone works
+   - Pas DAN pas shell/index.html about to the class te use
    - Test UITGEBREID: reconnect, streaming, history, typing indicator
 
-3. **Stap 3: Claude Activity Backend** (nieuw, laag risico)
+3. **Step 3: Claude Activity Backend** (new, laag risk)
    - Maak `ClaudeActivityBackend` class
-   - Luistert op Tandem's chat API voor berichten met `from: "claude"`
-   - Toont MCP tool calls als activiteit in het Kees panel
-   - Robin kan terugschrijven → chat history → Claude leest via MCP
+   - Luistert op Tandem's chat API for berichten with `from: "claude"`
+   - Shows MCP tool calls if activiteit in the Kees panel
+   - Robin can terugschrijven → chat history → Claude leest via MCP
 
 Verificatie:
-- [ ] OpenClaw werkt IDENTIEK aan voor de refactor
-- [ ] Geen regressies in chat (reconnect, streaming, history)
-- [ ] Claude activiteit zichtbaar in panel wanneer Cowork MCP tools gebruikt
+- [ ] OpenClaw works IDENTIEK about for the refactor
+- [ ] No regressions in chat (reconnect, streaming, history)
+- [ ] Claude activiteit visible in panel wanneer Cowork MCP tools uses
 
 **Sessie 3.2: Router UI + Voice koppeling**
 
@@ -448,181 +448,181 @@ Taken:
    - Dropdown/tabs boven chat: "🐙 Kees (OpenClaw)" | "🤖 Claude (Cowork)"
    - Connection status indicators (groen/rood)
    - State persistence in config
-2. Voice koppeling (~30 regels):
+2. Voice koppeling (~30 rules):
    - Voice final transcript → `chatRouter.sendMessage(transcript)`
-   - Werkt met alle backends
+   - Works with alle backends
 3. Unified chat history:
-   - Alle berichten in één lijst
-   - Elk bericht getagged met source: `robin` | `openclaw` | `claude`
-   - Visueel onderscheid (kleur/icon)
+   - Alle berichten in één list
+   - Elk bericht getagged with source: `robin` | `openclaw` | `claude`
+   - Visual onderscheid (color/icon)
 
 Verificatie:
-- [ ] Backend selector werkt en wisselen is smooth
+- [ ] Backend selector works and wisselen is smooth
 - [ ] Voice → actieve backend → antwoord in panel
-- [ ] Chat history toont berichten van alle bronnen
+- [ ] Chat history shows berichten or alle bronnen
 
 ---
 
-### Fase 4: Agent Autonomie (2-3 sessies)
+### Phase 4: Agent Autonomie (2-3 sessions)
 
 **Sessie 4.1: Task Queue + Approval System**
 
 Pre-checks:
 - [ ] MCP tools werken betrouwbaar
-- [ ] Chat router werkt
+- [ ] Chat router works
 - [ ] Event stream levert context
 
 Taken:
-1. Task queue systeem:
+1. Task queue system:
    - AITask interface (description, steps, status, results)
-   - TaskStep met requiresApproval flag
+   - TaskStep with requiresApproval flag
    - Task opslag: `~/.tandem/tasks/`
 2. Approval UI in Kees panel:
    - "Kees wil [actie] uitvoeren. Goedkeuren?"
    - Approve / Reject / Modify knoppen
 3. Auto-approve settings per actie type:
-   - Lezen/screenshots: altijd OK
+   - Lezen/screenshots: always OK
    - Navigeren: meestal OK
-   - Klikken/typen: vraag eerst
-   - Formulieren: altijd vragen
+   - Klikken/typen: question eerst
+   - Formulieren: always questions
 4. Noodrem: Escape = stop ALLE agent-activiteit
 
 Verificatie:
-- [ ] Claude kan een taak starten via MCP
-- [ ] Robin ziet approval request in panel
-- [ ] Goedkeuren/afwijzen werkt
+- [ ] Claude can a taak starten via MCP
+- [ ] Robin sees approval request in panel
+- [ ] Goedkeuren/afwijzen works
 - [ ] Noodrem stopt alles
 
 **Sessie 4.2: Autonomous Browse Sessions**
 
 Taken:
 1. Browse session management:
-   - Agents werken in eigen tabs (tab isolatie)
-   - Visuele indicator: welke tabs door AI bestuurd worden (🤖 in tab header)
-2. Menselijke timing (hergebruik X-Scout patronen):
-   - Delays tussen acties (8-20s pagina wissels, 2-6s scroll pauze)
-   - Later: sample uit Robin's echte behavioral data
+   - Agents werken in own tabs (tab isolatie)
+   - Visual indicator: welke tabs door AI bestuurd be (🤖 in tab header)
+2. Menselijke timing (hergebruik X-Scout patterns):
+   - Delays between acties (8-20s page wissels, 2-6s scroll pauze)
+   - Later: sample from Robin's real behavioral data
 3. Research capability via MCP:
-   - `tandem_research(topic)` — high-level tool die zoekt, leest, samenvat
-   - Opent eigen tabs, rapporteert via chat
-4. Activity log: alles wat AI doet wordt gelogd en zichtbaar
+   - `tandem_research(topic)` — high-level tool that zoekt, leest, samenvat
+   - Opens own tabs, rapporteert via chat
+4. Activity log: alles wat AI doet is gelogd and visible
 
 Verificatie:
-- [ ] Claude kan zelfstandig 5 pagina's onderzoeken
-- [ ] Robin ziet voortgang real-time
-- [ ] AI stopt als Robin ingrijpt (noodrem)
-- [ ] Menselijke timing zichtbaar (geen instant acties)
+- [ ] Claude can zelfstandig 5 page's onderzoeken
+- [ ] Robin sees voortgang real-time
+- [ ] AI stopt if Robin ingrijpt (noodrem)
+- [ ] Menselijke timing visible (no instant acties)
 
 ---
 
-### Fase 5: Multi-AI Coördinatie (1-2 sessies)
+### Phase 5: Multi-AI Coördinatie (1-2 sessions)
 
 **Sessie 5.1: Dual Backend + Message Routing**
 
 Pre-checks:
-- [ ] OpenClaw backend werkt
-- [ ] Claude activity backend werkt
+- [ ] OpenClaw backend works
+- [ ] Claude activity backend works
 - [ ] Chat router ondersteunt backend switching
 
 Taken:
 1. "Beide" mode in chat router:
-   - Bericht gaat naar alle actieve backends
+   - Bericht gaat to alle actieve backends
    - Antwoorden gelabeld: [🐙 Kees] / [🤖 Claude]
-   - Visueel onderscheid (kleur/border)
+   - Visual onderscheid (color/border)
 2. Selective routing:
-   - "@claude zoek dit op" → alleen naar Claude (via MCP chat)
-   - "@kees wat vind jij?" → alleen naar OpenClaw
-   - Geen prefix → naar alle actieve backends
+   - "@claude zoek this op" → only to Claude (via MCP chat)
+   - "@kees wat vind jij?" → only to OpenClaw
+   - No prefix → to alle actieve backends
 3. TabLockManager:
-   - Voorkom dat twee agents dezelfde tab bedienen
-   - Robin heeft altijd voorrang
-   - Eerste agent die claimt wint
+   - Voorkom that twee agents the same tab bedienen
+   - Robin has always voorrang
+   - First agent that claimt wint
 
 Verificatie:
-- [ ] Beide backends tegelijk actief
-- [ ] @-mention routing werkt
-- [ ] Geen tab conflicten
+- [ ] Beide backends simultaneously actief
+- [ ] @-mention routing works
+- [ ] No tab conflicts
 
 ---
 
 ## 6. Dependencies & versies
 
-| Package | Versie | Fase | Doel |
+| Package | Versie | Phase | Goal |
 |---------|--------|------|------|
 | `@modelcontextprotocol/sdk` | `^1.26.0` | 1 | MCP server |
 
-**Dat is het.** Geen `@anthropic-ai/sdk` nodig (geen directe API calls). Geen andere nieuwe dependencies. Express, ws, electron zijn er al.
+**That is the.** No `@anthropic-ai/sdk` nodig (no directe API calls). No andere new dependencies. Express, ws, electron are er already.
 
 ---
 
-## 7. Risico's gerangschikt
+## 7. Risk's gerangschikt
 
-| # | Risico | Impact | Kans | Mitigatie |
+| # | Risk | Impact | Kans | Mitigation |
 |---|--------|--------|------|-----------|
 | 1 | Chat Router refactoring breekt OpenClaw | HOOG | MEDIUM | Stapsgewijze refactor, test na elke stap |
 | 2 | MCP SDK v2 breaking changes | MEDIUM | MEDIUM | Pin v1.26.0, upgrade later |
-| 3 | Grote pagina's overflow Claude's context | MEDIUM | HOOG | ContentExtractor + 2000 woorden limiet |
-| 4 | Bot-detectie bij autonomous browsing | HOOG | LAAG | Behavioral timing + stealth patches |
-| 5 | Meerdere agents conflict op tabs | MEDIUM | MEDIUM | TabLockManager + isolatie |
-| 6 | Tandem niet draaien = MCP broken | MEDIUM | MEDIUM | Duidelijke errors + startup docs |
+| 3 | Grote page's overflow Claude's context | MEDIUM | HOOG | ContentExtractor + 2000 woorden limiet |
+| 4 | Bot-detection bij autonomous browsing | HOOG | LAAG | Behavioral timing + stealth patches |
+| 5 | Multiple agents conflict op tabs | MEDIUM | MEDIUM | TabLockManager + isolatie |
+| 6 | Tandem not draaien = MCP broken | MEDIUM | MEDIUM | Duidelijke errors + startup docs |
 
-**Opmerking:** Risico "Claude API kosten lopen op" is **VERWIJDERD** — Max Pro = vast bedrag.
+**Opmerking:** Risk "Claude API kosten lopen op" is **VERWIJDERD** — Max Pro = vast bedrag.
 
 ---
 
-## 8. Sessie-planning (totaal: 8-13 sessies)
+## 8. Sessie-planning (totaal: 8-13 sessions)
 
 ```
-Fase 1: MCP Server                    [3 sessies]
-  1.1: Basis server + navigatie/lees tools + activity logging
+Phase 1: MCP Server                    [3 sessions]
+  1.1: Basis server + navigatie/read tools + activity logging
   1.2: Interactie + tabs + chat + bookmarks/history tools
   1.3: Resources + context + content truncatie + documentatie
 
-Fase 2: Event Stream + Context        [1-2 sessies]
+Phase 2: Event Stream + Context        [1-2 sessions]
   2.1: EventStreamManager + SSE endpoint
   2.2: ContextManager (extend ContextBridge) + MCP resource updates
 
-Fase 3: Chat Router + Voice           [2-3 sessies]
+Phase 3: Chat Router + Voice           [2-3 sessions]
   3.1: Interface + OpenClawBackend extractie + Claude Activity Backend
   3.2: Router UI + voice koppeling + OpenClaw token fix
 
-Fase 4: Agent Autonomie               [2-3 sessies]
+Phase 4: Agent Autonomie               [2-3 sessions]
   4.1: Task queue + approval UI + noodrem
   4.2: Autonomous browse + behavioral timing + research tool
 
-Fase 5: Multi-AI Coördinatie          [1-2 sessies]
+Phase 5: Multi-AI Coördinatie          [1-2 sessions]
   5.1: Dual backend + @-mention routing + TabLockManager
 ```
 
 ---
 
-## 9. Wat er NIET meer in het plan zit
+## 9. Wat er NIET meer in the plan zit
 
-Deze items uit het originele plan zijn **verwijderd of niet van toepassing:**
+This items out the originele plan are **removed or not or toepassing:**
 
 | Item | Reden |
 |------|-------|
-| Claude Direct Backend (oude fase 3) | Geen API key, Max Pro account |
-| API key management / safeStorage | Niet nodig |
+| Claude Direct Backend (oude phase 3) | No API key, Max Pro account |
+| API key management / safeStorage | Not nodig |
 | Token budget / kosten monitoring | Max Pro = vast bedrag |
-| Model selector (Haiku/Sonnet/Opus) | Cowork bepaalt het model |
-| Anthropic SDK dependency | Niet nodig |
-| Claude conversation persistence | Cowork beheert dit |
-| System prompt management | Cowork beheert dit |
+| Model selector (Haiku/Sonnet/Opus) | Cowork bepaalt the model |
+| Anthropic SDK dependency | Not nodig |
+| Claude conversation persistence | Cowork beheert this |
+| System prompt management | Cowork beheert this |
 
 ---
 
-## 10. Eerste actie
+## 10. First actie
 
-Start met **Fase 1, Sessie 1.1.** Voorwaarden:
+Start with **Phase 1, Sessie 1.1.** Voorwaarden:
 
 1. Tandem Browser draait (`npm start`)
 2. `npm install @modelcontextprotocol/sdk`
-3. Bouw MCP server met basis tools
-4. Configureer Cowork om de MCP server te gebruiken
-5. Test: "lees de pagina die open staat in Tandem" via Cowork
+3. Bouw MCP server with basis tools
+4. Configureer Cowork to the MCP server te use
+5. Test: "read the page that open staat in Tandem" via Cowork
 
 ---
 
-*Dit plan is een levend document. Update het na elke sessie met bevindingen en wijzigingen.*
-*Laatste update: 12 februari 2026 — herzien voor Max Pro architectuur.*
+*Dit plan is a levend document. Update the na elke session with bevindingen and wijzigingen.*
+*Last update: 12 februari 2026 — herzien for Max Pro architectuur.*

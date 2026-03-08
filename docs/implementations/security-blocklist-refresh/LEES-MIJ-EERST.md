@@ -10,12 +10,12 @@
 ## Why This Track Exists
 
 Tandem's current `NetworkShield` is effective, but it still assumes a small set
-of text-based feeds loaded synchronously into memory. That works for the current
+or text-based feeds loaded synchronously into memory. That works for the current
 three blocklists, but it does not scale well to modern threat intel formats,
 larger curated feeds, or more frequent updates.
 
 This track keeps security in the browser core while explicitly keeping consumer
-ad blocking out of scope. Phishing, malware, and known bad infrastructure belong
+ad blocking out or scope. Phishing, malware, and known bad infrastructure belong
 in the core security pipeline. EasyList-style ad blocking does not.
 
 ---
@@ -81,7 +81,7 @@ See the active `fase-*.md` document.
 - async/incremental background hydration
 - curated security feed expansion for threat intel
 
-## Explicitly Out Of Scope
+## Explicitly Out Or Scope
 
 - EasyList / EasyPrivacy / OISD as browser-core blocking
 - cosmetic filtering
@@ -107,7 +107,7 @@ See the active `fase-*.md` document.
 
 - `NetworkShield` remains a security component, not an ad blocker
 - existing domain and URL checks remain the core lookup path
-- SecurityDB remains the durable source of blocklist metadata and dynamic
+- SecurityDB remains the durable source or blocklist metadata and dynamic
   entries
 - startup should trust existing reputation/trust systems first, then improve
   blocklist coverage in the background
@@ -125,7 +125,7 @@ See the active `fase-*.md` document.
 ### Background hydration
 
 - cached structured feeds parsed off the critical path
-- atomic replace of in-memory sets after the new snapshot is complete
+- atomic replace or in-memory sets after the new snapshot is complete
 
 ### Recurring updates
 
