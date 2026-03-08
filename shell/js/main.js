@@ -1,29 +1,36 @@
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+(() => {
+    const renderer = window.__tandemRenderer;
+    if (!renderer) {
+      console.error('[main] Missing renderer bridge');
+      return;
+    }
+
+    function getTabs() {
+      return renderer.getTabs();
+    }
+
+    function getActiveTabId() {
+      return renderer.getActiveTabId();
     }
 
     // ═══════════════════════════════════════════════
     // Platform detection & Chrome-style title bar setup
     // ═══════════════════════════════════════════════
 
-    // Detect platform and add class to body for CSS targeting
     (async () => {
       const platform = await window.tandem?.getPlatform?.() || 'unknown';
       document.body.classList.add(`platform-${platform}`);
     })();
 
-    // Hamburger menu button
     const btnAppMenu = document.getElementById('btn-app-menu');
     if (btnAppMenu) {
-      btnAppMenu.addEventListener('click', (e) => {
-        if (window.tandem) {
-          const rect = btnAppMenu.getBoundingClientRect();
-          window.tandem.showAppMenu(Math.round(rect.left), Math.round(rect.bottom));
-        }
+      btnAppMenu.addEventListener('click', () => {
+        if (!window.tandem) return;
+        const rect = btnAppMenu.getBoundingClientRect();
+        window.tandem.showAppMenu(Math.round(rect.left), Math.round(rect.bottom));
       });
     }
 
-    // Window control buttons (Linux/Windows)
     const btnMinimize = document.getElementById('btn-window-minimize');
     const btnMaximize = document.getElementById('btn-window-maximize');
     const btnClose = document.getElementById('btn-window-close');
@@ -46,439 +53,34 @@
       });
     }
 
-    // Double-click on tab bar (empty areas) to maximize/restore
     const tabBarEl = document.getElementById('tab-bar');
     if (tabBarEl) {
-      tabBarEl.addEventListener('dblclick', (e) => {
-        // Only trigger if clicking on the tab bar itself (not on tabs or buttons)
-        if (e.target === tabBarEl || e.target.classList.contains('tab-bar-spacer')) {
+      tabBarEl.addEventListener('dblclick', (event) => {
+        if (event.target === tabBarEl || event.target.classList.contains('tab-bar-spacer')) {
           if (window.tandem) window.tandem.maximizeWindow();
         }
       });
     }
 
-    // Update maximize button icon when window state changes
     async function updateMaximizeButton() {
-      if (btnMaximize && window.tandem?.isWindowMaximized) {
-        const isMaximized = await window.tandem.isWindowMaximized();
-        if (isMaximized) {
-          // Restore icon (two overlapping squares)
-          btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M2,2 L8,2 L8,8 L2,8 Z M3,3 L3,7 L7,7 L7,3 Z M3,1 L9,1 L9,7 M1,3 L1,9 L7,9" stroke="currentColor" fill="none" stroke-width="1" /></svg>';
-          btnMaximize.title = 'Restore';
-        } else {
-          // Maximize icon (single square)
-          btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" /></svg>';
-          btnMaximize.title = 'Maximize';
-        }
+      if (!btnMaximize || !window.tandem?.isWindowMaximized) return;
+
+      const isMaximized = await window.tandem.isWindowMaximized();
+      if (isMaximized) {
+        btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M2,2 L8,2 L8,8 L2,8 Z M3,3 L3,7 L7,7 L7,3 Z M3,1 L9,1 L9,7 M1,3 L1,9 L7,9" stroke="currentColor" fill="none" stroke-width="1" /></svg>';
+        btnMaximize.title = 'Restore';
+      } else {
+        btnMaximize.innerHTML = '<svg viewBox="0 0 10 10"><path d="M0,0 L10,0 L10,10 L0,10 Z M1,1 L1,9 L9,9 L9,1 Z" /></svg>';
+        btnMaximize.title = 'Maximize';
       }
     }
 
-    // Update on resize with debounce
     let resizeTimeout;
     window.addEventListener('resize', () => {
       clearTimeout(resizeTimeout);
       resizeTimeout = setTimeout(updateMaximizeButton, 100);
     });
-
-    // Initial update
     updateMaximizeButton();
-
-    // ═══════════════════════════════════════════════
-    // Tab management system (renderer side)
-    // ═══════════════════════════════════════════════
-
-    const tabBar = document.getElementById('tab-bar');
-    const btnNewTab = document.getElementById('btn-new-tab');
-    const urlBar = document.getElementById('url-bar');
-    const statusDot = document.getElementById('status-dot');
-    const container = document.getElementById('webview-container');
-    const overlay = document.getElementById('wingman-overlay');
-
-    /** Map of tabId → { webview, tabEl } */
-    const tabs = new Map();
-    let activeTabId = null;
-
-    /**
-     * Exposed to main process via window.__tandemTabs
-     * TabManager calls these via executeJavaScript
-     */
-    window.__tandemTabs = {
-      /** Create a new webview, return its webContentsId */
-      createTab(tabId, url, partition) {
-        partition = partition || 'persist:tandem';
-        const wv = document.createElement('webview');
-        wv.setAttribute('src', url);
-        wv.setAttribute('allowpopups', '');
-        wv.setAttribute('partition', partition);
-        wv.dataset.tabId = tabId;
-        container.appendChild(wv);
-
-        // Create tab bar element
-        const tabEl = document.createElement('div');
-        tabEl.className = 'tab';
-        tabEl.dataset.tabId = tabId;
-        tabEl.draggable = true;
-        tabEl.innerHTML = `
-          <span class="tab-source" title="You controlled">👤</span>
-          <span class="group-dot" style="display:none"></span>
-          <img class="tab-favicon" src="" style="display:none">
-          <span class="tab-title">New Tab</span>
-          <button class="tab-close" title="Close tab">✕</button>
-        `;
-
-        // Click to focus
-        tabEl.addEventListener('click', (e) => {
-          if (e.target.classList.contains('tab-close')) return;
-          if (window.tandem) window.tandem.focusTab(tabId);
-        });
-
-        // Right-click context menu (custom DOM menu for workspace move)
-        tabEl.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          if (window.__tandemShowTabContextMenu) {
-            window.__tandemShowTabContextMenu(tabEl.dataset.tabId, e.clientX, e.clientY);
-          }
-        });
-
-        // Drag start for workspace drag-and-drop
-        tabEl.addEventListener('dragstart', (e) => {
-          e.dataTransfer.setData('text/tab-id', tabEl.dataset.tabId);
-          e.dataTransfer.effectAllowed = 'move';
-        });
-
-        // Close button
-        tabEl.querySelector('.tab-close').addEventListener('click', () => {
-          if (window.tandem) window.tandem.closeTab(tabId);
-        });
-
-        // Insert before the + button
-        tabBar.insertBefore(tabEl, btnNewTab);
-
-        tabs.set(tabId, { webview: wv, tabEl });
-
-        // Wire up webview events
-        wv.addEventListener('did-navigate', (e) => updateTabMeta(tabId, { url: e.url }));
-        wv.addEventListener('did-navigate-in-page', (e) => {
-          if (e.isMainFrame) updateTabMeta(tabId, { url: e.url });
-        });
-        wv.addEventListener('page-title-updated', (e) => updateTabMeta(tabId, { title: e.title }));
-        wv.addEventListener('page-favicon-updated', (e) => {
-          if (e.favicons && e.favicons.length > 0) {
-            updateTabMeta(tabId, { favicon: e.favicons[0] });
-          }
-        });
-        wv.addEventListener('did-start-loading', () => {
-          if (tabId === activeTabId) statusDot.classList.add('loading');
-        });
-        wv.addEventListener('did-stop-loading', () => {
-          if (tabId === activeTabId) statusDot.classList.remove('loading');
-        });
-
-        // Return webContentsId (available after dom-ready).
-        // A 15-second timeout guards against the Electron edge-case where dom-ready
-        // never fires (e.g. renderer overload, webview creation failure). On timeout
-        // the partial renderer state (webview + tabEl + tabs Map entry) is cleaned up
-        // so it doesn't become an uncloseable zombie.
-        const TAB_INIT_TIMEOUT_MS = 15000;
-        return new Promise((resolve, reject) => {
-          let settled = false;
-
-          const cleanupPartial = () => {
-            const e = tabs.get(tabId);
-            if (e) {
-              try { e.webview.remove(); } catch { /* best-effort */ }
-              try { e.tabEl.remove(); } catch { /* best-effort */ }
-            }
-            tabs.delete(tabId);
-          };
-
-          const timer = setTimeout(() => {
-            if (settled) return;
-            settled = true;
-            cleanupPartial();
-            reject(new Error(`Tab init timeout (${TAB_INIT_TIMEOUT_MS}ms): ${url}`));
-          }, TAB_INIT_TIMEOUT_MS);
-
-          wv.addEventListener('dom-ready', () => {
-            if (settled) return;
-            settled = true;
-            clearTimeout(timer);
-            resolve(wv.getWebContentsId());
-          }, { once: true });
-        });
-      },
-
-      /** Remove a tab */
-      removeTab(tabId) {
-        const entry = tabs.get(tabId);
-        if (!entry) return;
-        entry.webview.remove();
-        entry.tabEl.remove();
-        tabs.delete(tabId);
-      },
-
-      /**
-       * Return all tab IDs currently tracked by the renderer.
-       * Used by the main process for reconciliation (orphan detection).
-       */
-      getTabIds() {
-        return Array.from(tabs.keys());
-      },
-
-      /**
-       * Force-remove a tab from renderer state without going through normal close flow.
-       * Used by the main process to clean up orphaned renderer tabs that it has lost
-       * track of (e.g. after a failed openTab() or an unexpected renderer state reset).
-       * Returns true if the tab was found and removed, false if it was unknown.
-       */
-      cleanupOrphan(tabId) {
-        const entry = tabs.get(tabId);
-        if (!entry) return false;
-        try { entry.webview.remove(); } catch { /* best-effort */ }
-        try { entry.tabEl.remove(); } catch { /* best-effort */ }
-        tabs.delete(tabId);
-        return true;
-      },
-
-      /** Focus/show a tab */
-      focusTab(tabId) {
-        // Hide all webviews, show the target
-        for (const [id, entry] of tabs) {
-          if (id === tabId) {
-            entry.webview.classList.add('active');
-            entry.tabEl.classList.add('active');
-          } else {
-            entry.webview.classList.remove('active');
-            entry.tabEl.classList.remove('active');
-          }
-        }
-        activeTabId = tabId;
-
-        // Update URL bar
-        const entry = tabs.get(tabId);
-        if (entry) {
-          try {
-            const url = entry.webview.getURL();
-            urlBar.value = url || '';
-          } catch (_) { }
-
-          // Restore zoom level for this tab
-          const zoomLevel = tabZoomLevels.get(tabId) || 0;
-          entry.webview.setZoomLevel(zoomLevel);
-        }
-
-        // Per-tab canvas visibility: will be handled by draw system
-        // Defer to avoid scope issues with redraw() function
-        setTimeout(() => {
-          const canvas = document.getElementById('draw-canvas');
-          const toolbar = document.getElementById('draw-toolbar');
-
-          if (typeof redraw === 'function') {
-            if (drawCanvasTabId === tabId && drawEnabled) {
-              // Active draw mode on this tab - show canvas and toolbar
-              if (canvas) canvas.classList.add('active');
-              // Install scroll listener for this tab
-              const entry = tabs.get(tabId);
-              if (entry && entry.webview) {
-                installScrollListener(entry.webview, tabId);
-              }
-              if (toolbar) toolbar.classList.add('visible');
-              redraw(); // Render shapes for this tab
-            } else if (typeof tabShapes !== 'undefined' && tabShapes.has(tabId) && tabShapes.get(tabId).length > 0) {
-              // This tab has saved shapes (but draw mode might be off) - show canvas only
-              if (canvas) canvas.classList.add('active');
-              if (toolbar) toolbar.classList.remove('visible');
-              // Temporarily set drawCanvasTabId to render this tab's shapes
-              const prevTabId = drawCanvasTabId;
-              drawCanvasTabId = tabId;
-              redraw();
-              drawCanvasTabId = prevTabId;
-            } else {
-              // No shapes and no active draw mode - hide everything
-              if (canvas) canvas.classList.remove('active');
-              if (toolbar) toolbar.classList.remove('visible');
-            }
-          }
-        }, 0);
-      },
-    };
-
-    /** Update tab metadata in both UI and main process */
-    function updateTabMeta(tabId, data) {
-      const entry = tabs.get(tabId);
-      if (!entry) return;
-
-      if (data.title) {
-        entry.tabEl.querySelector('.tab-title').textContent = data.title;
-        if (tabId === activeTabId) document.title = `${data.title} — Tandem`;
-      }
-      if (data.url && tabId === activeTabId) {
-        urlBar.value = data.url;
-      }
-      if (data.favicon) {
-        const img = entry.tabEl.querySelector('.tab-favicon');
-        img.src = data.favicon;
-        img.style.display = '';
-      }
-
-      // Notify main process
-      if (window.tandem) {
-        window.tandem.sendTabUpdate({ tabId, ...data });
-      }
-    }
-
-    // ═══════════════════════════════════════════════
-    // Initial tab — create on load
-    // ═══════════════════════════════════════════════
-
-    (async () => {
-      // The initial tab is created by the renderer, then registered with main
-      // Determine newtab URL — use file:// path to shell/newtab.html
-      const shellPath = window.location.href.replace(/\/[^/]*$/, '');
-      const initialUrl = shellPath + '/newtab.html';
-      const wv = document.createElement('webview');
-      wv.setAttribute('src', initialUrl);
-      wv.setAttribute('allowpopups', '');
-      wv.setAttribute('partition', 'persist:tandem');
-      wv.dataset.tabId = '__initial';
-      container.appendChild(wv);
-
-      const tabEl = document.createElement('div');
-      tabEl.className = 'tab active';
-      tabEl.dataset.tabId = '__initial';
-      tabEl.draggable = true;
-      tabEl.innerHTML = `
-        <span class="tab-source" title="You controlled">👤</span>
-        <span class="group-dot" style="display:none"></span>
-        <img class="tab-favicon" src="" style="display:none">
-        <span class="tab-title">New Tab</span>
-        <button class="tab-close" title="Close tab">✕</button>
-      `;
-      tabBar.insertBefore(tabEl, btnNewTab);
-
-      wv.classList.add('active');
-      activeTabId = '__initial';
-      urlBar.value = '';
-
-      tabs.set('__initial', { webview: wv, tabEl });
-
-      // Wire up events
-      wv.addEventListener('did-navigate', (e) => updateTabMeta('__initial', { url: e.url }));
-      wv.addEventListener('did-navigate-in-page', (e) => {
-        if (e.isMainFrame) updateTabMeta('__initial', { url: e.url });
-      });
-      wv.addEventListener('page-title-updated', (e) => updateTabMeta('__initial', { title: e.title }));
-      wv.addEventListener('page-favicon-updated', (e) => {
-        if (e.favicons && e.favicons.length > 0) updateTabMeta('__initial', { favicon: e.favicons[0] });
-      });
-      wv.addEventListener('did-start-loading', () => statusDot.classList.add('loading'));
-      wv.addEventListener('did-stop-loading', () => statusDot.classList.remove('loading'));
-
-      // Register with main process once ready
-      wv.addEventListener('dom-ready', () => {
-        const wcId = wv.getWebContentsId();
-        if (window.tandem) {
-          window.tandem.registerTab(wcId, initialUrl);
-        }
-      }, { once: true });
-
-      // Handle the rename once main assigns a real tabId
-      if (window.tandem) {
-        window.tandem.onTabRegistered((data) => {
-          const entry = tabs.get('__initial');
-          if (entry) {
-            tabs.delete('__initial');
-            entry.webview.dataset.tabId = data.tabId;
-            entry.tabEl.dataset.tabId = data.tabId;
-
-            // Rewire click handlers
-            entry.tabEl.onclick = null;
-            entry.tabEl.addEventListener('click', (e) => {
-              if (e.target.classList.contains('tab-close')) return;
-              if (window.tandem) window.tandem.focusTab(data.tabId);
-            });
-            entry.tabEl.addEventListener('contextmenu', (e) => {
-              e.preventDefault();
-              if (window.__tandemShowTabContextMenu) {
-                window.__tandemShowTabContextMenu(entry.tabEl.dataset.tabId, e.clientX, e.clientY);
-              }
-            });
-            entry.tabEl.querySelector('.tab-close').addEventListener('click', () => {
-              if (window.tandem) window.tandem.closeTab(data.tabId);
-            });
-
-            tabs.set(data.tabId, entry);
-            activeTabId = data.tabId;
-
-            // Re-register event listeners with new tabId
-            entry.webview.addEventListener('did-navigate', (e) => updateTabMeta(data.tabId, { url: e.url }));
-            entry.webview.addEventListener('page-title-updated', (e) => updateTabMeta(data.tabId, { title: e.title }));
-            entry.webview.addEventListener('page-favicon-updated', (e) => {
-              if (e.favicons && e.favicons.length > 0) updateTabMeta(data.tabId, { favicon: e.favicons[0] });
-            });
-          }
-        });
-      }
-
-      // Tab close handler for initial tab
-      tabEl.querySelector('.tab-close').addEventListener('click', () => {
-        if (window.tandem && activeTabId) window.tandem.closeTab(activeTabId);
-      });
-      tabEl.addEventListener('click', (e) => {
-        if (e.target.classList.contains('tab-close')) return;
-        if (window.tandem && activeTabId) window.tandem.focusTab(activeTabId);
-      });
-      // contextmenu listener is added in onTabRegistered handler (with resolved tabId)
-
-      // Drag start for workspace drag-and-drop
-      tabEl.addEventListener('dragstart', (e) => {
-        e.dataTransfer.setData('text/tab-id', tabEl.dataset.tabId);
-        e.dataTransfer.effectAllowed = 'move';
-      });
-    })();
-
-    // ═══════════════════════════════════════════════
-    // Navigation toolbar
-    // ═══════════════════════════════════════════════
-
-    document.getElementById('btn-back').onclick = () => {
-      const entry = tabs.get(activeTabId);
-      if (entry) entry.webview.goBack();
-    };
-    document.getElementById('btn-forward').onclick = () => {
-      const entry = tabs.get(activeTabId);
-      if (entry) entry.webview.goForward();
-    };
-    document.getElementById('btn-reload').onclick = () => {
-      const entry = tabs.get(activeTabId);
-      if (entry) entry.webview.reload();
-    };
-
-    urlBar.addEventListener('focus', () => urlBar.select());
-    urlBar.addEventListener('click', () => urlBar.select());
-
-    urlBar.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        let url = urlBar.value.trim();
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          if (url.includes('.') && !url.includes(' ')) {
-            url = 'https://' + url;
-          } else {
-            url = 'https://duckduckgo.com/?q=' + encodeURIComponent(url);
-          }
-        }
-        const entry = tabs.get(activeTabId);
-        if (entry) entry.webview.loadURL(url);
-      }
-    });
-
-    // ═══════════════════════════════════════════════
-    // New tab button
-    // ═══════════════════════════════════════════════
-
-    btnNewTab.addEventListener('click', () => {
-      if (window.tandem) window.tandem.newTab();
-    });
 
     // ═══════════════════════════════════════════════
     // Keyboard shortcuts (from main process)
@@ -489,6 +91,7 @@
         if (action === 'new-tab') {
           window.tandem.newTab();
         } else if (action === 'close-tab') {
+          const activeTabId = getActiveTabId();
           if (activeTabId) window.tandem.closeTab(activeTabId);
         } else if (action === 'quick-screenshot') {
           window.tandem.quickScreenshot();
@@ -506,27 +109,25 @@
           if (typeof ocSidebar !== 'undefined') ocSidebar.activateItem('bookmarks');
         } else if (action === 'show-about') {
           renderAboutPanel();
-         } else if (action === 'show-shortcuts') {
+        } else if (action === 'show-shortcuts') {
           showShortcutsOverlay();
         } else if (action === 'zoom-in') {
-          changeZoom('in');
+          window.changeZoom?.('in');
         } else if (action === 'zoom-out') {
-          changeZoom('out');
+          window.changeZoom?.('out');
         } else if (action === 'zoom-reset') {
-          changeZoom('reset');
+          window.changeZoom?.('reset');
         } else if (action.startsWith('focus-tab-')) {
           const index = parseInt(action.replace('focus-tab-', ''), 10);
           window.tandem.focusTabByIndex(index);
         } else if (action === 'claronote-record') {
-          // Switch to ClaroNote tab and toggle recording
-          document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.panel-tab').forEach((button) => button.classList.remove('active'));
           document.querySelector('[data-panel-tab="claronote"]').classList.add('active');
           document.getElementById('panel-activity').style.display = 'none';
           document.getElementById('panel-chat').style.display = 'none';
           document.getElementById('panel-screenshots').style.display = 'none';
           document.getElementById('panel-claronote').style.display = 'flex';
 
-          // Open panel if closed
           if (!document.getElementById('wingman-panel').classList.contains('open')) {
             document.getElementById('wingman-panel').classList.add('open');
             if (typeof window.updatePanelLayout === 'function') {
@@ -534,7 +135,6 @@
             }
           }
 
-          // Initialize and toggle recording
           if (typeof window.initClaroNote === 'function') {
             window.initClaroNote().then(() => {
               if (typeof window.toggleClaroNoteRecording === 'function') {
@@ -543,103 +143,12 @@
             });
           }
         } else if (action === 'voice-input') {
-          // Toggle voice input
-          if (window.tandem) window.tandem.toggleVoice();
+          window.tandem.toggleVoice();
         } else if (action === 'show-onboarding') {
-          // Manually show onboarding
           showOnboarding();
         }
       });
-
-      // Open URL in new tab (from About window links)
-
     }
-
-    // ═══════════════════════════════════════════════
-    // Zoom functionality
-    // ═══════════════════════════════════════════════
-
-    let tabZoomLevels = new Map(); // Store zoom levels per tab
-    let zoomIndicatorTimeout = null;
-
-    function changeZoom(direction) {
-      const entry = tabs.get(activeTabId);
-      if (!entry) return;
-
-      const currentZoom = tabZoomLevels.get(activeTabId) || 0;
-      let newZoom = currentZoom;
-
-      if (direction === 'in') {
-        newZoom = Math.min(currentZoom + 1, 5); // Max zoom in
-      } else if (direction === 'out') {
-        newZoom = Math.max(currentZoom - 1, -5); // Max zoom out
-      } else if (direction === 'reset') {
-        newZoom = 0;
-      }
-
-      if (newZoom !== currentZoom) {
-        tabZoomLevels.set(activeTabId, newZoom);
-        entry.webview.setZoomLevel(newZoom);
-        showZoomIndicator(newZoom);
-      }
-    }
-
-    function showZoomIndicator(zoomLevel) {
-      // Create or get zoom indicator
-      let indicator = document.getElementById('zoom-indicator');
-      if (!indicator) {
-        indicator = document.createElement('div');
-        indicator.id = 'zoom-indicator';
-        indicator.style.cssText = `
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          background: rgba(0, 0, 0, 0.8);
-          color: white;
-          padding: 8px 16px;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          z-index: 9999;
-          pointer-events: none;
-          backdrop-filter: blur(4px);
-          transition: opacity 0.3s ease;
-        `;
-        document.body.appendChild(indicator);
-      }
-
-      const percentage = Math.round(Math.pow(1.2, zoomLevel) * 100);
-      indicator.textContent = `${percentage}%`;
-      indicator.style.opacity = '1';
-
-      // Clear previous timeout
-      if (zoomIndicatorTimeout) {
-        clearTimeout(zoomIndicatorTimeout);
-      }
-
-      // Hide after 2 seconds
-      zoomIndicatorTimeout = setTimeout(() => {
-        indicator.style.opacity = '0';
-      }, 2000);
-    }
-
-    window.__tandemRenderer = {
-      escapeHtml,
-      overlay,
-      urlBar,
-      getTabs() {
-        return tabs;
-      },
-      getActiveTabId() {
-        return activeTabId;
-      },
-      getUpdateTabMeta() {
-        return updateTabMeta;
-      },
-      setUpdateTabMeta(next) {
-        updateTabMeta = next;
-      },
-    };
 
     // ═══════════════════════════════════════════════
     // Draw/Annotatie Tool
@@ -650,20 +159,18 @@
     const ctx = drawCanvas.getContext('2d');
 
     let drawEnabled = false;
-    let drawCanvasTabId = null; // Track which tab the canvas belongs to
+    let drawCanvasTabId = null;
     let currentTool = 'line';
     let currentColor = '#e94560';
-    let toolActive = false; // Tool is actively selected (can draw)
+    let toolActive = false;
     let isDrawing = false;
-    let startX = 0, startY = 0;
-    /** Store completed shapes PER TAB */
-    const tabShapes = new Map(); // Map<tabId, shapes[]>
-    /** Store scroll offset PER TAB */
-    const tabScrollOffsets = new Map(); // Map<tabId, {x, y}>
-    /** Current freeform path points */
+    let startX = 0;
+    let startY = 0;
+    const tabShapes = new Map();
+    const tabScrollOffsets = new Map();
     let currentPath = [];
+    let scrollPollInterval = null;
 
-    // Helper: get shapes array for current tab (create if not exists)
     function getShapesForCurrentTab() {
       if (!drawCanvasTabId) return [];
       if (!tabShapes.has(drawCanvasTabId)) {
@@ -672,7 +179,6 @@
       return tabShapes.get(drawCanvasTabId);
     }
 
-    // Helper: get scroll offset for current tab
     function getScrollOffset() {
       if (!drawCanvasTabId) return { x: 0, y: 0 };
       if (!tabScrollOffsets.has(drawCanvasTabId)) {
@@ -687,13 +193,10 @@
       drawCanvas.height = rect.height;
       redraw();
     }
+
     window.addEventListener('resize', resizeCanvas);
     setTimeout(resizeCanvas, 100);
 
-    // Scroll polling interval handle
-    let scrollPollInterval = null;
-
-    // Install scroll listener in webview to track page scroll position
     const scrollJS = `(function() {
       return {
         x: window.scrollX || window.pageXOffset || 0,
@@ -701,23 +204,20 @@
       };
     })();`;
 
-    async function installScrollListener(wv, tabId) {
-      // Stop any existing polling
+    async function installScrollListener(webview, tabId) {
       if (scrollPollInterval) {
         clearInterval(scrollPollInterval);
         scrollPollInterval = null;
       }
 
-      // Immediate first read of scroll position
       try {
-        const initialScroll = await wv.executeJavaScript(scrollJS);
+        const initialScroll = await webview.executeJavaScript(scrollJS);
         tabScrollOffsets.set(tabId, initialScroll);
         redraw();
-      } catch (err) {
+      } catch {
         tabScrollOffsets.set(tabId, { x: 0, y: 0 });
       }
 
-      // Continue polling for scroll changes
       scrollPollInterval = setInterval(async () => {
         if (!drawEnabled || drawCanvasTabId !== tabId) {
           clearInterval(scrollPollInterval);
@@ -726,14 +226,14 @@
         }
 
         try {
-          const scrollPos = await wv.executeJavaScript(scrollJS);
+          const scrollPos = await webview.executeJavaScript(scrollJS);
           const currentOffset = tabScrollOffsets.get(tabId) || { x: 0, y: 0 };
           if (scrollPos.x !== currentOffset.x || scrollPos.y !== currentOffset.y) {
             tabScrollOffsets.set(tabId, scrollPos);
             redraw();
           }
-        } catch (err) {
-          // Webview might be destroyed or navigating
+        } catch {
+          // Webview might be destroyed or navigating.
         }
       }, 50);
     }
@@ -743,7 +243,6 @@
       const shapes = getShapesForCurrentTab();
       const scroll = getScrollOffset();
 
-      // Apply scroll offset: translate canvas so shapes stay at page position
       ctx.save();
       ctx.translate(-scroll.x, -scroll.y);
 
@@ -754,107 +253,144 @@
       ctx.restore();
     }
 
-    function drawShape(s) {
-      ctx.strokeStyle = s.color;
-      ctx.fillStyle = s.color;
+    function drawShape(shape) {
+      ctx.strokeStyle = shape.color;
+      ctx.fillStyle = shape.color;
       ctx.lineWidth = 3;
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      if (s.type === 'line') {
+      if (shape.type === 'line') {
         ctx.beginPath();
-        if (s.points.length > 0) {
-          ctx.moveTo(s.points[0].x, s.points[0].y);
-          for (let i = 1; i < s.points.length; i++) {
-            ctx.lineTo(s.points[i].x, s.points[i].y);
+        if (shape.points.length > 0) {
+          ctx.moveTo(shape.points[0].x, shape.points[0].y);
+          for (let index = 1; index < shape.points.length; index += 1) {
+            ctx.lineTo(shape.points[index].x, shape.points[index].y);
           }
         }
         ctx.stroke();
-      } else if (s.type === 'rect') {
-        ctx.strokeRect(s.x, s.y, s.w, s.h);
-      } else if (s.type === 'circle') {
-        const rx = Math.abs(s.w) / 2;
-        const ry = Math.abs(s.h) / 2;
-        const cx = s.x + s.w / 2;
-        const cy = s.y + s.h / 2;
+      } else if (shape.type === 'rect') {
+        ctx.strokeRect(shape.x, shape.y, shape.w, shape.h);
+      } else if (shape.type === 'circle') {
+        const rx = Math.abs(shape.w) / 2;
+        const ry = Math.abs(shape.h) / 2;
+        const cx = shape.x + shape.w / 2;
+        const cy = shape.y + shape.h / 2;
         ctx.beginPath();
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.stroke();
-      } else if (s.type === 'arrow') {
-        const dx = s.ex - s.sx;
-        const dy = s.ey - s.sy;
+      } else if (shape.type === 'arrow') {
+        const dx = shape.ex - shape.sx;
+        const dy = shape.ey - shape.sy;
         const angle = Math.atan2(dy, dx);
         const len = Math.sqrt(dx * dx + dy * dy);
-        // Line
-        ctx.beginPath();
-        ctx.moveTo(s.sx, s.sy);
-        ctx.lineTo(s.ex, s.ey);
-        ctx.stroke();
-        // Arrowhead
         const headLen = Math.min(20, len * 0.3);
+
         ctx.beginPath();
-        ctx.moveTo(s.ex, s.ey);
-        ctx.lineTo(s.ex - headLen * Math.cos(angle - 0.4), s.ey - headLen * Math.sin(angle - 0.4));
-        ctx.moveTo(s.ex, s.ey);
-        ctx.lineTo(s.ex - headLen * Math.cos(angle + 0.4), s.ey - headLen * Math.sin(angle + 0.4));
+        ctx.moveTo(shape.sx, shape.sy);
+        ctx.lineTo(shape.ex, shape.ey);
         ctx.stroke();
-      } else if (s.type === 'text') {
+
+        ctx.beginPath();
+        ctx.moveTo(shape.ex, shape.ey);
+        ctx.lineTo(shape.ex - headLen * Math.cos(angle - 0.4), shape.ey - headLen * Math.sin(angle - 0.4));
+        ctx.moveTo(shape.ex, shape.ey);
+        ctx.lineTo(shape.ex - headLen * Math.cos(angle + 0.4), shape.ey - headLen * Math.sin(angle + 0.4));
+        ctx.stroke();
+      } else if (shape.type === 'text') {
         ctx.font = 'bold 16px -apple-system, sans-serif';
-        ctx.fillText(s.text, s.x, s.y);
+        ctx.fillText(shape.text, shape.x, shape.y);
       }
     }
 
-    drawCanvas.addEventListener('mousedown', (e) => {
-      if (!drawEnabled || !toolActive) return; // Only draw if tool is active
+    function buildShape(mx, my) {
+      if (currentTool === 'rect') {
+        return { type: 'rect', x: Math.min(startX, mx), y: Math.min(startY, my), w: Math.abs(mx - startX), h: Math.abs(my - startY), color: currentColor };
+      }
+      if (currentTool === 'circle') {
+        return { type: 'circle', x: Math.min(startX, mx), y: Math.min(startY, my), w: mx - startX, h: my - startY, color: currentColor };
+      }
+      if (currentTool === 'arrow') {
+        return { type: 'arrow', sx: startX, sy: startY, ex: mx, ey: my, color: currentColor };
+      }
+      return null;
+    }
+
+    function syncDrawSurfaceForTab(tabId) {
+      setTimeout(() => {
+        const entry = tabId ? getTabs().get(tabId) : null;
+
+        if (drawCanvasTabId === tabId && drawEnabled) {
+          drawCanvas.classList.add('active');
+          if (entry?.webview) {
+            installScrollListener(entry.webview, tabId);
+          }
+          drawToolbar.classList.add('visible');
+          redraw();
+          return;
+        }
+
+        if (tabId && tabShapes.has(tabId) && tabShapes.get(tabId).length > 0) {
+          drawCanvas.classList.add('active');
+          drawToolbar.classList.remove('visible');
+          const previousTabId = drawCanvasTabId;
+          drawCanvasTabId = tabId;
+          redraw();
+          drawCanvasTabId = previousTabId;
+          return;
+        }
+
+        drawCanvas.classList.remove('active');
+        drawToolbar.classList.remove('visible');
+      }, 0);
+    }
+
+    drawCanvas.addEventListener('mousedown', (event) => {
+      if (!drawEnabled || !toolActive) return;
       isDrawing = true;
       const rect = drawCanvas.getBoundingClientRect();
       const scroll = getScrollOffset();
-      // Store in page coordinates (canvas coords + scroll offset)
-      startX = e.clientX - rect.left + scroll.x;
-      startY = e.clientY - rect.top + scroll.y;
+      startX = event.clientX - rect.left + scroll.x;
+      startY = event.clientY - rect.top + scroll.y;
       if (currentTool === 'line') {
         currentPath = [{ x: startX, y: startY }];
       }
     });
 
-    drawCanvas.addEventListener('mousemove', (e) => {
+    drawCanvas.addEventListener('mousemove', (event) => {
       if (!isDrawing || !drawEnabled) return;
       const rect = drawCanvas.getBoundingClientRect();
       const scroll = getScrollOffset();
-      // Store in page coordinates
-      const mx = e.clientX - rect.left + scroll.x;
-      const my = e.clientY - rect.top + scroll.y;
+      const mx = event.clientX - rect.left + scroll.x;
+      const my = event.clientY - rect.top + scroll.y;
 
       if (currentTool === 'line') {
         currentPath.push({ x: mx, y: my });
         redraw();
-        // Draw current path live
         ctx.strokeStyle = currentColor;
         ctx.lineWidth = 3;
         ctx.lineCap = 'round';
         ctx.lineJoin = 'round';
         ctx.beginPath();
         ctx.moveTo(currentPath[0].x, currentPath[0].y);
-        for (let i = 1; i < currentPath.length; i++) {
-          ctx.lineTo(currentPath[i].x, currentPath[i].y);
+        for (let index = 1; index < currentPath.length; index += 1) {
+          ctx.lineTo(currentPath[index].x, currentPath[index].y);
         }
         ctx.stroke();
       } else {
-        // Preview shape
         redraw();
         const preview = buildShape(mx, my);
         if (preview) drawShape(preview);
       }
     });
 
-    drawCanvas.addEventListener('mouseup', (e) => {
+    drawCanvas.addEventListener('mouseup', (event) => {
       if (!isDrawing || !drawEnabled) return;
       isDrawing = false;
       const rect = drawCanvas.getBoundingClientRect();
       const scroll = getScrollOffset();
-      // Store in page coordinates
-      const mx = e.clientX - rect.left + scroll.x;
-      const my = e.clientY - rect.top + scroll.y;
+      const mx = event.clientX - rect.left + scroll.x;
+      const my = event.clientY - rect.top + scroll.y;
 
       const shapes = getShapesForCurrentTab();
       if (currentTool === 'text') {
@@ -872,95 +408,75 @@
       redraw();
     });
 
-    function buildShape(mx, my) {
-      if (currentTool === 'rect') {
-        return { type: 'rect', x: Math.min(startX, mx), y: Math.min(startY, my), w: Math.abs(mx - startX), h: Math.abs(my - startY), color: currentColor };
-      } else if (currentTool === 'circle') {
-        return { type: 'circle', x: Math.min(startX, mx), y: Math.min(startY, my), w: mx - startX, h: my - startY, color: currentColor };
-      } else if (currentTool === 'arrow') {
-        return { type: 'arrow', sx: startX, sy: startY, ex: mx, ey: my, color: currentColor };
-      }
-      return null;
-    }
-
-    // Draw tool buttons - toggle on/off
-    document.querySelectorAll('.draw-toolbar button[data-tool]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const wasActive = btn.classList.contains('active');
-
-        // Deactivate all tools first
-        document.querySelectorAll('.draw-toolbar button[data-tool]').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.draw-toolbar button[data-tool]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const wasActive = button.classList.contains('active');
+        document.querySelectorAll('.draw-toolbar button[data-tool]').forEach((candidate) => candidate.classList.remove('active'));
 
         if (wasActive) {
-          // Clicking active tool → deactivate (page interaction mode)
           toolActive = false;
           drawCanvas.classList.remove('drawing');
         } else {
-          // Clicking inactive tool → activate (drawing mode)
-          btn.classList.add('active');
-          currentTool = btn.dataset.tool;
+          button.classList.add('active');
+          currentTool = button.dataset.tool;
           toolActive = true;
           drawCanvas.classList.add('drawing');
         }
       });
     });
 
-    // Color buttons
-    document.querySelectorAll('.draw-toolbar .color-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.draw-toolbar .color-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentColor = btn.dataset.color;
+    document.querySelectorAll('.draw-toolbar .color-btn').forEach((button) => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.draw-toolbar .color-btn').forEach((candidate) => candidate.classList.remove('active'));
+        button.classList.add('active');
+        currentColor = button.dataset.color;
       });
     });
 
-    // Clear
     document.getElementById('btn-draw-clear').addEventListener('click', () => {
       if (drawCanvasTabId) {
-        tabShapes.set(drawCanvasTabId, []); // Clear shapes for current tab
+        tabShapes.set(drawCanvasTabId, []);
       }
       redraw();
     });
 
-    // Snap for Wingman
     document.getElementById('btn-snap-wingman').addEventListener('click', () => {
       if (window.tandem) window.tandem.snapForWingman();
     });
 
-    // Draw mode toggle from main process
     if (window.tandem) {
       window.tandem.onDrawMode((data) => {
         drawEnabled = data.enabled;
         if (drawEnabled) {
-          drawCanvasTabId = activeTabId; // Bind canvas to current tab
+          drawCanvasTabId = getActiveTabId();
           drawCanvas.classList.add('active');
           drawToolbar.classList.add('visible');
           resizeCanvas();
 
-          // Install scroll listener in active webview
-          const entry = tabs.get(activeTabId);
-          if (entry && entry.webview) {
-            installScrollListener(entry.webview, activeTabId);
+          const entry = getTabs().get(drawCanvasTabId);
+          if (entry?.webview) {
+            installScrollListener(entry.webview, drawCanvasTabId);
           }
         } else {
           drawCanvas.classList.remove('active');
           drawToolbar.classList.remove('visible');
-          drawCanvasTabId = null; // Unbind when disabled
+          drawCanvasTabId = null;
         }
+
+        syncDrawSurfaceForTab(getActiveTabId());
       });
 
       window.tandem.onDrawClear(() => {
         if (drawCanvasTabId) {
-          tabShapes.set(drawCanvasTabId, []); // Clear shapes for current tab
+          tabShapes.set(drawCanvasTabId, []);
         }
         redraw();
       });
     }
 
-    /**
-     * Composite screenshot: webview capture + canvas annotations → base64 PNG.
-     * Called from main process via executeJavaScript.
-     */
+    renderer.onActiveTabChanged(syncDrawSurfaceForTab);
+    syncDrawSurfaceForTab(getActiveTabId());
+
     window.__tandemDraw = {
       compositeScreenshot(webviewBase64) {
         return new Promise((resolve) => {
@@ -970,84 +486,16 @@
             offscreen.width = img.width;
             offscreen.height = img.height;
             const octx = offscreen.getContext('2d');
-            // Draw webview screenshot
             octx.drawImage(img, 0, 0);
-            // Scale annotations to match webview size
             const scaleX = img.width / drawCanvas.width;
             const scaleY = img.height / drawCanvas.height;
             octx.scale(scaleX, scaleY);
-            // Draw annotations canvas on top
             octx.drawImage(drawCanvas, 0, 0);
-            // Export as base64 PNG (strip data URL prefix)
             const dataUrl = offscreen.toDataURL('image/png');
             resolve(dataUrl.replace(/^data:image\/png;base64,/, ''));
           };
           img.src = 'data:image/png;base64,' + webviewBase64;
         });
-      }
+      },
     };
-
-    // ═══════════════════════════════════════════════
-    // Wire up webview activity tracking to panel
-    // ═══════════════════════════════════════════════
-
-    // Override the existing updateTabMeta to also log activity
-    const _origUpdateTabMeta = updateTabMeta;
-    updateTabMeta = function (tabId, data) {
-      // Track navigation
-      if (data.url && window.tandem) {
-        // Activity is tracked via IPC in main process, but we also
-        // need webview events. We'll send them up.
-      }
-      _origUpdateTabMeta(tabId, data);
-    };
-
-    // Patch __tandemTabs.createTab to add activity tracking on webview events
-    const _origCreateTab = window.__tandemTabs.createTab;
-    window.__tandemTabs.createTab = function (tabId, url, partition) {
-      const result = _origCreateTab.call(window.__tandemTabs, tabId, url, partition);
-      // After tab is created, wire activity events
-      const entry = tabs.get(tabId);
-      if (entry && entry.webview) {
-        wireActivityEvents(entry.webview, tabId);
-      }
-      return result;
-    };
-
-    function wireActivityEvents(wv, tabId) {
-      // Track navigation events → main process activity tracker
-      wv.addEventListener('did-navigate', (e) => {
-        if (window.tandem) window.tandem.sendWebviewEvent({ type: 'did-navigate', url: e.url, tabId });
-      });
-      wv.addEventListener('did-navigate-in-page', (e) => {
-        if (e.isMainFrame && window.tandem) {
-          window.tandem.sendWebviewEvent({ type: 'did-navigate-in-page', url: e.url, tabId });
-        }
-      });
-      wv.addEventListener('did-finish-load', () => {
-        if (window.tandem) {
-          window.tandem.sendWebviewEvent({
-            type: 'did-finish-load',
-            url: wv.getURL(),
-            title: wv.getTitle(),
-            tabId
-          });
-        }
-      });
-      wv.addEventListener('did-start-loading', () => {
-        if (window.tandem) window.tandem.sendWebviewEvent({ type: 'loading-start', tabId });
-      });
-      wv.addEventListener('did-stop-loading', () => {
-        if (window.tandem) window.tandem.sendWebviewEvent({ type: 'loading-stop', tabId });
-      });
-
-      // Wingman Vision: scroll/selection/form tracking moved to CDP Runtime.addBinding (see DevToolsManager)
-    }
-
-    // Also wire activity events for the initial tab
-    (() => {
-      const initialEntry = tabs.get(activeTabId);
-      if (initialEntry && initialEntry.webview) {
-        wireActivityEvents(initialEntry.webview, activeTabId);
-      }
-    })();
+})();

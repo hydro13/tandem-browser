@@ -51,6 +51,16 @@ function registerEarlyShellAuthIpc(): void {
     }
   });
 }
+
+function registerEarlyTabRegisterIpc(): void {
+  ipcMain.removeAllListeners('tab-register');
+  ipcMain.on('tab-register', (_event, data: PendingTabRegister) => {
+    if (runtime?.tabManager) {
+      return;
+    }
+    pendingTabRegister = data;
+  });
+}
 /** Queue security coverage for webviews that load before SecurityManager is ready */
 const pendingSecurityCoverageWebContentsIds: number[] = [];
 
@@ -129,6 +139,7 @@ function teardown(): void {
 
 async function createWindow(): Promise<BrowserWindow> {
   registerEarlyShellAuthIpc();
+  registerEarlyTabRegisterIpc();
 
   const partition = DEFAULT_PARTITION;
   const ses = session.fromPartition(partition);
