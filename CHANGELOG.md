@@ -2,6 +2,13 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.51.3] - 2026-03-08
+
+- fix: spell-check tab-snoozing section in opera research doc
+
+Fix typos: "hart" → "heart", "or" → "of", "if" → "as",
+"then" → "than", and garbled sentence about sleeping mode.
+
 ## [v0.51.2] - 2026-03-08
 
 - fix: correct region overlay bleed and application screenshot color profile
