@@ -46,7 +46,8 @@ Last updated: March 8, 2026
 - [x] Split the Wingman and ClaroNote renderer surfaces out of `shell/js/main.js` into dedicated shell modules with explicit shared state instead of file-scope coupling
 - [x] Extract browser tools (`bookmarks`, `history`, `find`, `voice`, `settings`, `screenshot`) out of `shell/js/main.js` into `shell/js/browser-tools.js` with the shared renderer bridge as the explicit integration surface
 - [x] Extract tab rendering, navigation, zoom, and shared renderer state out of `shell/js/main.js` into `shell/js/tabs.js`, and keep active-tab coordination explicit through the renderer bridge
-- [ ] Continue splitting the remaining renderer core so `shell/js/main.js` no longer mixes titlebar/window chrome, keyboard shortcut orchestration, and the draw overlay surface in one file
+- [x] Extract the draw overlay surface out of `shell/js/main.js` into `shell/js/draw.js` so annotation state, screenshot compositing, and draw-mode lifecycles stop sharing a file with window chrome and shortcuts
+- [ ] Decide whether the remaining shell entrypoint should stay as a slim `main.js` for window chrome + shortcut orchestration or be split one more time into dedicated `window-chrome` and `shortcuts` modules if it grows again
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later

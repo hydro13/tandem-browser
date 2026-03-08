@@ -13,12 +13,14 @@ All notable changes to Tandem Browser will be documented in this file.
 - **Wingman and ClaroNote split** (`shell/js/main.js`, `shell/js/wingman.js`, `shell/js/claronote.js`, `shell/index.html`) — moved the Wingman panel, chat, approvals, panel resizing, and ClaroNote renderer logic out of `main.js`, and replaced implicit file-scope coupling with an explicit renderer bridge on `window.__tandemRenderer`
 - **Browser tools split** (`shell/js/main.js`, `shell/js/browser-tools.js`, `shell/index.html`) — moved renderer-side bookmarks, history, find-in-page, voice input, settings navigation, and screenshot preview logic out of `main.js`, and kept the integration boundary explicit through `window.__tandemRenderer` instead of hidden file-scope access
 - **Tabs and renderer bridge split** (`shell/js/tabs.js`, `shell/js/main.js`, `shell/index.html`, `src/main.ts`) — moved tab creation, focus, navigation, zoom, activity tracking, and the shared renderer bridge out of `main.js` into a dedicated tabs module, and restored the early `tab-register` queue in the Electron main process so the shell can bootstrap safely before runtime managers are ready
+- **Draw overlay split** (`shell/js/draw.js`, `shell/js/main.js`, `shell/index.html`) — moved annotation state, scroll tracking, draw-mode lifecycle handling, and screenshot compositing out of `main.js` into a dedicated draw module, leaving the shell entrypoint focused on window chrome and shortcut orchestration
 
 ### Technical Details
 - ESLint now uses a dedicated TypeScript project file so `src/**/tests/**/*.test.ts` no longer fails parser setup just because runtime `tsconfig.json` excludes test files from the build output
 - Verification now has one canonical entry point: `npm run verify`
 - The shell renderer split now leaves `shell/js/main.js` focused on tabs, drawing, and core orchestration, while `shell/js/browser-tools.js` owns the browser utility surface
 - `shell/js/main.js` is now down to the remaining titlebar, keyboard shortcut orchestration, and draw overlay flow, while `shell/js/tabs.js` owns the renderer tab lifecycle and shared state bridge
+- The shell entrypoint is now down to window chrome plus shortcut orchestration, with `shell/js/draw.js` owning the draw overlay lifecycle and screenshot composition path
 
 ## [v0.45.1] - 2026-03-08
 
