@@ -8,7 +8,7 @@ vi.mock('electron', () => ({
 }));
 
 import { registerSessionRoutes } from '../../routes/sessions';
-import { createMockContext, createTestApp } from '../helpers';
+import { createMockContext, createMockWebContents, createTestApp } from '../helpers';
 import type { RouteContext } from '../../context';
 
 describe('Session Routes', () => {
@@ -538,6 +538,165 @@ describe('Session Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
       expect(res.body.states).toEqual([]);
+    });
+  });
+
+  // ─── POST /sessions/fetch ──────────────────────
+
+  describe('POST /sessions/fetch', () => {
+    it('executes a same-origin fetch in the active tab', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC.executeJavaScript).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        url: 'https://example.com/api/me',
+        headers: { 'content-type': 'application/json' },
+        body: { id: 'u1' },
+        responseType: 'json',
+      } as any);
+
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: '/api/me' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.response).toEqual({
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        url: 'https://example.com/api/me',
+        headers: { 'content-type': 'application/json' },
+        body: { id: 'u1' },
+        responseType: 'json',
+      });
+      expect(mockWC.executeJavaScript).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(mockWC.executeJavaScript).mock.calls[0]?.[0]).toContain('"url":"https://example.com/api/me"');
+      expect(vi.mocked(mockWC.executeJavaScript).mock.calls[0]?.[0]).toContain('"method":"GET"');
+    });
+
+    it('uses tabId when provided', async () => {
+      const tabWC = createMockWebContents(7);
+      vi.mocked(ctx.tabManager.getWebContents).mockReturnValueOnce(tabWC as any);
+      vi.mocked(tabWC.executeJavaScript).mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        url: 'https://example.com/api/missing',
+        headers: { 'content-type': 'text/plain' },
+        body: 'missing',
+        responseType: 'text',
+      } as any);
+
+      const res = await request(app)
+        .post('/sessions/fetch?tabId=tab-7')
+        .send({ url: '/api/missing' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(ctx.tabManager.getWebContents).toHaveBeenCalledWith('tab-7');
+      expect(tabWC.executeJavaScript).toHaveBeenCalledTimes(1);
+    });
+
+    it('serializes JSON bodies and preserves custom headers', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC.executeJavaScript).mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        statusText: 'Created',
+        url: 'https://example.com/api/items',
+        headers: { 'content-type': 'application/json' },
+        body: { ok: true },
+        responseType: 'json',
+      } as any);
+
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({
+          url: '/api/items',
+          method: 'post',
+          headers: { 'x-trace-id': 'trace-1' },
+          body: { name: 'Item' },
+        });
+
+      expect(res.status).toBe(200);
+      const script = vi.mocked(mockWC.executeJavaScript).mock.calls[0]?.[0] ?? '';
+      expect(script).toContain('"method":"POST"');
+      expect(script).toContain('\\"name\\":\\"Item\\"');
+      expect(script).toContain('"x-trace-id":"trace-1"');
+      expect(script).toContain('"content-type":"application/json"');
+    });
+
+    it('returns 400 when url is missing', async () => {
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({});
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('url required');
+    });
+
+    it('returns 400 for unsupported methods', async () => {
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: '/api/me', method: 'TRACE' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Unsupported method: TRACE');
+    });
+
+    it('returns 400 for forbidden headers', async () => {
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({
+          url: '/api/me',
+          headers: { Authorization: 'Bearer nope' },
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Header not allowed: Authorization');
+    });
+
+    it('returns 400 for cross-origin targets', async () => {
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: 'https://other.example.com/api/me' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('Cross-origin fetch is not allowed; use the tab origin or a relative URL');
+    });
+
+    it('returns 400 when body is sent with GET', async () => {
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: '/api/me', body: { invalid: true } });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('body is not allowed for GET requests');
+    });
+
+    it('returns 500 when no tab is available', async () => {
+      vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
+
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: '/api/me' });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('No active tab');
+    });
+
+    it('returns 408 on fetch timeout', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC.executeJavaScript).mockRejectedValueOnce(new Error('Fetch timed out'));
+
+      const res = await request(app)
+        .post('/sessions/fetch')
+        .send({ url: '/api/me' });
+
+      expect(res.status).toBe(408);
+      expect(res.body.error).toBe('Fetch timed out after 15s');
     });
   });
 });

@@ -2,6 +2,17 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.44.88] - 2026-03-08
+
+### Added
+- **Session fetch relay** (`src/api/routes/sessions.ts`) — added `POST /sessions/fetch` so the local API can execute same-origin requests inside the selected tab context, reuse the browser session for authenticated SPA/API calls, and return the response payload without exposing auth headers or tokens
+- **Route coverage** (`src/api/tests/routes/sessions.test.ts`, `src/api/tests/helpers.ts`) — added focused tests for successful tab-context fetches, `tabId` selection, JSON body serialization, timeout handling, and the new header/origin safety rails
+
+### Technical Details
+- `function registerSessionRoutes()` now validates request method, blocks direct auth/cookie/sec/proxy header injection, resolves relative URLs against the active tab URL, and rejects cross-origin targets before executing page-context `fetch()`
+- The relay runs through `webContents.executeJavaScript()` with a 15-second abort timeout, preserves page cookies and any app-level `window.fetch` wrappers already present in the tab, and normalizes JSON responses plus response headers into a stable API envelope
+- Verification: `npm run compile` passed; `npx vitest run src/api/tests/routes/sessions.test.ts` passed; `npm start` and manual curl validation were not run in this session
+
 ## [v0.44.87] - 2026-03-07
 
 ### Changed

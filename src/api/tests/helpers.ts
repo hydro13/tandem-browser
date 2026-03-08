@@ -67,6 +67,7 @@ export function createMockContext(): RouteContext {
       setGroup: vi.fn().mockReturnValue({ groupId: 'g1', name: 'Test', color: '#4285f4', tabIds: [] }),
       setTabSource: vi.fn().mockReturnValue(true),
       getActiveWebContents: vi.fn().mockResolvedValue(mockWC),
+      getWebContents: vi.fn().mockReturnValue(mockWC),
       getActiveTab: vi.fn().mockReturnValue({
         id: 'tab-1',
         webContentsId: 100,

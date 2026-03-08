@@ -133,6 +133,12 @@ No new npm packages are expected for the initial roadmap.
   breaking essential flows like 1Password
 - **Containment UX:** automatic isolation must be visible and reversible
 
+### Follow-up Design
+
+- `docs/plans/security-containment-review-design.md` — containment recovery UX,
+  safe review tabs, and optional technical-detail flows after automatic
+  containment
+
 ---
 
 ## Anti-Detect Considerations

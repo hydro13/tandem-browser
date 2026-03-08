@@ -39,6 +39,7 @@
 
 ### 🟡 Medium prioriteit — Features
 
+- [x] Session fetch relay — `POST /sessions/fetch` voert same-origin API-calls uit vanuit de tab-context met bestaande browser-auth, zonder auth headers of tokens via de API bloot te geven
 - [ ] Voice + screenshot combo — combi-bericht naar Wingman
 - [ ] Whisper lokaal — offline speech fallback
 - [ ] DOM change detection — meld wat er veranderd is (niet alleen SPA wait)

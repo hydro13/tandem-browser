@@ -106,6 +106,10 @@ curl -X POST http://127.0.0.1:8765/navigate \
 curl http://127.0.0.1:8765/page-content
 
 curl http://127.0.0.1:8765/screenshot --output screen.png
+
+curl -X POST http://127.0.0.1:8765/sessions/fetch \
+  -H 'Content-Type: application/json' \
+  -d '{"tabId":"tab-7","url":"/api/me","method":"GET"}'
 ```
 
 ## Security Model
