@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import type * as FsModule from 'fs';
 
 vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
@@ -20,7 +21,7 @@ vi.mock('../../../utils/logger', () => ({
 }));
 
 vi.mock('fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs')>();
+  const actual = await importOriginal<typeof FsModule>();
   return {
     ...actual,
     default: {

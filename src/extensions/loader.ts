@@ -96,7 +96,7 @@ export class ExtensionLoader {
     try {
       const { nmProxy } = await import('./nm-proxy');
       nmProxy.patchManifestCSP(manifestPath);
-    } catch (_e) {
+    } catch {
       // Non-fatal — extension will still load, but native messaging proxy won't work
     }
 

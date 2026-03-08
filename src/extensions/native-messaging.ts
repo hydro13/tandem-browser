@@ -249,7 +249,7 @@ export class NativeMessagingSetup {
               );
               log.info(`🔌 session.extensions props: ${extInteresting.join(', ')}`);
             }
-          } catch (_e) {
+          } catch {
             log.info('🔌 Could not enumerate session properties');
           }
         }

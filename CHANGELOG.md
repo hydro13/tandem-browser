@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [Unreleased] - 2026-03-08
+
+### Changed
+- **Verification baseline** (`package.json`, `eslint.config.mjs`, `tsconfig.eslint.json`, `.github/workflows/verify.yml`) — restored ESLint coverage for the test tree, added a single `npm run verify` command, and wired the same verification command into GitHub Actions so compile, lint, and test can run from one entry point locally and in CI
+- **Planning source cleanup** (`TODO.md`, `docs/internal/README.md`, `docs/internal/ROADMAP.md`, `docs/internal/STATUS.md`) — made `TODO.md` the single active engineering backlog and downgraded the older internal roadmap/status files into explicit historical snapshots to reduce planning drift
+- **Documentation consistency** (`PROJECT.md`, `README.md`, `CONTRIBUTING.md`) — synchronized the current version and replaced machine-local documentation links with repo-relative links that work on GitHub and in local clones
+- **Bootstrap composition split** (`src/main.ts`, `src/bootstrap/runtime.ts`, `src/bootstrap/tab-session.ts`, `src/bootstrap/types.ts`) — moved runtime manager composition, teardown logic, and initial-tab/session-restore orchestration out of `main.ts` so the Electron entrypoint is back to being an orchestration layer instead of a monolithic service factory
+
+### Technical Details
+- ESLint now uses a dedicated TypeScript project file so `src/**/tests/**/*.test.ts` no longer fails parser setup just because runtime `tsconfig.json` excludes test files from the build output
+- Verification now has one canonical entry point: `npm run verify`
+
 ## [v0.45.1] - 2026-03-08
 
 - fix: english consistency cleanup pass 2 (ui-copy)

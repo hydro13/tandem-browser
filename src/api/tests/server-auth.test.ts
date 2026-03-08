@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Application } from 'express';
 import type { PathLike } from 'fs';
+import type * as FsModule from 'fs';
 import request from 'supertest';
 
 const { logInfo, logWarn, logError } = vi.hoisted(() => ({
@@ -28,7 +29,7 @@ vi.mock('../../utils/logger', () => ({
 }));
 
 vi.mock('fs', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs')>();
+  const actual = await importOriginal<typeof FsModule>();
   const token = 'a'.repeat(64);
   return {
     ...actual,

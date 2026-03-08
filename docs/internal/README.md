@@ -1,14 +1,15 @@
 # Internal Docs
 
-This directory contains project-management and workflow material used during
-active development.
+This directory now serves as an archive for older project-management snapshots.
 
-Current contents:
+Active planning moved to the repository root:
 
-- `ROADMAP.md`: internal feature prioritization and sequencing
-- `STATUS.md`: day-to-day progress tracking
-- These files remain in their original working language and are intentionally
-  separated from the main public docs surface
+- [`TODO.md`](../../TODO.md): the single active engineering backlog
 
-These files are intentionally kept separate from the main public documentation
-surface so the repository is easier to navigate for external readers.
+Historical snapshots retained here:
+
+- `ROADMAP.md`: archived planning snapshot from the earlier phase-doc workflow
+- `STATUS.md`: archived day-to-day progress log from the same period
+
+These files remain in the repo for context, but they are no longer the active
+source of truth for current priorities.

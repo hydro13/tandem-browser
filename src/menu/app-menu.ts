@@ -1,6 +1,5 @@
-import type { BrowserWindow} from 'electron';
-import { app, Menu, BrowserWindow as BW, shell } from 'electron';
-import path from 'path';
+import type { BrowserWindow } from 'electron';
+import { app, Menu } from 'electron';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';

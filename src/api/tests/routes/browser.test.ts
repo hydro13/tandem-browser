@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import express from 'express';
+import type * as OsModule from 'os';
 
 // ── External mocks (must precede imports that reference them) ───
 
@@ -34,7 +35,7 @@ vi.mock('fs', () => ({
 }));
 
 vi.mock('os', async () => {
-  const actual = await vi.importActual<typeof import('os')>('os');
+  const actual = await vi.importActual<typeof OsModule>('os');
   return {
     ...actual,
     default: {

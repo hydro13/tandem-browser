@@ -4,24 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function createFakeExtension(
-  tmpDir: string,
-  name: string,
-  manifest: Record<string, unknown>,
-  swContent = 'console.log("hello");'
-): string {
-  const extDir = path.join(tmpDir, name);
-  fs.mkdirSync(extDir, { recursive: true });
-
-  const swPath = path.join(extDir, 'background.js');
-  fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify(manifest));
-  fs.writeFileSync(swPath, swContent);
-
-  return extDir;
-}
-
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
 describe('ActionPolyfill', () => {
@@ -34,15 +16,6 @@ describe('ActionPolyfill', () => {
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
-
-  // Helper: create polyfill instance with a custom extensions dir
-  function makePolyfill(port = 8765): { polyfill: ActionPolyfill; extDir: string } {
-    // Override tandemDir by pointing it at our tmp dir via env
-    const polyfill = new ActionPolyfill(port);
-    // Patch internal method to use tmpDir instead of ~/.tandem/extensions
-    // We inject directly by writing files and calling with patched path resolution
-    return { polyfill, extDir: tmpDir };
-  }
 
   describe('injectPolyfills()', () => {
     it('returns empty array when extensions dir does not exist', () => {
@@ -155,11 +128,6 @@ describe('ActionPolyfill', () => {
 
   describe('polyfill script shape', () => {
     it('generated script contains chrome.action object literal', () => {
-      const polyfill = new ActionPolyfill(8765);
-      // Access private method via any cast
-      const script = (polyfill as any).__proto__.constructor
-        .toString()
-        .includes('chrome.action');
       // Verify by reading the source file instead
       const src = fs.readFileSync(
         path.join(__dirname, '../action-polyfill.ts'),

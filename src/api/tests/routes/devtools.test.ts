@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import type * as ConstantsModule from '../../../utils/constants';
 
 vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
@@ -12,7 +13,7 @@ vi.mock('electron', () => ({
 
 // Mock the constants module so DEFAULT_TIMEOUT_MS is short for timeout tests
 vi.mock('../../../utils/constants', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../../utils/constants')>();
+  const actual = await importOriginal<typeof ConstantsModule>();
   return {
     ...actual,
     DEFAULT_TIMEOUT_MS: 100, // 100ms instead of 30s for fast tests

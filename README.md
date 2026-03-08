@@ -36,7 +36,7 @@ The browser surface is broader than a simple tab shell.
 - Primary platform: macOS
 - Secondary platform: Linux
 - Windows: not actively validated yet
-- Current release: see [package.json](/Users/robinwaslander/Documents/dev/tandem-browser/package.json) and [CHANGELOG.md](/Users/robinwaslander/Documents/dev/tandem-browser/CHANGELOG.md)
+- Current release: see [package.json](package.json) and [CHANGELOG.md](CHANGELOG.md)
 
 ## Architecture
 
@@ -49,7 +49,7 @@ This split matters because Tandem is designed to keep AI control out or the page
 JavaScript context whenever possible while still giving OpenClaw a useful local
 browser surface.
 
-For the broader system overview, see [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md).
+For the broader system overview, see [PROJECT.md](PROJECT.md).
 
 ## Quick Start
 
@@ -127,14 +127,14 @@ paranoid than a normal desktop browser shell.
 
 ## Repository Guide
 
-- [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md): product vision, OpenClaw positioning, and architecture overview
-- [docs/README.md](/Users/robinwaslander/Documents/dev/tandem-browser/docs/README.md): documentation folder
-- [CHANGELOG.md](/Users/robinwaslander/Documents/dev/tandem-browser/CHANGELOG.md): release history
-- [CONTRIBUTING.md](/Users/robinwaslander/Documents/dev/tandem-browser/CONTRIBUTING.md): contribution workflow
-- [SECURITY.md](/Users/robinwaslander/Documents/dev/tandem-browser/SECURITY.md): vulnerability reporting
+- [PROJECT.md](PROJECT.md): product vision, OpenClaw positioning, and architecture overview
+- [docs/README.md](docs/README.md): documentation folder
+- [CHANGELOG.md](CHANGELOG.md): release history
+- [CONTRIBUTING.md](CONTRIBUTING.md): contribution workflow
+- [SECURITY.md](SECURITY.md): vulnerability reporting
 
-Internal workflow files such as [AGENTS.md](/Users/robinwaslander/Documents/dev/tandem-browser/AGENTS.md) and [TODO.md](/Users/robinwaslander/Documents/dev/tandem-browser/TODO.md) are kept for local development operations and are not the primary public documentation surface. The `docs/` tree also contains historical contributor packs with files such as `CLAUDE.md` and `LEES-MIJ-EERST.md`; those are retained for maintainers, not as end-user documentation.
+Internal workflow files such as [AGENTS.md](AGENTS.md) and [TODO.md](TODO.md) are kept for local development operations and are not the primary public documentation surface. The `docs/` tree also contains historical contributor packs with files such as `CLAUDE.md` and `LEES-MIJ-EERST.md`; those are retained for maintainers, not as end-user documentation.
 
 ## License
 
-MIT. See [LICENSE](/Users/robinwaslander/Documents/dev/tandem-browser/LICENSE).
+MIT. See [LICENSE](LICENSE).

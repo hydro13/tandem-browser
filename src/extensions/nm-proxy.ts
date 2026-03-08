@@ -45,9 +45,6 @@ export interface NativeMessagingProxyAuthOptions {
   }) => ExtensionRouteAccessDecision;
 }
 
-// Extension ID that Tandem assigns to the 1Password extension
-const TANDEM_EXTENSION_ID = 'chdppelbdlmkldaobdpeaemleeajiodj';
-
 // 1Password's official Chrome Web Store extension ID.
 // When spawning BrowserSupport, we use this ID as the origin argument because
 // 1Password validates extension IDs against its own internal list (not just
@@ -93,8 +90,8 @@ function findHostManifest(hostName: string): HostInfo | null {
       if (manifest.path && fs.existsSync(manifest.path)) {
         return { binary: manifest.path, manifestPath };
       }
-    } catch (_) {
-      // corrupt manifest — skip
+    } catch {
+      continue;
     }
   }
   return null;
@@ -125,7 +122,7 @@ function writeNativeMessage(msg: unknown): Buffer {
 
 // ─── One-shot: sendNativeMessage ─────────────────────────────────────────────
 
-function sendOneShot(binary: string, _extensionId: string, message: unknown): Promise<unknown> {
+function sendOneShot(binary: string, message: unknown): Promise<unknown> {
   return new Promise((resolve, reject) => {
     // Spawn via nm-relay (properly signed com.tandem.browser binary inside
     // Tandem Browser.app) so BrowserSupport sees a recognized parent process.
@@ -147,7 +144,9 @@ function sendOneShot(binary: string, _extensionId: string, message: unknown): Pr
       if (settled) return;
       settled = true;
       clearTimeout(timer);
-      try { proc.kill(); } catch (_) {}
+      try { proc.kill(); } catch {
+        // ignore process-kill failures during cleanup
+      }
       if (err) reject(err);
       else resolve(value);
     };
@@ -181,7 +180,6 @@ function sendOneShot(binary: string, _extensionId: string, message: unknown): Pr
 function handlePersistentConnection(
   ws: WebSocket,
   binary: string,
-  _extensionId: string,
   host: string,
   actorLabel: string,
 ): void {
@@ -209,7 +207,11 @@ function handlePersistentConnection(
     while (result) {
       outBuf = result.remaining;
       if (ws.readyState === WebSocket.OPEN) {
-        try { ws.send(JSON.stringify(result.msg)); } catch (_) {}
+        try {
+          ws.send(JSON.stringify(result.msg));
+        } catch {
+          log.warn(`⚠️ NM "${host}" failed to forward message to WebSocket for ${actorLabel}`);
+        }
       }
       result = readNativeMessage(outBuf);
     }
@@ -236,14 +238,18 @@ function handlePersistentConnection(
       const msg = JSON.parse(data.toString()) as unknown;
       log.info(`🔌 NM "${host}" WS→stdin for ${actorLabel}: ${JSON.stringify(msg).slice(0, 200)}`);
       proc.stdin.write(writeNativeMessage(msg));
-    } catch (_) {
+    } catch {
       log.warn(`⚠️ NM "${host}" invalid WS message for ${actorLabel}`);
     }
   });
 
   ws.on('close', () => {
     log.info(`🔌 NM "${host}" WS closed for ${actorLabel} — killing process`);
-    try { proc.kill(); } catch (_) {}
+    try {
+      proc.kill();
+    } catch {
+      log.warn(`⚠️ NM "${host}" process already exited before close cleanup for ${actorLabel}`);
+    }
   });
 
   log.info(`🔌 NM "${host}" persistent connection established for ${actorLabel}`);
@@ -258,14 +264,12 @@ export class NativeMessagingProxy {
    * the trusted-extension auth check before this handler runs.
    */
   registerRoutes(router: Router): void {
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     router.post('/extensions/native-message', async (req, res) => {
       const extensionAccess = res.locals.extensionAccess as ExtensionRouteAccessDecision | null | undefined;
       const actorLabel = extensionAccess?.auditLabel ?? 'token-auth caller';
-      const { host, message, extensionId } = req.body as {
+      const { host, message } = req.body as {
         host?: string;
         message?: unknown;
-        extensionId?: string;
       };
 
       if (!host || message === undefined) {
@@ -274,7 +278,6 @@ export class NativeMessagingProxy {
         return;
       }
 
-      const effectiveId = extensionAccess?.runtimeId ?? extensionAccess?.extensionId ?? extensionId ?? TANDEM_EXTENSION_ID;
       const hostInfo = findHostManifest(host);
       if (!hostInfo) {
         log.warn(`⚠️ NM proxy: host "${host}" not found for ${actorLabel}`);
@@ -283,7 +286,7 @@ export class NativeMessagingProxy {
       }
 
       try {
-        const response = await sendOneShot(hostInfo.binary, effectiveId, message);
+        const response = await sendOneShot(hostInfo.binary, message);
         log.info(`🔌 NM proxy: one-shot "${host}" OK for ${actorLabel}`);
         res.json(response);
       } catch (err) {
@@ -337,7 +340,6 @@ export class NativeMessagingProxy {
       const host = url.searchParams.get('host');
       const extensionAccess = (ws as WebSocket & { extensionAccess?: ExtensionRouteAccessDecision }).extensionAccess;
       const actorLabel = extensionAccess?.auditLabel ?? 'unknown-extension [unknown]';
-      const extensionId = extensionAccess?.runtimeId ?? extensionAccess?.extensionId ?? url.searchParams.get('extensionId') ?? TANDEM_EXTENSION_ID;
 
       if (!host) {
         log.warn(`⚠️ NM proxy WS rejected for ${actorLabel}: missing ?host=`);
@@ -352,7 +354,7 @@ export class NativeMessagingProxy {
         return;
       }
 
-      handlePersistentConnection(ws, hostInfo.binary, extensionId, host, actorLabel);
+      handlePersistentConnection(ws, hostInfo.binary, host, actorLabel);
     });
 
     log.info('🔌 NM proxy: WebSocket server ready at ws://127.0.0.1:8765/extensions/native-message/ws');

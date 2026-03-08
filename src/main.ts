@@ -13,63 +13,19 @@ process.on('unhandledRejection', (reason) => {
 
 import { webContents, type WebContents } from 'electron';
 import fs from 'fs';
-import { app, BrowserWindow, session, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, session, ipcMain } from 'electron';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
-import { TabManager } from './tabs/manager';
-import { PanelManager } from './panel/manager';
-import { DrawOverlayManager } from './draw/overlay';
-import { ActivityTracker } from './activity/tracker';
-import { VoiceManager } from './voice/recognition';
-import { BehaviorObserver } from './behavior/observer';
-import { ConfigManager } from './config/manager';
-import { SiteMemoryManager } from './memory/site-memory';
-import { WatchManager } from './watch/watcher';
-import { HeadlessManager } from './headless/manager';
-import { FormMemoryManager } from './memory/form-memory';
-import { ContextBridge } from './bridge/context-bridge';
-import { PiPManager } from './pip/manager';
-import { NetworkInspector } from './network/inspector';
-import { ChromeImporter } from './import/chrome-importer';
-import { BookmarkManager } from './bookmarks/manager';
-import { HistoryManager } from './history/manager';
-import { DownloadManager } from './downloads/manager';
-import { AudioCaptureManager } from './audio/capture';
-import type { ExtensionLoader } from './extensions/loader';
-import { ExtensionManager } from './extensions/manager';
-import { ExtensionToolbar } from './extensions/toolbar';
-import { ClaroNoteManager } from './claronote/manager';
-import { EventStreamManager } from './events/stream';
-import { TaskManager } from './agents/task-manager';
-import { TabLockManager } from './agents/tab-lock-manager';
-import { ContextMenuManager } from './context-menu/manager';
-import { DevToolsManager } from './devtools/manager';
-import { WingmanStream } from './activity/wingman-stream';
 import { buildAppMenu } from './menu/app-menu';
 import { RequestDispatcher } from './network/dispatcher';
-import { SecurityManager, type SecurityContainmentIncident } from './security/security-manager';
-import { SnapshotManager } from './snapshot/manager';
-import { NetworkMocker } from './network/mocker';
-import { SessionManager } from './sessions/manager';
-import { StateManager } from './sessions/state';
-import { ScriptInjector } from './scripts/injector';
-import { LocatorFinder } from './locators/finder';
-import { DeviceEmulator } from './device/emulator';
-import { SidebarManager } from './sidebar/manager';
-import { WorkspaceManager } from './workspaces/manager';
-import { SyncManager } from './sync/manager';
-import { PinboardManager } from './pinboards/manager';
-import { SessionRestoreManager } from './session/restore';
-import { ContentExtractor } from './content/extractor';
-import { WorkflowEngine } from './workflow/engine';
-import { LoginManager } from './auth/login-manager';
-import type { ManagerRegistry } from './registry';
 import { setMainWindow } from './notifications/alert';
-import { registerIpcHandlers, syncTabsToContext } from './ipc/handlers';
-import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS, CDP_ATTACH_DELAY_MS } from './utils/constants';
+import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS } from './utils/constants';
 import { tandemDir } from './utils/paths';
 import { createLogger } from './utils/logger';
+import { createManagerRegistry, destroyRuntime, initializeRuntimeManagers, registerRuntimeIpcHandlers } from './bootstrap/runtime';
+import { registerInitialTabLifecycle } from './bootstrap/tab-session';
+import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 
 const log = createLogger('Main');
 
@@ -77,54 +33,13 @@ const IS_DEV = process.argv.includes('--dev');
 
 let mainWindow: BrowserWindow | null = null;
 let api: TandemAPI | null = null;
-let tabManager: TabManager | null = null;
-let panelManager: PanelManager | null = null;
-let drawManager: DrawOverlayManager | null = null;
-let activityTracker: ActivityTracker | null = null;
-let voiceManager: VoiceManager | null = null;
-let behaviorObserver: BehaviorObserver | null = null;
-let configManager: ConfigManager | null = null;
-let siteMemory: SiteMemoryManager | null = null;
-let watchManager: WatchManager | null = null;
-let headlessManager: HeadlessManager | null = null;
-let formMemory: FormMemoryManager | null = null;
-let contextBridge: ContextBridge | null = null;
-let pipManager: PiPManager | null = null;
-let networkInspector: NetworkInspector | null = null;
-let chromeImporter: ChromeImporter | null = null;
-let bookmarkManager: BookmarkManager | null = null;
-let historyManager: HistoryManager | null = null;
-let downloadManager: DownloadManager | null = null;
-let audioCaptureManager: AudioCaptureManager | null = null;
-let extensionLoader: ExtensionLoader | null = null;
-let extensionManager: ExtensionManager | null = null;
-let extensionToolbar: ExtensionToolbar | null = null;
-let claroNoteManager: ClaroNoteManager | null = null;
-let eventStream: EventStreamManager | null = null;
-let taskManager: TaskManager | null = null;
-let tabLockManager: TabLockManager | null = null;
-let contextMenuManager: ContextMenuManager | null = null;
-let devToolsManager: DevToolsManager | null = null;
-let wingmanStream: WingmanStream | null = null;
+let runtime: RuntimeManagers | null = null;
 let dispatcher: RequestDispatcher | null = null;
-let securityManager: SecurityManager | null = null;
-let snapshotManager: SnapshotManager | null = null;
-let networkMocker: NetworkMocker | null = null;
-let sessionManager: SessionManager | null = null;
-let stateManager: StateManager | null = null;
-let scriptInjector: ScriptInjector | null = null;
-let locatorFinder: LocatorFinder | null = null;
-let deviceEmulator: DeviceEmulator | null = null;
-let sidebarManager: SidebarManager | null = null;
-let workspaceManager: WorkspaceManager | null = null;
-let syncManager: SyncManager | null = null;
-let pinboardManager: PinboardManager | null = null;
-let sessionRestoreManager: SessionRestoreManager | null = null;
 let cookieFlushTimer: ReturnType<typeof setInterval> | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
 /** Queue tab-register IPC when it arrives before tabManager is ready */
-let pendingTabRegister: { webContentsId: number; url: string } | null = null;
+let pendingTabRegister: PendingTabRegister | null = null;
 
 function registerEarlyShellAuthIpc(): void {
   try { ipcMain.removeHandler('get-api-token'); } catch { /* handler may not exist yet */ }
@@ -185,8 +100,8 @@ function clearStartApiIpcListeners(): void {
 }
 
 function queueSecurityCoverage(webContentsId: number): void {
-  if (securityManager) {
-    securityManager.onTabCreated(webContentsId).catch(e => log.warn('securityManager.onTabCreated failed:', e instanceof Error ? e.message : e));
+  if (runtime?.securityManager) {
+    runtime.securityManager.onTabCreated(webContentsId).catch(e => log.warn('securityManager.onTabCreated failed:', e instanceof Error ? e.message : e));
     return;
   }
 
@@ -201,102 +116,15 @@ function teardown(): void {
   pendingTabRegister = null;
   pendingContextMenuWebContents.length = 0;
   pendingSecurityCoverageWebContentsIds.length = 0;
-
-  if (api) api.stop();
+  destroyRuntime({
+    api,
+    runtime,
+    mainWindow,
+    canUseWindow,
+  });
   api = null;
-
-  if (behaviorObserver) behaviorObserver.destroy();
-  behaviorObserver = null;
-
-  if (watchManager) watchManager.destroy();
-  watchManager = null;
-
-  if (headlessManager) headlessManager.destroy();
-  headlessManager = null;
-
-  if (pipManager) pipManager.destroy();
-  pipManager = null;
-
-  if (networkInspector) networkInspector.destroy();
-  networkInspector = null;
-
-  if (voiceManager && canUseWindow(mainWindow)) {
-    voiceManager.stop();
-  }
-  voiceManager = null;
-
-  if (audioCaptureManager) audioCaptureManager.stopRecording();
-  audioCaptureManager = null;
-
-  if (chromeImporter) chromeImporter.destroy();
-  chromeImporter = null;
-
-  if (taskManager) taskManager.destroy();
-  taskManager = null;
-
-  if (tabLockManager) tabLockManager.destroy();
-  tabLockManager = null;
-
-  if (contextMenuManager) contextMenuManager.destroy();
-  contextMenuManager = null;
-
-  if (devToolsManager) devToolsManager.destroy();
-  devToolsManager = null;
-
-  if (wingmanStream) wingmanStream.destroy();
-  wingmanStream = null;
-
-  if (securityManager) securityManager.destroy();
-  securityManager = null;
-
-  if (snapshotManager) snapshotManager.destroy();
-  snapshotManager = null;
-
-  if (networkMocker) networkMocker.destroy();
-  networkMocker = null;
-
-  if (sessionManager) sessionManager.destroy();
-  sessionManager = null;
-
-  if (extensionToolbar) extensionToolbar.destroy();
-  extensionToolbar = null;
-
-  if (extensionManager) extensionManager.getIdentityPolyfill().destroy();
-  if (extensionManager) extensionManager.destroyUpdateChecker();
-  extensionManager = null;
-  extensionLoader = null;
-
-  if (historyManager) historyManager.destroy();
-  historyManager = null;
-
-  if (sidebarManager) sidebarManager.destroy();
-  sidebarManager = null;
-
-  if (workspaceManager) workspaceManager.destroy();
-  workspaceManager = null;
-
-  if (pinboardManager) pinboardManager.destroy();
-  pinboardManager = null;
-
-  if (syncManager) syncManager.destroy();
-  syncManager = null;
-
-  panelManager = null;
-  drawManager = null;
-  configManager = null;
-  siteMemory = null;
-  formMemory = null;
-  contextBridge = null;
-  downloadManager = null;
-  claroNoteManager = null;
-  eventStream = null;
+  runtime = null;
   dispatcher = null;
-  stateManager = null;
-  scriptInjector = null;
-  locatorFinder = null;
-  deviceEmulator = null;
-  sessionRestoreManager = null;
-  tabManager = null;
 }
 
 async function createWindow(): Promise<BrowserWindow> {
@@ -416,26 +244,26 @@ async function createWindow(): Promise<BrowserWindow> {
 
       if (!isSidebarWebview) {
         contents.on('did-finish-load', () => {
-          securityManager?.onTabNavigated(contents.id).catch(e => log.warn('securityManager.onTabNavigated failed:', e instanceof Error ? e.message : e));
+          runtime?.securityManager.onTabNavigated(contents.id).catch(e => log.warn('securityManager.onTabNavigated failed:', e instanceof Error ? e.message : e));
         });
 
         contents.on('destroyed', () => {
-          securityManager?.onTabClosed(contents.id);
+          runtime?.securityManager.onTabClosed(contents.id);
         });
       }
 
       // Register context menu for this webview (queue if manager not yet ready)
-      if (contextMenuManager) {
-        contextMenuManager.registerWebContents(contents);
+      if (runtime?.contextMenuManager) {
+        runtime.contextMenuManager.registerWebContents(contents);
       } else {
         pendingContextMenuWebContents.push(contents);
       }
 
       // Workspace: assign new tab webContents to active workspace
-      if (!isSidebarWebview && workspaceManager) {
-        workspaceManager.assignTab(contents.id);
+      if (!isSidebarWebview && runtime?.workspaceManager) {
+        runtime.workspaceManager.assignTab(contents.id);
         contents.on('destroyed', () => {
-          workspaceManager?.removeTab(contents.id);
+          runtime?.workspaceManager.removeTab(contents.id);
         });
       }
 
@@ -504,7 +332,11 @@ async function createWindow(): Promise<BrowserWindow> {
     if (contents.getType() !== 'window') {
       contents.on('will-navigate', (_e, url) => {
         if (isSidebarWebview) return; // let sidebar webviews navigate freely
-        if (tabManager && !tabManager.hasWebContents(contents.id) && mainWindow && url && url !== 'about:blank') {
+        const currentTabManager = runtime?.tabManager;
+        if (!currentTabManager || !mainWindow || !url || url === 'about:blank') {
+          return;
+        }
+        if (!currentTabManager.hasWebContents(contents.id)) {
           mainWindow.webContents.send('open-url-in-new-tab', url);
           contents.stop();
         }
@@ -585,244 +417,15 @@ async function createWindow(): Promise<BrowserWindow> {
 
 async function startAPI(win: BrowserWindow): Promise<void> {
   clearStartApiIpcListeners();
-
-  configManager = new ConfigManager();
-  tabManager = new TabManager(win);
-  panelManager = new PanelManager(win, configManager);
-  drawManager = new DrawOverlayManager(win, configManager);
-  wingmanStream = new WingmanStream(configManager);
-  activityTracker = new ActivityTracker(win, panelManager, drawManager, wingmanStream);
-  voiceManager = new VoiceManager(win, panelManager);
-  behaviorObserver = new BehaviorObserver(win);
-  siteMemory = new SiteMemoryManager();
-  watchManager = new WatchManager();
-  headlessManager = new HeadlessManager();
-  formMemory = new FormMemoryManager();
-  contextBridge = new ContextBridge();
-  pipManager = new PiPManager();
-  networkInspector = new NetworkInspector();
-  if (dispatcher) networkInspector.registerWith(dispatcher);
-  securityManager = new SecurityManager();
-  chromeImporter = new ChromeImporter(configManager);
-  bookmarkManager = new BookmarkManager();
-  historyManager = new HistoryManager();
-  downloadManager = new DownloadManager();
-  audioCaptureManager = new AudioCaptureManager();
-  extensionManager = new ExtensionManager();
-  extensionLoader = extensionManager.getLoader();
-  claroNoteManager = new ClaroNoteManager();
-  eventStream = new EventStreamManager();
-  taskManager = new TaskManager();
-  tabLockManager = new TabLockManager();
-  devToolsManager = new DevToolsManager(tabManager!);
-  snapshotManager = new SnapshotManager(devToolsManager!);
-  networkMocker = new NetworkMocker(devToolsManager!);
-  sessionManager = new SessionManager();
-  stateManager = new StateManager();
-  scriptInjector = new ScriptInjector();
-  locatorFinder = new LocatorFinder(devToolsManager!, snapshotManager!);
-  deviceEmulator = new DeviceEmulator();
-  sidebarManager = new SidebarManager();
-  workspaceManager = new WorkspaceManager();
-  workspaceManager.setMainWindow(win);
-  syncManager = new SyncManager();
-  const deviceSyncConfig = configManager.getConfig().deviceSync;
-  if (deviceSyncConfig.enabled && deviceSyncConfig.syncRoot) {
-    syncManager.init(deviceSyncConfig);
-  }
-  pinboardManager = new PinboardManager();
-  pinboardManager.setSyncManager(syncManager);
-  sessionRestoreManager = new SessionRestoreManager(syncManager);
-  tabManager.setSyncManager(syncManager);
-  tabManager.setSessionRestore(sessionRestoreManager);
-  tabManager.setWorkspaceIdResolver((webContentsId) => workspaceManager?.getWorkspaceIdForTab(webContentsId) ?? null);
-  historyManager.setSyncManager(syncManager);
-  workspaceManager.setSyncManager(syncManager);
-  devToolsManager.setWingmanStream(wingmanStream!);
-  devToolsManager.setActivityTracker(activityTracker!);
-
-  // SecurityManager consolidated init (was 3 scattered calls, now 1)
-  // initGatekeeper() follows after api.start() since it needs the HTTP server
-
-  contextMenuManager = new ContextMenuManager({
+  runtime = await initializeRuntimeManagers({
     win,
-    tabManager: tabManager!,
-    bookmarkManager: bookmarkManager!,
-    historyManager: historyManager!,
-    panelManager: panelManager!,
-    downloadManager: downloadManager!,
-    pinboardManager: pinboardManager!,
+    dispatcher,
+    pendingContextMenuWebContents,
+    pendingSecurityCoverageWebContentsIds,
+    canUseWindow,
+    log,
   });
-
-  // Drain any webview webContents that were created before contextMenuManager was ready
-  while (pendingContextMenuWebContents.length > 0) {
-    const wc = pendingContextMenuWebContents.shift()!;
-    if (!wc.isDestroyed()) {
-      contextMenuManager.registerWebContents(wc);
-    }
-  }
-
-  // Connect ContextBridge to EventStreamManager for live context (Phase 2.2)
-  contextBridge.connectEventStream(eventStream);
-
-  // Wire TaskManager events to renderer (Phase 4)
-  taskManager.on('approval-request', (data: Record<string, unknown>) => {
-    if (canUseWindow(win)) {
-      win.webContents.send('approval-request', data);
-    }
-  });
-  taskManager.on('task-updated', (task: Record<string, unknown>) => {
-    if (canUseWindow(win)) {
-      win.webContents.send('task-updated', task);
-    }
-  });
-  taskManager.on('emergency-stop', (data: Record<string, unknown>) => {
-    if (canUseWindow(win)) {
-      win.webContents.send('emergency-stop', data);
-    }
-  });
-
-  // Hook download manager into session
-  const partition = DEFAULT_PARTITION;
-  const ses = session.fromPartition(partition);
-  downloadManager.hookSession(ses, win);
-
-  // Initialize SecurityManager with all external deps (consolidated from 3 scattered calls)
-  if (securityManager) {
-    securityManager.init({
-      dispatcher: dispatcher || undefined,
-      devToolsManager: devToolsManager!,
-      session: ses,
-    });
-    securityManager.onContainmentIncident = (incident: SecurityContainmentIncident) => {
-      if (!canUseWindow(win)) {
-        return;
-      }
-
-      win.webContents.send('emergency-stop', {
-        source: 'security-containment',
-        incidentId: incident.id,
-        domain: incident.domain,
-        url: incident.url,
-        wcId: incident.wcId,
-        reason: incident.reason,
-        actionSummary: incident.actionSummary,
-        reviewMessage: incident.reviewMessage,
-        automationPaused: incident.automationPaused,
-      });
-
-      const domainLabel = incident.domain ?? 'the current site';
-      void dialog.showMessageBox(win, {
-        type: 'warning',
-        buttons: ['OK'],
-        defaultId: 0,
-        title: 'Security containment activated',
-        message: `Tandem contained ${domainLabel}.`,
-        detail: `${incident.actionSummary}\n\nWhy it happened: ${incident.reason}\n\nNext step: ${incident.reviewMessage}`,
-      }).catch((e) => {
-        log.warn('containment dialog failed:', e instanceof Error ? e.message : String(e));
-      });
-    };
-  }
-
-  while (pendingSecurityCoverageWebContentsIds.length > 0) {
-    const wcId = pendingSecurityCoverageWebContentsIds.shift()!;
-    securityManager?.onTabCreated(wcId).catch(e => log.warn('securityManager.onTabCreated failed:', e instanceof Error ? e.message : e));
-  }
-
-  // Configure native messaging host directories before loading extensions.
-  // Electron 40 requires session.setNativeMessagingHostDirectory() to be called
-  // before chrome.runtime.connectNative() / sendNativeMessage() will work.
-  // We call it on both the partition session and defaultSession to cover all cases.
-  // Manifests are mirrored to these dirs by NativeMessagingSetup.mirrorManifestsToTandemDir().
-  try {
-    const os = await import('os');
-    const path = await import('path');
-    const nativeMsgDirs = [
-      path.join(os.homedir(), 'Library', 'Application Support', 'Tandem Browser', 'NativeMessagingHosts'),
-      path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome', 'NativeMessagingHosts'),
-      '/Library/Google/Chrome/NativeMessagingHosts',
-    ].filter(d => { try { return require('fs').existsSync(d); } catch { return false; } });
-
-    for (const dir of nativeMsgDirs) {
-      for (const targetSession of [ses, session.defaultSession]) {
-        const s = targetSession as unknown as Record<string, unknown>;
-        if (typeof s['setNativeMessagingHostDirectory'] === 'function') {
-          (s['setNativeMessagingHostDirectory'] as (p: string) => void)(dir);
-          log.info(`🔌 Native messaging: set host directory ${dir}`);
-        }
-      }
-      if (nativeMsgDirs.indexOf(dir) === 0) break; // Use first valid dir only
-    }
-  } catch (err) {
-    log.warn('⚠️ Native messaging dir setup failed:', err instanceof Error ? err.message : String(err));
-  }
-
-  // Load extensions from ~/.tandem/extensions/
-  extensionToolbar = new ExtensionToolbar(extensionManager);
-  extensionToolbar.setMainWindow(win);
-
-  extensionManager.init(ses).then(() => {
-    // Register toolbar IPC handlers after extensions are loaded
-    extensionToolbar!.registerIpcHandlers(ses);
-    // Send initial toolbar state to renderer
-    extensionToolbar!.notifyToolbarUpdate(ses);
-  }).catch((err) => {
-    log.warn('⚠️ Failed to load some extensions:', err);
-    // Still register IPC handlers so toolbar works (just empty)
-    extensionToolbar!.registerIpcHandlers(ses);
-  });
-
-  // Auto-start Chrome bookmark sync if enabled in config
-  if (configManager.getConfig().sync.chromeBookmarks) {
-    chromeImporter.startSync();
-  }
-
-  const registry: ManagerRegistry = {
-    tabManager: tabManager!,
-    panelManager: panelManager!,
-    drawManager: drawManager!,
-    activityTracker: activityTracker!,
-    voiceManager: voiceManager!,
-    behaviorObserver: behaviorObserver!,
-    configManager: configManager!,
-    siteMemory: siteMemory!,
-    watchManager: watchManager!,
-    headlessManager: headlessManager!,
-    formMemory: formMemory!,
-    contextBridge: contextBridge!,
-    pipManager: pipManager!,
-    networkInspector: networkInspector!,
-    chromeImporter: chromeImporter!,
-    bookmarkManager: bookmarkManager!,
-    historyManager: historyManager!,
-    downloadManager: downloadManager!,
-    audioCaptureManager: audioCaptureManager!,
-    extensionLoader: extensionLoader!,
-    extensionManager: extensionManager!,
-    claroNoteManager: claroNoteManager!,
-    contentExtractor: new ContentExtractor(),
-    workflowEngine: new WorkflowEngine(),
-    loginManager: new LoginManager(),
-    eventStream: eventStream!,
-    taskManager: taskManager!,
-    tabLockManager: tabLockManager!,
-    devToolsManager: devToolsManager!,
-    wingmanStream: wingmanStream!,
-    securityManager: securityManager!,
-    snapshotManager: snapshotManager!,
-    networkMocker: networkMocker!,
-    sessionManager: sessionManager!,
-    stateManager: stateManager!,
-    scriptInjector: scriptInjector!,
-    locatorFinder: locatorFinder!,
-    deviceEmulator: deviceEmulator!,
-    sidebarManager: sidebarManager!,
-    workspaceManager: workspaceManager!,
-    syncManager: syncManager!,
-    pinboardManager: pinboardManager!,
-  };
-
+  const registry = createManagerRegistry(runtime);
   api = new TandemAPI({ win, port: API_PORT, registry });
   await api.start();
   log.info(`🧠 Tandem API running on http://localhost:${API_PORT}`);
@@ -830,9 +433,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   // Phase 4: Wire GatekeeperWebSocket + NM proxy WebSocket onto the running HTTP server
   const httpServer = api.getHttpServer();
   if (httpServer) {
-    if (securityManager) {
-      securityManager.initGatekeeper(httpServer);
-    }
+    runtime.securityManager.initGatekeeper(httpServer);
     // Start native messaging proxy WebSocket (Electron 40 workaround)
     const { nmProxy: _nmProxyMain } = await import('./extensions/nm-proxy');
     _nmProxyMain.startWebSocket(httpServer, {
@@ -858,139 +459,15 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     });
   }
 
-  // Register all IPC handlers from extracted module
-  registerIpcHandlers({
+  registerRuntimeIpcHandlers(win, runtime);
+  registerInitialTabLifecycle({
     win,
-    tabManager: tabManager!,
-    panelManager: panelManager!,
-    drawManager: drawManager!,
-    voiceManager: voiceManager!,
-    behaviorObserver: behaviorObserver!,
-    siteMemory: siteMemory!,
-    formMemory: formMemory!,
-    contextBridge: contextBridge!,
-    networkInspector: networkInspector!,
-    bookmarkManager: bookmarkManager!,
-    historyManager: historyManager!,
-    eventStream: eventStream!,
-    taskManager: taskManager!,
-    contextMenuManager: contextMenuManager!,
-    devToolsManager: devToolsManager!,
-    activityTracker: activityTracker!,
-    securityManager,
-    scriptInjector: scriptInjector!,
-    deviceEmulator: deviceEmulator!,
-    wingmanStream: wingmanStream!,
-    snapshotManager: snapshotManager!,
+    runtime,
+    canUseWindow,
+    pendingTabRegister,
+    setPendingTabRegister: (data) => { pendingTabRegister = data; },
+    log,
   });
-
-  // Restore saved session tabs after the initial tab is registered
-  async function restoreSessionTabs(initialTabId: string): Promise<void> {
-    if (!sessionRestoreManager || !tabManager) return;
-    const currentWorkspaceManager = workspaceManager;
-    const saved = sessionRestoreManager.load();
-    if (!saved || saved.tabs.length === 0) return;
-
-    log.info(`Restoring ${saved.tabs.length} tabs from session`);
-    currentWorkspaceManager?.resetTabAssignments();
-    const defaultWorkspaceId = currentWorkspaceManager?.list().find(ws => ws.isDefault)?.id ?? null;
-
-    // Open all saved tabs
-    let firstRestoredTabId: string | null = null;
-    for (const savedTab of saved.tabs) {
-      try {
-        const tab = await tabManager.openTab(savedTab.url, savedTab.groupId ?? undefined, 'robin', 'persist:tandem', false);
-        const targetWorkspaceId = savedTab.workspaceId && currentWorkspaceManager?.get(savedTab.workspaceId)
-          ? savedTab.workspaceId
-          : defaultWorkspaceId;
-        if (targetWorkspaceId && currentWorkspaceManager) {
-          currentWorkspaceManager.moveTab(tab.webContentsId, targetWorkspaceId);
-        }
-        if (savedTab.pinned) tabManager.pinTab(tab.id);
-        if (savedTab.title) tab.title = savedTab.title;
-        if (!firstRestoredTabId) firstRestoredTabId = tab.id;
-        // Track which saved tab ID maps to active
-        if (saved.activeTabId === savedTab.id) {
-          firstRestoredTabId = tab.id; // override: this is the active one
-        }
-      } catch (e) {
-        log.warn('Failed to restore tab:', savedTab.url, e instanceof Error ? e.message : String(e));
-      }
-    }
-
-    // Close the initial default tab (it was just the shell bootstrap)
-    if (firstRestoredTabId) {
-      await tabManager.closeTab(initialTabId);
-      const activeWorkspace = currentWorkspaceManager?.getActive();
-      if (activeWorkspace && currentWorkspaceManager) {
-        currentWorkspaceManager.switch(activeWorkspace.id);
-      }
-      // Focus the previously active tab (or the first restored tab)
-      await tabManager.focusTab(firstRestoredTabId);
-    }
-  }
-
-  // Listen for initial tab registration
-  ipcMain.on('tab-register', (_event, data: { webContentsId: number; url: string }) => {
-    if (!tabManager) {
-      pendingTabRegister = data;
-      return;
-    }
-    if (tabManager.count === 0) {
-      const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
-      // Notify renderer of the tab ID
-      if (canUseWindow(win)) {
-        win.webContents.send('tab-registered', { tabId: tab.id });
-      }
-      eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
-      syncTabsToContext(tabManager!, contextBridge!);
-      // Auto-attach CDP for Wingman Vision + Security on startup
-      // Reduced from 2000ms to CDP_ATTACH_DELAY_MS to minimize ScriptGuard race window
-      setTimeout(async () => {
-        await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
-        securityManager?.onTabAttached(data.webContentsId).catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
-      }, CDP_ATTACH_DELAY_MS);
-      // Restore saved session tabs (replaces the default new tab), then reconcile
-      // to remove any renderer orphans that result from failed tab restorations.
-      restoreSessionTabs(tab.id)
-        .then(() => tabManager?.reconcileWithRenderer()
-          .then(r => {
-            if (r.removed.length > 0) {
-              log.info(`Post-restore reconcile: removed ${r.removed.length} renderer orphan(s): ${r.removed.join(', ')}`);
-            }
-          })
-          .catch(e => log.warn('Post-restore reconcile failed:', e instanceof Error ? e.message : String(e)))
-        )
-        .catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
-    }
-  });
-
-  // Process any tab-register message that arrived before startAPI was ready
-  if (pendingTabRegister && tabManager && tabManager.count === 0) {
-    const data = pendingTabRegister;
-    pendingTabRegister = null;
-    const tab = tabManager.registerInitialTab(data.webContentsId, data.url);
-    if (canUseWindow(win)) {
-      win.webContents.send('tab-registered', { tabId: tab.id });
-    }
-    eventStream?.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
-    syncTabsToContext(tabManager!, contextBridge!);
-    setTimeout(async () => {
-      await devToolsManager?.attachToTab(data.webContentsId).catch(e => log.warn('devToolsManager.attachToTab failed:', e instanceof Error ? e.message : e));
-      securityManager?.onTabAttached(data.webContentsId).catch(e => log.warn('securityManager.onTabAttached failed:', e instanceof Error ? e.message : e));
-    }, CDP_ATTACH_DELAY_MS);
-    // Restore saved session tabs (replaces the default new tab), then reconcile.
-    restoreSessionTabs(tab.id)
-      .then(() => tabManager?.reconcileWithRenderer()
-        .then(r => {
-          if (r.removed.length > 0) {
-            log.info(`Post-restore reconcile: removed ${r.removed.length} renderer orphan(s): ${r.removed.join(', ')}`);
-          }
-        })
-        .catch(e => log.warn('Post-restore reconcile failed:', e instanceof Error ? e.message : String(e)))
-      )
-      .catch(e => log.warn('Session restore failed:', e instanceof Error ? e.message : String(e)));
-  }
 }
 
 
@@ -999,13 +476,13 @@ void app.whenReady().then(async () => {
   await startAPI(win);
   buildAppMenu({
     mainWindow: win,
-    tabManager,
-    panelManager,
-    drawManager,
-    voiceManager,
-    pipManager,
-    configManager,
-    audioCaptureManager,
+    tabManager: runtime?.tabManager ?? null,
+    panelManager: runtime?.panelManager ?? null,
+    drawManager: runtime?.drawManager ?? null,
+    voiceManager: runtime?.voiceManager ?? null,
+    pipManager: runtime?.pipManager ?? null,
+    configManager: runtime?.configManager ?? null,
+    audioCaptureManager: runtime?.audioCaptureManager ?? null,
   });
 
   // Keep shortcuts always registered while app is running
@@ -1018,13 +495,13 @@ void app.whenReady().then(async () => {
         await startAPI(w);
         buildAppMenu({
           mainWindow: w,
-          tabManager,
-          panelManager,
-          drawManager,
-          voiceManager,
-          pipManager,
-          configManager,
-          audioCaptureManager,
+          tabManager: runtime?.tabManager ?? null,
+          panelManager: runtime?.panelManager ?? null,
+          drawManager: runtime?.drawManager ?? null,
+          voiceManager: runtime?.voiceManager ?? null,
+          pipManager: runtime?.pipManager ?? null,
+          configManager: runtime?.configManager ?? null,
+          audioCaptureManager: runtime?.audioCaptureManager ?? null,
         });
       }).catch((err) => {
         log.error('Failed to recreate window:', err);

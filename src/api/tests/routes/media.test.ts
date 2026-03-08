@@ -249,7 +249,7 @@ describe('Media Routes', () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(ctx.panelManager.getImagePath).mockReturnValue('/tmp/test-images/valid.png');
 
-      const res = await request(app).get('/chat/image/valid.png');
+      const _res = await request(app).get('/chat/image/valid.png');
 
       // sendFile will try to serve the file; since /tmp/test-images/valid.png
       // doesn't actually exist on disk the response won't be 400 or 404 from our guards

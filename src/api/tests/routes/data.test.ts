@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
+import type * as FsModule from 'fs';
 
 vi.mock('fs', async () => {
-  const actual = await vi.importActual<typeof import('fs')>('fs');
+  const actual = await vi.importActual<typeof FsModule>('fs');
   return {
     ...actual,
     default: {

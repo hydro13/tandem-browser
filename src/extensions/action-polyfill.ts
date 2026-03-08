@@ -690,8 +690,6 @@ export class ActionPolyfill {
 
         const cwsId = dir.name;
         const polyfillCode = generatePolyfillScript(cwsId, this.apiPort);
-        const POLYFILL_START_PREFIX = '/* Tandem chrome.action polyfill v';
-        const POLYFILL_END_MARKER  = '/* Tandem:polyfill:end */';
         const marker = '/* Tandem chrome.action polyfill v9';
 
         let existing = fs.readFileSync(swPath, 'utf-8');

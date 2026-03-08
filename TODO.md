@@ -14,10 +14,11 @@ Last updated: March 8, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.45.0`
+- Current app version: `0.45.1`
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
+- `TODO.md` is the active engineering backlog; `docs/internal/ROADMAP.md` and `docs/internal/STATUS.md` are historical snapshots, not the day-to-day source of truth.
 
 ## Current Priorities
 
@@ -36,8 +37,13 @@ Last updated: March 8, 2026
 
 - [ ] Fix the `Snoze` typo in `docs/research/opera-browser-research.md` and do a quick spell-check in the same tab-snoozing section
 - [ ] Harden extension update version comparison in `src/extensions/update-checker.ts`; `isNewerVersion()` still relies on `split('.')` and `Number`, which is fragile for suffixes such as `1.2.3-beta`
-- [ ] Replace absolute local links in `README.md` for `AGENTS.md` and `TODO.md` with repo-relative links that work on GitHub
 - [ ] Add focused tests for extension version comparison edge cases in `src/extensions/tests/`, including `1.2` vs `1.2.0`, `1.10.0` vs `1.9.9`, and pre-release suffix input
+
+### Codebase Hygiene
+
+- [x] Split `src/main.ts` bootstrap and teardown wiring into dedicated `src/bootstrap/` modules so manager composition stops growing in one file
+- [ ] Split `shell/index.html`, `shell/js/main.js`, and `shell/css/main.css` into smaller shell modules by surface (`tabs`, `sidebar`, `wingman`, `settings`, layout CSS)
+- [ ] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later
 

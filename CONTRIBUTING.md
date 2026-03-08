@@ -4,8 +4,8 @@ Thanks for contributing to Tandem Browser.
 
 ## Before You Start
 
-- Read [README.md](/Users/robinwaslander/Documents/dev/tandem-browser/README.md) for the product overview
-- Read [PROJECT.md](/Users/robinwaslander/Documents/dev/tandem-browser/PROJECT.md) for architecture context
+- Read [README.md](README.md) for the product overview
+- Read [PROJECT.md](PROJECT.md) for architecture context
 - Keep changes local-first and privacy-preserving
 - Avoid introducing new dependencies unless they are clearly justified
 
@@ -13,8 +13,7 @@ Thanks for contributing to Tandem Browser.
 
 ```bash
 npm install
-npm run compile
-npm test
+npm run verify
 ```
 
 For manual app testing:
