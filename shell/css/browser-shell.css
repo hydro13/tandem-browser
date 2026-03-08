@@ -152,43 +152,6 @@
       overflow: hidden;
     }
 
-    .screenshot-menu {
-      position: absolute;
-      top: 78px;
-      right: 170px;
-      min-width: 170px;
-      display: none;
-      flex-direction: column;
-      gap: 4px;
-      padding: 8px;
-      background: rgba(16, 22, 40, 0.96);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      box-shadow: 0 18px 40px rgba(0, 0, 0, 0.38);
-      z-index: 150;
-      backdrop-filter: blur(18px);
-    }
-
-    .screenshot-menu.visible {
-      display: flex;
-    }
-
-    .screenshot-menu button {
-      background: transparent;
-      border: 1px solid transparent;
-      color: var(--text);
-      text-align: left;
-      padding: 10px 12px;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
-    }
-
-    .screenshot-menu button:hover {
-      background: rgba(255, 255, 255, 0.08);
-      border-color: rgba(255, 255, 255, 0.08);
-    }
-
     .region-capture-overlay {
       position: fixed;
       inset: 0;

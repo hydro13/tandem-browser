@@ -5,6 +5,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ## [v0.51.0] - 2026-03-08
 
 - feat: expand screenshot workflows with google photos and capture modes
+- fix: use native screenshot mode menu in shell
 
 ## [v0.50.0] - 2026-03-08
 

@@ -7,7 +7,6 @@
 
     const overlay = renderer.overlay;
     const screenshotButton = document.getElementById('btn-screenshot');
-    const screenshotMenu = document.getElementById('screenshot-menu');
     const regionOverlay = document.getElementById('region-capture-overlay');
     const regionBox = document.getElementById('region-capture-box');
 
@@ -30,14 +29,6 @@
     wingmanBadge.addEventListener('mouseleave', () => { clearTimeout(wingmanBadgePressTimer); });
     wingmanBadge.style.cursor = 'pointer';
     wingmanBadge.title = 'Right-click for settings';
-
-    function closeScreenshotMenu() {
-      screenshotMenu.classList.remove('visible');
-    }
-
-    function openScreenshotMenu() {
-      screenshotMenu.classList.add('visible');
-    }
 
     function updateRegionBox(startX, startY, currentX, currentY) {
       const left = Math.min(startX, currentX);
@@ -111,7 +102,6 @@
     }
 
     async function captureScreenshotMode(mode) {
-      closeScreenshotMenu();
       if (!window.tandem) return;
 
       if (mode === 'region') {
@@ -126,23 +116,11 @@
 
     screenshotButton.addEventListener('click', (event) => {
       event.stopPropagation();
-      if (screenshotMenu.classList.contains('visible')) {
-        closeScreenshotMenu();
-      } else {
-        openScreenshotMenu();
-      }
-    });
-
-    screenshotMenu.querySelectorAll('[data-screenshot-mode]').forEach((button) => {
-      button.addEventListener('click', () => {
-        void captureScreenshotMode(button.dataset.screenshotMode);
+      const rect = screenshotButton.getBoundingClientRect();
+      void window.tandem?.showScreenshotMenu({
+        x: Math.round(rect.left),
+        y: Math.round(rect.bottom + 6),
       });
-    });
-
-    document.addEventListener('click', (event) => {
-      if (!screenshotMenu.contains(event.target) && event.target !== screenshotButton) {
-        closeScreenshotMenu();
-      }
     });
 
     // ═══════════════════════════════════════════════
@@ -293,6 +271,9 @@
           bookmarkStar.classList.toggle('bookmarked', data.bookmarked);
           bookmarkStar.textContent = data.bookmarked ? '★' : '☆';
         }
+      });
+      window.tandem.onScreenshotModeSelected((mode) => {
+        void captureScreenshotMode(mode);
       });
 
     }

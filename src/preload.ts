@@ -49,6 +49,11 @@ contextBridge.exposeInMainWorld('tandem', {
     ipcRenderer.on('shortcut', handler);
     return () => ipcRenderer.removeListener('shortcut', handler);
   },
+  onScreenshotModeSelected: (callback: (mode: 'page' | 'application' | 'region') => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, mode: 'page' | 'application' | 'region') => callback(mode);
+    ipcRenderer.on('screenshot-mode-selected', handler);
+    return () => ipcRenderer.removeListener('screenshot-mode-selected', handler);
+  },
     onTabRegistered: (callback: (data: { tabId: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { tabId: string }) => callback(data);
     ipcRenderer.on('tab-registered', handler);
@@ -103,6 +108,7 @@ contextBridge.exposeInMainWorld('tandem', {
     mode: 'page' | 'application' | 'region',
     region?: { x: number; y: number; width: number; height: number },
   ) => ipcRenderer.invoke('capture-screenshot', { mode, region }),
+  showScreenshotMenu: (anchor: { x: number; y: number }) => ipcRenderer.invoke('show-screenshot-menu', anchor),
 
   // Voice
   onVoiceToggle: (callback: (data: { listening: boolean }) => void) => {

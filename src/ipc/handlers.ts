@@ -80,6 +80,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     'window-minimize',
     'window-maximize',
     'window-close',
+    'show-screenshot-menu',
   ];
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
@@ -87,6 +88,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   const ipcHandlers = [
     'snap-for-wingman',
     'quick-screenshot',
+    'show-screenshot-menu',
     'bookmark-page',
     'unbookmark-page',
     'is-bookmarked',
@@ -186,6 +188,31 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
+  });
+
+  ipcMain.handle('show-screenshot-menu', async (_event, anchor: { x?: number; y?: number }) => {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Web Page',
+        click: () => _win.webContents.send('screenshot-mode-selected', 'page'),
+      },
+      {
+        label: 'Application',
+        click: () => _win.webContents.send('screenshot-mode-selected', 'application'),
+      },
+      {
+        label: 'Region',
+        click: () => _win.webContents.send('screenshot-mode-selected', 'region'),
+      },
+    ]);
+
+    menu.popup({
+      window: _win,
+      x: typeof anchor?.x === 'number' ? anchor.x : undefined,
+      y: typeof anchor?.y === 'number' ? anchor.y : undefined,
+    });
+
+    return { ok: true };
   });
 
   // ═══ Voice IPC ═══
