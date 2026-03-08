@@ -17,6 +17,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ## [Unreleased] - 2026-03-08
 
 ### Changed
+- **Configurable new-tab quick links** (`shell/newtab.html`, `shell/settings.html`, `src/config/manager.ts`) — the new tab page now reads quick links from shared config instead of a hardcoded HTML list, and settings now expose a small editor to add, remove, and save those shortcuts
 - **Closed-panel Wingman reply notifications** (`src/panel/manager.ts`, `src/panel/tests/manager.test.ts`) — incoming AI chat replies now trigger the existing Wingman alert path when the side panel is closed, so replies are surfaced even if the user is browsing with the panel hidden
 - **Extension update version comparison** (`src/extensions/update-checker.ts`, `src/extensions/tests/extensions.test.ts`) — replaced the fragile dot-split numeric comparison with segment-aware parsing that treats `1.2` and `1.2.0` as equal, compares multi-digit segments numerically, and handles prerelease suffixes such as `-beta` and `-rc.1` consistently during update checks
 - **Verification baseline** (`package.json`, `eslint.config.mjs`, `tsconfig.eslint.json`, `.github/workflows/verify.yml`) — restored ESLint coverage for the test tree, added a single `npm run verify` command, and wired the same verification command into GitHub Actions so compile, lint, and test can run from one entry point locally and in CI

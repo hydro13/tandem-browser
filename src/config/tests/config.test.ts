@@ -45,6 +45,12 @@ describe('ConfigManager', () => {
       expect(config.general.activeBackend).toBe('openclaw');
       expect(config.general.agentName).toBe('Wingman');
       expect(config.general.agentDisplayName).toBe('AI Wingman');
+      expect(config.general.quickLinks).toHaveLength(8);
+      expect(config.general.quickLinks[0]).toMatchObject({
+        id: 'duckduckgo',
+        label: 'DuckDuckGo',
+        url: 'https://duckduckgo.com',
+      });
     });
 
     it('loads with correct screenshot defaults', () => {
@@ -151,7 +157,7 @@ describe('ConfigManager', () => {
 
     it('enforces screenshots.clipboard always true', () => {
       const cm = new ConfigManager();
-      cm.updateConfig({ screenshots: { clipboard: false as any } });
+      cm.updateConfig({ screenshots: { clipboard: false as unknown as true } });
       const config = cm.getConfig();
       expect(config.screenshots.clipboard).toBe(true);
     });
@@ -169,6 +175,23 @@ describe('ConfigManager', () => {
       const config = cm.getConfig();
       expect(config.general.language).toBe('fr-FR');
       expect(config.appearance.theme).toBe('light');
+    });
+
+    it('replaces quick links with sanitized values', () => {
+      const cm = new ConfigManager();
+      cm.updateConfig({
+        general: {
+          quickLinks: [
+            { label: ' Docs ', url: ' https://docs.example.com ' },
+            { label: 'Invalid missing url', url: ' ' },
+          ],
+        },
+      });
+
+      const config = cm.getConfig();
+      expect(config.general.quickLinks).toEqual([
+        { id: 'quick-link-1', label: 'Docs', url: 'https://docs.example.com' },
+      ]);
     });
   });
 
@@ -220,6 +243,26 @@ describe('ConfigManager', () => {
       const cm = new ConfigManager();
       const config = cm.getConfig();
       expect(config.general.startPage).toBe('wingman');
+    });
+
+    it('normalizes saved quick links from disk', () => {
+      const savedConfig = JSON.stringify({
+        general: {
+          quickLinks: [
+            { id: 'docs', label: ' Docs ', url: ' https://docs.example.com ' },
+            { label: 'Missing URL' },
+          ],
+        },
+      });
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(savedConfig);
+
+      const cm = new ConfigManager();
+      const config = cm.getConfig();
+
+      expect(config.general.quickLinks).toEqual([
+        { id: 'docs', label: 'Docs', url: 'https://docs.example.com' },
+      ]);
     });
   });
 

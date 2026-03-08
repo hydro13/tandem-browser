@@ -8,6 +8,12 @@ import { createLogger } from '../utils/logger';
 import { detectOpenClaw } from '../utils/openclaw-detect';
 const log = createLogger('ConfigManager');
 
+export interface QuickLinkConfig {
+  id: string;
+  label: string;
+  url: string;
+}
+
 /**
  * TandemConfig — All configurable settings for Tandem Browser.
  * Stored in ~/.tandem/config.json
@@ -24,6 +30,7 @@ export interface TandemConfig {
     activeBackend: 'openclaw' | 'claude';
     agentName: string;
     agentDisplayName: string;
+    quickLinks: QuickLinkConfig[];
   };
 
   // Screenshots
@@ -98,6 +105,17 @@ export interface TandemConfig {
   onboardingComplete: boolean;
 }
 
+const DEFAULT_QUICK_LINKS: QuickLinkConfig[] = [
+  { id: 'duckduckgo', label: 'DuckDuckGo', url: 'https://duckduckgo.com' },
+  { id: 'github', label: 'GitHub', url: 'https://github.com' },
+  { id: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com' },
+  { id: 'gmail', label: 'Gmail', url: 'https://mail.google.com' },
+  { id: 'youtube', label: 'YouTube', url: 'https://youtube.com' },
+  { id: 'reddit', label: 'Reddit', url: 'https://reddit.com' },
+  { id: 'claronote', label: 'ClaroNote', url: 'https://claronote.com' },
+  { id: 'x', label: 'X', url: 'https://x.com' },
+];
+
 const DEFAULT_CONFIG: TandemConfig = {
   general: {
     startPage: 'wingman',
@@ -109,6 +127,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     activeBackend: 'openclaw',
     agentName: 'Wingman',
     agentDisplayName: 'AI Wingman',
+    quickLinks: DEFAULT_QUICK_LINKS,
   },
   screenshots: {
     clipboard: true,
@@ -228,12 +247,13 @@ export class ConfigManager {
           delete raw.general.keesPanelPosition;
           delete raw.general.keesPanelDefaultOpen;
         }
-        return this.deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw) as unknown as TandemConfig;
+        const merged = this.deepMerge(DEFAULT_CONFIG as unknown as Record<string, unknown>, raw) as unknown as TandemConfig;
+        return this.normalizeConfig(merged);
       }
     } catch (e) {
       log.warn('Config file corrupted, using defaults:', e instanceof Error ? e.message : String(e));
     }
-    return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+    return this.normalizeConfig(JSON.parse(JSON.stringify(DEFAULT_CONFIG)) as TandemConfig);
   }
 
   /** Save config to disk */
@@ -277,10 +297,50 @@ export class ConfigManager {
     const merged = this.deepMerge(this.config as unknown as Record<string, unknown>, patch) as unknown as TandemConfig;
     // Enforce clipboard always true
     merged.screenshots.clipboard = true;
-    this.config = merged;
+    this.config = this.normalizeConfig(merged);
     this.save();
     this.notifyListeners(patch as Partial<TandemConfig>);
     return this.getConfig();
+  }
+
+  private normalizeConfig(config: TandemConfig): TandemConfig {
+    return {
+      ...config,
+      general: {
+        ...config.general,
+        quickLinks: this.normalizeQuickLinks(config.general.quickLinks),
+      },
+    };
+  }
+
+  private normalizeQuickLinks(rawLinks: unknown): QuickLinkConfig[] {
+    if (!Array.isArray(rawLinks)) {
+      return DEFAULT_QUICK_LINKS.map((link) => ({ ...link }));
+    }
+
+    return rawLinks
+      .map((link, index) => this.normalizeQuickLink(link, index))
+      .filter((link): link is QuickLinkConfig => link !== null);
+  }
+
+  private normalizeQuickLink(rawLink: unknown, index: number): QuickLinkConfig | null {
+    if (!rawLink || typeof rawLink !== 'object') {
+      return null;
+    }
+
+    const candidate = rawLink as Partial<QuickLinkConfig>;
+    const label = typeof candidate.label === 'string' ? candidate.label.trim() : '';
+    const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
+
+    if (!label || !url) {
+      return null;
+    }
+
+    const id = typeof candidate.id === 'string' && candidate.id.trim()
+      ? candidate.id.trim()
+      : `quick-link-${index + 1}`;
+
+    return { id, label, url };
   }
 
   /** Register a change listener */

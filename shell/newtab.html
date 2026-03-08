@@ -136,6 +136,29 @@
       border-radius: 4px;
     }
 
+    .quick-link-fallback {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: rgba(233, 69, 96, 0.16);
+      color: #f2b1bc;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .quick-links-empty {
+      color: #666;
+      font-size: 13px;
+      padding: 12px 0;
+      text-align: center;
+      width: 100%;
+    }
+
     .recent-section {
       width: 100%;
       max-width: 560px;
@@ -200,39 +223,8 @@
     <input type="text" id="search" placeholder="Search or type a URL..." autofocus>
   </div>
 
-  <div class="quick-links">
-    <a class="quick-link" href="https://duckduckgo.com">
-      <div class="icon"><img src="https://duckduckgo.com/favicon.ico" alt="DDG"></div>
-      DuckDuckGo
-    </a>
-    <a class="quick-link" href="https://github.com">
-      <div class="icon"><img src="https://github.com/favicon.ico" alt="GH"></div>
-      GitHub
-    </a>
-    <a class="quick-link" href="https://linkedin.com">
-      <div class="icon"><img src="https://linkedin.com/favicon.ico" alt="LI"></div>
-      LinkedIn
-    </a>
-    <a class="quick-link" href="https://mail.google.com">
-      <div class="icon"><img src="https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico" alt="GM"></div>
-      Gmail
-    </a>
-    <a class="quick-link" href="https://youtube.com">
-      <div class="icon"><img src="https://youtube.com/favicon.ico" alt="YT"></div>
-      YouTube
-    </a>
-    <a class="quick-link" href="https://reddit.com">
-      <div class="icon"><img src="https://reddit.com/favicon.ico" alt="RD"></div>
-      Reddit
-    </a>
-    <a class="quick-link" href="https://claronote.com">
-      <div class="icon">&#x1F4DD;</div>
-      ClaroNote
-    </a>
-    <a class="quick-link" href="https://x.com">
-      <div class="icon">&#x1D54F;</div>
-      X
-    </a>
+  <div class="quick-links" id="quick-links">
+    <div class="quick-links-empty">Loading shortcuts...</div>
   </div>
 
   <div class="recent-section">
@@ -243,7 +235,19 @@
   </div>
 
   <script>
+    const API = 'http://localhost:8765';
     const searchInput = document.getElementById('search');
+    const quickLinksContainer = document.getElementById('quick-links');
+    const fallbackQuickLinks = [
+      { label: 'DuckDuckGo', url: 'https://duckduckgo.com' },
+      { label: 'GitHub', url: 'https://github.com' },
+      { label: 'LinkedIn', url: 'https://linkedin.com' },
+      { label: 'Gmail', url: 'https://mail.google.com' },
+      { label: 'YouTube', url: 'https://youtube.com' },
+      { label: 'Reddit', url: 'https://reddit.com' },
+      { label: 'ClaroNote', url: 'https://claronote.com' },
+      { label: 'X', url: 'https://x.com' },
+    ];
 
     searchInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
@@ -261,11 +265,82 @@
       }
     });
 
+    function createQuickLinkFallback(label) {
+      const fallback = document.createElement('span');
+      fallback.className = 'quick-link-fallback';
+      fallback.textContent = (label || '?').trim().slice(0, 2).toUpperCase();
+      return fallback;
+    }
+
+    function getFaviconUrl(rawUrl) {
+      try {
+        const hostname = new URL(rawUrl).hostname;
+        return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=64`;
+      } catch {
+        return '';
+      }
+    }
+
+    function renderQuickLinks(links) {
+      quickLinksContainer.innerHTML = '';
+
+      if (!Array.isArray(links) || links.length === 0) {
+        quickLinksContainer.innerHTML = '<div class="quick-links-empty">No quick links configured</div>';
+        return;
+      }
+
+      for (const link of links) {
+        if (!link || !link.label || !link.url) continue;
+
+        const anchor = document.createElement('a');
+        anchor.className = 'quick-link';
+        anchor.href = link.url;
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'icon';
+
+        const faviconUrl = getFaviconUrl(link.url);
+        if (faviconUrl) {
+          const img = document.createElement('img');
+          img.src = faviconUrl;
+          img.alt = link.label;
+          img.addEventListener('error', () => {
+            iconWrap.replaceChildren(createQuickLinkFallback(link.label));
+          }, { once: true });
+          iconWrap.appendChild(img);
+        } else {
+          iconWrap.appendChild(createQuickLinkFallback(link.label));
+        }
+
+        const label = document.createElement('span');
+        label.textContent = link.label;
+
+        anchor.appendChild(iconWrap);
+        anchor.appendChild(label);
+        quickLinksContainer.appendChild(anchor);
+      }
+
+      if (!quickLinksContainer.children.length) {
+        quickLinksContainer.innerHTML = '<div class="quick-links-empty">No quick links configured</div>';
+      }
+    }
+
+    async function loadQuickLinks() {
+      try {
+        const res = await fetch(`${API}/config`);
+        if (!res.ok) throw new Error('config load failed');
+        const config = await res.json();
+        renderQuickLinks(config.general?.quickLinks || []);
+      } catch {
+        renderQuickLinks(fallbackQuickLinks);
+      }
+    }
+
     // Load recent tabs from API
     async function loadRecentTabs() {
       const container = document.getElementById('recent-tabs');
       try {
-        const res = await fetch('http://localhost:8765/tabs/list');
+        const res = await fetch(`${API}/tabs/list`);
         const data = await res.json();
 
         if (data.tabs && data.tabs.length > 0) {
@@ -291,6 +366,7 @@
       }
     }
 
+    loadQuickLinks();
     loadRecentTabs();
   </script>
 </body>

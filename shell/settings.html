@@ -223,6 +223,44 @@
 
     .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
+    .field-stack {
+      align-items: stretch;
+      flex-direction: column;
+    }
+
+    .field-stack .field-info {
+      width: 100%;
+    }
+
+    .quick-link-editor {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .quick-link-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .quick-link-row {
+      display: grid;
+      grid-template-columns: minmax(0, 160px) minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .quick-link-empty {
+      padding: 10px 12px;
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      text-align: center;
+    }
+
     /* Stats grid */
     .stats-grid {
       display: grid;
@@ -478,6 +516,20 @@
           <div class="field-label">Custom start URL</div>
         </div>
         <input type="url" id="cfg-customStartUrl" placeholder="https://example.com" />
+      </div>
+
+      <div class="field field-stack">
+        <div class="field-info">
+          <div class="field-label">Quick links</div>
+          <div class="field-desc">Choose the shortcuts shown on the new tab page</div>
+        </div>
+        <div class="quick-link-editor">
+          <div class="quick-link-list" id="cfg-quickLinks"></div>
+          <div class="btn-group">
+            <button type="button" class="btn btn-secondary" id="btn-addQuickLink">Add link</button>
+            <button type="button" class="btn btn-primary" id="btn-saveQuickLinks">Save links</button>
+          </div>
+        </div>
       </div>
 
       <div class="field">
@@ -993,6 +1045,7 @@
   <script src="js/api-auth.js"></script>
   <script>
     const API = 'http://localhost:8765';
+    const quickLinksList = document.getElementById('cfg-quickLinks');
 
     // ═══ Load config ═══
     let config = {};
@@ -1025,6 +1078,7 @@
       setChecked('cfg-wingmanPanelDefaultOpen', !!g.wingmanPanelDefaultOpen);
       setChecked('cfg-showBookmarksBar', g.showBookmarksBar !== false);
       toggleField('field-customStartUrl', g.startPage === 'custom');
+      renderQuickLinkRows(g.quickLinks || []);
 
       // Liquid Glass Lite
       setChecked('cfg-lgl-enabled', lgl.enabled !== false);
@@ -1069,6 +1123,83 @@
     function setVal(id, val) { const el = document.getElementById(id); if (el) el.value = val; }
     function setChecked(id, val) { const el = document.getElementById(id); if (el) el.checked = val; }
     function toggleField(id, show) { const el = document.getElementById(id); if (el) el.style.display = show ? 'flex' : 'none'; }
+
+    function appendQuickLinkRow(link = {}) {
+      const row = document.createElement('div');
+      row.className = 'quick-link-row';
+      row.innerHTML = `
+        <input type="text" class="quick-link-label" placeholder="Label" value="${esc(link.label || '')}" />
+        <input type="url" class="quick-link-url" placeholder="https://example.com" value="${esc(link.url || '')}" />
+        <button type="button" class="btn btn-danger quick-link-remove">Remove</button>
+      `;
+      row.querySelector('.quick-link-remove').addEventListener('click', () => {
+        row.remove();
+        updateQuickLinksEmptyState();
+      });
+      quickLinksList.appendChild(row);
+      updateQuickLinksEmptyState();
+    }
+
+    function renderQuickLinkRows(links) {
+      quickLinksList.innerHTML = '';
+      if (Array.isArray(links)) {
+        for (const link of links) appendQuickLinkRow(link);
+      }
+      updateQuickLinksEmptyState();
+    }
+
+    function updateQuickLinksEmptyState() {
+      const rows = quickLinksList.querySelectorAll('.quick-link-row');
+      let empty = quickLinksList.querySelector('.quick-link-empty');
+      if (!rows.length) {
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'quick-link-empty';
+          empty.textContent = 'No quick links configured yet.';
+          quickLinksList.appendChild(empty);
+        }
+        return;
+      }
+      empty?.remove();
+    }
+
+    function normalizeQuickLinkUrl(rawUrl) {
+      const trimmed = rawUrl.trim();
+      if (!trimmed) return '';
+      const withScheme = /^[a-zA-Z][a-zA-Z\d+\-.]*:/.test(trimmed) ? trimmed : `https://${trimmed}`;
+      return new URL(withScheme).toString();
+    }
+
+    function collectQuickLinks() {
+      const rows = quickLinksList.querySelectorAll('.quick-link-row');
+      const links = [];
+
+      for (const row of rows) {
+        const label = row.querySelector('.quick-link-label').value.trim();
+        const rawUrl = row.querySelector('.quick-link-url').value.trim();
+
+        if (!label && !rawUrl) continue;
+        if (!label || !rawUrl) {
+          throw new Error('Each quick link needs both a label and a URL.');
+        }
+
+        links.push({
+          label,
+          url: normalizeQuickLinkUrl(rawUrl),
+        });
+      }
+
+      return links;
+    }
+
+    async function saveQuickLinks() {
+      try {
+        const quickLinks = collectQuickLinks();
+        await saveConfig({ general: { quickLinks } });
+      } catch (error) {
+        showToast(error instanceof Error ? error.message : 'Save failed ✕');
+      }
+    }
 
     // ═══ Save on change ═══
     async function saveConfig(patch) {
@@ -1133,6 +1264,10 @@
     wire('cfg-chromeBookmarks', 'sync.chromeBookmarks');
     wire('cfg-chromeProfile', 'sync.chromeProfile');
     wire('cfg-trackingEnabled', 'behavior.trackingEnabled');
+    document.getElementById('btn-addQuickLink').addEventListener('click', () => appendQuickLinkRow());
+    document.getElementById('btn-saveQuickLinks').addEventListener('click', () => {
+      void saveQuickLinks();
+    });
 
     // Liquid Glass Lite
     wire('cfg-lgl-enabled', 'appearance.liquidGlass.enabled');

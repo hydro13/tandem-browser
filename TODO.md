@@ -27,7 +27,7 @@ Last updated: March 8, 2026
 - [ ] `WebSocket /watch/live` for live watch updates
 - [x] Show a notification when the Wingman panel is closed and Wingman replies
 - [ ] Google Photos upload support for screenshots; the settings UI exists, but the upload path does not
-- [ ] Configurable quick links on the new tab page; links are still hardcoded
+- [x] Configurable quick links on the new tab page; links are no longer hardcoded
 - [ ] Configurable diff modes for watches beyond SHA-256 hash comparison
 - [ ] HAR export for the network inspector
 - [ ] Design and build the `Personal News` experience; the sidebar currently has a placeholder slot, but the actual panel and feed model are not implemented yet
