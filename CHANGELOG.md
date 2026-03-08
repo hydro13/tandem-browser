@@ -2,6 +2,24 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.51.1] - 2026-03-08
+
+- fix: use native screenshot mode menu in shell
+
+What was built/changed:
+- Modified files: src/preload.ts, src/ipc/handlers.ts, shell/js/wingman.js, shell/index.html, shell/css/browser-shell.css, CHANGELOG.md, TODO.md
+- Replaced the renderer-side screenshot mode popup with a native Electron menu triggered from the toolbar camera button
+- Removed dead screenshot popup markup and styles from the shell
+
+Why this approach:
+- The native menu is more reliable than the custom renderer popup and avoids a second fragile overlay path for a core capture workflow
+
+Tested:
+- npx tsc: zero errors
+- npx vitest run src/draw/tests/overlay.test.ts: all tests pass
+- npm run verify: passed
+- Manual: app launch reached Electron startup logs; user restart still required to load the new preload/renderer code
+
 ## [v0.51.0] - 2026-03-08
 
 - feat: expand screenshot workflows with google photos and capture modes
