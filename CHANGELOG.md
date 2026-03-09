@@ -2,6 +2,28 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.57.1] - 2026-03-09
+
+- fix: Linux video recorder Wayland/Pipewire compatibility
+
+What was built/changed:
+- Use native getDisplayMedia() on Linux instead of desktopCapturer to avoid Wayland screencast portal conflicts
+- Add try/catch error handling in get-desktop-source IPC handler to prevent renderer crashes
+- Fix stop button event bubbling (stopPropagation) to prevent double-click triggering fullscreen
+- Add debug logging for audio track detection
+- Platform-aware audio handling (Linux uses getDisplayMedia audio, macOS/Windows use desktopCapturer)
+
+Why this approach:
+- Electron's desktopCapturer API has known issues with Wayland/Pipewire portals
+- Native getDisplayMedia() is the web standard and works reliably on Wayland
+- Prevents renderer crashes from unhandled IPC errors
+
+Tested:
+- Video recording on Linux/Wayland: works (video + mic audio)
+- Stop button: works (single click + Esc shortcut)
+- ffmpeg MP4 conversion: works
+- Known limitation: Tab/webview audio not captured on Linux due to Electron process isolation (documented in TODO.md)
+
 ## [Unreleased]
 
 - fix: Linux video recorder compatibility with Wayland/Pipewire
