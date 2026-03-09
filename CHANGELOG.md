@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.53.0] - 2026-03-09
+
+- feat: expose recording APIs in preload bridge
+
 ## [v0.52.0] - 2026-03-09
 
 - feat: add VideoRecorderManager, remove AudioCaptureManager
