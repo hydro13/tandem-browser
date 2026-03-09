@@ -2,6 +2,14 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.57.2] - 2026-03-09
+
+- fix: check Screen Recording permission before capture on macOS
+
+Prevents renderer crash by checking systemPreferences.getMediaAccessStatus
+before attempting desktopCapturer. Shows user-friendly alert with
+instructions to enable permission in System Settings.
+
 ## [v0.57.1] - 2026-03-09
 
 - fix: Linux video recorder Wayland/Pipewire compatibility
