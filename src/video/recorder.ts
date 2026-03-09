@@ -160,6 +160,7 @@ export class VideoRecorderManager {
         '-c:v', 'libx264',
         '-preset', 'fast',
         '-crf', '23',
+        '-r', '30',
         '-c:a', 'aac',
         '-b:a', '128k',
         '-movflags', '+faststart',
