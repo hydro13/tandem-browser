@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.57.8] - 2026-03-14
+
+- fix: auto-wrap window.location navigation in /devtools/evaluate
+
+Prevents renderer blocking when navigating via evaluate endpoint.
+Previously, window.location assignments destroyed the JS context
+before evaluate could return, causing 30s timeouts and 'not
+responding' dialogs.
+
+Now auto-detects window.location assignments and wraps them in
+setTimeout(0) to return immediately while navigation happens
+asynchronously.
+
 ## [v0.57.7] - 2026-03-14
 
 - fix: auto-wrap window.location navigation in /devtools/evaluate to prevent renderer blocking
