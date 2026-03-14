@@ -16,9 +16,8 @@ navigation, extraction, automation, and observability. Tandem is not a generic
 environment designed so the human and OpenClaw can browse together on the same
 machine.
 
-Tandem is maintained by the same maintainer behind OpenClaw and should be read
-as a first-party OpenClaw companion browser rather than a third-party
-integration experiment.
+Tandem is built by an OpenClaw maintainer with OpenClaw as the primary AI
+runtime.
 
 Tandem is built around a two-layer model:
 
@@ -82,7 +81,7 @@ Tandem is built around collaboration with OpenClaw.
 - the right-side Wingman workflow is designed around OpenClaw as the primary AI runtime
 - the local browser API exists so OpenClaw can inspect, navigate, extract, and automate safely
 - the security model is shaped by the fact that OpenClaw has access to a live browser
-- Tandem is maintained by the same maintainer behind OpenClaw and is intended as a first-party companion browser
+- Tandem is built by an OpenClaw maintainer with OpenClaw as the primary AI runtime
 - the repository may still be useful for general Electron browser experimentation, but the product itself is intentionally OpenClaw-first
 
 ## Typical OpenClaw Workflows
