@@ -73,6 +73,9 @@
     "typescript-eslint": "^8.56.1",
     "vitest": "^4.0.18"
   },
+  "overrides": {
+    "yauzl": "3.2.1"
+  },
   "productName": "Tandem Browser",
   "build": {
     "appId": "com.tandem.browser",
