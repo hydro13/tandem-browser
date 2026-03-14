@@ -89,7 +89,7 @@ class OpenClawBackend {
       }
       // Sort chronologically (oldest first) — chat.history may return newest-first
       parsed.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
-      if (onMessages) onMessages(parsed);
+      this._invokeCallback(onMessages, [parsed]);
     });
   }
 
@@ -153,7 +153,10 @@ class OpenClawBackend {
 
       if (msg.type === 'res' && msg.id) {
         const cb = this._pendingCallbacks.get(msg.id);
-        if (cb) { this._pendingCallbacks.delete(msg.id); cb(msg); }
+        if (cb) {
+          this._pendingCallbacks.delete(msg.id);
+          this._invokeCallback(cb, [msg]);
+        }
       }
     };
 
@@ -168,7 +171,7 @@ class OpenClawBackend {
 
   _sendRequest(method, params, cb) {
     if (!this._ws || this._ws.readyState !== WebSocket.OPEN) {
-      if (cb) cb({ error: { code: 'NOT_CONNECTED', message: 'WebSocket not connected' } });
+      this._invokeCallback(cb, [{ error: { code: 'NOT_CONNECTED', message: 'WebSocket not connected' } }]);
       return null;
     }
     const id = crypto.randomUUID();
@@ -231,14 +234,20 @@ class OpenClawBackend {
 
   _setConnected(connected) {
     this._connected = connected;
-    for (const cb of this._connectionCallbacks) cb(connected);
+    for (const cb of this._connectionCallbacks) this._invokeCallback(cb, [connected]);
   }
 
   _emit(type, data) {
     if (type === 'message' || type === 'historyReload') {
-      for (const cb of this._messageCallbacks) cb(data, type);
+      for (const cb of this._messageCallbacks) this._invokeCallback(cb, [data, type]);
     } else if (type === 'typing') {
-      for (const cb of this._typingCallbacks) cb(data);
+      for (const cb of this._typingCallbacks) this._invokeCallback(cb, [data]);
+    }
+  }
+
+  _invokeCallback(cb, args = []) {
+    if (typeof cb === 'function') {
+      cb(...args);
     }
   }
 }

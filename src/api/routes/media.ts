@@ -5,19 +5,24 @@ import { handleRouteError } from '../../utils/errors';
 import { getErrorMessage } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
 
-function renderGooglePhotosAuthPage(opts: { ok: boolean; message: string }): string {
-  const statusText = opts.ok ? 'connected' : 'failed';
+function renderGooglePhotosAuthPage(opts: { ok: boolean; title: string; message: string; detail?: string }): string {
   return `<!doctype html>
 <html>
   <body style="font-family: sans-serif; padding: 24px;">
-    <h1>Google Photos connection ${statusText}</h1>
+    <h1>${opts.title}</h1>
     <p id="status-message"></p>
+    <p id="status-detail"></p>
     <script>
       const tandemAuthPayload = ${JSON.stringify({ type: 'tandem-google-photos-auth', ok: opts.ok })};
       const tandemStatusMessage = ${JSON.stringify(opts.message)};
+      const tandemStatusDetail = ${JSON.stringify(opts.detail ?? '')};
       const statusEl = document.getElementById('status-message');
+      const detailEl = document.getElementById('status-detail');
       if (statusEl) {
         statusEl.textContent = tandemStatusMessage;
+      }
+      if (detailEl) {
+        detailEl.textContent = tandemStatusDetail;
       }
       if (window.opener) {
         window.opener.postMessage(tandemAuthPayload, '*');
@@ -329,13 +334,16 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       await ctx.googlePhotosManager.completeAuth({ code, state, error });
       res.type('html').send(renderGooglePhotosAuthPage({
         ok: true,
+        title: 'Google Photos connected',
         message: 'You can close this window and return to Tandem.',
       }));
     } catch (e) {
-      getErrorMessage(e, 'Google Photos authorization failed');
+      const message = getErrorMessage(e, 'Google Photos authorization failed');
       res.status(400).type('html').send(renderGooglePhotosAuthPage({
         ok: false,
+        title: 'Google Photos connection failed',
         message: 'Google Photos authorization failed. Review Tandem logs for details.',
+        detail: message,
       }));
     }
   });

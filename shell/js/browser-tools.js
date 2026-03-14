@@ -730,18 +730,34 @@
         div.className = 'ss-item';
         if (data.base64) {
           const imgSrc = `data:image/png;base64,${data.base64}`;
-          div.innerHTML = `
-            <img src="${imgSrc}" alt="${escapeHtml(data.filename)}" title="Click to enlarge">
-            <div class="ss-label">${escapeHtml(data.filename)}</div>
-          `;
-          div.querySelector('img').addEventListener('click', () => {
+          const img = document.createElement('img');
+          img.src = imgSrc;
+          img.alt = data.filename;
+          img.title = 'Click to enlarge';
+          div.appendChild(img);
+
+          const label = document.createElement('div');
+          label.className = 'ss-label';
+          label.textContent = data.filename;
+          div.appendChild(label);
+
+          img.addEventListener('click', () => {
             const win = window.open('', '_blank', 'width=1200,height=800');
             if (win) {
-              win.document.write(`<!DOCTYPE html><html><head><title>${data.filename}</title><style>body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:100%;max-height:100vh;}</style></head><body><img src="${imgSrc}"></body></html>`);
+              win.document.title = data.filename;
+              const style = win.document.createElement('style');
+              style.textContent = 'body{margin:0;background:#111;display:flex;align-items:center;justify-content:center;min-height:100vh;}img{max-width:100%;max-height:100vh;}';
+              win.document.head.appendChild(style);
+              const preview = win.document.createElement('img');
+              preview.src = imgSrc;
+              win.document.body.replaceChildren(preview);
             }
           });
         } else {
-          div.innerHTML = `<div class="ss-label">${escapeHtml(data.filename)}</div>`;
+          const label = document.createElement('div');
+          label.className = 'ss-label';
+          label.textContent = data.filename;
+          div.appendChild(label);
         }
         listEl.prepend(div);
       });
