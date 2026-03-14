@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.57.5] - 2026-03-14
+
+- fix: prepare public developer preview (repo)
+
 ## [Unreleased]
 
 - fix: make application screenshot capture fall back cleanly when macOS window capture metadata is unavailable
