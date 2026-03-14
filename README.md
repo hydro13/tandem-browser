@@ -14,8 +14,7 @@ This repository is a public `developer preview`.
 
 **The real strength is the security model.**
 
-OpenClaw's Chrome MCP gives the agent direct access to your browser — no
-filter, no check. Tandem puts a full security stack between web content and the
+Tandem puts a full security stack between web content and the
 agent: network shield with domain/IP blocklists, outbound guard that scans POST
 bodies for credential leaks, AST-level JavaScript analysis on runtime scripts,
 behavior monitoring per tab, and a gatekeeper channel that surfaces ambiguous
