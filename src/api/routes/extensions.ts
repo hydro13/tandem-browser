@@ -8,6 +8,7 @@ import { ChromeExtensionImporter } from '../../extensions/chrome-importer';
 import { GalleryLoader } from '../../extensions/gallery-loader';
 import { handleRouteError } from '../../utils/errors';
 import { createLogger } from '../../utils/logger';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 const log = createLogger('ExtensionRoutes');
 
@@ -116,7 +117,12 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
   });
 
   // DELETE /extensions/uninstall/:id — Uninstall extension by ID (accepts CWS ID or Electron ID)
-  router.delete('/extensions/uninstall/:id', (req: Request, res: Response) => {
+  router.delete('/extensions/uninstall/:id', createRateLimitMiddleware({
+    bucket: 'extensions-uninstall',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many extension uninstall requests. Retry shortly.',
+  }), (req: Request, res: Response) => {
     try {
       const id = req.params.id as string;
       // Validate extension ID format (32 lowercase a-p chars)
@@ -358,7 +364,12 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
 
   // POST /extensions/identity/auth — Handle chrome.identity.launchWebAuthFlow() from extensions
   // Trusted extension caller only — enforced in TandemAPI auth middleware.
-  router.post('/extensions/identity/auth', async (req: Request, res: Response) => {
+  router.post('/extensions/identity/auth', createRateLimitMiddleware({
+    bucket: 'extensions-identity-auth',
+    windowMs: 60_000,
+    max: 30,
+    message: 'Too many extension auth requests. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const { url, interactive, extensionId } = req.body;
       if (!url || typeof url !== 'string') {

@@ -1,8 +1,8 @@
 import { session } from 'electron';
-import * as path from 'path';
 import * as fs from 'fs';
 import * as crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
+import { assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
 export class StateManager {
   private stateDir: string;
@@ -12,6 +12,11 @@ export class StateManager {
     if (!fs.existsSync(this.stateDir)) {
       fs.mkdirSync(this.stateDir, { recursive: true });
     }
+  }
+
+  private getStateFilePath(name: string, extension: 'enc' | 'json'): string {
+    const safeName = assertSinglePathSegment(name, 'state name');
+    return resolvePathWithinRoot(this.stateDir, `${safeName}.${extension}`);
   }
 
   /** Save session cookies to disk */
@@ -30,9 +35,9 @@ export class StateManager {
     if (encKey) {
       content = this.encrypt(content, encKey);
       data.encrypted = true;
-      filePath = path.join(this.stateDir, `${name}.enc`);
+      filePath = this.getStateFilePath(name, 'enc');
     } else {
-      filePath = path.join(this.stateDir, `${name}.json`);
+      filePath = this.getStateFilePath(name, 'json');
     }
 
     fs.writeFileSync(filePath, content, 'utf-8');
@@ -42,10 +47,10 @@ export class StateManager {
   /** Load session cookies from disk into a partition */
   async load(name: string, partition: string): Promise<{ cookiesRestored: number }> {
     // Try .enc first, then .json
-    let filePath = path.join(this.stateDir, `${name}.enc`);
+    let filePath = this.getStateFilePath(name, 'enc');
     let encrypted = true;
     if (!fs.existsSync(filePath)) {
-      filePath = path.join(this.stateDir, `${name}.json`);
+      filePath = this.getStateFilePath(name, 'json');
       encrypted = false;
     }
     if (!fs.existsSync(filePath)) {

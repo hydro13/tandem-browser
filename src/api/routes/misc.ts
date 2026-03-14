@@ -6,6 +6,7 @@ import { getActiveWC } from '../context';
 import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 // Module-level live mode state (was a closure variable in server.ts)
 let liveMode = false;
@@ -224,7 +225,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/behavior/clear', (_req: Request, res: Response) => {
+  router.post('/behavior/clear', createRateLimitMiddleware({
+    bucket: 'misc-behavior-clear',
+    windowMs: 60_000,
+    max: 5,
+    message: 'Too many behavior clear requests. Retry shortly.',
+  }), (_req: Request, res: Response) => {
     try {
       const rawDir = tandemDir('behavior', 'raw');
       if (fs.existsSync(rawDir)) {
@@ -456,7 +462,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   // CLARONOTE — Notes & Recording
   // ═══════════════════════════════════════════════
 
-  router.post('/claronote/login', async (req: Request, res: Response) => {
+  router.post('/claronote/login', createRateLimitMiddleware({
+    bucket: 'misc-claronote-login',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many ClaroNote login requests. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const { email, password } = req.body;
       if (!email || !password) {
@@ -572,7 +583,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   // DATA — Wipe
   // ═══════════════════════════════════════════════
 
-  router.post('/data/wipe', (_req: Request, res: Response) => {
+  router.post('/data/wipe', createRateLimitMiddleware({
+    bucket: 'misc-data-wipe',
+    windowMs: 60_000,
+    max: 3,
+    message: 'Too many data wipe requests. Retry shortly.',
+  }), (_req: Request, res: Response) => {
     try {
       const baseDir = tandemDir();
 
@@ -751,7 +767,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/auth/is-login-page', async (_req: Request, res: Response) => {
+  router.get('/auth/is-login-page', createRateLimitMiddleware({
+    bucket: 'misc-auth-is-login-page',
+    windowMs: 60_000,
+    max: 30,
+    message: 'Too many login-page checks. Retry shortly.',
+  }), async (_req: Request, res: Response) => {
     try {
       const wc = await getActiveWC(ctx);
       if (!wc) {
@@ -766,7 +787,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/auth/update', async (req: Request, res: Response) => {
+  router.post('/auth/update', createRateLimitMiddleware({
+    bucket: 'misc-auth-update',
+    windowMs: 60_000,
+    max: 20,
+    message: 'Too many auth state updates. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const { domain, status, username } = req.body;
       if (!domain || !status) {
@@ -781,7 +807,12 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.delete('/auth/state/:domain', async (req: Request, res: Response) => {
+  router.delete('/auth/state/:domain', createRateLimitMiddleware({
+    bucket: 'misc-auth-delete',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many auth state deletions. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const domain = req.params.domain as string;
       await ctx.loginManager.clearLoginState(domain);

@@ -22,12 +22,13 @@ import { StealthManager } from './stealth/manager';
 import { buildAppMenu } from './menu/app-menu';
 import { RequestDispatcher } from './network/dispatcher';
 import { setMainWindow } from './notifications/alert';
-import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, AUTH_POPUP_PATTERNS, COOKIE_FLUSH_INTERVAL_MS } from './utils/constants';
+import { API_PORT, WEBHOOK_PORT, DEFAULT_PARTITION, COOKIE_FLUSH_INTERVAL_MS } from './utils/constants';
 import { tandemDir } from './utils/paths';
 import { createLogger } from './utils/logger';
 import { createManagerRegistry, destroyRuntime, initializeRuntimeManagers, registerRuntimeIpcHandlers } from './bootstrap/runtime';
 import { registerInitialTabLifecycle } from './bootstrap/tab-session';
 import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
+import { isGoogleAuthUrl, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
 
 const log = createLogger('Main');
 
@@ -75,12 +76,31 @@ function readApiTokenFromDisk(): string {
 }
 
 function isLocalTandemApiUrl(rawUrl: string): boolean {
-  try {
-    const url = new URL(rawUrl);
-    return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') && url.port === String(API_PORT);
-  } catch {
+  const url = tryParseUrl(rawUrl);
+  if (!url) {
     return false;
   }
+
+  return (
+    urlHasProtocol(url, 'http:') &&
+    (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+    url.port === String(API_PORT)
+  );
+}
+
+function isAuthPopupUrl(rawUrl: string): boolean {
+  const url = tryParseUrl(rawUrl);
+  if (!url || !urlHasProtocol(url, 'http:', 'https:')) {
+    return false;
+  }
+
+  return (
+    isGoogleAuthUrl(rawUrl) ||
+    hostnameMatches(url, 'appleid.apple.com') ||
+    hostnameMatches(url, 'login.microsoftonline.com') ||
+    pathnameMatchesPrefix(url, '/oauth') ||
+    pathnameMatchesPrefix(url, '/auth')
+  );
 }
 
 function isInternalShellWebContents(webContentsId?: number): boolean {
@@ -244,7 +264,7 @@ async function createWindow(): Promise<BrowserWindow> {
       contents.on('dom-ready', () => {
         // Skip stealth injection on Google auth pages — our patches break their login detection
         const url = contents.getURL();
-        if (url.includes('accounts.google.com') || url.includes('consent.google.com')) {
+        if (isGoogleAuthUrl(url)) {
           log.info('🔑 Skipping stealth for Google auth:', url.substring(0, 60));
           return;
         }
@@ -286,7 +306,7 @@ async function createWindow(): Promise<BrowserWindow> {
       contents.setWindowOpenHandler(({ url }) => {
         // OAuth/auth popups need window.opener — allow for ALL webviews (incl. sidebar)
         // e.g. Google login from Gmail/Calendar sidebar panel
-        const isAuth = AUTH_POPUP_PATTERNS.some(p => url.includes(p));
+        const isAuth = isAuthPopupUrl(url);
         // Sidebar webviews: allow auth popups, deny everything else
         if (isSidebarWebview && !isAuth) return { action: 'deny' };
         if (isAuth) {
@@ -325,7 +345,7 @@ async function createWindow(): Promise<BrowserWindow> {
         const sidebarId = sidebarPartition.replace('persist:', '');
         contents.on('did-create-window', (win) => {
           win.webContents.on('did-navigate', (_e, url) => {
-            if (!url.includes('accounts.google.com') && !url.includes('google.com/o/oauth2')) {
+            if (!isGoogleAuthUrl(url)) {
               win.close();
               if (mainWindow) {
                 mainWindow.webContents.send('reload-sidebar-webview', sidebarId);

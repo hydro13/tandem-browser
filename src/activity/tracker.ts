@@ -4,6 +4,7 @@ import type { ActivityEvent } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';
 import type { WingmanStream } from './wingman-stream';
 import { createLogger } from '../utils/logger';
+import { hostnameMatches, tryParseUrl, urlHasProtocol } from '../utils/security';
 
 const log = createLogger('ActivityTracker');
 const PANEL_ACTIVITY_TYPES: ReadonlySet<ActivityEvent['type']> = new Set([
@@ -78,7 +79,8 @@ export class ActivityTracker {
     // Auto-snapshot on navigation (skip initial loads and internal pages)
     if (this.autoSnapshotEnabled && data.type === 'did-navigate' && data.url && this.counter > 5) {
       const url = data.url as string;
-      if (url.startsWith('http') && !url.includes('duckduckgo.com')) {
+      const parsedUrl = tryParseUrl(url);
+      if (parsedUrl && urlHasProtocol(parsedUrl, 'http:', 'https:') && !hostnameMatches(parsedUrl, 'duckduckgo.com')) {
         setTimeout(() => {
           try {
             this.win.webContents.send('auto-snapshot-request', { url });

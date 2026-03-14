@@ -1,8 +1,8 @@
 import fs from 'fs';
-import path from 'path';
 import type { WebContents } from 'electron';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { resolvePathWithinRoot, tryParseUrl, urlHasProtocol } from '../utils/security';
 
 const log = createLogger('SiteMemory');
 
@@ -59,12 +59,11 @@ export class SiteMemoryManager {
 
   /** Extract domain from URL */
   private getDomain(url: string): string {
-    try {
-      const u = new URL(url);
-      return u.hostname;
-    } catch {
+    const parsedUrl = tryParseUrl(url);
+    if (!parsedUrl) {
       return 'unknown';
     }
+    return parsedUrl.hostname;
   }
 
   /** Sanitize domain for filesystem */
@@ -74,7 +73,7 @@ export class SiteMemoryManager {
 
   /** Load site data from disk */
   private loadSite(domain: string): SiteData | null {
-    const filePath = path.join(this.memoryDir, this.domainToFilename(domain));
+    const filePath = resolvePathWithinRoot(this.memoryDir, this.domainToFilename(domain));
     if (!fs.existsSync(filePath)) return null;
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -86,7 +85,7 @@ export class SiteMemoryManager {
 
   /** Save site data to disk */
   private saveSite(data: SiteData): void {
-    const filePath = path.join(this.memoryDir, this.domainToFilename(data.domain));
+    const filePath = resolvePathWithinRoot(this.memoryDir, this.domainToFilename(data.domain));
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   }
 
@@ -117,7 +116,8 @@ export class SiteMemoryManager {
    */
   async recordVisit(wc: WebContents, url: string): Promise<SiteVisit | null> {
     const domain = this.getDomain(url);
-    if (domain === 'unknown' || url.startsWith('file://') || url.startsWith('about:')) return null;
+    const parsedUrl = tryParseUrl(url);
+    if (!parsedUrl || !urlHasProtocol(parsedUrl, 'http:', 'https:') || domain === 'unknown') return null;
 
     try {
       const pageData = await wc.executeJavaScript(`
@@ -234,7 +234,7 @@ export class SiteMemoryManager {
       const files = fs.readdirSync(this.memoryDir).filter(f => f.endsWith('.json'));
       return files.map(f => {
         try {
-          const data: SiteData = JSON.parse(fs.readFileSync(path.join(this.memoryDir, f), 'utf-8'));
+          const data: SiteData = JSON.parse(fs.readFileSync(resolvePathWithinRoot(this.memoryDir, f), 'utf-8'));
           return { domain: data.domain, lastVisit: data.lastVisit, visitCount: data.visitCount };
         } catch (e) {
           log.warn('Site memory listSites: skipping corrupt file', f + ':', e instanceof Error ? e.message : String(e));
@@ -267,7 +267,7 @@ export class SiteMemoryManager {
       const files = fs.readdirSync(this.memoryDir).filter(f => f.endsWith('.json'));
       for (const f of files) {
         try {
-          const data: SiteData = JSON.parse(fs.readFileSync(path.join(this.memoryDir, f), 'utf-8'));
+          const data: SiteData = JSON.parse(fs.readFileSync(resolvePathWithinRoot(this.memoryDir, f), 'utf-8'));
           for (const visit of data.visits) {
             const searchableText = `${visit.title} ${visit.description} ${visit.headings.join(' ')} ${visit.textPreview}`.toLowerCase();
             if (searchableText.includes(q)) {

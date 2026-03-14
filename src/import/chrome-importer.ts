@@ -4,6 +4,7 @@ import os from 'os';
 import type { ConfigManager } from '../config/manager';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('ChromeImport');
 
@@ -65,11 +66,16 @@ export class ChromeImporter {
       this.chromeBasePath = path.join(os.homedir(), '.config', 'google-chrome');
     }
     const profile = this.configManager?.getConfig().sync.chromeProfile ?? 'Default';
-    this.chromeProfilePath = path.join(this.chromeBasePath, profile);
+    this.chromeProfilePath = this.resolveChromeProfilePath(profile);
     this.tandemDir = tandemDir();
     if (!fs.existsSync(this.tandemDir)) {
       fs.mkdirSync(this.tandemDir, { recursive: true });
     }
+  }
+
+  private resolveChromeProfilePath(profileDir: string): string {
+    const safeProfileDir = assertSinglePathSegment(profileDir, 'Chrome profile');
+    return resolvePathWithinRoot(this.chromeBasePath, safeProfileDir);
   }
 
   /** List available Chrome profiles */
@@ -83,13 +89,13 @@ export class ChromeImporter {
         if (!entry.isDirectory()) continue;
         // Chrome profiles are 'Default', 'Profile 1', 'Profile 2', etc.
         if (entry.name === 'Default' || entry.name.startsWith('Profile ')) {
-          const profilePath = path.join(this.chromeBasePath, entry.name);
-          const hasBookmarks = fs.existsSync(path.join(profilePath, 'Bookmarks'));
+          const profilePath = this.resolveChromeProfilePath(entry.name);
+          const hasBookmarks = fs.existsSync(resolvePathWithinRoot(profilePath, 'Bookmarks'));
 
           // Try to read profile name from Preferences
           let displayName = entry.name;
           try {
-            const prefs = JSON.parse(fs.readFileSync(path.join(profilePath, 'Preferences'), 'utf-8'));
+            const prefs = JSON.parse(fs.readFileSync(resolvePathWithinRoot(profilePath, 'Preferences'), 'utf-8'));
             if (prefs.profile?.name) displayName = `${prefs.profile.name} (${entry.name})`;
           } catch { /* use folder name */ }
 
@@ -105,7 +111,7 @@ export class ChromeImporter {
 
   /** Switch to a different Chrome profile */
   setProfile(profileDir: string): void {
-    this.chromeProfilePath = path.join(this.chromeBasePath, profileDir);
+    this.chromeProfilePath = this.resolveChromeProfilePath(profileDir);
     // Restart sync if active
     if (this.watcher) {
       this.stopSync();
@@ -117,7 +123,7 @@ export class ChromeImporter {
   startSync(): boolean {
     if (this.watcher) return true; // Already watching
 
-    const bookmarksPath = path.join(this.chromeProfilePath, 'Bookmarks');
+    const bookmarksPath = resolvePathWithinRoot(this.chromeProfilePath, 'Bookmarks');
     if (!fs.existsSync(bookmarksPath)) {
       log.warn('📚 Chrome Bookmarks not found at:', bookmarksPath);
       return false;
@@ -192,9 +198,9 @@ export class ChromeImporter {
   getStatus(): ChromeImportStatus {
     return {
       chromeFound: fs.existsSync(this.chromeProfilePath),
-      bookmarksFound: fs.existsSync(path.join(this.chromeProfilePath, 'Bookmarks')),
-      historyFound: fs.existsSync(path.join(this.chromeProfilePath, 'History')),
-      cookiesFound: fs.existsSync(path.join(this.chromeProfilePath, 'Cookies')),
+      bookmarksFound: fs.existsSync(resolvePathWithinRoot(this.chromeProfilePath, 'Bookmarks')),
+      historyFound: fs.existsSync(resolvePathWithinRoot(this.chromeProfilePath, 'History')),
+      cookiesFound: fs.existsSync(resolvePathWithinRoot(this.chromeProfilePath, 'Cookies')),
       profilePath: this.chromeProfilePath,
     };
   }
@@ -202,7 +208,7 @@ export class ChromeImporter {
   /** Import Chrome bookmarks → ~/.tandem/bookmarks.json */
   importBookmarks(): { ok: boolean; count: number; error?: string } {
     try {
-      const bookmarksPath = path.join(this.chromeProfilePath, 'Bookmarks');
+      const bookmarksPath = resolvePathWithinRoot(this.chromeProfilePath, 'Bookmarks');
       if (!fs.existsSync(bookmarksPath)) {
         return { ok: false, count: 0, error: 'Chrome Bookmarks file not found' };
       }
@@ -230,7 +236,7 @@ export class ChromeImporter {
       countBookmarks(bookmarks);
 
       // Load existing bookmarks.json and merge
-      const outputPath = path.join(this.tandemDir, 'bookmarks.json');
+      const outputPath = resolvePathWithinRoot(this.tandemDir, 'bookmarks.json');
       let existing: { bookmarks: ChromeBookmark[]; importedFrom?: string } = { bookmarks: [] };
       if (fs.existsSync(outputPath)) {
         try {
@@ -285,7 +291,7 @@ export class ChromeImporter {
       }
 
       // Chrome locks the History file while running — copy it first
-      const tmpPath = path.join(this.tandemDir, '.chrome-history-tmp');
+      const tmpPath = resolvePathWithinRoot(this.tandemDir, '.chrome-history-tmp');
       fs.copyFileSync(historyPath, tmpPath);
 
        
@@ -313,7 +319,7 @@ export class ChromeImporter {
       }));
 
       // Save
-      const outputPath = path.join(this.tandemDir, 'history.json');
+      const outputPath = resolvePathWithinRoot(this.tandemDir, 'history.json');
       let existing: { entries: ChromeHistoryEntry[]; importedFrom?: string } = { entries: [] };
       if (fs.existsSync(outputPath)) {
         try {

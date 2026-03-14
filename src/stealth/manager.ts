@@ -2,6 +2,7 @@ import type { Session } from 'electron';
 import crypto from 'crypto';
 import type { RequestDispatcher } from '../network/dispatcher';
 import { createLogger } from '../utils/logger';
+import { isGoogleAuthUrl } from '../utils/security';
 
 const log = createLogger('StealthManager');
 
@@ -46,9 +47,7 @@ export class StealthManager {
         // For Google auth domains: restore real Electron UA (Google blocks fake Chrome UA)
         // but keep everything else — TotalRecall V2 works with default Electron UA on Google
         const url = _details.url || '';
-        if (url.includes('accounts.google.com') || url.includes('google.com/signin') ||
-            url.includes('googleapis.com') || url.includes('gstatic.com') ||
-            url.includes('consent.google.com')) {
+        if (isGoogleAuthUrl(url)) {
           // Remove our fake UA, let Electron's real one through
           delete headers['User-Agent'];
           return headers;

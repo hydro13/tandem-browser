@@ -30,6 +30,7 @@ import { registerSecurityRoutes } from '../security/routes';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
 import type { ExtensionRouteAccessDecision } from '../extensions/manager';
 import { createLogger } from '../utils/logger';
+import { createRateLimitMiddleware } from './rate-limit';
 
 const log = createLogger('TandemAPI');
 const PUBLIC_ROUTE_PATHS = new Set<string>(['/status', '/google-photos/oauth/callback']);
@@ -140,6 +141,12 @@ export class TandemAPI {
       }
       res.status(decision.status).json({ error: decision.reason });
     });
+    this.app.use(createRateLimitMiddleware({
+      bucket: 'global-api',
+      windowMs: 60_000,
+      max: 600,
+      message: 'Too many API requests. Retry shortly.',
+    }));
 
     this.setupRoutes();
 
@@ -315,8 +322,23 @@ export class TandemAPI {
 
   private extractBearerToken(authorizationHeader: string | undefined): string | null {
     if (!authorizationHeader) return null;
-    const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
-    return match?.[1] ?? null;
+    const trimmed = authorizationHeader.trim();
+    if (!trimmed || trimmed.length > 8192) {
+      return null;
+    }
+
+    const separatorIndex = trimmed.indexOf(' ');
+    if (separatorIndex <= 0) {
+      return null;
+    }
+
+    const scheme = trimmed.slice(0, separatorIndex);
+    if (scheme.toLowerCase() !== 'bearer') {
+      return null;
+    }
+
+    const token = trimmed.slice(separatorIndex + 1).trim();
+    return token || null;
   }
 
   private normalizeOrigin(originHeader: string | string[] | undefined | null): string | null {

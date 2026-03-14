@@ -5,6 +5,7 @@ import { tandemDir } from '../utils/paths';
 import { DEFAULT_TIMEOUT_MS } from '../utils/constants';
 import { humanizedClick, humanizedType } from '../input/humanized';
 import { createLogger } from '../utils/logger';
+import { assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('WorkflowEngine');
 
@@ -155,6 +156,11 @@ export class WorkflowEngine {
     // Load any saved executions if needed
   }
 
+  private getWorkflowPath(id: string): string {
+    const safeId = assertSinglePathSegment(id, 'workflow id');
+    return resolvePathWithinRoot(this.workflowsDir, `${safeId}.json`);
+  }
+
   /**
    * Get all workflow templates
    */
@@ -165,7 +171,7 @@ export class WorkflowEngine {
 
       for (const file of files) {
         if (file.endsWith('.json')) {
-          const filePath = path.join(this.workflowsDir, file);
+          const filePath = resolvePathWithinRoot(this.workflowsDir, file);
           const content = fs.readFileSync(filePath, 'utf8');
           const workflow = JSON.parse(content) as WorkflowDefinition;
           workflows.push(workflow);
@@ -193,8 +199,7 @@ export class WorkflowEngine {
       updatedAt: now
     };
 
-    const filename = `${id}.json`;
-    const filepath = path.join(this.workflowsDir, filename);
+    const filepath = this.getWorkflowPath(id);
     
     fs.writeFileSync(filepath, JSON.stringify(workflowDef, null, 2));
     
@@ -205,7 +210,7 @@ export class WorkflowEngine {
    * Delete workflow template
    */
   async deleteWorkflow(id: string): Promise<void> {
-    const filepath = path.join(this.workflowsDir, `${id}.json`);
+    const filepath = this.getWorkflowPath(id);
     if (fs.existsSync(filepath)) {
       fs.unlinkSync(filepath);
     }

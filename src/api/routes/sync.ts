@@ -1,6 +1,7 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
 import * as fs from 'fs';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -34,7 +35,12 @@ export function registerSyncRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/sync/config', (req: Request, res: Response) => {
+  router.post('/sync/config', createRateLimitMiddleware({
+    bucket: 'sync-config',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many sync configuration requests. Retry shortly.',
+  }), (req: Request, res: Response) => {
     try {
       const { enabled, syncRoot, deviceName } = req.body;
       const patch: Record<string, unknown> = { deviceSync: {} };

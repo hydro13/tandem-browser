@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
+import { resolvePathWithinRoot, tryParseUrl } from '../utils/security';
 
 export interface FormField {
   name: string;
@@ -108,11 +109,11 @@ export class FormMemoryManager {
 
   /** Extract domain from URL */
   private getDomain(url: string): string {
-    try {
-      return new URL(url).hostname;
-    } catch {
+    const parsedUrl = tryParseUrl(url);
+    if (!parsedUrl) {
       return 'unknown';
     }
+    return parsedUrl.hostname;
   }
 
   /** Sanitize domain for filesystem */
@@ -122,7 +123,7 @@ export class FormMemoryManager {
 
   /** Load form data for a domain */
   private loadDomain(domain: string): DomainFormData | null {
-    const filePath = path.join(this.formsDir, this.domainToFilename(domain));
+    const filePath = resolvePathWithinRoot(this.formsDir, this.domainToFilename(domain));
     if (!fs.existsSync(filePath)) return null;
     try {
       return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
@@ -133,7 +134,7 @@ export class FormMemoryManager {
 
   /** Save form data for a domain */
   private saveDomain(data: DomainFormData): void {
-    const filePath = path.join(this.formsDir, this.domainToFilename(data.domain));
+    const filePath = resolvePathWithinRoot(this.formsDir, this.domainToFilename(data.domain));
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
   }
 
@@ -181,7 +182,7 @@ export class FormMemoryManager {
       return files.map(f => {
         try {
           const data: DomainFormData = JSON.parse(
-            fs.readFileSync(path.join(this.formsDir, f), 'utf-8')
+            fs.readFileSync(resolvePathWithinRoot(this.formsDir, f), 'utf-8')
           );
           return {
             domain: data.domain,
@@ -244,7 +245,7 @@ export class FormMemoryManager {
 
   /** Delete all form data for a domain */
   deleteDomain(domain: string): boolean {
-    const filePath = path.join(this.formsDir, this.domainToFilename(domain));
+    const filePath = resolvePathWithinRoot(this.formsDir, this.domainToFilename(domain));
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
       return true;

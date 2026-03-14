@@ -328,25 +328,46 @@
       }
     }
 
+    function parseSafeNavigationUrl(rawUrl) {
+      try {
+        const parsed = new URL(rawUrl, window.location.href);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          return null;
+        }
+        return parsed;
+      } catch {
+        return null;
+      }
+    }
+
+    function buildEmptyState(className, text) {
+      const el = document.createElement('div');
+      el.className = className;
+      el.textContent = text;
+      return el;
+    }
+
     function renderQuickLinks(links) {
-      quickLinksContainer.innerHTML = '';
+      quickLinksContainer.replaceChildren();
 
       if (!Array.isArray(links) || links.length === 0) {
-        quickLinksContainer.innerHTML = '<div class="quick-links-empty">No quick links configured</div>';
+        quickLinksContainer.appendChild(buildEmptyState('quick-links-empty', 'No quick links configured'));
         return;
       }
 
       for (const link of links) {
         if (!link || !link.label || !link.url) continue;
+        const parsedUrl = parseSafeNavigationUrl(link.url);
+        if (!parsedUrl) continue;
 
         const anchor = document.createElement('a');
         anchor.className = 'quick-link';
-        anchor.href = link.url;
+        anchor.href = parsedUrl.toString();
 
         const iconWrap = document.createElement('div');
         iconWrap.className = 'icon';
 
-        const faviconUrl = getFaviconUrl(link.url);
+        const faviconUrl = getFaviconUrl(parsedUrl.toString());
         if (faviconUrl) {
           const img = document.createElement('img');
           img.src = faviconUrl;
@@ -368,7 +389,7 @@
       }
 
       if (!quickLinksContainer.children.length) {
-        quickLinksContainer.innerHTML = '<div class="quick-links-empty">No quick links configured</div>';
+        quickLinksContainer.appendChild(buildEmptyState('quick-links-empty', 'No quick links configured'));
       }
     }
 
@@ -398,26 +419,46 @@
         const res = await fetch(`${API}/tabs/list`);
         const data = await res.json();
 
-        if (data.tabs && data.tabs.length > 0) {
-          container.innerHTML = data.tabs
-            .filter(t => t.url && !t.url.includes('newtab.html'))
-            .slice(0, 5)
-            .map(t => `
-              <a class="recent-tab" href="${t.url}">
-                <img src="https://www.google.com/s2/favicons?domain=${new URL(t.url).hostname}&sz=32" alt="">
-                <span>${t.title || t.url}</span>
-                <span class="url">${new URL(t.url).hostname}</span>
-              </a>
-            `).join('');
+        container.replaceChildren();
 
-          if (!container.innerHTML.trim()) {
-            container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
+        if (data.tabs && data.tabs.length > 0) {
+          const recentTabs = data.tabs
+            .filter(t => typeof t?.url === 'string' && !t.url.includes('newtab.html'))
+            .slice(0, 5);
+
+          for (const tab of recentTabs) {
+            const parsedUrl = parseSafeNavigationUrl(tab.url);
+            if (!parsedUrl) continue;
+
+            const anchor = document.createElement('a');
+            anchor.className = 'recent-tab';
+            anchor.href = parsedUrl.toString();
+
+            const img = document.createElement('img');
+            img.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(parsedUrl.hostname)}&sz=32`;
+            img.alt = '';
+
+            const title = document.createElement('span');
+            title.textContent = tab.title || parsedUrl.toString();
+
+            const hostname = document.createElement('span');
+            hostname.className = 'url';
+            hostname.textContent = parsedUrl.hostname;
+
+            anchor.appendChild(img);
+            anchor.appendChild(title);
+            anchor.appendChild(hostname);
+            container.appendChild(anchor);
+          }
+
+          if (!container.children.length) {
+            container.appendChild(buildEmptyState('', 'No recent tabs'));
           }
         } else {
-          container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
+          container.appendChild(buildEmptyState('', 'No recent tabs'));
         }
-      } catch (err) {
-        container.innerHTML = '<div style="color: #555; font-size: 13px; padding: 8px;">No recent tabs</div>';
+      } catch {
+        container.replaceChildren(buildEmptyState('', 'No recent tabs'));
       }
     }
 

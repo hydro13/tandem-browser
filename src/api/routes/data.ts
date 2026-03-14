@@ -6,6 +6,7 @@ import type { RouteContext } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { createLogger } from '../../utils/logger';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 const log = createLogger('DataRoutes');
 
@@ -181,7 +182,12 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/config/openclaw-token', (_req: Request, res: Response) => {
+  router.get('/config/openclaw-token', createRateLimitMiddleware({
+    bucket: 'data-openclaw-token',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many OpenClaw token requests. Retry shortly.',
+  }), (_req: Request, res: Response) => {
     try {
       const openclawPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
       if (!fs.existsSync(openclawPath)) {
@@ -204,7 +210,12 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   // DATA EXPORT / IMPORT
   // ═══════════════════════════════════════════════
 
-  router.get('/data/export', (_req: Request, res: Response) => {
+  router.get('/data/export', createRateLimitMiddleware({
+    bucket: 'data-export',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many data export requests. Retry shortly.',
+  }), (_req: Request, res: Response) => {
     try {
       const baseDir = tandemDir();
       const data: Record<string, unknown> = {
@@ -230,7 +241,12 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/data/import', (req: Request, res: Response) => {
+  router.post('/data/import', createRateLimitMiddleware({
+    bucket: 'data-import',
+    windowMs: 60_000,
+    max: 5,
+    message: 'Too many data import requests. Retry shortly.',
+  }), (req: Request, res: Response) => {
     try {
       const data = req.body;
       if (data.config) {

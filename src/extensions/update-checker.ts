@@ -6,6 +6,7 @@ import type { CrxDownloader } from './crx-downloader';
 import type { ExtensionLoader } from './loader';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
 const log = createLogger('UpdateChecker');
 
@@ -60,6 +61,11 @@ const FIRST_CHECK_DELAY_MS = 300000; // 5 minutes after launch
 const STALE_TMP_THRESHOLD_MS = 3600000; // 1 hour
 const DISK_USAGE_WARNING_BYTES = 524288000; // 500 MB
 const REQUEST_TIMEOUT_MS = 30000;
+const CHROME_EXTENSION_ID_RE = /^[a-p]{32}$/;
+
+function isChromeExtensionId(value: string): boolean {
+  return CHROME_EXTENSION_ID_RE.test(value);
+}
 
 /**
  * UpdateChecker — Checks for and applies extension updates from Chrome Web Store.
@@ -81,6 +87,27 @@ export class UpdateChecker {
     this.extensionsDir = tandemDir('extensions');
     this.stateFilePath = path.join(this.extensionsDir, 'update-state.json');
     this.state = this.loadState();
+  }
+
+  private assertExtensionId(extensionId: string): string {
+    const safeExtensionId = assertSinglePathSegment(extensionId, 'extension ID');
+    if (!isChromeExtensionId(safeExtensionId)) {
+      throw new Error('Invalid extension ID');
+    }
+    return safeExtensionId;
+  }
+
+  private getExtensionPath(extensionId: string): string {
+    return resolvePathWithinRoot(this.extensionsDir, this.assertExtensionId(extensionId));
+  }
+
+  private getExtensionMetaPath(extensionId: string): string {
+    return resolvePathWithinRoot(this.getExtensionPath(extensionId), '.tandem-meta.json');
+  }
+
+  private getExtensionTempPath(prefix: string, extensionId: string): string {
+    const safeExtensionId = this.assertExtensionId(extensionId);
+    return resolvePathWithinRoot(this.extensionsDir, '.tmp', `${prefix}-${safeExtensionId}`);
   }
 
   // ─── Version Check ───────────────────────────────────────────────────────
@@ -292,26 +319,34 @@ export class UpdateChecker {
    * Atomic: download → verify → swap → load → rollback on failure.
    */
   async updateOne(extensionId: string, session: Session): Promise<UpdateResult> {
-    const extPath = path.join(this.extensionsDir, extensionId);
-    const manifestPath = path.join(extPath, 'manifest.json');
+    let safeExtensionId: string;
+    try {
+      safeExtensionId = this.assertExtensionId(extensionId);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      return { extensionId, name: extensionId, previousVersion: '', newVersion: '', success: false, error: message };
+    }
+
+    const extPath = this.getExtensionPath(safeExtensionId);
+    const manifestPath = resolvePathWithinRoot(extPath, 'manifest.json');
 
     if (!fs.existsSync(manifestPath)) {
-      return { extensionId, name: extensionId, previousVersion: '', newVersion: '', success: false, error: 'Extension not found on disk' };
+      return { extensionId: safeExtensionId, name: safeExtensionId, previousVersion: '', newVersion: '', success: false, error: 'Extension not found on disk' };
     }
 
     let manifest: Record<string, unknown>;
     try {
       manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
     } catch {
-      return { extensionId, name: extensionId, previousVersion: '', newVersion: '', success: false, error: 'Invalid manifest.json' };
+      return { extensionId: safeExtensionId, name: safeExtensionId, previousVersion: '', newVersion: '', success: false, error: 'Invalid manifest.json' };
     }
 
-    const name = typeof manifest.name === 'string' ? manifest.name : extensionId;
+    const name = typeof manifest.name === 'string' ? manifest.name : safeExtensionId;
     const previousVersion = typeof manifest.version === 'string' ? manifest.version : '0.0.0';
 
     // Preserve key field and meta from old extension
     const oldKeyField = manifest.key;
-    const metaPath = path.join(extPath, '.tandem-meta.json');
+    const metaPath = this.getExtensionMetaPath(safeExtensionId);
     let oldMeta: Record<string, unknown> | null = null;
     if (fs.existsSync(metaPath)) {
       try {
@@ -320,20 +355,20 @@ export class UpdateChecker {
     }
 
     // Step 1: Download new CRX to temp
-    const tmpDir = path.join(this.extensionsDir, '.tmp', extensionId);
+    const tmpDir = this.getExtensionTempPath('check', safeExtensionId);
     if (fs.existsSync(tmpDir)) {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     }
 
-    log.info(`Downloading update for ${name} (${extensionId})...`);
-    const _installResult = await this.downloader.installFromCws(extensionId);
+    log.info(`Downloading update for ${name} (${safeExtensionId})...`);
+    const _installResult = await this.downloader.installFromCws(safeExtensionId);
     // installFromCws extracts to extensionsDir/{id} which IS our current ext path
     // But the extension is already there, so installFromCws will return "already installed"
     // We need to work around this by temporarily renaming the existing dir
 
     // Step 2: Atomic swap approach
-    const oldDir = `${extPath}.old`;
-    const tmpExtractDir = path.join(this.extensionsDir, '.tmp', `update-${extensionId}`);
+    const oldDir = resolvePathWithinRoot(this.extensionsDir, `${safeExtensionId}.old`);
+    const tmpExtractDir = this.getExtensionTempPath('update', safeExtensionId);
 
     try {
       // Clean up any previous failed attempts
@@ -348,7 +383,7 @@ export class UpdateChecker {
       fs.renameSync(extPath, oldDir);
 
       // Now download — installFromCws will install to extensionsDir/{id}
-      const result = await this.downloader.installFromCws(extensionId);
+      const result = await this.downloader.installFromCws(safeExtensionId);
 
       if (!result.success) {
         // Rollback: restore .old
@@ -356,20 +391,20 @@ export class UpdateChecker {
           fs.rmSync(extPath, { recursive: true, force: true });
         }
         fs.renameSync(oldDir, extPath);
-        this.updateExtState(extensionId, previousVersion, null, 'failed');
-        return { extensionId, name, previousVersion, newVersion: '', success: false, error: `Download failed: ${result.error}` };
+        this.updateExtState(safeExtensionId, previousVersion, null, 'failed');
+        return { extensionId: safeExtensionId, name, previousVersion, newVersion: '', success: false, error: `Download failed: ${result.error}` };
       }
 
       // Verify the new version is actually newer
-      const newManifestPath = path.join(extPath, 'manifest.json');
+      const newManifestPath = resolvePathWithinRoot(extPath, 'manifest.json');
       if (!fs.existsSync(newManifestPath)) {
         // Rollback
         if (fs.existsSync(extPath)) {
           fs.rmSync(extPath, { recursive: true, force: true });
         }
         fs.renameSync(oldDir, extPath);
-        this.updateExtState(extensionId, previousVersion, null, 'failed');
-        return { extensionId, name, previousVersion, newVersion: '', success: false, error: 'New version has no manifest.json' };
+        this.updateExtState(safeExtensionId, previousVersion, null, 'failed');
+        return { extensionId: safeExtensionId, name, previousVersion, newVersion: '', success: false, error: 'New version has no manifest.json' };
       }
 
       let newManifest: Record<string, unknown>;
@@ -381,8 +416,8 @@ export class UpdateChecker {
           fs.rmSync(extPath, { recursive: true, force: true });
         }
         fs.renameSync(oldDir, extPath);
-        this.updateExtState(extensionId, previousVersion, null, 'failed');
-        return { extensionId, name, previousVersion, newVersion: '', success: false, error: 'New version has invalid manifest.json' };
+        this.updateExtState(safeExtensionId, previousVersion, null, 'failed');
+        return { extensionId: safeExtensionId, name, previousVersion, newVersion: '', success: false, error: 'New version has invalid manifest.json' };
       }
 
       const newVersion = typeof newManifest.version === 'string' ? newManifest.version : '0.0.0';
@@ -393,15 +428,15 @@ export class UpdateChecker {
           fs.rmSync(extPath, { recursive: true, force: true });
         }
         fs.renameSync(oldDir, extPath);
-        this.updateExtState(extensionId, previousVersion, newVersion, 'success');
-        return { extensionId, name, previousVersion, newVersion, success: true, error: 'Already at latest version' };
+        this.updateExtState(safeExtensionId, previousVersion, newVersion, 'success');
+        return { extensionId: safeExtensionId, name, previousVersion, newVersion, success: true, error: 'Already at latest version' };
       }
 
       // Preserve key field if old manifest had it but new one doesn't
       if (oldKeyField && !newManifest.key) {
         newManifest.key = oldKeyField;
         fs.writeFileSync(newManifestPath, JSON.stringify(newManifest, null, 2), 'utf-8');
-        log.info(`Preserved manifest.json key field for ${extensionId}`);
+        log.info(`Preserved manifest.json key field for ${safeExtensionId}`);
       }
 
       // Restore .tandem-meta.json if it existed
@@ -412,7 +447,7 @@ export class UpdateChecker {
           lastUpdated: new Date().toISOString(),
         };
         fs.writeFileSync(
-          path.join(extPath, '.tandem-meta.json'),
+          this.getExtensionMetaPath(safeExtensionId),
           JSON.stringify(updatedMeta, null, 2),
           'utf-8',
         );
@@ -420,7 +455,7 @@ export class UpdateChecker {
 
       // Unload old version from session
       try {
-        session.removeExtension(extensionId);
+        session.removeExtension(safeExtensionId);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         log.warn(`session.removeExtension failed (may not be loaded): ${msg}`);
@@ -442,8 +477,8 @@ export class UpdateChecker {
         try {
           await this.loader.loadExtension(session, extPath);
         } catch { /* best effort */ }
-        this.updateExtState(extensionId, previousVersion, newVersion, 'rolled-back');
-        return { extensionId, name, previousVersion, newVersion, success: false, error: `Load failed, rolled back: ${msg}` };
+        this.updateExtState(safeExtensionId, previousVersion, newVersion, 'rolled-back');
+        return { extensionId: safeExtensionId, name, previousVersion, newVersion, success: false, error: `Load failed, rolled back: ${msg}` };
       }
 
       // Success — clean up .old directory
@@ -451,8 +486,8 @@ export class UpdateChecker {
         fs.rmSync(oldDir, { recursive: true, force: true });
       }
 
-      this.updateExtState(extensionId, newVersion, newVersion, 'success');
-      return { extensionId, name, previousVersion, newVersion, success: true };
+      this.updateExtState(safeExtensionId, newVersion, newVersion, 'success');
+      return { extensionId: safeExtensionId, name, previousVersion, newVersion, success: true };
 
     } catch (err: unknown) {
       // Unexpected error — attempt rollback
@@ -461,8 +496,8 @@ export class UpdateChecker {
       if (!fs.existsSync(extPath) && fs.existsSync(oldDir)) {
         fs.renameSync(oldDir, extPath);
       }
-      this.updateExtState(extensionId, previousVersion, null, 'failed');
-      return { extensionId, name, previousVersion, newVersion: '', success: false, error: msg };
+      this.updateExtState(safeExtensionId, previousVersion, null, 'failed');
+      return { extensionId: safeExtensionId, name, previousVersion, newVersion: '', success: false, error: msg };
     }
   }
 
@@ -504,22 +539,22 @@ export class UpdateChecker {
 
     try {
       const dirs = fs.readdirSync(this.extensionsDir, { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('.') && !d.name.endsWith('.old'));
+        .filter(d => d.isDirectory() && isChromeExtensionId(d.name));
 
       for (const dir of dirs) {
-        const manifestPath = path.join(this.extensionsDir, dir.name, 'manifest.json');
+        const manifestPath = resolvePathWithinRoot(this.extensionsDir, dir.name, 'manifest.json');
         if (!fs.existsSync(manifestPath)) continue;
 
         try {
           const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-          const metaPath = path.join(this.extensionsDir, dir.name, '.tandem-meta.json');
+          const metaPath = resolvePathWithinRoot(this.extensionsDir, dir.name, '.tandem-meta.json');
           let chromeImported = false;
           let cwsId = dir.name;
 
           if (fs.existsSync(metaPath)) {
             try {
               const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
-              if (meta.source === 'chrome-import' && meta.cwsId) {
+              if (meta.source === 'chrome-import' && typeof meta.cwsId === 'string' && isChromeExtensionId(meta.cwsId)) {
                 chromeImported = true;
                 cwsId = meta.cwsId;
               }
@@ -550,15 +585,15 @@ export class UpdateChecker {
 
     try {
       const dirs = fs.readdirSync(this.extensionsDir, { withFileTypes: true })
-        .filter(d => d.isDirectory() && !d.name.startsWith('.'));
+        .filter(d => d.isDirectory() && isChromeExtensionId(d.name));
 
       for (const dir of dirs) {
-        const extPath = path.join(this.extensionsDir, dir.name);
+        const extPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
         const size = this.getDirectorySize(extPath);
         totalBytes += size;
 
         let name = dir.name;
-        const manifestPath = path.join(extPath, 'manifest.json');
+        const manifestPath = resolvePathWithinRoot(extPath, 'manifest.json');
         if (fs.existsSync(manifestPath)) {
           try {
             const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
@@ -610,15 +645,15 @@ export class UpdateChecker {
 
       for (const dir of dirs) {
         // Remove .old directories (leftover from failed updates)
-        if (dir.name.endsWith('.old') && dir.isDirectory()) {
-          const fullPath = path.join(this.extensionsDir, dir.name);
+        if (dir.name.endsWith('.old') && dir.isDirectory() && isChromeExtensionId(dir.name.slice(0, -4))) {
+          const fullPath = resolvePathWithinRoot(this.extensionsDir, dir.name);
           log.info(`Cleaning up stale .old directory: ${dir.name}`);
           fs.rmSync(fullPath, { recursive: true, force: true });
         }
       }
 
       // Remove .tmp directory if older than 1 hour
-      const tmpDir = path.join(this.extensionsDir, '.tmp');
+      const tmpDir = resolvePathWithinRoot(this.extensionsDir, '.tmp');
       if (fs.existsSync(tmpDir)) {
         try {
           const stat = fs.statSync(tmpDir);

@@ -2,6 +2,8 @@ import type { Router, Request, Response } from 'express';
 import fs from 'fs';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
+import { escapeHtml, getErrorMessage } from '../../utils/security';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -57,7 +59,12 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   });
 
   /** Serve chat images */
-  router.get('/chat/image/:filename', (req: Request, res: Response) => {
+  router.get('/chat/image/:filename', createRateLimitMiddleware({
+    bucket: 'media-chat-image',
+    windowMs: 60_000,
+    max: 120,
+    message: 'Too many chat image requests. Retry shortly.',
+  }), (req: Request, res: Response) => {
     const filename = req.params.filename as string;
     // Security: prevent path traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
@@ -255,7 +262,12 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/integrations/google-photos/connect', (req: Request, res: Response) => {
+  router.post('/integrations/google-photos/connect', createRateLimitMiddleware({
+    bucket: 'media-google-photos-connect',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many Google Photos connect requests. Retry shortly.',
+  }), (req: Request, res: Response) => {
     try {
       const clientId = typeof req.body?.clientId === 'string' ? req.body.clientId.trim() : '';
       if (clientId) {
@@ -279,7 +291,12 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/google-photos/oauth/callback', async (req: Request, res: Response) => {
+  router.get('/google-photos/oauth/callback', createRateLimitMiddleware({
+    bucket: 'media-google-photos-callback',
+    windowMs: 60_000,
+    max: 30,
+    message: 'Too many Google Photos callback requests. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const code = typeof req.query.code === 'string' ? req.query.code : undefined;
       const state = typeof req.query.state === 'string' ? req.query.state : undefined;
@@ -299,12 +316,13 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   </body>
 </html>`);
     } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
+      const message = getErrorMessage(e, 'Google Photos authorization failed');
+      const safeMessage = escapeHtml(message);
       res.status(400).type('html').send(`<!doctype html>
 <html>
   <body style="font-family: sans-serif; padding: 24px;">
     <h1>Google Photos connection failed</h1>
-    <p>${message}</p>
+    <p>${safeMessage}</p>
     <script>
       if (window.opener) {
         window.opener.postMessage({ type: 'tandem-google-photos-auth', ok: false, error: ${JSON.stringify(message)} }, '*');

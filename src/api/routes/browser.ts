@@ -9,6 +9,7 @@ import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
+import { createRateLimitMiddleware } from '../rate-limit';
 
 /** Maximum allowed code length for JS execution endpoints (1 MB) */
 const MAX_CODE_LENGTH = 1_048_576;
@@ -224,7 +225,12 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // SCREENSHOT — via capturePage (main process, not in webview)
   // ═══════════════════════════════════════════════
 
-  router.get('/screenshot', async (req: Request, res: Response) => {
+  router.get('/screenshot', createRateLimitMiddleware({
+    bucket: 'browser-screenshot',
+    windowMs: 60_000,
+    max: 30,
+    message: 'Too many screenshot requests. Retry shortly.',
+  }), async (req: Request, res: Response) => {
     try {
       const wc = await getSessionWC(ctx, req);
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }

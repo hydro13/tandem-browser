@@ -1,6 +1,7 @@
 import type { BrowserWindow} from 'electron';
 import TurndownService = require('turndown');
 import { createLogger } from '../utils/logger';
+import { hostnameMatches, isSearchEngineResultsUrl, pathnameMatchesPrefix, tryParseUrl } from '../utils/security';
 
 const log = createLogger('ContentExtractor');
 
@@ -155,28 +156,27 @@ export class ContentExtractor {
   }
 
   private detectPageType(url: string, html: string): 'article' | 'profile' | 'product' | 'search' | 'generic' {
+    const parsedUrl = tryParseUrl(url);
     const urlLower = url.toLowerCase();
     const htmlLower = html.toLowerCase();
 
     // Profile pages
-    if (urlLower.includes('linkedin.com/in/') || 
+    if ((parsedUrl && hostnameMatches(parsedUrl, 'linkedin.com') && pathnameMatchesPrefix(parsedUrl, '/in')) ||
         urlLower.includes('/profile') ||
         htmlLower.includes('profile') && htmlLower.includes('experience')) {
       return 'profile';
     }
 
     // Product pages
-    if (urlLower.includes('/product/') ||
-        urlLower.includes('amazon.com/') && urlLower.includes('/dp/') ||
+    if ((parsedUrl && pathnameMatchesPrefix(parsedUrl, '/product')) ||
+        (parsedUrl && hostnameMatches(parsedUrl, 'amazon.com') && pathnameMatchesPrefix(parsedUrl, '/dp')) ||
         htmlLower.includes('add to cart') ||
         htmlLower.includes('price') && htmlLower.includes('reviews')) {
       return 'product';
     }
 
     // Search results
-    if (urlLower.includes('google.com/search') ||
-        urlLower.includes('bing.com/search') ||
-        urlLower.includes('duckduckgo.com/?q=') ||
+    if (isSearchEngineResultsUrl(url) ||
         htmlLower.includes('search results') ||
         htmlLower.includes('results for')) {
       return 'search';
@@ -186,8 +186,8 @@ export class ContentExtractor {
     if (htmlLower.includes('<article') ||
         htmlLower.includes('byline') ||
         htmlLower.includes('author') && htmlLower.includes('published') ||
-        urlLower.includes('/article/') ||
-        urlLower.includes('/blog/')) {
+        (parsedUrl && pathnameMatchesPrefix(parsedUrl, '/article')) ||
+        (parsedUrl && pathnameMatchesPrefix(parsedUrl, '/blog'))) {
       return 'article';
     }
 

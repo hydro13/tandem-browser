@@ -39,6 +39,17 @@ navigation happens asynchronously in the background.
 
 ## [Unreleased]
 
+- fix: reduce the first public CodeQL security backlog
+
+Hardens the highest-signal CodeQL findings first: bearer token parsing no longer
+uses the flagged backtracking regex, the new-tab and Google Photos callback
+surfaces stop routing untrusted data through HTML sinks, Google/auth/search URL
+checks now parse URLs structurally instead of relying on substring tests, and the
+first path-traversal cluster now resolves file paths inside trusted roots for
+sessions, workflow templates, Chrome import, site/form memory, and extension
+updates. Adds a small in-memory API rate limiter for the currently flagged
+high-cost and high-sensitivity routes.
+
 - fix: make application screenshot capture fall back cleanly when macOS window capture metadata is unavailable
 - fix: tolerate missing screen audio source lookup during application recording setup
 - docs: align public-facing repo docs for developer preview and first-party OpenClaw positioning

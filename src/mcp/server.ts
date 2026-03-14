@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { apiCall, logActivity } from './api-client.js';
 import { API_PORT } from '../utils/constants';
 import { createLogger } from '../utils/logger';
+import { hostnameMatches, tryParseUrl, urlHasProtocol } from '../utils/security';
 
 const log = createLogger('McpServer');
 
@@ -530,13 +531,14 @@ server.tool(
       const links: Array<{ href: string; text: string }> = (linksData.links || [])
         .filter((l: { href?: string; text?: string }) => {
           const href = l.href || '';
+          const parsed = tryParseUrl(href);
           // Filter out search engine internal links
-          return href.startsWith('http') &&
-            !href.includes('google.com') &&
-            !href.includes('duckduckgo.com') &&
-            !href.includes('bing.com') &&
-            !href.includes('javascript:') &&
-            l.text && l.text.length > 5;
+          return !!parsed &&
+            urlHasProtocol(parsed, 'http:', 'https:') &&
+            !hostnameMatches(parsed, 'google.com') &&
+            !hostnameMatches(parsed, 'duckduckgo.com') &&
+            !hostnameMatches(parsed, 'bing.com') &&
+            !!l.text && l.text.length > 5;
         })
         .slice(0, clampedMax);
 
