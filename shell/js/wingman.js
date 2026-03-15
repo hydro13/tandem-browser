@@ -903,8 +903,18 @@
             };
 
             micRecognition.onerror = (e) => {
-              if (e.error !== 'no-speech') {
+              console.warn('[mic-btn] SpeechRecognition error:', e.error);
+              if (e.error === 'not-allowed') {
+                // Microphone permission denied
                 micVoiceActive = false;
+                if (micRecognition) { try { micRecognition.stop(); } catch { } micRecognition = null; }
+                micBtn.classList.remove('active');
+                micBtn.textContent = '🎤';
+                micBtn.title = 'Mic permission denied — allow in system settings';
+                alert('Microphone access denied.\n\nGo to System Settings → Privacy & Security → Microphone and enable Tandem.');
+              } else if (e.error !== 'no-speech' && e.error !== 'aborted') {
+                micVoiceActive = false;
+                if (micRecognition) { try { micRecognition.stop(); } catch { } micRecognition = null; }
                 micBtn.classList.remove('active');
                 micBtn.textContent = '🎤';
                 micBtn.title = 'Voice input';
@@ -912,8 +922,19 @@
             };
 
             micRecognition.onend = () => {
+              // Only restart if still active and not intentionally stopped
               if (micVoiceActive && micRecognition) {
-                try { micRecognition.start(); } catch { }
+                setTimeout(() => {
+                  if (micVoiceActive && micRecognition) {
+                    try { micRecognition.start(); } catch (e) {
+                      console.warn('[mic-btn] Failed to restart:', e);
+                      micVoiceActive = false;
+                      micBtn.classList.remove('active');
+                      micBtn.textContent = '🎤';
+                      micBtn.title = 'Voice input';
+                    }
+                  }
+                }, 100);
               }
             };
 
@@ -925,7 +946,11 @@
               micBtn.title = 'Listening... (click to stop)';
               inputEl.focus();
             } catch (e) {
-              console.error('Voice input failed:', e);
+              console.error('[mic-btn] Voice input failed to start:', e);
+              micVoiceActive = false;
+              micRecognition = null;
+              micBtn.classList.remove('active');
+              micBtn.textContent = '🎤';
             }
           }
         });
