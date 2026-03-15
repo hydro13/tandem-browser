@@ -33,6 +33,8 @@ const TRUSTED_SCRIPT_DOMAINS = new Set([
   'platform.linkedin.com',
   'snap.licdn.com',
   'media.licdn.com',
+  // GitHub CDN — required for dashboard/feed to load
+  'github.githubassets.com',
 ]);
 const GATEKEEPER_PENDING_LIMIT = 100;
 const GATEKEEPER_HOLD_TIMEOUT_MS = 4_000;
