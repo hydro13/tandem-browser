@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.0] - 2026-03-15
+
+- feat: add preview system — persistent HTML previews at /preview/:id with live reload
+
 ## [v0.58.0] - 2026-03-15
 
 - feat: add GET /active-tab/context endpoint for OpenClaw page awareness
