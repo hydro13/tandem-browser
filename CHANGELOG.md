@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.57.20] - 2026-03-15
+
+- fix: open sidebar webview links in new tab instead of silently denying them
+
 ## [v0.57.19] - 2026-03-15
 
 - fix: add X-Tab-Id support to snapshot and page-content for background tab access
