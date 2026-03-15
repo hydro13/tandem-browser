@@ -958,9 +958,10 @@
 
             navigator.mediaDevices.getUserMedia({ audio: true, video: false })
               .then(stream => {
-                // Stop immediately — we just needed to trigger the permission
-                stream.getTracks().forEach(t => t.stop());
+                // Start SpeechRecognition FIRST, then stop the warmup stream
+                // (stopping before start causes not-allowed error in some Electron builds)
                 startMic();
+                setTimeout(() => stream.getTracks().forEach(t => t.stop()), 500);
               })
               .catch(err => {
                 console.error('[mic-btn] Mic permission denied via getUserMedia:', err);
