@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.60.2] - 2026-03-16
+
+- fix: request macOS microphone permission before starting voice input
+
 ## [v0.60.1] - 2026-03-16
 
 - fix: mic button handles permission denied and onend race condition
