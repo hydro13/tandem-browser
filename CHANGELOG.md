@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.7] - 2026-03-15
+
+- fix: remove claude/both backend tabs from chat panel, wingman only
+
 ## [v0.59.6] - 2026-03-15
 
 - fix: always sync webhook.secret with OpenClaw on startup, not only when empty
