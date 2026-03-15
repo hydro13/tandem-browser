@@ -284,6 +284,13 @@
       position: relative;
       min-height: 0;
     }
+    /* Persistent webview host — overlays panel-content, never removed from DOM */
+    #sidebar-webview-host {
+      position: absolute;
+      inset: 48px 0 0 0; /* offset for panel header */
+      z-index: 10;
+      pointer-events: none;
+    }
     .sidebar-webview {
       position: absolute;
       inset: 0;

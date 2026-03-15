@@ -281,14 +281,41 @@
 
     function loadWebviewInPanel(id) {
       const content = document.getElementById('sidebar-panel-content');
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      // Use persistent host so webviews are never removed from DOM (preserves login state)
+      const host = document.getElementById('sidebar-webview-host');
+
+      // Hide all webviews
+      webviewCache.forEach(wv => {
+        wv.style.display = 'none';
+        wv.style.pointerEvents = 'none';
+      });
+
       const wv = getOrCreateWebview(id);
       if (!wv) return;
-      if (!content.contains(wv)) {
-        content.appendChild(wv);
+
+      // Mount in persistent host if not already there
+      if (!host.contains(wv)) {
+        host.appendChild(wv);
       }
+
+      // Show this webview and enable pointer events
       wv.style.display = 'flex';
+      wv.style.pointerEvents = 'auto';
+
+      // Make host cover the panel-content area
+      host.style.pointerEvents = 'auto';
       content.classList.add('webview-mode');
+    }
+
+    function hideWebviews() {
+      const host = document.getElementById('sidebar-webview-host');
+      webviewCache.forEach(wv => {
+        wv.style.display = 'none';
+        wv.style.pointerEvents = 'none';
+      });
+      if (host) host.style.pointerEvents = 'none';
+      const content = document.getElementById('sidebar-panel-content');
+      if (content) content.classList.remove('webview-mode');
     }
 
     async function activateItem(id) {
@@ -309,7 +336,7 @@
       } else if (newActive === 'pinboards') {
         loadPinboardPanel();
       } else {
-        webviewCache.forEach(wv => { wv.style.display = 'none'; });
+        hideWebviews();
         const content = document.getElementById('sidebar-panel-content');
         content.classList.remove('webview-mode');
       }
@@ -545,7 +572,7 @@
     async function loadBookmarkPanel() {
       const content = document.getElementById('sidebar-panel-content');
       // Hide all webviews
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      hideWebviews();
       content.classList.remove('webview-mode');
 
       // Build panel HTML
@@ -713,7 +740,7 @@
     // === HISTORY PANEL MODULE ===
     async function loadHistoryPanel() {
       const content = document.getElementById('sidebar-panel-content');
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      hideWebviews();
       content.classList.remove('webview-mode');
 
       content.innerHTML = `
@@ -841,7 +868,7 @@
 
     async function loadPinboardPanel() {
       const content = document.getElementById('sidebar-panel-content');
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      hideWebviews();
       content.classList.remove('webview-mode');
       pbState.currentBoardId = null;
 
@@ -1395,7 +1422,7 @@
       panel.classList.add('open');
 
       // Detach cached webviews before innerHTML wipe (preserve login state)
-      webviewCache.forEach(wv => { wv.style.display = 'none'; if (content.contains(wv)) content.removeChild(wv); });
+      hideWebviews();
       content.classList.remove('webview-mode');
 
       const rows = SETUP_SECTIONS.map((section, si) => {
@@ -1724,7 +1751,7 @@
       setPanelWidth(getPanelWidth('__workspaces'));
 
       // Hide webviews
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
+      hideWebviews();
       content.classList.remove('webview-mode');
 
       // Refresh workspace data
@@ -1807,7 +1834,7 @@
         const panel = document.getElementById('sidebar-panel');
         panel.classList.remove('open');
         // Hide webviews but don't remove them (preserve login state)
-        webviewCache.forEach(wv => { wv.style.display = 'none'; });
+        hideWebviews();
         const content = document.getElementById('sidebar-panel-content');
         content.classList.remove('webview-mode');
         // Remove non-webview content
