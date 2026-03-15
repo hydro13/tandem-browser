@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.2] - 2026-03-15
+
+- fix: webview stays within sidebar-panel-content bounds, header no longer covered
+
 ## [v0.59.1] - 2026-03-15
 
 - fix: use safeSetPanelHTML to preserve webview sessions during panel content updates
