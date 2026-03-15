@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.11] - 2026-03-15
+
+- fix: break panel toggle feedback loop — setPanelOpenSilent updates state without IPC echo
+
 ## [v0.59.10] - 2026-03-15
 
 - fix: use panelManager directly instead of ctx in ipc handler
