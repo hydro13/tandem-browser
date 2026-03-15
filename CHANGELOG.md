@@ -4,35 +4,33 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## [v0.57.21] - 2026-03-15
 
-- fix: disable auto-containment on script analysis false positives — log only, containment requires behavioral evidence
+**Security model refinement — daily browsing fixed, real threats still caught**
 
-## [v0.57.20] - 2026-03-15
+This release addresses a series of false positives in the security stack that made normal browsing impractical, and adds background tab API access for OpenClaw agents.
 
-- fix: open sidebar webview links in new tab instead of silently denying them
+### Security fixes
 
-## [v0.57.19] - 2026-03-15
+- **Script analysis containment removed** — ScriptGuard was triggering containment popups on virtually every news site and SPA because minified/obfuscated JavaScript scored high on threat rules. Script analysis now logs anomalies and reports to the gatekeeper channel, but does not activate containment. Containment still activates on confirmed behavioral signals (crypto miner CPU patterns, sustained WASM activity via BehaviorMonitor).
 
-- fix: add X-Tab-Id support to snapshot and page-content for background tab access
+- **LinkedIn fully unblocked** — Three separate layers were blocking LinkedIn:
+  - NetworkShield blocklist contained `ads.linkedin.com` and `snap.licdn.com`, causing the parent domain check to block all of `linkedin.com`
+  - Gatekeeper was blocking scripts from `static.licdn.com` due to low trust score on first visit
+  - ScriptGuard rule engine was running on trusted CDN domains and triggering containment on LinkedIn's minified JS
+  - Fixed by adding an explicit domain allowlist in NetworkShield, a trusted script domain list in Guardian, and skipping the rule engine for known CDN domains in ScriptGuard
 
-## [v0.57.18] - 2026-03-15
+### API improvements
 
-- fix: respect X-Tab-Id header in getSessionWC for background tab content access
+- **`X-Tab-Id` header support** — `GET /page-content`, `GET /page-html`, and `GET /snapshot` now accept an `X-Tab-Id` request header to target a specific background tab without changing focus. Background tab content extraction uses DevTools `Runtime.evaluate` instead of `executeJavaScript` to avoid hangs on non-active tabs.
 
-## [v0.57.17] - 2026-03-15
+### UX fixes
 
-- fix: skip rule engine for trusted cdn domains to prevent false positive containment on linkedin
+- **Sidebar links now open in new tab** — Links clicked inside sidebar webviews (Telegram, WhatsApp, etc.) were silently denied. They now open in a new Tandem tab as expected.
 
-## [v0.57.16] - 2026-03-15
+### Docs
 
-- fix: bypass gatekeeper script blocking for trusted linkedin cdn domains
-
-## [v0.57.15] - 2026-03-15
-
-- fix: add snap.licdn.com and media subdomains to allowlist for linkedin profile images
-
-## [v0.57.14] - 2026-03-15
-
-- fix: add domain allowlist to network shield to prevent blocking linkedin first-party domains
+- Added hero screenshot and browser interaction screenshot to README
+- Security model description moved to top of README per maintainer feedback
+- TODO: expose `POST /screenshot/application` and `POST /screenshot/region` as HTTP API endpoints
 
 ## [v0.57.13] - 2026-03-14
 
