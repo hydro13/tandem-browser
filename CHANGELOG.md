@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.59.14] - 2026-03-15
+
+- fix: apply theme on settings page load, not only on change
+
 ## [v0.59.13] - 2026-03-15
 
 - fix: correct light theme CSS for lgl-glass-sidebar, navbar and toolbar (invalid selector syntax)
