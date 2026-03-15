@@ -27,8 +27,16 @@ export function getSessionPartition(ctx: RouteContext, req: Request): string {
   return ctx.sessionManager.resolvePartition(sessionName);
 }
 
-/** Get WebContents for a session (via X-Session header) */
+/** Get WebContents for a session (via X-Tab-Id or X-Session header) */
 export async function getSessionWC(ctx: RouteContext, req: Request): Promise<Electron.WebContents | null> {
+  // X-Tab-Id takes priority — allows reading background tabs without focusing them
+  const tabId = req.headers['x-tab-id'] as string;
+  if (tabId) {
+    const tab = ctx.tabManager.listTabs().find(t => t.id === tabId);
+    if (!tab) return null;
+    return webContents.fromId(tab.webContentsId) || null;
+  }
+
   const sessionName = req.headers['x-session'] as string;
   if (!sessionName || sessionName === 'default') {
     return getActiveWC(ctx);

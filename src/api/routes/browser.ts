@@ -142,9 +142,9 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/page-html', async (_req: Request, res: Response) => {
+  router.get('/page-html', async (req: Request, res: Response) => {
     try {
-      const html = await execInActiveTab(ctx, 'document.documentElement.outerHTML');
+      const html = await execInSessionTab(ctx, req, 'document.documentElement.outerHTML');
       res.type('html').send(html);
     } catch (e) {
       handleRouteError(res, e);
