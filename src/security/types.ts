@@ -480,6 +480,9 @@ export const KNOWN_WS_SERVICES = new Set([
   'wss.slack.com', 'gateway.discord.gg',
   // Intercom
   'nexus-websocket-a.intercom.io',
+  // Google — Web Speech API uses WebSocket to www.google.com
+  'www.google.com', 'google.com',
+  'speech.googleapis.com',
 ]);
 
 // Known analytics/tracker domains (merged from outbound-guard + content-analyzer)
