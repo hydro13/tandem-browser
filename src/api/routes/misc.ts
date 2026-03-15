@@ -126,6 +126,77 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
+  // ACTIVE TAB CONTEXT — for OpenClaw awareness
+  // ═══════════════════════════════════════════════
+
+  /**
+   * GET /active-tab/context
+   *
+   * Returns everything OpenClaw needs to understand what the user is looking at:
+   * - tab id, url, title
+   * - scroll position and viewport
+   * - short text extract from the page (first ~1500 chars, enough for a one-liner summary)
+   * - all open tabs (id, url, title, active flag)
+   *
+   * Use this instead of polling /status + /page-content separately.
+   */
+  router.get('/active-tab/context', async (_req: Request, res: Response) => {
+    try {
+      const tab = ctx.tabManager.getActiveTab();
+      if (!tab) {
+        res.json({ ready: false, activeTab: null, tabs: [] });
+        return;
+      }
+
+      const wc = await getActiveWC(ctx);
+      let viewport = null;
+      let pageTextExcerpt = '';
+
+      if (wc && !wc.isDestroyed()) {
+        try {
+          const raw = await wc.executeJavaScript(`JSON.stringify({
+            innerWidth: window.innerWidth,
+            innerHeight: window.innerHeight,
+            scrollTop: Math.round(document.documentElement.scrollTop),
+            scrollHeight: document.documentElement.scrollHeight,
+            clientHeight: document.documentElement.clientHeight
+          })`);
+          viewport = JSON.parse(raw);
+        } catch { /* best-effort */ }
+
+        try {
+          const text = await wc.executeJavaScript(
+            `document.body ? document.body.innerText.replace(/\\s+/g,' ').trim().substring(0,1500) : ''`
+          );
+          pageTextExcerpt = typeof text === 'string' ? text : '';
+        } catch { /* best-effort */ }
+      }
+
+      const allTabs = ctx.tabManager.listTabs().map(t => ({
+        id: t.id,
+        url: t.url,
+        title: t.title,
+        active: t.id === tab.id,
+      }));
+
+      res.json({
+        ready: !!wc,
+        activeTab: {
+          id: tab.id,
+          url: tab.url,
+          title: tab.title,
+          loading: wc ? wc.isLoading() : false,
+          viewport,
+          pageTextExcerpt,
+        },
+        tabs: allTabs,
+      });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // ═══════════════════════════════════════════════
   // EVENT STREAM — SSE (Phase 2)
   // ═══════════════════════════════════════════════
 
