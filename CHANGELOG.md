@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.61.1] - 2026-03-16
+
+- fix: add Google WebSocket endpoints to KNOWN_WS_SERVICES for Web Speech API
+
 ## [v0.61.0] - 2026-03-16
 
 - feat: add /devtools/shell endpoint to open shell chrome devtools for debugging
