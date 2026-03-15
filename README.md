@@ -107,14 +107,6 @@ Examples:
   settings
 - Chrome-style extension loading and related compatibility work
 
-## Key Product Surfaces
-
-- left sidebar for workspaces, communication panels, bookmarks, history,
-  downloads, and utilities
-- main Chromium browsing surface with multi-tab session management
-- right-side Wingman panel for chat, activity, screenshots, and agent context
-- shell-level overlays for screenshots and annotations that stay outside the
-  page JavaScript context
 
 ## Security Principles
 
