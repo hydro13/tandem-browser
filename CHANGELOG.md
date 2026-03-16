@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.1] - 2026-03-16
+
+- fix: convert webm to m4a before Apple Speech transcription, add better error logging
+
 ## [v0.62.0] - 2026-03-16
 
 - feat: native voice-to-text via Apple Speech (macOS) + Whisper fallback (Linux/Windows)
