@@ -35,6 +35,9 @@ const TRUSTED_SCRIPT_DOMAINS = new Set([
   'media.licdn.com',
   // GitHub CDN — required for dashboard/feed to load
   'github.githubassets.com',
+  // Twitter/X CDN — required for x.com to load
+  'abs.twimg.com',
+  'pbs.twimg.com',
   // Google APIs & CDN — required for Web Speech API, Gmail, Google services
   'apis.google.com',
   'www.google.com',
