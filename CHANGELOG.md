@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.7] - 2026-03-16
+
+- fix: add abs.twimg.com to trusted script domains for x.com
+
 ## [v0.62.6] - 2026-03-16
 
 - fix: remove __tandemRng/__tandemNoise globals from window (detected by x.com anti-bot)
