@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.8] - 2026-03-16
+
+- fix: remove duplicate test files with spaces in names
+
 ## [v0.62.7] - 2026-03-16
 
 - fix: add abs.twimg.com to trusted script domains for x.com
