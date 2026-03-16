@@ -869,6 +869,12 @@
       let micChunks = [];
       let micStream = null;
 
+      // Show mic button only on Linux (macOS users use system dictation Fn+Fn)
+      if (micBtn && window.tandem?.getPlatform) {
+        const platform = window.tandem.getPlatform();
+        if (platform !== 'darwin') micBtn.style.display = '';
+      }
+
       if (micBtn) {
         micBtn.addEventListener('click', async () => {
           if (micRecording) {

@@ -293,7 +293,8 @@
           <div id="chat-image-preview" class="chat-image-preview" style="display:none;"></div>
           <div class="chat-input-wrap">
             <textarea class="chat-input" id="chat-input" placeholder="Message to Wingman..." rows="1"></textarea>
-            <button class="chat-mic-btn" id="chat-mic-btn" title="Voice input">🎤</button>
+            <!-- Mic button: shown on Linux only (macOS users use system Fn+Fn dictation) -->
+            <button class="chat-mic-btn" id="chat-mic-btn" title="Voice input" style="display:none">🎤</button>
             <button class="chat-send-btn" id="chat-send-btn">▶</button>
           </div>
         </div>
