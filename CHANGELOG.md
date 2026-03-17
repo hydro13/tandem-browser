@@ -2,6 +2,25 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.15] - 2026-03-17
+
+- fix: restore stock OpenClaw Wingman chat (wingman)
+
+What was built/changed:
+- New files: src/openclaw/connect.ts
+- Modified files: src/api/routes/data.ts, src/api/tests/routes/data.test.ts, src/ipc/handlers.ts, src/panel/manager.ts, src/preload.ts, shell/chat/openclaw-backend.js, shell/chat/router.js, shell/js/wingman.js, TODO.md, CHANGELOG.md
+- New API endpoints: GET /config/openclaw-connect
+- Chat send/persist flow now stores Robin and Wingman messages without depending on the old local tandem-chat skill
+
+Why this approach:
+- Stock Tandem now signs a real OpenClaw device identity for the gateway WebSocket handshake and uses the same operator read/write chat flow as the official OpenClaw webchat
+- This removes the hidden dependency on a local /chat polling bridge and fixes the misleading connected state in the panel
+
+Tested:
+- npx tsc --pretty false: zero errors
+- npx vitest run: 34 files, 1036 passed, 39 skipped
+- Manual: verified local OpenClaw gateway chat round-trip in the Wingman panel, GET /config/openclaw-connect, and persisted replies via GET /chat
+
 ## [Unreleased]
 
 - fix: sign a real OpenClaw device identity for Wingman gateway chat, handle current gateway response frames, persist gateway replies into Tandem chat history, and show honest OpenClaw connection state in the panel
