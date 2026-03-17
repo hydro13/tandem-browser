@@ -7,6 +7,10 @@ improve the browser over time. If you are interested in OpenClaw workflows,
 local-first browser tooling, security, Electron infrastructure, or agent
 interfaces, contributions are welcome.
 
+Tandem is still in a stage where extra help is genuinely valuable. Bug fixes,
+repro steps, platform testing, code review, docs cleanup, and focused UX polish
+all move the project forward.
+
 ## Before You Start
 
 - Read [README.md](README.md) for the product overview
@@ -22,6 +26,8 @@ The repository is currently maintained as a public developer preview.
 - macOS is the primary development target
 - Linux is supported but still has rough edges in some media workflows
 - Windows is not actively validated
+- official public releases are currently source-only
+- official end-user binaries are intentionally not published yet
 
 Please keep changes honest about current product maturity. Do not present
 unfinished features as production-ready.
@@ -33,6 +39,21 @@ project direction explicitly changes.
 Public-facing changes should also avoid framing Tandem as a gimmick or a loose
 plugin integration. The project is intended as a first-party OpenClaw companion
 browser maintained from the same ecosystem.
+
+## Good First Contribution Areas
+
+Useful contribution areas right now include:
+
+- bug fixes with clear reproduction steps
+- Linux testing and platform-specific fixes
+- browser API improvements for tabs, sessions, snapshots, and devtools
+- OpenClaw workflow polish and Tandem skill ergonomics
+- security review and containment hardening
+- UI polish in the shared human + Wingman workflow
+- docs cleanup where public setup or project status is confusing
+
+If you are unsure where to start, opening an issue with a concrete bug report,
+validation result, or implementation question is already useful.
 
 ## Development Workflow
 
@@ -98,6 +119,10 @@ A good pull request should include:
 
 If a change depends on local OpenClaw services, call that out clearly so other
 contributors know what they can and cannot validate on a clean machine.
+
+If your PR is exploratory, incomplete, or looking for direction, that is still
+fine. A smaller draft PR with a clear problem statement is better than waiting
+for a perfect large patch.
 
 ## Session Closeout
 

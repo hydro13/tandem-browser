@@ -68,8 +68,14 @@ This repository is a public `developer preview` — real project, early public s
 - Windows is not actively validated yet
 - current version: `0.62.16`
 - current release history: [CHANGELOG.md](CHANGELOG.md)
+- official release format today: source code only
+- official binaries: not published yet
 
 The goal of making the repository public is to let other contributors, maintainers, and OpenClaw-adjacent builders help improve the browser over time — not just to show it.
+If you want to help shape Tandem, now is the right time. The browser still has
+rough edges, and extra engineering eyes on bugs, architecture, UX, Linux
+behavior, extension compatibility, and OpenClaw workflow polish would be
+genuinely useful.
 
 ## OpenClaw-First Positioning
 
@@ -280,6 +286,8 @@ The local API binds to `127.0.0.1:8765`.
 - Windows support is not actively validated
 - Packaging and auto-update flows are still less mature than the core browser
   and API surface
+- Public releases are currently source-only; no official end-user binaries are
+  published yet
 
 ## Contributing Focus
 
@@ -293,6 +301,8 @@ Good contribution areas right now:
 - Linux quality and cross-platform testing
 - security review and containment hardening
 - UI polish for the shared human + OpenClaw browsing workflow
+- bug reports with reproduction steps and logs
+- code review, issue triage, and docs cleanup
 
 If you want the project map first, start with:
 
@@ -314,7 +324,10 @@ documents are maintainer workflow material. They remain in the repository for
 engineering context, but they are not the primary public entry points.
 
 Contributions are welcome. If you want to help improve Tandem as an
-OpenClaw-first browser, start with [CONTRIBUTING.md](CONTRIBUTING.md).
+OpenClaw-first browser, start with [CONTRIBUTING.md](CONTRIBUTING.md). Even if
+you are not ready to ship a large feature, smaller fixes, validation work,
+security review, Linux testing, docs improvements, and focused issue reports
+are all useful contributions.
 
 ## License
 
