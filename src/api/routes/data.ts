@@ -1,4 +1,5 @@
 import type { Router, Request, Response } from 'express';
+import { rateLimit as expressRateLimit } from 'express-rate-limit';
 import path from 'path';
 import os from 'os';
 import fs from 'fs';
@@ -6,9 +7,25 @@ import type { RouteContext } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { createLogger } from '../../utils/logger';
+import { buildOpenClawConnectParams, readOpenClawGatewayToken } from '../../openclaw/connect';
 import { createRateLimitMiddleware } from '../rate-limit';
 
 const log = createLogger('DataRoutes');
+const openClawTokenRateLimit = expressRateLimit({
+  windowMs: 60_000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OpenClaw token requests. Retry shortly.' },
+});
+
+const openClawConnectRateLimit = expressRateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many OpenClaw connect requests. Retry shortly.' },
+});
 
 export function registerDataRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -182,25 +199,40 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/config/openclaw-token', createRateLimitMiddleware({
-    bucket: 'data-openclaw-token',
-    windowMs: 60_000,
-    max: 10,
-    message: 'Too many OpenClaw token requests. Retry shortly.',
-  }), (_req: Request, res: Response) => {
+  router.get('/config/openclaw-token', openClawTokenRateLimit, (_req: Request, res: Response) => {
     try {
       const openclawPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
       if (!fs.existsSync(openclawPath)) {
         res.status(404).json({ error: 'OpenClaw config not found at ~/.openclaw/openclaw.json' });
         return;
       }
-      const data = JSON.parse(fs.readFileSync(openclawPath, 'utf-8'));
-      const token = data.token || data.gateway?.auth?.token;
+      const token = readOpenClawGatewayToken();
       if (!token) {
         res.status(404).json({ error: 'No token field in openclaw.json' });
         return;
       }
       res.json({ token });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.get('/config/openclaw-connect', openClawConnectRateLimit, (req: Request, res: Response) => {
+    try {
+      const nonce = typeof req.query.nonce === 'string' ? req.query.nonce.trim() : '';
+      if (!nonce) {
+        res.status(400).json({ error: 'nonce required' });
+        return;
+      }
+
+      const openclawPath = path.join(os.homedir(), '.openclaw', 'openclaw.json');
+      if (!fs.existsSync(openclawPath)) {
+        res.status(404).json({ error: 'OpenClaw config not found at ~/.openclaw/openclaw.json' });
+        return;
+      }
+
+      const params = buildOpenClawConnectParams(nonce);
+      res.json({ params });
     } catch (e) {
       handleRouteError(res, e);
     }

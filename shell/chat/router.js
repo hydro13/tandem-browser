@@ -67,9 +67,9 @@ class ChatRouter {
     const backend = this.getActive();
     if (!backend) {
       console.warn('[ChatRouter] No active backend');
-      return;
+      return false;
     }
-    await backend.sendMessage(text);
+    return backend.sendMessage(text);
   }
 
   async connectAll() {

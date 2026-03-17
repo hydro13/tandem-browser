@@ -349,6 +349,16 @@
         return el;
       }
 
+      async function persistChatMessage(from, text, image, notifyWebhook = false) {
+        if (!window.tandem?.persistChatMessage) return false;
+        try {
+          const result = await window.tandem.persistChatMessage({ from, text, image, notifyWebhook });
+          return Boolean(result?.ok);
+        } catch {
+          return false;
+        }
+      }
+
       // ── Router setup ──
 
       const router = new ChatRouter();
@@ -381,22 +391,26 @@
         if (btnBoth) btnBoth.classList.toggle('active', activeId === 'both');
 
         if (activeId === 'both') {
-          // In both mode — OpenClaw always available via webhook
+          const ocConn = openclawBackend.isConnected();
           const clConn = claudeBackend.isConnected();
-          wsDot.style.background = 'var(--success)'; // Always connected (OpenClaw via webhook)
-          if (clConn) {
+          const bothConnected = ocConn && clConn;
+          const anyConnected = ocConn || clConn;
+          wsDot.style.background = anyConnected ? 'var(--success)' : 'var(--accent)';
+          if (bothConnected) {
             wsStatusText.textContent = 'Wingman + Claude Connected';
-          } else {
+          } else if (ocConn) {
             wsStatusText.textContent = 'Wingman Connected, Claude Disconnected';
+          } else if (clConn) {
+            wsStatusText.textContent = 'Wingman Disconnected, Claude Connected';
+          } else {
+            wsStatusText.textContent = 'Wingman + Claude Disconnected';
           }
           inputEl.placeholder = 'Message to Wingman & Claude... (@wingman/@claude for specific)';
         } else {
           // Single backend mode
           const backend = router.getActive();
           if (backend) {
-            // OpenClaw uses webhook path (always available if Tandem API is running)
-            const isOC = router.getActiveId() === 'openclaw';
-            const connected = isOC ? true : backend.isConnected();
+            const connected = backend.isConnected();
             wsDot.style.background = connected ? 'var(--success)' : 'var(--accent)';
             wsStatusText.textContent = connected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
           }
@@ -493,21 +507,18 @@
 
       router.onConnectionChange((connected, backendId) => {
         if (backendId === 'openclaw') {
-          // OpenClaw always "connected" via webhook path (WebSocket is optional for receiving)
-          if (dotOC) dotOC.classList.add('connected');
+          if (dotOC) dotOC.classList.toggle('connected', connected);
         } else if (backendId === 'claude') {
           if (dotCL) dotCL.classList.toggle('connected', connected);
         }
-        // Update "both" dot — OpenClaw always available
-        if (dotBoth) dotBoth.classList.add('connected');
+        if (dotBoth) dotBoth.classList.toggle('connected', openclawBackend.isConnected() && claudeBackend.isConnected());
 
         // Update status bar for current mode
         if (currentMode === 'both') {
           updateBackendUI('both');
         } else if (backendId === router.getActiveId()) {
           const backend = router.getActive();
-          const isOC = backendId === 'openclaw';
-          const effectiveConnected = isOC ? true : connected;
+          const effectiveConnected = backend ? backend.isConnected() : connected;
           wsDot.style.background = effectiveConnected ? 'var(--success)' : 'var(--accent)';
           wsStatusText.textContent = effectiveConnected ? `${backend.name} Connected` : `${backend.name} Disconnected`;
         }
@@ -538,13 +549,19 @@
             const timeEl = streamData.element.querySelector('.msg-time');
             if (timeEl) timeEl.textContent = formatTime(Date.now());
           }
+          messagesEl.innerHTML = '';
           streamingMessages.clear();
           currentConversationId = null;
 
-          // Re-add local Robin messages after any history operations
+          if (Array.isArray(msg)) {
+            for (const historyMsg of msg) {
+              const el = appendMessage(historyMsg.role, historyMsg.text, historyMsg.timestamp, historyMsg.source, historyMsg.image);
+              el.dataset.fromHistory = 'true';
+            }
+          }
+
           setTimeout(() => {
             for (const localMsg of localRobinMessages) {
-              // Check if this message is already in the DOM (from history)
               let alreadyExists = false;
               for (const child of messagesEl.children) {
                 if (child.classList.contains('robin') &&
@@ -555,7 +572,6 @@
                 }
               }
 
-              // Only add if not already present from history
               if (!alreadyExists) {
                 const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
                 el.dataset.localMessage = 'true';
@@ -593,6 +609,7 @@
             }
           }
         } else {
+          const shouldPersistOpenClawFinal = backendId === 'openclaw' && msg._final && msg.text;
           // Finalize current conversation
           if (currentConversationId) {
             const streamData = streamingMessages.get(currentConversationId);
@@ -605,11 +622,19 @@
               scrollToBottom();
               streamingMessages.delete(currentConversationId);
             }
+            if (backendId === 'openclaw' && msg.text) {
+              void persistChatMessage('wingman', msg.text);
+            }
             currentConversationId = null;
+          } else if (shouldPersistOpenClawFinal) {
+            void persistChatMessage('wingman', msg.text);
           }
           // Only append a new element if this is NOT a final event (final reuses the streaming element)
           if (!msg._final) {
             appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
+            if (backendId === 'openclaw' && msg.text) {
+              void persistChatMessage('wingman', msg.text, msg.image);
+            }
           }
         }
       });
@@ -685,6 +710,7 @@
             }
           }
         } else {
+          const shouldPersistOpenClawFinal = backendId === 'openclaw' && msg._final && msg.text;
           // Finalize conversation for this backend
           if (dualStreamingConversations[backendId]) {
             const convId = dualStreamingConversations[backendId].conversationId;
@@ -695,9 +721,19 @@
               if (timeEl) timeEl.textContent = formatTime(Date.now());
               streamingMessages.delete(convId);
             }
+            if (backendId === 'openclaw' && msg.text) {
+              void persistChatMessage('wingman', msg.text);
+            }
             delete dualStreamingConversations[backendId];
+          } else if (shouldPersistOpenClawFinal) {
+            void persistChatMessage('wingman', msg.text);
           }
-          appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
+          if (!msg._final) {
+            appendMessage(msg.role, msg.text, msg.timestamp, msg.source, msg.image);
+            if (backendId === 'openclaw' && msg.text) {
+              void persistChatMessage('wingman', msg.text, msg.image);
+            }
+          }
         }
       });
 
@@ -784,7 +820,7 @@
 
       // ── Send message (input + button) ──
 
-      function sendMessage() {
+      async function sendMessage() {
         const text = inputEl.value.trim();
 
         // Image paste: send via IPC (before text-only check)
@@ -836,16 +872,20 @@
           const backend = router.getActive();
           const activeId = router.getActiveId();
 
-          // OpenClaw: always send via IPC→webhook (doesn't need WebSocket to be connected)
+          // OpenClaw: send through the official gateway chat path.
           if (activeId === 'openclaw') {
             const robinMsg = appendMessage('user', text, Date.now(), 'robin');
             robinMsg.dataset.localMessage = 'true';
-            // IPC → panelManager.addChatMessage → webhook → /hooks/wake → Wingman receives it
-            window.tandem?.sendChatMessage(text);
+            const sentViaGateway = await router.sendMessage(text);
+            if (sentViaGateway) {
+              void persistChatMessage('robin', text);
+            } else {
+              appendMessage('assistant', '⚠️ Wingman could not reach OpenClaw.', Date.now(), 'wingman');
+            }
           } else {
             // For Claude, needs WebSocket connection
             if (!backend || !backend.isConnected()) return;
-            router.sendMessage(text);
+            await router.sendMessage(text);
           }
         }
       }

@@ -23,6 +23,11 @@ export interface ChatMessage {
   image?: string;  // relative filename in ~/.tandem/chat-images/
 }
 
+export interface AddChatMessageOptions {
+  notifyWebhook?: boolean;
+  emitIpc?: boolean;
+}
+
 /**
  * PanelManager — Manages the Wingman side panel.
  * 
@@ -124,7 +129,12 @@ export class PanelManager {
   }
 
   /** Add a chat message */
-  addChatMessage(from: 'robin' | 'wingman' | 'kees' | 'claude', text: string, image?: string): ChatMessage {
+  addChatMessage(
+    from: 'robin' | 'wingman' | 'kees' | 'claude',
+    text: string,
+    image?: string,
+    opts: AddChatMessageOptions = {},
+  ): ChatMessage {
     const msg: ChatMessage = {
       id: ++this.chatCounter,
       from,
@@ -134,7 +144,7 @@ export class PanelManager {
     };
     this.chatMessages.push(msg);
     this.saveChatHistory();
-    if (this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
+    if (opts.emitIpc !== false && this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
       this.win.webContents.send('chat-message', msg);
     }
     // Clear typing indicator when wingman sends a message
@@ -145,7 +155,9 @@ export class PanelManager {
     this.maybeNotifyForIncomingReply(msg);
 
     // Fire webhook for robin messages (async, non-blocking)
-    this.fireWebhook(msg).catch(e => log.warn('fireWebhook failed:', e instanceof Error ? e.message : e));
+    if (opts.notifyWebhook !== false) {
+      this.fireWebhook(msg).catch(e => log.warn('fireWebhook failed:', e instanceof Error ? e.message : e));
+    }
 
     return msg;
   }

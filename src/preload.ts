@@ -79,7 +79,16 @@ contextBridge.exposeInMainWorld('tandem', {
   sendChatMessage: (text: string) => {
     ipcRenderer.send('chat-send', text);
   },
+  sendLegacyChatMessage: (text: string) => {
+    ipcRenderer.send('chat-send-legacy', text);
+  },
   sendChatImage: (text: string, image: string) => ipcRenderer.invoke('chat-send-image', { text, image }),
+  persistChatMessage: (data: {
+    from: 'robin' | 'wingman' | 'kees' | 'claude';
+    text?: string;
+    image?: string;
+    notifyWebhook?: boolean;
+  }) => ipcRenderer.invoke('chat-persist-message', data),
 
   // Draw overlay
   onDrawMode: (callback: (data: { enabled: boolean }) => void) => {

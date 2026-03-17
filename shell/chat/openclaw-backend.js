@@ -3,7 +3,8 @@
  * Implements ChatBackend interface (see src/chat/interfaces.ts)
  *
  * Extracted from inline ocChat IIFE in index.html.
- * Token is loaded dynamically from ~/.openclaw/openclaw.json via API.
+ * Connect params are prepared by Tandem so the browser client can present
+ * a signed device identity without exposing private keys in the renderer.
  */
 class OpenClawBackend {
   constructor() {
@@ -18,7 +19,6 @@ class OpenClawBackend {
     this._streamingMsg = null;
     this._streamingText = '';
     this._pendingCallbacks = new Map();
-    this._token = null;
 
     this._sessionKey = 'agent:main:main';
     this._wsUrl = 'ws://127.0.0.1:18789';
@@ -31,9 +31,6 @@ class OpenClawBackend {
   }
 
   async connect() {
-    if (!this._token) {
-      await this._fetchToken();
-    }
     this._doConnect();
   }
 
@@ -54,12 +51,23 @@ class OpenClawBackend {
   }
 
   async sendMessage(text) {
-    if (!text || !this._connected) return;
-    this._sendRequest('chat.send', {
+    if (!text) return false;
+    const connected = await this._ensureConnected();
+    if (!connected) return false;
+
+    const res = await this._sendRequestAsync('chat.send', {
       sessionKey: this._sessionKey,
       message: text,
       idempotencyKey: crypto.randomUUID()
     });
+    const payload = this._getResponsePayload(res);
+    return Boolean(
+      res
+      && res.ok !== false
+      && !res.error
+      && payload
+      && (payload.runId || payload.status === 'started' || payload.status === 'in_flight' || payload.status === 'ok')
+    );
   }
 
   onMessage(cb) { this._messageCallbacks.push(cb); }
@@ -69,14 +77,13 @@ class OpenClawBackend {
   /** Load chat history from OpenClaw */
   loadHistory(onMessages) {
     this._sendRequest('chat.history', { sessionKey: this._sessionKey, limit: 20 }, (res) => {
-      if (!res.result) return;
-      const msgs = res.result.messages || res.result;
+      const payload = this._getResponsePayload(res);
+      if (!payload) return;
+      const msgs = payload.messages || payload;
       if (!Array.isArray(msgs)) return;
       const parsed = [];
       for (const m of msgs) {
-        const text = Array.isArray(m.content)
-          ? m.content.filter(c => c.type === 'text').map(c => c.text).join('\n')
-          : (m.text || m.content || '');
+        const text = this._extractMessageText(m);
         if (text) {
           parsed.push({
             id: m.id || crypto.randomUUID(),
@@ -95,17 +102,18 @@ class OpenClawBackend {
 
   // ── Private ────────────────────────────────────
 
-  async _fetchToken() {
+  async _fetchConnectParams(nonce) {
     try {
-      const res = await fetch(`${this._apiBase}/config/openclaw-token`);
+      const res = await fetch(`${this._apiBase}/config/openclaw-connect?nonce=${encodeURIComponent(nonce)}`);
       if (!res.ok) {
-        console.warn('[OpenClawBackend] Could not fetch token:', res.statusText);
-        return;
+        console.warn('[OpenClawBackend] Could not fetch connect params:', res.statusText);
+        return null;
       }
       const data = await res.json();
-      this._token = data.token;
+      return data.params || null;
     } catch (e) {
-      console.warn('[OpenClawBackend] Token fetch failed:', e.message);
+      console.warn('[OpenClawBackend] Connect param fetch failed:', e.message);
+      return null;
     }
   }
 
@@ -122,26 +130,32 @@ class OpenClawBackend {
 
       if (msg.type === 'event') {
         if (msg.event === 'connect.challenge') {
-          this._sendRequest('connect', {
-            minProtocol: 3, maxProtocol: 3,
-            client: { id: 'webchat', version: '1.0', platform: 'browser', mode: 'webchat', instanceId: crypto.randomUUID() },
-            role: 'operator',
-            scopes: ['operator.admin'],
-            auth: { token: this._token },
-            userAgent: navigator.userAgent,
-            locale: navigator.language
-          }, (res) => {
-            if (res.result) {
-              this._setConnected(true);
-              this._reconnectDelay = 1000;
-              // Load history after connecting (emit as historyReload so UI clears first)
-              this.loadHistory((msgs) => {
-                this._emit('historyReload', msgs);
-              });
-            } else {
-              console.error('[OpenClawBackend] Connect failed:', res.error);
+          this._fetchConnectParams(msg.payload?.nonce || '').then((params) => {
+            if (!params) {
               this._setConnected(false);
+              return;
             }
+
+            params.userAgent = navigator.userAgent;
+            params.locale = navigator.language;
+
+            this._sendRequest('connect', params, (res) => {
+              const payload = this._getResponsePayload(res);
+              if (res && res.ok !== false && payload) {
+                this._setConnected(true);
+                this._reconnectDelay = 1000;
+                // Load history after connecting (emit as historyReload so UI clears first)
+                this.loadHistory((msgs) => {
+                  this._emit('historyReload', msgs);
+                });
+              } else {
+                console.error('[OpenClawBackend] Connect failed:', res.error);
+                this._setConnected(false);
+              }
+            });
+          }).catch((error) => {
+            console.error('[OpenClawBackend] Connect preparation failed:', error?.message || error);
+            this._setConnected(false);
           });
         }
         if (msg.event === 'chat') {
@@ -155,7 +169,7 @@ class OpenClawBackend {
         const cb = this._pendingCallbacks.get(msg.id);
         if (cb) {
           this._pendingCallbacks.delete(msg.id);
-          this._invokeCallback(cb, [msg]);
+          this._invokeCallback(cb, [this._normalizeResponse(msg)]);
         }
       }
     };
@@ -180,11 +194,49 @@ class OpenClawBackend {
     return id;
   }
 
+  _sendRequestAsync(method, params) {
+    return new Promise((resolve) => {
+      const id = this._sendRequest(method, params, (res) => resolve(res));
+      if (!id) {
+        return;
+      }
+    });
+  }
+
+  async _ensureConnected(timeoutMs = 4000) {
+    if (this._connected) return true;
+
+    await this.connect();
+    if (this._connected) return true;
+
+    return new Promise((resolve) => {
+      let settled = false;
+      const onChange = (connected) => {
+        if (!connected || settled) return;
+        settled = true;
+        cleanup();
+        resolve(true);
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        const index = this._connectionCallbacks.indexOf(onChange);
+        if (index >= 0) this._connectionCallbacks.splice(index, 1);
+      };
+      const timer = setTimeout(() => {
+        if (settled) return;
+        cleanup();
+        resolve(this._connected);
+      }, timeoutMs);
+
+      this._connectionCallbacks.push(onChange);
+    });
+  }
+
   _handleChatEvent(payload) {
     const { state, message } = payload;
     if (state === 'delta') {
       this._emit('typing', true);
-      const text = (message && (message.text || (Array.isArray(message.content) ? message.content.filter(c => c.type === 'text').map(c => c.text).join('') : ''))) || '';
+      const text = this._extractMessageText(message);
       this._streamingText = text || this._streamingText;
       this._emit('message', {
         id: 'streaming',
@@ -196,7 +248,7 @@ class OpenClawBackend {
       });
     } else if (state === 'final') {
       this._emit('typing', false);
-      const finalText = this._streamingText;
+      const finalText = this._extractMessageText(message) || this._streamingText;
       this._streamingMsg = null;
       this._streamingText = '';
       // Emit a non-streaming message to finalize the UI element
@@ -249,5 +301,39 @@ class OpenClawBackend {
     if (typeof cb === 'function') {
       cb(...args);
     }
+  }
+
+  _extractMessageText(message) {
+    if (!message) return '';
+    if (Array.isArray(message.content)) {
+      return message.content
+        .filter((part) => part && part.type === 'text' && typeof part.text === 'string')
+        .map((part) => part.text)
+        .join('\n');
+    }
+    return message.text || message.content || '';
+  }
+
+  _normalizeResponse(response) {
+    if (!response || typeof response !== 'object') {
+      return { ok: false, error: { code: 'INVALID_RESPONSE', message: 'Invalid response frame' } };
+    }
+
+    if (Object.prototype.hasOwnProperty.call(response, 'payload') || Object.prototype.hasOwnProperty.call(response, 'ok')) {
+      return {
+        ...response,
+        result: response.payload
+      };
+    }
+
+    return {
+      ...response,
+      ok: !response.error,
+      payload: response.result
+    };
+  }
+
+  _getResponsePayload(response) {
+    return response?.payload ?? response?.result ?? null;
   }
 }

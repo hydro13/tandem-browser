@@ -75,6 +75,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   const ipcChannels = [
     'tab-update',
     'chat-send',
+    'chat-send-legacy',
     'voice-transcript',
     'voice-status-update',
     'activity-webview-event',
@@ -104,6 +105,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     'emergency-stop',
     'show-tab-context-menu',
     'chat-send-image',
+    'chat-persist-message',
     'navigate',
     'go-back',
     'go-forward',
@@ -135,10 +137,44 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
+  // Legacy webhook-based path kept as a fallback during OpenClaw chat migration.
+  ipcMain.on('chat-send-legacy', (_event, text: string) => {
+    if (text) {
+      panelManager.addChatMessage('robin', text);
+    }
+  });
+
   // ═══ Chat Image IPC — Robin pastes image from clipboard ═══
   ipcMain.handle('chat-send-image', async (_event, data: { text: string; image: string }) => {
     const filename = panelManager.saveImage(data.image);
     const msg = panelManager.addChatMessage('robin', data.text || '', filename);
+    return { ok: true, message: msg };
+  });
+
+  ipcMain.handle('chat-persist-message', async (_event, data: {
+    from: 'robin' | 'wingman' | 'kees' | 'claude';
+    text?: string;
+    image?: string;
+    notifyWebhook?: boolean;
+  }) => {
+    const text = typeof data?.text === 'string' ? data.text : '';
+    const image = typeof data?.image === 'string' ? data.image : undefined;
+    if (!text && !image) {
+      return { ok: false, error: 'text or image required' };
+    }
+
+    const savedImage = image?.startsWith('data:image/')
+      ? panelManager.saveImage(image)
+      : image;
+    const msg = panelManager.addChatMessage(
+      data.from,
+      text,
+      savedImage,
+      {
+        notifyWebhook: data.notifyWebhook,
+        emitIpc: false,
+      },
+    );
     return { ok: true, message: msg };
   });
 

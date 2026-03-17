@@ -2,10 +2,40 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
-## [v0.62.14] - 2026-03-17
+## [v0.62.16] - 2026-03-17
 
-- fix: use assertPathWithinRoot return value so CodeQL traces the safe path
+- fix: satisfy CodeQL rate limit detection (api)
 
+What was built/changed:
+- Modified files: src/api/routes/data.ts
+- Swapped the OpenClaw token/connect route limiters to a CodeQL-recognized express-rate-limit middleware while keeping the existing request caps and messages
+
+Why this approach:
+- The endpoint was already protected by the custom limiter, but CodeQL does not treat that middleware as a proven rate limiter for this filesystem-backed handler
+- Using a standard limiter on the sensitive OpenClaw config routes removes the false-positive gate without changing the user-visible behavior
+
+Tested:
+- npx tsc --pretty false: zero errors
+- npx vitest run src/api/tests/routes/data.test.ts: 52 passed
+
+## [v0.62.15] - 2026-03-17
+
+- fix: restore stock OpenClaw Wingman chat (wingman)
+
+What was built/changed:
+- New files: src/openclaw/connect.ts
+- Modified files: src/api/routes/data.ts, src/api/tests/routes/data.test.ts, src/ipc/handlers.ts, src/panel/manager.ts, src/preload.ts, shell/chat/openclaw-backend.js, shell/chat/router.js, shell/js/wingman.js, TODO.md, CHANGELOG.md
+- New API endpoints: GET /config/openclaw-connect
+- Chat send/persist flow now stores Robin and Wingman messages without depending on the old local tandem-chat skill
+
+Why this approach:
+- Stock Tandem now signs a real OpenClaw device identity for the gateway WebSocket handshake and uses the same operator read/write chat flow as the official OpenClaw webchat
+- This removes the hidden dependency on a local /chat polling bridge and fixes the misleading connected state in the panel
+
+Tested:
+- npx tsc --pretty false: zero errors
+- npx vitest run: 34 files, 1036 passed, 39 skipped
+- Manual: verified local OpenClaw gateway chat round-trip in the Wingman panel, GET /config/openclaw-connect, and persisted replies via GET /chat
 ## [v0.62.13] - 2026-03-17
 
 - fix: restrict sync root paths to user home directory (security)

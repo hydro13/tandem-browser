@@ -440,6 +440,39 @@ describe('Data Routes', () => {
     });
   });
 
+  describe('GET /config/openclaw-connect', () => {
+    it('returns 400 when nonce is missing', async () => {
+      const res = await request(app).get('/config/openclaw-connect');
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('nonce required');
+    });
+
+    it('returns signed connect params for OpenClaw gateway auth', async () => {
+      vi.mocked(fs.existsSync).mockImplementation((filePath: any) => (
+        typeof filePath === 'string' && filePath.includes('.openclaw/openclaw.json')
+      ));
+      vi.mocked(fs.readFileSync).mockImplementation((filePath: any) => {
+        if (typeof filePath === 'string' && filePath.includes('.openclaw/openclaw.json')) {
+          return JSON.stringify({ gateway: { auth: { token: 'nested-token' } } }) as any;
+        }
+
+        throw new Error(`unexpected readFileSync: ${String(filePath)}`);
+      });
+
+      const res = await request(app).get('/config/openclaw-connect?nonce=test-nonce');
+
+      expect(res.status).toBe(200);
+      expect(res.body.params.auth.token).toBe('nested-token');
+      expect(res.body.params.scopes).toEqual(['operator.read', 'operator.write']);
+      expect(typeof res.body.params.device.id).toBe('string');
+      expect(res.body.params.device.id.length).toBeGreaterThan(10);
+      expect(res.body.params.device.nonce).toBe('test-nonce');
+      expect(typeof res.body.params.device.signature).toBe('string');
+      expect(res.body.params.device.signature.length).toBeGreaterThan(10);
+    });
+  });
+
   // ═══════════════════════════════════════════════
   // DATA EXPORT / IMPORT
   // ═══════════════════════════════════════════════
