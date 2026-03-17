@@ -159,8 +159,7 @@ export function normalizeExistingDirectoryPath(value: string, label: string): st
     throw new Error(`${label} is required`);
   }
 
-  const resolved = path.resolve(trimmed);
-  assertPathWithinRoot(os.homedir(), resolved);
+  const resolved = assertPathWithinRoot(os.homedir(), path.resolve(trimmed));
   const stat = fs.statSync(resolved);
   if (!stat.isDirectory()) {
     throw new Error(`${label} must be a directory`);

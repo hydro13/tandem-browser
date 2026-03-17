@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.62.13",
+  "version": "0.62.14",
   "description": "First-party OpenClaw companion browser for human-AI collaboration with built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",

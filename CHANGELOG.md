@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.62.14] - 2026-03-17
+
+- fix: use assertPathWithinRoot return value so CodeQL traces the safe path
+
 ## [v0.62.13] - 2026-03-17
 
 - fix: restrict sync root paths to user home directory (security)
