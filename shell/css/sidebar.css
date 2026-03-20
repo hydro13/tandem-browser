@@ -85,6 +85,8 @@
       flex-direction: column;
       padding: 10px 0;
       gap: 8px;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     /* Sidebar item button */

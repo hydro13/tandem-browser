@@ -217,7 +217,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.get('/config/openclaw-connect', openClawConnectRateLimit, (req: Request, res: Response) => {
+  router.get('/config/openclaw-connect', openClawConnectRateLimit, async (req: Request, res: Response) => {
     try {
       const nonce = typeof req.query.nonce === 'string' ? req.query.nonce.trim() : '';
       if (!nonce) {
@@ -231,7 +231,7 @@ export function registerDataRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
 
-      const params = buildOpenClawConnectParams(nonce);
+      const params = await buildOpenClawConnectParams(nonce);
       res.json({ params });
     } catch (e) {
       handleRouteError(res, e);

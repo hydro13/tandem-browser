@@ -6,6 +6,20 @@ All notable changes to Tandem Browser will be documented in this file.
 
 - fix: increase V8 heap limit to 4GB to prevent OOM on memory-heavy SPAs
 
+### Linux Fixes
+
+- **fix(linux): make OpenClaw identity loading async to prevent main process blocking**
+  
+  Converted synchronous `fs.readFileSync`/`writeFileSync` calls in OpenClaw identity 
+  loading to async `fs.promises` API. The sync calls were blocking the main process 
+  during WebSocket connect handshake, causing "not responding" dialogs on Linux 
+  (macOS was unaffected due to different I/O scheduling).
+
+- **fix(linux): add overflow scrolling to sidebar for screens with limited height**
+  
+  Added `overflow-y: auto` to `.sidebar-items` so sidebar icons are accessible via 
+  scroll on smaller screens. Settings/Help/Collapse buttons no longer get cut off.
+
 ## [v0.63.3] - 2026-03-20
 
 - fix: resolve CI test failures — safe app.getVersion(), update quickLinks count in tests

@@ -88,7 +88,7 @@ function generateIdentity(): DeviceIdentity {
   };
 }
 
-function writeIdentity(filePath: string, identity: DeviceIdentity): void {
+async function writeIdentity(filePath: string, identity: DeviceIdentity): Promise<void> {
   ensureDir(path.dirname(filePath));
   const stored: StoredDeviceIdentity = {
     version: 1,
@@ -97,13 +97,13 @@ function writeIdentity(filePath: string, identity: DeviceIdentity): void {
     privateKeyPem: identity.privateKeyPem,
     createdAtMs: Date.now(),
   };
-  fs.writeFileSync(filePath, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600 });
+  await fs.promises.writeFile(filePath, `${JSON.stringify(stored, null, 2)}\n`, { mode: 0o600 });
 }
 
-function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceIdentity {
+async function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): Promise<DeviceIdentity> {
   try {
     if (fs.existsSync(filePath)) {
-      const raw = fs.readFileSync(filePath, 'utf-8');
+      const raw = await fs.promises.readFile(filePath, 'utf-8');
       const parsed = JSON.parse(raw) as Partial<StoredDeviceIdentity>;
       if (
         parsed?.version === 1
@@ -118,7 +118,7 @@ function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceId
             publicKeyPem: parsed.publicKeyPem,
             privateKeyPem: parsed.privateKeyPem,
           };
-          writeIdentity(filePath, nextIdentity);
+          await writeIdentity(filePath, nextIdentity);
           return nextIdentity;
         }
 
@@ -134,7 +134,7 @@ function loadOrCreateDeviceIdentity(filePath = OPENCLAW_IDENTITY_PATH): DeviceId
   }
 
   const identity = generateIdentity();
-  writeIdentity(filePath, identity);
+  await writeIdentity(filePath, identity);
   return identity;
 }
 
@@ -178,7 +178,7 @@ function buildDeviceAuthPayloadV3(params: {
   ].join('|');
 }
 
-export function buildOpenClawConnectParams(nonce: string): OpenClawConnectParams {
+export async function buildOpenClawConnectParams(nonce: string): Promise<OpenClawConnectParams> {
   const trimmedNonce = nonce.trim();
   if (!trimmedNonce) {
     throw new Error('nonce is required');
@@ -189,7 +189,7 @@ export function buildOpenClawConnectParams(nonce: string): OpenClawConnectParams
     throw new Error('No token field in openclaw.json');
   }
 
-  const identity = loadOrCreateDeviceIdentity();
+  const identity = await loadOrCreateDeviceIdentity();
   const signedAt = Date.now();
   const platform = process.platform;
   const deviceFamily = 'desktop';
