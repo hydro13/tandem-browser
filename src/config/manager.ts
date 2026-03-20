@@ -107,13 +107,11 @@ export interface TandemConfig {
 
 const DEFAULT_QUICK_LINKS: QuickLinkConfig[] = [
   { id: 'duckduckgo', label: 'DuckDuckGo', url: 'https://duckduckgo.com' },
-  { id: 'github', label: 'GitHub', url: 'https://github.com' },
-  { id: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com' },
-  { id: 'gmail', label: 'Gmail', url: 'https://mail.google.com' },
+  { id: 'google', label: 'Google', url: 'https://google.com' },
+  { id: 'github', label: 'GitHub', url: 'https://github.com/hydro13' },
+  { id: 'x', label: 'X', url: 'https://x.com/Robin_waslander' },
+  { id: 'linkedin', label: 'LinkedIn', url: 'https://linkedin.com/in/robinwaslander' },
   { id: 'youtube', label: 'YouTube', url: 'https://youtube.com' },
-  { id: 'reddit', label: 'Reddit', url: 'https://reddit.com' },
-  { id: 'claronote', label: 'ClaroNote', url: 'https://claronote.com' },
-  { id: 'x', label: 'X', url: 'https://x.com' },
 ];
 
 function normalizeQuickLinkUrl(rawUrl: string): string {

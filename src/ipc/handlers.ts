@@ -304,6 +304,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { backend: detectBackend() };
   });
 
+
+
   // ═══ Microphone Permission Request ═══
   ipcMain.handle('request-mic-permission', async () => {
     if (process.platform !== 'darwin') return { granted: true };

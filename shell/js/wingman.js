@@ -323,7 +323,7 @@
         let cls, name;
         if (role === 'user') {
           cls = 'robin';
-          name = 'Robin';
+          name = 'You';
         } else if (sourceClass === 'claude') {
           cls = 'claude';
           name = 'Claude';

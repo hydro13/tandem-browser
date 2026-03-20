@@ -304,24 +304,39 @@ export class DrawOverlayManager {
     const config = this.configManager.getConfig();
     if (!config.screenshots.applePhotos) return;
 
+    // Request Photos permission if needed
+    try {
+      const { systemPreferences } = require('electron');
+      const status = (systemPreferences.getMediaAccessStatus as (mediaType: string) => string)('photos');
+      if (status === 'denied') {
+        log.warn('📸 Apple Photos permission denied');
+        return;
+      }
+    } catch { /* systemPreferences.photos may not exist on older Electron */ }
+
     const scriptLines = [
       'on run argv',
       '  set importPath to item 1 of argv',
+      '  set theFile to POSIX file importPath',
       '  tell application "Photos"',
+      '    activate',
       '    with timeout of 30 seconds',
-      '      import POSIX file importPath',
+      '      import theFile',
       '    end timeout',
       '  end tell',
       'end run',
     ];
 
-    execFile('osascript', [...scriptLines.flatMap(line => ['-e', line]), filePath], (error) => {
-      if (error) {
-        log.warn('📸 Apple Photos import failed:', error.message);
-      } else {
-        log.info('📸 Screenshot imported to Apple Photos:', path.basename(filePath));
-      }
-    });
+    // Small delay to ensure file is fully flushed to disk before Photos tries to import it
+    setTimeout(() => {
+      execFile('osascript', [...scriptLines.flatMap(line => ['-e', line]), filePath], (error) => {
+        if (error) {
+          log.warn('📸 Apple Photos import failed:', error.message);
+        } else {
+          log.info('📸 Screenshot imported to Apple Photos:', path.basename(filePath));
+        }
+      });
+    }, 300);
   }
 
   private async importToGooglePhotos(filePath: string): Promise<void> {

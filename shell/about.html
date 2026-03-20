@@ -114,7 +114,11 @@
   <div class="title"><span class="t">T</span><span class="rest">andem</span></div>
   <div class="subtitle">First-Party OpenClaw Companion Browser</div>
   <div class="status-badge">Developer Preview</div>
-  <div class="version" id="version">v0.62.17</div>
+  <div class="version" id="version"></div>
+  <script>
+    const v = window.__TANDEM_VERSION__;
+    if (v) document.getElementById('version').textContent = 'v' + v;
+  </script>
   <div class="info">
     Built specifically for human-AI collaboration with OpenClaw.<br>
     Maintained in the same ecosystem as OpenClaw, with security and local control built in.

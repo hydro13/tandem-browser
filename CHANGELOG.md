@@ -2,6 +2,56 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.63.3] - 2026-03-20
+
+- fix: resolve CI test failures — safe app.getVersion(), update quickLinks count in tests
+
+## [v0.63.2] - 2026-03-20
+
+- fix: remove unused imports in app-menu, fix eslint any in overlay
+
+## [v0.63.1] - 2026-03-20
+
+- fix: UI/UX polish pass v0.63.0 — 18 fixes across shell, sidebar, settings, screenshots
+
+## [v0.63.0] - 2026-03-20
+
+UI/UX polish pass — 18 fixes across shell, sidebar, settings, and screenshots.
+
+### Shell & Menus
+- fix: rename first app menu from "Electron" to "Tandem Browser"
+- fix: remove redundant Window menu
+- fix: move Draw Mode to Edit menu, remove Copilot/Wingman menu
+- fix: move "About Tandem Browser" to Help menu
+
+### Sidebar
+- fix: sidebar defaults to wide mode on first launch, remembers preference thereafter
+- fix: wide mode shows labels next to icons, group headers visible
+- fix: tooltips only shown in narrow mode
+- fix: footer buttons left-aligned with labels (Collapse, Customize, Tips & Tutorials)
+- fix: Customize button now works as toggle (click to open, click again to close)
+- fix: remove Downloads and Personal News from sidebar settings
+
+### Quick Links
+- fix: auto-save on add/remove/change (no more Save button, debounced 600ms)
+- fix: default quick links updated to public profiles (DuckDuckGo, Google, GitHub, X, LinkedIn, YouTube)
+
+### Wingman
+- fix: display name changed from "Robin" to "You" in Wingman chat
+
+### Help
+- fix: Help/lamp button links to local help.html instead of external URL
+
+### About
+- fix: About panel now shows dynamic version from app (was hardcoded v0.57.6)
+
+### Settings
+- fix: Language, Wingman panel default open, and Show bookmarks bar marked as "Coming soon" and disabled
+- fix: Screenshot storage path now uses native folder picker dialog instead of text input
+
+### Screenshots
+- fix: Apple Photos import error -1728 — more robust AppleScript, 300ms flush delay, permission check
+
 ## [v0.62.17] - 2026-03-18
 
 - fix: update default quick links — remove personal/ClaroNote links, add Robin's public profiles

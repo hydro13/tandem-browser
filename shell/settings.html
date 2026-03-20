@@ -526,45 +526,39 @@
         <div class="quick-link-editor">
           <div class="quick-link-list" id="cfg-quickLinks"></div>
           <div class="btn-group">
-            <button type="button" class="btn btn-secondary" id="btn-addQuickLink">Add link</button>
-            <button type="button" class="btn btn-primary" id="btn-saveQuickLinks">Save links</button>
+            <button type="button" class="btn btn-secondary" id="btn-addQuickLink">+ Add link</button>
           </div>
         </div>
       </div>
 
-      <div class="field">
+      <div class="field" style="opacity:0.45;pointer-events:none;">
         <div class="field-info">
-          <div class="field-label">Language</div>
+          <div class="field-label">Language <span style="font-size:11px;color:#999;font-weight:normal;">— Coming soon</span></div>
           <div class="field-desc">Interface and search language</div>
         </div>
-        <select id="cfg-language">
-          <option value="nl-BE">Dutch (Belgium)</option>
-          <option value="nl-NL">Dutch (Netherlands)</option>
+        <select id="cfg-language" disabled>
           <option value="en-US">English (US)</option>
-          <option value="en-GB">English (UK)</option>
-          <option value="de-DE">German</option>
-          <option value="fr-FR">French</option>
         </select>
       </div>
 
-      <div class="field">
+      <div class="field" style="opacity:0.45;pointer-events:none;">
         <div class="field-info">
-          <div class="field-label">Wingman panel default open</div>
+          <div class="field-label">Wingman panel default open <span style="font-size:11px;color:#999;font-weight:normal;">— Coming soon</span></div>
           <div class="field-desc">Panel auto-open on startup</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="cfg-wingmanPanelDefaultOpen">
+          <input type="checkbox" id="cfg-wingmanPanelDefaultOpen" disabled>
           <span class="slider"></span>
         </label>
       </div>
 
-      <div class="field">
+      <div class="field" style="opacity:0.45;pointer-events:none;">
         <div class="field-info">
-          <div class="field-label">Show bookmarks bar</div>
+          <div class="field-label">Show bookmarks bar <span style="font-size:11px;color:#999;font-weight:normal;">— Coming soon</span></div>
           <div class="field-desc">Show the bookmarks bar below the address bar (Cmd+Shift+B)</div>
         </div>
         <label class="toggle">
-          <input type="checkbox" id="cfg-showBookmarksBar">
+          <input type="checkbox" id="cfg-showBookmarksBar" disabled>
           <span class="slider"></span>
         </label>
       </div>
@@ -600,8 +594,10 @@
       <div class="field" id="field-localFolderPath">
         <div class="field-info">
           <div class="field-label">Storage path</div>
+          <div class="field-desc" id="cfg-localFolderPath-display" style="font-size:12px;color:var(--text-dim);margin-top:2px;word-break:break-all;">~/Pictures/Tandem/</div>
         </div>
-        <input type="text" id="cfg-localFolderPath" placeholder="~/Pictures/Tandem/" />
+        <button type="button" class="btn btn-secondary" id="btn-chooseFolder">Choose folder…</button>
+        <input type="hidden" id="cfg-localFolderPath" />
       </div>
 
       <div class="field">
@@ -1113,7 +1109,10 @@
       setChecked('cfg-localFolder', s.localFolder !== false);
       setChecked('cfg-applePhotos', !!s.applePhotos);
       setChecked('cfg-googlePhotos', !!s.googlePhotos);
-      setVal('cfg-localFolderPath', s.localFolderPath || '~/Pictures/Tandem/');
+      const folderPath = s.localFolderPath || '~/Pictures/Tandem/';
+      setVal('cfg-localFolderPath', folderPath);
+      const displayEl = document.getElementById('cfg-localFolderPath-display');
+      if (displayEl) displayEl.textContent = folderPath;
       setVal('cfg-googlePhotosClientId', googlePhotosStatus.clientId || '');
       renderGooglePhotosStatus();
 
@@ -1180,7 +1179,14 @@
       row.querySelector('.quick-link-remove').addEventListener('click', () => {
         row.remove();
         updateQuickLinksEmptyState();
+        void saveQuickLinks();
       });
+      // Auto-save on label/url change (debounced)
+      let _qlTimer;
+      row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', () => {
+        clearTimeout(_qlTimer);
+        _qlTimer = setTimeout(() => void saveQuickLinks(), 600);
+      }));
       quickLinksList.appendChild(row);
       updateQuickLinksEmptyState();
     }
@@ -1362,8 +1368,23 @@
     wire('cfg-chromeBookmarks', 'sync.chromeBookmarks');
     wire('cfg-chromeProfile', 'sync.chromeProfile');
     wire('cfg-trackingEnabled', 'behavior.trackingEnabled');
-    document.getElementById('btn-addQuickLink').addEventListener('click', () => appendQuickLinkRow());
-    document.getElementById('btn-saveQuickLinks').addEventListener('click', () => {
+    // Folder picker for screenshot storage path
+    document.getElementById('btn-chooseFolder').addEventListener('click', async () => {
+      try {
+        const res = await fetch(`${API}/dialog/pick-folder`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.canceled && data.path) {
+          document.getElementById('cfg-localFolderPath').value = data.path;
+          document.getElementById('cfg-localFolderPath-display').textContent = data.path;
+          await saveConfig({ screenshots: { localFolderPath: data.path } });
+        }
+      } catch (e) {
+        console.error('Folder picker failed:', e);
+      }
+    });
+
+    document.getElementById('btn-addQuickLink').addEventListener('click', () => {
+      appendQuickLinkRow();
       void saveQuickLinks();
     });
     document.getElementById('cfg-googlePhotosClientId').addEventListener('blur', () => {

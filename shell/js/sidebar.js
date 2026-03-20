@@ -162,6 +162,7 @@
             <div class="messenger-icon" style="background:${bg}">
               ${icon.svg}
             </div>
+            <span class="sidebar-item-label">${item.label}</span>
           </button>`;
       }
       return `
@@ -202,13 +203,16 @@
       const sec2 = sorted.filter(i => i.order >= 10 && i.order < 20);
       const sec3 = sorted.filter(i => i.order >= 20);
 
-      // 3 sections: workspace icons / communication / utilities, with separators in between
+      // 3 sections: workspace icons / communication / utilities, with group headers + separators
       const wsHtml = renderWorkspaceIcons();
       itemsEl.innerHTML =
+        (wsHtml ? '<p class="sidebar-group-header">Workspaces</p>' : '') +
         wsHtml +
         (wsHtml && sec2.length ? '<div class="sidebar-separator"></div>' : '') +
+        (sec2.length ? '<p class="sidebar-group-header">Communication</p>' : '') +
         sec2.map(renderItemHTML).join('') +
         (sec2.length && sec3.length ? '<div class="sidebar-separator"></div>' : '') +
+        (sec3.length ? '<p class="sidebar-group-header">Browser Utilities</p>' : '') +
         sec3.map(renderItemHTML).join('');
 
       // Panel — skip title/open state when setup panel is open
@@ -231,8 +235,9 @@
 
       // Wide toggle button
       const toggleBtn = document.getElementById('sidebar-toggle-width');
-      toggleBtn.textContent = config.state === 'wide' ? '\u2039' : '\u203a';
-      toggleBtn.title = config.state === 'wide' ? 'Collapse' : 'Expand';
+      const toggleLabel = config.state === 'wide' ? 'Collapse' : 'Expand';
+      toggleBtn.innerHTML = (config.state === 'wide' ? '\u2039' : '\u203a') + `<span class="sidebar-footer-label">${toggleLabel}</span>`;
+      toggleBtn.title = toggleLabel;
     }
 
     // === WEBVIEW MODULE ===
@@ -1415,7 +1420,7 @@
     const SETUP_SECTIONS = [
       { title: 'Workspaces',        ids: ['workspaces'] },
       { title: 'Communication',     ids: ['calendar','gmail','whatsapp','telegram','discord','slack','instagram','x'] },
-      { title: 'Browser Utilities', ids: ['pinboards','bookmarks','history','downloads','news'] },
+      { title: 'Browser Utilities', ids: ['pinboards','bookmarks','history'] },
     ];
 
     function renderSetupPanel(items) {
@@ -1855,12 +1860,23 @@
       });
 
       document.getElementById('sidebar-customize').addEventListener('click', () => {
-        renderSetupPanel(config.items);
+        if (isSetupPanelOpen) {
+          // Toggle off — close the panel
+          const panel = document.getElementById('sidebar-panel');
+          panel.classList.remove('open');
+          isSetupPanelOpen = false;
+          hideWebviews();
+        } else {
+          renderSetupPanel(config.items);
+        }
       });
 
       document.getElementById('sidebar-tips').addEventListener('click', () => {
         const webview = document.querySelector('webview.active');
-        if (webview) webview.loadURL('https://tandem.browser/help');
+        if (webview) {
+          const shellPath = window.location.href.replace(/\/[^/]*$/, '');
+          webview.loadURL(shellPath + '/help.html');
+        }
       });
 
       // Shortcut: Cmd+Shift+B (Mac) / Ctrl+Shift+B (Windows/Linux)

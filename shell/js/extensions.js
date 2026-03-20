@@ -215,7 +215,7 @@ function renderAboutPanel() {
       <div class="about-title"><span class="about-t">T</span><span class="about-rest">andem</span></div>
       <div class="about-subtitle">First-Party OpenClaw Companion Browser</div>
       <div class="about-quote">Public developer preview for serious OpenClaw workflows</div>
-      <div class="about-version">v0.57.6</div>
+      <div class="about-version" id="about-version-text">...</div>
       <div class="about-info">
         Built specifically for human-AI collaboration with OpenClaw.<br>
         Maintained in the same ecosystem as OpenClaw, with local control and security built in.
@@ -228,6 +228,10 @@ function renderAboutPanel() {
     </div>
   `;
   
+  // Set version from injected global
+  const aboutVersionEl = document.getElementById('about-version-text');
+  if (aboutVersionEl) aboutVersionEl.textContent = window.__TANDEM_VERSION__ ? 'v' + window.__TANDEM_VERSION__ : '';
+
   // Bind GitHub link
   const githubLink = document.getElementById('about-github-link');
   if (githubLink) {

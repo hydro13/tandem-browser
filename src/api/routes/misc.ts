@@ -1,4 +1,5 @@
 import type { Router, Request, Response } from 'express';
+import { app } from 'electron';
 import path from 'path';
 import fs from 'fs';
 import type { RouteContext} from '../context';
@@ -54,10 +55,30 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         loading: wc ? wc.isLoading() : false,
         activeTab: tab.id,
         tabs: ctx.tabManager.count,
+        version: (() => { try { return app.getVersion(); } catch { return undefined; } })(),
         viewport,
       });
     } catch (e) {
       res.json({ ready: false, error: e instanceof Error ? e.message : String(e) });
+    }
+  });
+
+  // ═══ Folder Picker Dialog ═══
+  router.post('/dialog/pick-folder', async (_req: Request, res: Response) => {
+    try {
+      const { dialog, BrowserWindow } = require('electron');
+      const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      const result = await dialog.showOpenDialog(win, {
+        properties: ['openDirectory', 'createDirectory'],
+        title: 'Choose screenshot folder',
+      });
+      if (result.canceled || result.filePaths.length === 0) {
+        res.json({ canceled: true });
+      } else {
+        res.json({ path: result.filePaths[0] });
+      }
+    } catch (e) {
+      handleRouteError(res, e);
     }
   });
 

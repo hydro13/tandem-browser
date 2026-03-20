@@ -9,7 +9,7 @@ import type { SidebarConfig, SidebarItem, SidebarState } from './types';
 // Section 3: Browser utilities — Pinboards, Bookmarks, History, Downloads, Personal News
 // Fixed footer (hardcoded in UI, not in items): Tips (💡) + Setup (⚙️)
 const DEFAULT_CONFIG: SidebarConfig = {
-  state: 'narrow',
+  state: 'wide',
   activeItemId: null,
   panelPinned: false,
   panelWidths: {},
@@ -29,8 +29,8 @@ const DEFAULT_CONFIG: SidebarConfig = {
     { id: 'pinboards',  label: 'Pinboards',       icon: '', type: 'panel',   enabled: true, order: 20 },
     { id: 'bookmarks',  label: 'Bookmarks',       icon: '', type: 'panel',   enabled: true, order: 21 },
     { id: 'history',    label: 'History',         icon: '', type: 'panel',   enabled: true, order: 22 },
-    { id: 'downloads',  label: 'Downloads',       icon: '', type: 'panel',   enabled: true, order: 23 },
-    { id: 'news',       label: 'Personal News',   icon: '', type: 'panel',   enabled: true, order: 24 },
+    { id: 'downloads',  label: 'Downloads',       icon: '', type: 'panel',   enabled: false, order: 23 },
+    { id: 'news',       label: 'Personal News',   icon: '', type: 'panel',   enabled: false, order: 24 },
   ]
 };
 

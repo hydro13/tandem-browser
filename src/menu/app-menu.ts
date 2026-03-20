@@ -1,5 +1,5 @@
 import type { BrowserWindow } from 'electron';
-import { app, Menu } from 'electron';
+import { Menu } from 'electron';
 import type { TabManager } from '../tabs/manager';
 import type { PanelManager } from '../panel/manager';
 import type { DrawOverlayManager } from '../draw/overlay';
@@ -7,9 +7,6 @@ import type { VoiceManager } from '../voice/recognition';
 import type { PiPManager } from '../pip/manager';
 import type { ConfigManager } from '../config/manager';
 import type { VideoRecorderManager } from '../video/recorder';
-import { createLogger } from '../utils/logger';
-
-const log = createLogger('AppMenu');
 
 export interface MenuDeps {
   mainWindow: BrowserWindow | null;
@@ -27,13 +24,8 @@ export function buildAppMenu(deps: MenuDeps): void {
 
   const template: Electron.MenuItemConstructorOptions[] = [
     {
-      label: app.name,
+      label: 'Tandem Browser',
       submenu: [
-        {
-          label: 'About Tandem Browser',
-          click: () => send('show-about'),
-        },
-        { type: 'separator' },
         { label: 'Settings', accelerator: 'CmdOrCtrl+,', click: () => send('open-settings') },
         { type: 'separator' },
         { role: 'hide' },
@@ -69,6 +61,8 @@ export function buildAppMenu(deps: MenuDeps): void {
         { role: 'copy' },
         { role: 'paste' },
         { role: 'selectAll' },
+        { type: 'separator' },
+        { label: 'Draw Mode', accelerator: 'CmdOrCtrl+Shift+D', click: () => deps.drawManager?.toggleDrawMode() },
       ],
     },
     {
@@ -82,50 +76,13 @@ export function buildAppMenu(deps: MenuDeps): void {
       ],
     },
     {
-      label: deps.configManager?.getConfig().general.agentName || 'Wingman',
-      submenu: [
-        { label: 'Toggle Panel', accelerator: 'CmdOrCtrl+K', click: () => {
-          deps.panelManager?.togglePanel();
-        }},
-        { label: 'Voice Input', accelerator: 'CmdOrCtrl+Shift+M', click: () => deps.voiceManager?.toggleVoice() },
-        { label: 'PiP Mode', accelerator: 'CmdOrCtrl+Shift+P', click: () => deps.pipManager?.toggle() },
-        { type: 'separator' },
-        { label: 'Draw Mode', accelerator: 'CmdOrCtrl+Shift+D', click: () => deps.drawManager?.toggleDrawMode() },
-        { label: 'Quick Screenshot', accelerator: 'CmdOrCtrl+Shift+S', click: () => send('quick-screenshot') },
-        { type: 'separator' },
-        { label: 'Record Tab Audio', accelerator: 'CmdOrCtrl+R', click: () => {
-          if (deps.videoRecorderManager) {
-            if (deps.videoRecorderManager.isRecording()) {
-              deps.videoRecorderManager.forceStop();
-              deps.mainWindow?.webContents.send('audio-recording-status', { recording: false });
-            } else {
-              const result = deps.videoRecorderManager.startRecording('application');
-              if (result.ok) {
-                deps.mainWindow?.webContents.send('audio-recording-status', { recording: true });
-              } else {
-                log.warn('Audio capture start failed:', result.error);
-              }
-            }
-          }
-        }},
-        { label: 'ClaroNote Record', accelerator: 'CmdOrCtrl+Shift+C', click: () => send('claronote-record') },
-      ],
-    },
-    {
-      label: 'Window',
-      submenu: [
-        { role: 'minimize' },
-        { role: 'zoom' },
-        { type: 'separator' },
-        { role: 'front' },
-      ],
-    },
-    {
       label: 'Help',
       submenu: [
         { label: 'Keyboard Shortcuts', accelerator: 'CmdOrCtrl+Shift+/', click: () => send('show-shortcuts') },
         { type: 'separator' },
         { label: 'Show Onboarding', click: () => send('show-onboarding') },
+        { type: 'separator' },
+        { label: 'About Tandem Browser', click: () => send('show-about') },
       ],
     },
   ];

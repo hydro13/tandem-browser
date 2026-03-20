@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { ActivityEvent, ChatMessage } from './panel/manager';
 import type { ToolbarExtension } from './extensions/toolbar';
 contextBridge.exposeInMainWorld('__TANDEM_TOKEN__', '');
+contextBridge.exposeInMainWorld('__TANDEM_VERSION__', process.env.npm_package_version || '');
 
 contextBridge.exposeInMainWorld('tandem', {
   getApiToken: () => ipcRenderer.invoke('get-api-token'),
@@ -286,6 +287,7 @@ contextBridge.exposeInMainWorld('tandem', {
   // Chrome-style compact title bar: platform detection and window controls
   setPanelOpen: (open: boolean) => ipcRenderer.send('panel-open-changed', { open }),
   requestMicPermission: () => ipcRenderer.invoke('request-mic-permission'),
+
   transcribeAudio: (buffer: ArrayBuffer, language?: string) => ipcRenderer.invoke('transcribe-audio', { buffer, language }),
   getSpeechBackend: () => ipcRenderer.invoke('get-speech-backend'),
   getPlatform: () => process.platform,

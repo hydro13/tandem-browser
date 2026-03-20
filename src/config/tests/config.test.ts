@@ -45,7 +45,7 @@ describe('ConfigManager', () => {
       expect(config.general.activeBackend).toBe('openclaw');
       expect(config.general.agentName).toBe('Wingman');
       expect(config.general.agentDisplayName).toBe('AI Wingman');
-      expect(config.general.quickLinks).toHaveLength(8);
+      expect(config.general.quickLinks).toHaveLength(6);
       expect(config.general.quickLinks[0]).toMatchObject({
         id: 'duckduckgo',
         label: 'DuckDuckGo',
@@ -199,7 +199,7 @@ describe('ConfigManager', () => {
       const updated = cm.addQuickLink('Tweakers', 'https://tweakers.net#hero');
 
       expect(updated.general.quickLinks.at(-1)).toEqual({
-        id: 'quick-link-9',
+        id: 'quick-link-7',
         label: 'Tweakers',
         url: 'https://tweakers.net/',
       });
