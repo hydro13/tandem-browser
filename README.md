@@ -31,7 +31,7 @@ machine.
 Tandem is built by an OpenClaw maintainer with OpenClaw as the primary AI
 runtime.
 
-**The left sidebar brings your communication and tools into the browser.** Built-in panels for Telegram, WhatsApp, Discord, Slack, Gmail, Google Calendar, Instagram, and X — all persistent, all in their own isolated session alongside your main browsing. Next to the messengers: Workspaces, Pinboards, Bookmarks, History, Downloads, and Personal News. The sidebar is resizable, pinnable, and rendered with frosted glass so it stays out of the way when you don't need it.
+**The left sidebar brings your communication and tools into the browser.** Built-in panels for Telegram, WhatsApp, Discord, Slack, Gmail, Google Calendar, Instagram, and X — all persistent, all in their own isolated session alongside your main browsing. Next to the messengers: Workspaces, Pinboards, Bookmarks, and History. The sidebar is resizable, pinnable, and rendered with frosted glass so it stays out of the way when you don't need it.
 
 **The right-side Wingman panel** is where OpenClaw lives. Chat, activity feed, screenshots, and agent context — all in one place, connected to the local API so the agent can see what you're looking at and act on it.
 
@@ -283,7 +283,6 @@ The local API binds to `127.0.0.1:8765`.
 
 ## Known Limitations
 
-- `Personal News` exists as a sidebar slot but is not a finished panel
 - Linux video recording still has desktop audio limitations due to Electron
   process isolation
 - Windows support is not actively validated
