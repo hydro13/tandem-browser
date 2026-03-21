@@ -1,0 +1,8 @@
+name: "Tandem Browser CodeQL config"
+
+# Paths to exclude from analysis — security scanner modules that intentionally
+# parse untrusted HTML to detect prompt injection patterns. The matched text
+# is sanitized and only used in JSON API responses, never rendered in a DOM.
+paths-ignore:
+  - src/security/prompt-injection-guard.ts
+  - src/api/middleware/injection-scanner.ts
