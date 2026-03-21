@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.65.0] - 2026-03-21
+
+- feat: Prompt Injection Guard — browser-level AI content defense (Layer 8)
+
+- New PromptInjectionGuard module with 40+ detection patterns
+- Hidden text detection: CSS, HTML, Unicode tricks
+- API middleware on /page-content, /page-html, /snapshot, /execute-js
+- Risk scoring: ≥70 blocks content, 30-70 warns, <30 passes
+- Centered modal alerts with tab highlighting (red/orange)
+- Double-confirmation override with 5-min TTL per domain
+- Config integrity monitor on openclaw.json
+- 89 tests with false positive validation
+
 ## [v0.64.0] - 2026-03-21
 
 ### New: Prompt Injection Guard (Security Layer 8)
