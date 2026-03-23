@@ -269,7 +269,7 @@ async function createWindow(): Promise<BrowserWindow> {
       contents.on('dom-ready', () => {
         // Skip stealth injection on sites that detect and block stealth patches
         const url = contents.getURL();
-        if (isGoogleAuthUrl(url) || shouldSkipStealth(url)) {
+        if (isGoogleAuthUrl(url) || shouldSkipStealth(url, runtime?.configManager.getConfig().stealth.skipHosts)) {
           log.info('🔑 Skipping stealth for:', url.substring(0, 60));
           return;
         }
