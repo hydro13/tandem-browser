@@ -7,6 +7,9 @@ All notable changes to Tandem Browser will be documented in this file.
 ### Added
 - `POST /tabs/open` now accepts `inheritSessionFrom` and copies IndexedDB data from the source tab into the new tab before reloading the destination, preserving Discord-style IndexedDB-backed logins.
 
+### Fixed
+- `inheritSessionFrom` now waits for IndexedDB transaction completion before loading the destination URL, plus a short Linux-focused safety delay to avoid slower filesystem I/O racing the restore path.
+
 ## [v0.65.5] - 2026-03-21
 
 - fix: CodeQL config — exclude security scanner modules from XSS taint analysis

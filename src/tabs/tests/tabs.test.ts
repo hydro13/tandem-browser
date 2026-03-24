@@ -146,10 +146,61 @@ describe('TabManager', () => {
         { inheritSessionFrom: sourceTab.id },
       );
       const targetWc = tm.getWebContents(inheritedTab.id) as any;
+      const restoreScript = targetWc.executeJavaScript.mock.calls[0]?.[0] as string;
 
       expect(sourceWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('indexedDB.databases()'));
-      expect(targetWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('store.put'));
+      expect(restoreScript).toContain('tx.oncomplete = () => resolve(undefined)');
+      expect(restoreScript).toContain('tx.onerror = () => reject(tx.error || new Error(\'IndexedDB transaction failed\'))');
+      expect(restoreScript).toContain('store.put');
       expect(targetWc.loadURL).toHaveBeenCalledWith('https://discord.com/channels/123');
+    });
+
+    it('waits for the Linux IndexedDB safety delay before loading the inherited URL', async () => {
+      vi.useFakeTimers();
+      try {
+        const sourceTab = await tm.openTab('https://discord.com/channels/@me');
+        const sourceWc = tm.getWebContents(sourceTab.id) as any;
+        sourceWc.executeJavaScript.mockResolvedValueOnce(
+          JSON.stringify({
+            'keyval-store': {
+              version: 1,
+              stores: {
+                keyval: [['token', 'secret']],
+              },
+            },
+          })
+        );
+
+        const inheritedTabPromise = tm.openTab(
+          'https://discord.com/channels/456',
+          undefined,
+          'robin',
+          'persist:tandem',
+          true,
+          { inheritSessionFrom: sourceTab.id },
+        );
+
+        let resolved = false;
+        void inheritedTabPromise.then(() => {
+          resolved = true;
+        });
+
+        await vi.advanceTimersByTimeAsync(0);
+        expect(resolved).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(49);
+        expect(resolved).toBe(false);
+
+        await vi.advanceTimersByTimeAsync(1);
+        const inheritedTab = await inheritedTabPromise;
+        const targetWc = tm.getWebContents(inheritedTab.id) as any;
+
+        expect(resolved).toBe(true);
+        expect(targetWc.loadURL).toHaveBeenCalledWith('https://discord.com/channels/456');
+      } finally {
+        vi.clearAllTimers();
+        vi.useRealTimers();
+      }
     });
 
     it('falls back to a normal open when the source tab no longer exists', async () => {

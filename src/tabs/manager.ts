@@ -210,12 +210,6 @@ export class TabManager {
         request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB database for restore'));
       });
 
-      const waitForTransaction = (tx) => new Promise((resolve, reject) => {
-        tx.oncomplete = () => resolve(undefined);
-        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
-        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
-      });
-
       return (async () => {
         const dump = JSON.parse(rawDump || '{}');
         for (const [dbName, dbInfo] of Object.entries(dump)) {
@@ -226,13 +220,18 @@ export class TabManager {
           const db = await openDatabase(dbName, version, stores);
           try {
             for (const [storeName, entries] of Object.entries(stores)) {
-              const tx = db.transaction(storeName, 'readwrite');
-              const store = tx.objectStore(storeName);
-              for (const entry of entries) {
-                if (!Array.isArray(entry) || entry.length !== 2) continue;
-                store.put(entry[1], entry[0]);
-              }
-              await waitForTransaction(tx);
+              await new Promise((resolve, reject) => {
+                const tx = db.transaction(storeName, 'readwrite');
+                const store = tx.objectStore(storeName);
+                tx.oncomplete = () => resolve(undefined);
+                tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+                tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+
+                for (const entry of entries) {
+                  if (!Array.isArray(entry) || entry.length !== 2) continue;
+                  store.put(entry[1], entry[0]);
+                }
+              });
             }
           } finally {
             db.close();
@@ -260,6 +259,7 @@ export class TabManager {
 
       await targetWc.executeJavaScript(this.buildIndexedDbRestoreScript(dumpJson));
       if (targetUrl !== 'about:blank') {
+        await new Promise(resolve => setTimeout(resolve, 50));
         await targetWc.loadURL(targetUrl);
       }
       return true;
