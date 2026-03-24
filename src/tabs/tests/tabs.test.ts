@@ -1,20 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const mockTabWebContents = new Map<number, any>();
+
 // Mock electron before importing TabManager
 vi.mock('electron', () => {
-  const mockWebContents = new Map<number, any>();
-  let nextWcId = 100;
-
   return {
     BrowserWindow: vi.fn(),
     session: {},
     webContents: {
-      fromId: (id: number) => mockWebContents.get(id) || null,
+      fromId: (id: number) => mockTabWebContents.get(id) || null,
     },
     WebContents: {},
-    // Expose for test helpers
-    __mockWebContents: mockWebContents,
-    __nextWcId: () => nextWcId++,
   };
 });
 
@@ -30,7 +26,14 @@ function createMockWindow() {
     if (code.includes('createTab(')) {
       const tabIdMatch = code.match(/createTab\("(tab-\d+)"/);
       if (tabIdMatch) rendererTabs.set(tabIdMatch[1], true);
-      return Promise.resolve(wcIdCounter++);
+      const wcId = wcIdCounter++;
+      mockTabWebContents.set(wcId, {
+        id: wcId,
+        executeJavaScript: vi.fn().mockResolvedValue('{}'),
+        loadURL: vi.fn().mockResolvedValue(undefined),
+        isDestroyed: vi.fn().mockReturnValue(false),
+      });
+      return Promise.resolve(wcId);
     }
     if (code.includes('removeTab(')) {
       const tabIdMatch = code.match(/removeTab\("(tab-\d+)"/);
@@ -67,6 +70,7 @@ describe('TabManager', () => {
   let win: ReturnType<typeof createMockWindow>;
 
   beforeEach(() => {
+    mockTabWebContents.clear();
     win = createMockWindow();
     tm = new TabManager(win);
   });
@@ -119,8 +123,20 @@ describe('TabManager', () => {
       expect(tm.getActiveTab()?.id).toBe(t1.id);
     });
 
-    it('inherits the source tab partition when inheritSessionFrom is provided', async () => {
-      const sourceTab = await tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:discord');
+    it('copies IndexedDB from the source tab and reloads the target URL', async () => {
+      const sourceTab = await tm.openTab('https://discord.com/channels/@me');
+      const sourceWc = tm.getWebContents(sourceTab.id) as any;
+      sourceWc.executeJavaScript.mockResolvedValueOnce(
+        JSON.stringify({
+          'keyval-store': {
+            version: 1,
+            stores: {
+              keyval: [['token', 'secret']],
+            },
+          },
+        })
+      );
+
       const inheritedTab = await tm.openTab(
         'https://discord.com/channels/123',
         undefined,
@@ -129,35 +145,25 @@ describe('TabManager', () => {
         true,
         { inheritSessionFrom: sourceTab.id },
       );
+      const targetWc = tm.getWebContents(inheritedTab.id) as any;
 
-      expect(inheritedTab.partition).toBe('persist:discord');
-      expect(
-        win.webContents.executeJavaScript.mock.calls.some(
-          ([code]: [string]) => code.includes('createTab(') && code.includes('"persist:discord"')
-        )
-      ).toBe(true);
+      expect(sourceWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('indexedDB.databases()'));
+      expect(targetWc.executeJavaScript).toHaveBeenCalledWith(expect.stringContaining('store.put'));
+      expect(targetWc.loadURL).toHaveBeenCalledWith('https://discord.com/channels/123');
     });
 
-    it('reuses the source tab URL when inheritSessionFrom opens a blank tab', async () => {
-      const sourceTab = await tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:discord');
-      const inheritedTab = await tm.openTab(
-        'about:blank',
+    it('falls back to a normal open when the source tab no longer exists', async () => {
+      const tab = await tm.openTab(
+        'https://discord.com/channels/@me',
         undefined,
         'robin',
         'persist:tandem',
         true,
-        { inheritSessionFrom: sourceTab.id },
+        { inheritSessionFrom: 'tab-999' },
       );
 
-      expect(inheritedTab.url).toBe('https://discord.com/channels/@me');
-    });
-
-    it('throws when inheritSessionFrom references an unknown tab', async () => {
-      await expect(
-        tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:tandem', true, {
-          inheritSessionFrom: 'tab-999',
-        })
-      ).rejects.toThrow("Tab 'tab-999' not found");
+      expect(tab.url).toBe('https://discord.com/channels/@me');
+      expect(tab.partition).toBe('persist:tandem');
     });
 
     it('sends tab-source-changed IPC', async () => {

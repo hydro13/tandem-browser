@@ -135,10 +135,141 @@ export class TabManager {
 
     const inheritedTab = this.tabs.get(options.inheritSessionFrom) || null;
     if (!inheritedTab) {
-      throw new Error(`Tab '${options.inheritSessionFrom}' not found`);
+      log.warn(`inheritSessionFrom ignored: source tab '${options.inheritSessionFrom}' not found`);
+      return null;
     }
 
     return inheritedTab;
+  }
+
+  private buildIndexedDbDumpScript(): string {
+    return `(() => {
+      const openDatabase = (name, version) => new Promise((resolve, reject) => {
+        const request = typeof version === 'number' ? indexedDB.open(name, version) : indexedDB.open(name);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB database'));
+      });
+
+      const readStoreEntries = (store) => new Promise((resolve, reject) => {
+        const entries = [];
+        const request = store.openCursor();
+        request.onsuccess = () => {
+          const cursor = request.result;
+          if (cursor) {
+            entries.push([cursor.key, cursor.value]);
+            cursor.continue();
+            return;
+          }
+          resolve(entries);
+        };
+        request.onerror = () => reject(request.error || new Error('Failed to read IndexedDB cursor'));
+      });
+
+      return (async () => {
+        if (typeof indexedDB === 'undefined' || typeof indexedDB.databases !== 'function') {
+          return '{}';
+        }
+
+        const databases = await indexedDB.databases();
+        const dump = {};
+
+        for (const info of databases) {
+          if (!info || !info.name) continue;
+
+          const db = await openDatabase(info.name, typeof info.version === 'number' ? info.version : undefined);
+          try {
+            dump[info.name] = { version: db.version, stores: {} };
+            for (const storeName of Array.from(db.objectStoreNames)) {
+              const tx = db.transaction(storeName, 'readonly');
+              const store = tx.objectStore(storeName);
+              dump[info.name].stores[storeName] = await readStoreEntries(store);
+            }
+          } finally {
+            db.close();
+          }
+        }
+
+        return JSON.stringify(dump);
+      })();
+    })()`;
+  }
+
+  private buildIndexedDbRestoreScript(dumpJson: string): string {
+    return `((rawDump) => {
+      const openDatabase = (name, version, stores) => new Promise((resolve, reject) => {
+        const request = indexedDB.open(name, version);
+        request.onupgradeneeded = () => {
+          const db = request.result;
+          for (const storeName of Object.keys(stores)) {
+            if (!db.objectStoreNames.contains(storeName)) {
+              db.createObjectStore(storeName);
+            }
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || new Error('Failed to open IndexedDB database for restore'));
+      });
+
+      const waitForTransaction = (tx) => new Promise((resolve, reject) => {
+        tx.oncomplete = () => resolve(undefined);
+        tx.onerror = () => reject(tx.error || new Error('IndexedDB transaction failed'));
+        tx.onabort = () => reject(tx.error || new Error('IndexedDB transaction aborted'));
+      });
+
+      return (async () => {
+        const dump = JSON.parse(rawDump || '{}');
+        for (const [dbName, dbInfo] of Object.entries(dump)) {
+          const version = typeof dbInfo.version === 'number' ? dbInfo.version : 1;
+          const stores = dbInfo && typeof dbInfo === 'object' && dbInfo.stores && typeof dbInfo.stores === 'object'
+            ? dbInfo.stores
+            : {};
+          const db = await openDatabase(dbName, version, stores);
+          try {
+            for (const [storeName, entries] of Object.entries(stores)) {
+              const tx = db.transaction(storeName, 'readwrite');
+              const store = tx.objectStore(storeName);
+              for (const entry of entries) {
+                if (!Array.isArray(entry) || entry.length !== 2) continue;
+                store.put(entry[1], entry[0]);
+              }
+              await waitForTransaction(tx);
+            }
+          } finally {
+            db.close();
+          }
+        }
+        return true;
+      })();
+    })(${JSON.stringify(dumpJson)})`;
+  }
+
+  private async restoreIndexedDbFromSource(sourceTabId: string, targetTabId: string, targetUrl: string): Promise<boolean> {
+    const sourceWc = this.getWebContents(sourceTabId);
+    const targetWc = this.getWebContents(targetTabId);
+    if (!sourceWc || sourceWc.isDestroyed() || !targetWc || targetWc.isDestroyed()) {
+      log.warn(`IndexedDB inherit skipped: source or target webContents missing (${sourceTabId} -> ${targetTabId})`);
+      return false;
+    }
+
+    try {
+      const dumpJson = await sourceWc.executeJavaScript(this.buildIndexedDbDumpScript()) as string;
+      if (!dumpJson || dumpJson === '{}') {
+        log.info(`IndexedDB inherit: no databases found in source tab ${sourceTabId}`);
+        return false;
+      }
+
+      await targetWc.executeJavaScript(this.buildIndexedDbRestoreScript(dumpJson));
+      if (targetUrl !== 'about:blank') {
+        await targetWc.loadURL(targetUrl);
+      }
+      return true;
+    } catch (error) {
+      log.warn(
+        `IndexedDB inherit failed for ${sourceTabId} -> ${targetTabId}:`,
+        error instanceof Error ? error.message : String(error),
+      );
+      return false;
+    }
   }
 
   /** Open a new tab */
@@ -210,6 +341,10 @@ export class TabManager {
 
     // Now notify renderer of source indicator (after focus is done)
     this.win.webContents.send('tab-source-changed', { tabId: id, source });
+
+    if (inheritedTab) {
+      await this.restoreIndexedDbFromSource(inheritedTab.id, id, resolvedUrl);
+    }
 
     this.scheduleSyncPublish();
     this.onTabsChanged();

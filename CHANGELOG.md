@@ -5,7 +5,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ## Unreleased
 
 ### Added
-- `POST /tabs/open` now accepts `inheritSessionFrom` so new tabs can reuse the source tab's persisted session partition, including IndexedDB/localStorage-backed logins such as Discord.
+- `POST /tabs/open` now accepts `inheritSessionFrom` and copies IndexedDB data from the source tab into the new tab before reloading the destination, preserving Discord-style IndexedDB-backed logins.
 
 ## [v0.65.5] - 2026-03-21
 
