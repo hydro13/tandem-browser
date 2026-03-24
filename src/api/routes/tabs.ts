@@ -5,11 +5,22 @@ import { handleRouteError } from '../../utils/errors';
 
 export function registerTabRoutes(router: Router, ctx: RouteContext): void {
   router.post('/tabs/open', async (req: Request, res: Response) => {
-    const { url = 'about:blank', groupId, source = 'robin', focus = true } = req.body;
+    const { url = 'about:blank', groupId, source = 'robin', focus = true, inheritSessionFrom } = req.body;
+    if (inheritSessionFrom !== undefined && typeof inheritSessionFrom !== 'string') {
+      res.status(400).json({ error: 'inheritSessionFrom must be a tab ID string' });
+      return;
+    }
     try {
       const tabSource = source === 'kees' || source === 'wingman' ? 'wingman' as const : 'robin' as const;
-      const tab = await ctx.tabManager.openTab(url, groupId, tabSource, 'persist:tandem', focus);
-      ctx.panelManager.logActivity('tab-open', { url, source: tabSource });
+      const tab = await ctx.tabManager.openTab(
+        url,
+        groupId,
+        tabSource,
+        'persist:tandem',
+        focus,
+        inheritSessionFrom ? { inheritSessionFrom } : undefined,
+      );
+      ctx.panelManager.logActivity('tab-open', { url, source: tabSource, inheritSessionFrom: inheritSessionFrom || null });
       res.json({ ok: true, tab });
     } catch (e) {
       handleRouteError(res, e);

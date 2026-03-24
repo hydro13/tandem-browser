@@ -41,10 +41,11 @@ describe('Tab Routes', () => {
         'robin',
         'persist:tandem',
         true,
+        undefined,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'robin' },
+        { url: 'about:blank', source: 'robin', inheritSessionFrom: null },
       );
     });
 
@@ -61,6 +62,7 @@ describe('Tab Routes', () => {
         'robin',
         'persist:tandem',
         false,
+        undefined,
       );
     });
 
@@ -75,10 +77,11 @@ describe('Tab Routes', () => {
         'wingman',
         'persist:tandem',
         true,
+        undefined,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'wingman' },
+        { url: 'about:blank', source: 'wingman', inheritSessionFrom: null },
       );
     });
 
@@ -93,7 +96,38 @@ describe('Tab Routes', () => {
         'wingman',
         'persist:tandem',
         true,
+        undefined,
       );
+    });
+
+    it('passes inheritSessionFrom through to the tab manager', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ url: 'https://discord.com/channels/@me', inheritSessionFrom: 'tab-9' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
+        'https://discord.com/channels/@me',
+        undefined,
+        'robin',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: 'tab-9' },
+      );
+      expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
+        'tab-open',
+        { url: 'https://discord.com/channels/@me', source: 'robin', inheritSessionFrom: 'tab-9' },
+      );
+    });
+
+    it('returns 400 when inheritSessionFrom is not a string', async () => {
+      const res = await request(app)
+        .post('/tabs/open')
+        .send({ inheritSessionFrom: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('inheritSessionFrom must be a tab ID string');
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
     });
 
     it('returns 500 when tabManager.openTab throws', async () => {

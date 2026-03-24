@@ -2,6 +2,11 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## Unreleased
+
+### Added
+- `POST /tabs/open` now accepts `inheritSessionFrom` so new tabs can reuse the source tab's persisted session partition, including IndexedDB/localStorage-backed logins such as Discord.
+
 ## [v0.65.5] - 2026-03-21
 
 - fix: CodeQL config — exclude security scanner modules from XSS taint analysis

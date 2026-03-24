@@ -119,6 +119,47 @@ describe('TabManager', () => {
       expect(tm.getActiveTab()?.id).toBe(t1.id);
     });
 
+    it('inherits the source tab partition when inheritSessionFrom is provided', async () => {
+      const sourceTab = await tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:discord');
+      const inheritedTab = await tm.openTab(
+        'https://discord.com/channels/123',
+        undefined,
+        'robin',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: sourceTab.id },
+      );
+
+      expect(inheritedTab.partition).toBe('persist:discord');
+      expect(
+        win.webContents.executeJavaScript.mock.calls.some(
+          ([code]: [string]) => code.includes('createTab(') && code.includes('"persist:discord"')
+        )
+      ).toBe(true);
+    });
+
+    it('reuses the source tab URL when inheritSessionFrom opens a blank tab', async () => {
+      const sourceTab = await tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:discord');
+      const inheritedTab = await tm.openTab(
+        'about:blank',
+        undefined,
+        'robin',
+        'persist:tandem',
+        true,
+        { inheritSessionFrom: sourceTab.id },
+      );
+
+      expect(inheritedTab.url).toBe('https://discord.com/channels/@me');
+    });
+
+    it('throws when inheritSessionFrom references an unknown tab', async () => {
+      await expect(
+        tm.openTab('https://discord.com/channels/@me', undefined, 'robin', 'persist:tandem', true, {
+          inheritSessionFrom: 'tab-999',
+        })
+      ).rejects.toThrow("Tab 'tab-999' not found");
+    });
+
     it('sends tab-source-changed IPC', async () => {
       await tm.openTab('https://test.com', undefined, 'kees');
       expect(win.webContents.send).toHaveBeenCalledWith(

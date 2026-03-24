@@ -191,9 +191,10 @@
 
     function createRendererTab(tabId, url, partition = 'persist:tandem', options = {}) {
       const webview = document.createElement('webview');
-      webview.setAttribute('src', url);
-      webview.setAttribute('allowpopups', '');
+      // Chromium only applies a webview partition if it is present before first navigation.
       webview.setAttribute('partition', partition);
+      webview.setAttribute('allowpopups', '');
+      webview.setAttribute('src', url);
       webview.dataset.tabId = tabId;
       container.appendChild(webview);
 

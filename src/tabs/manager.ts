@@ -29,6 +29,10 @@ export interface TabGroup {
   tabIds: string[];
 }
 
+export interface OpenTabOptions {
+  inheritSessionFrom?: string;
+}
+
 /**
  * TabManager — Manages multiple webview tabs in Tandem Browser.
  * 
@@ -124,9 +128,34 @@ export class TabManager {
     return webContents.fromId(tab.webContentsId) || null;
   }
 
+  private resolveInheritedTab(options?: OpenTabOptions): Tab | null {
+    if (!options?.inheritSessionFrom) {
+      return null;
+    }
+
+    const inheritedTab = this.tabs.get(options.inheritSessionFrom) || null;
+    if (!inheritedTab) {
+      throw new Error(`Tab '${options.inheritSessionFrom}' not found`);
+    }
+
+    return inheritedTab;
+  }
+
   /** Open a new tab */
-  async openTab(url: string = 'about:blank', groupId?: string, source: TabSource = 'robin', partition: string = 'persist:tandem', focus: boolean = true): Promise<Tab> {
+  async openTab(
+    url: string = 'about:blank',
+    groupId?: string,
+    source: TabSource = 'robin',
+    partition: string = 'persist:tandem',
+    focus: boolean = true,
+    options?: OpenTabOptions,
+  ): Promise<Tab> {
     const id = this.nextId();
+    const inheritedTab = this.resolveInheritedTab(options);
+    const resolvedPartition = inheritedTab?.partition ?? partition;
+    const resolvedUrl = url === 'about:blank' && inheritedTab?.url
+      ? inheritedTab.url
+      : url;
 
     // Tell renderer to create a webview and return its webContentsId.
     // If createTab() fails (e.g. dom-ready timeout), the renderer may have already
@@ -138,7 +167,7 @@ export class TabManager {
     let webContentsId: number;
     try {
       webContentsId = await this.win.webContents.executeJavaScript(`
-        window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(url)}, ${JSON.stringify(partition)})
+        window.__tandemTabs.createTab(${JSON.stringify(id)}, ${JSON.stringify(resolvedUrl)}, ${JSON.stringify(resolvedPartition)})
       `);
     } catch (e) {
       // Best-effort renderer cleanup — ignore secondary errors.
@@ -154,14 +183,14 @@ export class TabManager {
       id,
       webContentsId,
       title: 'New Tab',
-      url,
+      url: resolvedUrl,
       favicon: '',
       groupId: groupId || null,
       active: false,
       createdAt: Date.now(),
       source,
       pinned: false,
-      partition,
+      partition: resolvedPartition,
     };
 
     this.tabs.set(id, tab);
