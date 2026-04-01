@@ -389,8 +389,13 @@ export function createMockContext(): RouteContext {
       queryXPath: vi.fn().mockResolvedValue([]),
       getStorage: vi.fn().mockResolvedValue({}),
       getPerformanceMetrics: vi.fn().mockResolvedValue(null),
+      attachToTab: vi.fn().mockResolvedValue(mockWC),
       evaluate: vi.fn().mockResolvedValue(undefined),
+      evaluateInTab: vi.fn().mockResolvedValue(undefined),
       sendCommand: vi.fn().mockResolvedValue({}),
+      sendCommandToTab: vi.fn().mockResolvedValue({}),
+      getAttachedWebContents: vi.fn().mockReturnValue(mockWC),
+      getDispatchWebContents: vi.fn().mockReturnValue(null),
       screenshotElement: vi.fn().mockResolvedValue(null),
     } as any,
 

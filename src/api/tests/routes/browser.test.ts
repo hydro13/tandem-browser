@@ -177,6 +177,48 @@ describe('Browser Routes', () => {
       expect(res.body).toEqual(mockContent);
     });
 
+    it('uses X-Tab-Id to evaluate page content in a background tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce({
+        title: 'Background',
+        url: 'https://example.com/background',
+        description: 'Background tab',
+        text: 'Background content',
+        length: 18,
+      });
+
+      const res = await request(app)
+        .get('/page-content')
+        .set('X-Tab-Id', 'tab-2');
+
+      expect(res.status).toBe(200);
+      expect(ctx.devToolsManager.evaluateInTab).toHaveBeenCalledWith(
+        202,
+        expect.stringContaining('new Promise((resolve) => {'),
+      );
+    });
+
+    it('returns 404 when X-Tab-Id does not match a tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .get('/page-content')
+        .set('X-Tab-Id', 'tab-missing');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
+    });
+
     it('returns 500 when no active tab', async () => {
       vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
 
@@ -203,6 +245,32 @@ describe('Browser Routes', () => {
       expect(res.status).toBe(200);
       expect(res.type).toBe('text/html');
       expect(res.text).toBe('<html><body>Hello</body></html>');
+    });
+
+    it('uses X-Tab-Id to read HTML from a background tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce('<html><body>Background</body></html>');
+
+      const res = await request(app)
+        .get('/page-html')
+        .set('X-Tab-Id', 'tab-2');
+
+      expect(res.status).toBe(200);
+      expect(res.text).toBe('<html><body>Background</body></html>');
+      expect(ctx.devToolsManager.evaluateInTab).toHaveBeenCalledWith(
+        202,
+        'document.documentElement.outerHTML',
+      );
     });
 
     it('returns 500 when no active tab', async () => {
@@ -346,6 +414,51 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, result: 'hello' });
+    });
+
+    it('prefers X-Tab-Id over body.tabId for background execution', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-header',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+        {
+          id: 'tab-body',
+          webContentsId: 303,
+          url: 'https://example.com/other',
+          title: 'Other',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce(42);
+
+      const res = await request(app)
+        .post('/execute-js')
+        .set('X-Tab-Id', 'tab-header')
+        .send({ code: '21 + 21', tabId: 'tab-body' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, result: 42 });
+      expect(ctx.devToolsManager.evaluateInTab).toHaveBeenCalledWith(202, '21 + 21');
+    });
+
+    it('returns 404 when requested tab id does not exist', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .post('/execute-js')
+        .set('X-Tab-Id', 'tab-missing')
+        .send({ code: '1 + 1' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
     });
 
     it('returns 413 when code exceeds 1MB', async () => {

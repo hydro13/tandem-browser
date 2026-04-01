@@ -110,6 +110,8 @@ Examples:
 - Human + AI shared browsing with one local browser session
 - Local HTTP API for tabs, navigation, screenshots, content extraction,
   sessions, devtools surfaces, and automation
+- Background-tab-safe API targeting via `X-Tab-Id` for snapshots, page reads,
+  JS evaluation, waits, links, and form inspection without forcing focus
 - Security-by-default browsing with multi-layer filtering and review points
 - OpenClaw-first runtime integration for chat, browser control, and local agent workflows
 - Local-first persistence for sessions, history, workspaces, bookmarks, and

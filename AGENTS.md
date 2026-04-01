@@ -91,7 +91,7 @@ tandem-browser/
 ### 2. Test Your Own Work
 
 - **Always compile:** `npx tsc` must be error-free before you finish
-- **Start the app:** `npm run dev` and verify startup without crashes
+- **Start the app:** `npm start` and verify startup without crashes
 - **Test API endpoints:** Use `curl` for every new or changed endpoint
 - **Test the UI:** Take a screenshot and verify it looks correct
 - **Run tests:** `npx vitest run`; all existing tests must keep passing
@@ -430,7 +430,7 @@ After each session, provide:
 ## Tested
 - ✅ npx tsc — no errors
 - ✅ npx vitest run — all tests pass
-- ✅ npm run dev — app starts without crashes
+- ✅ npm start — app starts without crashes
 - ✅ curl localhost:8765/new-endpoint — response OK
 - ⚠️ [any issues found]
 

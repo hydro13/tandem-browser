@@ -47,6 +47,7 @@ describe('Snapshot Routes', () => {
         compact: false,
         selector: undefined,
         depth: undefined,
+        wcId: undefined,
       });
     });
 
@@ -68,7 +69,51 @@ describe('Snapshot Routes', () => {
         compact: true,
         selector: '#main',
         depth: 2,
+        wcId: undefined,
       });
+    });
+
+    it('uses X-Tab-Id to target a background tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+      vi.mocked(ctx.snapshotManager.getSnapshot).mockResolvedValue({
+        text: '<snapshot>',
+        count: 2,
+        url: 'https://example.com/background',
+      });
+
+      const res = await request(app)
+        .get('/snapshot')
+        .set('X-Tab-Id', 'tab-2');
+
+      expect(res.status).toBe(200);
+      expect(ctx.snapshotManager.getSnapshot).toHaveBeenCalledWith({
+        interactive: false,
+        compact: false,
+        selector: undefined,
+        depth: undefined,
+        wcId: 202,
+      });
+    });
+
+    it('returns 404 when X-Tab-Id does not exist', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .get('/snapshot')
+        .set('X-Tab-Id', 'tab-missing');
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
     });
 
     it('returns 500 when snapshotManager.getSnapshot throws', async () => {

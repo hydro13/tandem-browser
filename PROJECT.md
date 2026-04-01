@@ -23,7 +23,7 @@ The security layer exists because when an AI has access to your browser, your th
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
-**Current version:** `0.57.6`  
+**Current version:** `0.66.0`  
 **Repository status:** Public developer preview  
 **Started:** February 11, 2026
 
@@ -221,6 +221,10 @@ Current route modules:
 - `workspaces.ts` — workspace CRUD and tab assignment
 - `sync.ts` — sync surfaces
 - `pinboards.ts` — pinboard CRUD and panel data
+
+Selected read and browser routes now accept `X-Tab-Id` so agents can target
+background tabs without stealing focus. Current support includes `/snapshot`,
+`/page-content`, `/page-html`, `/execute-js`, `/wait`, `/links`, and `/forms`.
 
 Security routes are registered separately from `src/security/routes.ts`.
 

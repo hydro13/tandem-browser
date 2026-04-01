@@ -30,6 +30,29 @@ interface CDPAXNode {
 
 const MAX_TYPED_CHARS = 10_000;
 
+interface RefTarget {
+  backendNodeId: number;
+  wcId: number | null;
+}
+
+interface DOMBoxModelResponse {
+  model?: {
+    content?: number[];
+  };
+}
+
+interface DOMResolveNodeResponse {
+  object?: {
+    objectId?: string;
+  };
+}
+
+interface RuntimeCallFunctionResponse {
+  result?: {
+    value?: string;
+  };
+}
+
 /**
  * SnapshotManager — Provides accessibility tree snapshots via CDP.
  *
@@ -42,7 +65,7 @@ const MAX_TYPED_CHARS = 10_000;
  */
 export class SnapshotManager {
   private refMap: RefMap = {};
-  private refBackendNodeMap: Map<string, number> = new Map();
+  private refTargets: Map<string, RefTarget> = new Map();
   private refCounter = 0;
   private devtools: DevToolsManager;
   private subscribedToNavigation = false;
@@ -64,9 +87,12 @@ export class SnapshotManager {
         // Only reset on top-level navigation (not iframes)
         const frame = params.frame as Record<string, unknown> | undefined;
         if (!frame?.parentId) {
-          this.refMap = {};
-          this.refBackendNodeMap.clear();
-          this.refCounter = 0;
+          const targetWcId = this.devtools.getDispatchWebContents()?.id;
+          if (targetWcId) {
+            this.clearRefsForTab(targetWcId);
+          } else {
+            this.clearAllRefs();
+          }
         }
       },
     });
@@ -84,14 +110,12 @@ export class SnapshotManager {
       const result = await this.devtools.sendCommandToTab(options.wcId, 'Accessibility.getFullAXTree', {});
       const rawNodes = (result.nodes || []) as CDPAXNode[];
       let tree = this.buildTree(rawNodes);
-      if (options.selector) tree = await this.filterBySelector(tree, options.selector);
+      if (options.selector) tree = await this.filterBySelector(tree, options.selector, options.wcId);
       if (options.interactive) tree = this.filterInteractive(tree);
       if (options.compact) tree = this.filterCompact(tree);
       if (options.depth !== undefined) tree = this.filterByDepth(tree, options.depth);
-      this.refMap = {};
-      this.refBackendNodeMap.clear();
-      this.refCounter = 0;
-      this.assignRefs(tree);
+      this.clearAllRefs();
+      this.assignRefs(tree, options.wcId);
       const text = this.formatTree(tree);
       const count = this.countNodes(tree);
       // Get URL from the tab
@@ -102,6 +126,10 @@ export class SnapshotManager {
     }
 
     // Enable Accessibility domain (idempotent)
+    const attachedWc = await this.devtools.ensureAttached();
+    if (!attachedWc) {
+      throw new Error('No active tab');
+    }
     await this.devtools.sendCommand('Accessibility.enable', {});
 
     // Get the full accessibility tree
@@ -113,7 +141,7 @@ export class SnapshotManager {
 
     // Selector filter: scope to a CSS selector's subtree
     if (options.selector) {
-      tree = await this.filterBySelector(tree, options.selector);
+      tree = await this.filterBySelector(tree, options.selector, attachedWc.id);
     }
 
     // Interactive filter
@@ -132,12 +160,10 @@ export class SnapshotManager {
     }
 
     // Reset refs for this snapshot
-    this.refMap = {};
-    this.refBackendNodeMap.clear();
-    this.refCounter = 0;
+    this.clearAllRefs();
 
     // Assign @refs to all nodes
-    this.assignRefs(tree);
+    this.assignRefs(tree, attachedWc.id);
 
     // Format as text
     const text = this.formatTree(tree);
@@ -165,14 +191,12 @@ export class SnapshotManager {
    * Resolves ref → backendDOMNodeId → DOM.getBoxModel → center coordinates → sendInputEvent.
    */
   async clickRef(ref: string): Promise<void> {
-    const backendNodeId = this.refBackendNodeMap.get(ref);
-    if (backendNodeId === undefined) {
-      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
-    }
+    const target = this.requireRefTarget(ref);
+    const { backendNodeId } = target;
 
     // Get the box model to find element coordinates
-    await this.devtools.sendCommand('DOM.enable', {});
-    const box = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+    await this.sendCommandForRef(target, 'DOM.enable', {});
+    const box = await this.sendCommandForRef<DOMBoxModelResponse>(target, 'DOM.getBoxModel', { backendNodeId });
     if (!box.model?.content) {
       throw new Error(`Cannot get box model for ${ref}`);
     }
@@ -183,20 +207,19 @@ export class SnapshotManager {
     const y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
 
     // Get WebContents via ensureAttached for sendInputEvent
-    const wc = await this.devtools.ensureAttached();
-    if (!wc) throw new Error('No active tab');
+    const wc = await this.getWebContentsForRef(target);
 
     // Scroll element into view first
     try {
-      const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+      const resolved = await this.sendCommandForRef<DOMResolveNodeResponse>(target, 'DOM.resolveNode', { backendNodeId });
       if (resolved.object?.objectId) {
-        await this.devtools.sendCommand('Runtime.callFunctionOn', {
+        await this.sendCommandForRef(target, 'Runtime.callFunctionOn', {
           objectId: resolved.object.objectId,
           functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }',
           returnByValue: true,
         });
         // Re-get box model after scroll
-        const box2 = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+        const box2 = await this.sendCommandForRef<DOMBoxModelResponse>(target, 'DOM.getBoxModel', { backendNodeId });
         if (box2.model?.content) {
           const c2 = box2.model.content;
           const x2 = Math.round((c2[0] + c2[2] + c2[4] + c2[6]) / 4);
@@ -218,14 +241,12 @@ export class SnapshotManager {
    * Clicks to focus, then types char-by-char via sendInputEvent.
    */
   async fillRef(ref: string, value: string): Promise<void> {
-    const backendNodeId = this.refBackendNodeMap.get(ref);
-    if (backendNodeId === undefined) {
-      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
-    }
+    const target = this.requireRefTarget(ref);
+    const { backendNodeId } = target;
 
     // Get box model for clicking to focus
-    await this.devtools.sendCommand('DOM.enable', {});
-    const box = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+    await this.sendCommandForRef(target, 'DOM.enable', {});
+    const box = await this.sendCommandForRef<DOMBoxModelResponse>(target, 'DOM.getBoxModel', { backendNodeId });
     if (!box.model?.content) {
       throw new Error(`Cannot get box model for ${ref}`);
     }
@@ -234,19 +255,18 @@ export class SnapshotManager {
     let x = Math.round((c[0] + c[2] + c[4] + c[6]) / 4);
     let y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
 
-    const wc = await this.devtools.ensureAttached();
-    if (!wc) throw new Error('No active tab');
+    const wc = await this.getWebContentsForRef(target);
 
     // Scroll into view and re-get coordinates
     try {
-      const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+      const resolved = await this.sendCommandForRef<DOMResolveNodeResponse>(target, 'DOM.resolveNode', { backendNodeId });
       if (resolved.object?.objectId) {
-        await this.devtools.sendCommand('Runtime.callFunctionOn', {
+        await this.sendCommandForRef(target, 'Runtime.callFunctionOn', {
           objectId: resolved.object.objectId,
           functionDeclaration: 'function() { this.scrollIntoView({ behavior: "smooth", block: "center" }); }',
           returnByValue: true,
         });
-        const box2 = await this.devtools.sendCommand('DOM.getBoxModel', { backendNodeId });
+        const box2 = await this.sendCommandForRef<DOMBoxModelResponse>(target, 'DOM.getBoxModel', { backendNodeId });
         if (box2.model?.content) {
           const c2 = box2.model.content;
           x = Math.round((c2[0] + c2[2] + c2[4] + c2[6]) / 4);
@@ -285,18 +305,16 @@ export class SnapshotManager {
    * Get the text content of an element by @ref.
    */
   async getTextRef(ref: string): Promise<string> {
-    const backendNodeId = this.refBackendNodeMap.get(ref);
-    if (backendNodeId === undefined) {
-      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
-    }
+    const target = this.requireRefTarget(ref);
+    const { backendNodeId } = target;
 
-    await this.devtools.sendCommand('DOM.enable', {});
-    const resolved = await this.devtools.sendCommand('DOM.resolveNode', { backendNodeId });
+    await this.sendCommandForRef(target, 'DOM.enable', {});
+    const resolved = await this.sendCommandForRef<DOMResolveNodeResponse>(target, 'DOM.resolveNode', { backendNodeId });
     if (!resolved.object?.objectId) {
       throw new Error(`Cannot resolve DOM node for ${ref}`);
     }
 
-    const textResult = await this.devtools.sendCommand('Runtime.callFunctionOn', {
+    const textResult = await this.sendCommandForRef<RuntimeCallFunctionResponse>(target, 'Runtime.callFunctionOn', {
       objectId: resolved.object.objectId,
       functionDeclaration: 'function() { return this.innerText || this.textContent || ""; }',
       returnByValue: true,
@@ -310,8 +328,21 @@ export class SnapshotManager {
    * Used by LocatorFinder for semantic element search.
    */
   async getAccessibilityTree(options?: SnapshotOptions): Promise<AccessibilityNode[]> {
-    await this.devtools.sendCommand('Accessibility.enable', {});
-    const result = await this.devtools.sendCommand('Accessibility.getFullAXTree', {});
+    const attachedWc = options?.wcId
+      ? await this.devtools.attachToTab(options.wcId, { makePrimary: false })
+      : await this.devtools.ensureAttached();
+    if (!attachedWc) {
+      throw new Error('No active tab');
+    }
+
+    if (options?.wcId) {
+      await this.devtools.sendCommandToTab(options.wcId, 'Accessibility.enable', {});
+    } else {
+      await this.devtools.sendCommand('Accessibility.enable', {});
+    }
+    const result = options?.wcId
+      ? await this.devtools.sendCommandToTab(options.wcId, 'Accessibility.getFullAXTree', {})
+      : await this.devtools.sendCommand('Accessibility.getFullAXTree', {});
     const rawNodes = (result.nodes || []) as CDPAXNode[];
     let tree = this.buildTree(rawNodes);
 
@@ -323,10 +354,8 @@ export class SnapshotManager {
     }
 
     // Reset and assign refs (same as getSnapshot)
-    this.refMap = {};
-    this.refBackendNodeMap.clear();
-    this.refCounter = 0;
-    this.assignRefs(tree);
+    this.clearAllRefs();
+    this.assignRefs(tree, attachedWc.id);
 
     return tree;
   }
@@ -338,7 +367,8 @@ export class SnapshotManager {
   registerBackendNodeId(backendNodeId: number): string {
     this.refCounter++;
     const ref = `@e${this.refCounter}`;
-    this.refBackendNodeMap.set(ref, backendNodeId);
+    const wcId = this.devtools.getAttachedWebContents()?.id ?? null;
+    this.refTargets.set(ref, { backendNodeId, wcId });
     return ref;
   }
 
@@ -347,6 +377,49 @@ export class SnapshotManager {
    */
   getRefMap(): RefMap {
     return this.refMap;
+  }
+
+  private clearAllRefs(): void {
+    this.refMap = {};
+    this.refTargets.clear();
+    this.refCounter = 0;
+  }
+
+  private clearRefsForTab(wcId: number): void {
+    for (const [ref, target] of Array.from(this.refTargets.entries())) {
+      if (target.wcId !== wcId) continue;
+      delete this.refMap[ref];
+      this.refTargets.delete(ref);
+    }
+  }
+
+  private requireRefTarget(ref: string): RefTarget {
+    const target = this.refTargets.get(ref);
+    if (!target) {
+      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
+    }
+    return target;
+  }
+
+  private async sendCommandForRef<T = unknown>(
+    refTarget: RefTarget,
+    method: string,
+    params?: Record<string, unknown>,
+  ): Promise<T> {
+    if (refTarget.wcId) {
+      return this.devtools.sendCommandToTab(refTarget.wcId, method, params) as Promise<T>;
+    }
+    return this.devtools.sendCommand(method, params) as Promise<T>;
+  }
+
+  private async getWebContentsForRef(refTarget: RefTarget): Promise<Electron.WebContents> {
+    const wc = refTarget.wcId
+      ? await this.devtools.attachToTab(refTarget.wcId, { makePrimary: false })
+      : await this.devtools.ensureAttached();
+    if (!wc) {
+      throw new Error(refTarget.wcId ? `Tab ${refTarget.wcId} is no longer available` : 'No active tab');
+    }
+    return wc;
   }
 
   // ═══════════════════════════════════════════════
@@ -469,23 +542,38 @@ export class SnapshotManager {
    * Filter by CSS selector: find the DOM element matching the selector,
    * then return only the AX subtree rooted at that element.
    */
-  private async filterBySelector(tree: AccessibilityNode[], selector: string): Promise<AccessibilityNode[]> {
+  private async filterBySelector(tree: AccessibilityNode[], selector: string, wcId?: number): Promise<AccessibilityNode[]> {
     // Use CDP DOM.querySelector to find the target element
-    await this.devtools.sendCommand('DOM.enable', {});
-    const doc = await this.devtools.sendCommand('DOM.getDocument', { depth: 0 });
-    const queryResult = await this.devtools.sendCommand('DOM.querySelector', {
-      nodeId: doc.root.nodeId,
-      selector,
-    });
+    if (wcId) {
+      await this.devtools.sendCommandToTab(wcId, 'DOM.enable', {});
+    } else {
+      await this.devtools.sendCommand('DOM.enable', {});
+    }
+    const doc = wcId
+      ? await this.devtools.sendCommandToTab(wcId, 'DOM.getDocument', { depth: 0 })
+      : await this.devtools.sendCommand('DOM.getDocument', { depth: 0 });
+    const queryResult = wcId
+      ? await this.devtools.sendCommandToTab(wcId, 'DOM.querySelector', {
+          nodeId: doc.root.nodeId,
+          selector,
+        })
+      : await this.devtools.sendCommand('DOM.querySelector', {
+          nodeId: doc.root.nodeId,
+          selector,
+        });
 
     if (!queryResult.nodeId) {
       throw new Error(`Selector not found: ${selector}`);
     }
 
     // Get the backendNodeId of the matched element
-    const nodeInfo = await this.devtools.sendCommand('DOM.describeNode', {
-      nodeId: queryResult.nodeId,
-    });
+    const nodeInfo = wcId
+      ? await this.devtools.sendCommandToTab(wcId, 'DOM.describeNode', {
+          nodeId: queryResult.nodeId,
+        })
+      : await this.devtools.sendCommand('DOM.describeNode', {
+          nodeId: queryResult.nodeId,
+        });
     const targetBackendId = nodeInfo.node?.backendNodeId;
     if (!targetBackendId) {
       throw new Error(`Cannot resolve selector: ${selector}`);
@@ -568,7 +656,7 @@ export class SnapshotManager {
   /**
    * Assign @refs (@e1, @e2, ...) to all nodes in the tree.
    */
-  private assignRefs(nodes: AccessibilityNode[]): void {
+  private assignRefs(nodes: AccessibilityNode[], wcId: number | null): void {
     for (const node of nodes) {
       if (node.name || INTERACTIVE_ROLES.has(node.role)) {
         this.refCounter++;
@@ -576,11 +664,11 @@ export class SnapshotManager {
         node.ref = ref;
         this.refMap[ref] = node.nodeId;
         if (node.backendDOMNodeId !== undefined) {
-          this.refBackendNodeMap.set(ref, node.backendDOMNodeId);
+          this.refTargets.set(ref, { backendNodeId: node.backendDOMNodeId, wcId });
         }
       }
 
-      this.assignRefs(node.children);
+      this.assignRefs(node.children, wcId);
     }
   }
 
@@ -694,7 +782,7 @@ export class SnapshotManager {
    */
   destroy(): void {
     this.refMap = {};
-    this.refBackendNodeMap.clear();
+    this.refTargets.clear();
     this.refCounter = 0;
     this.devtools.unsubscribe('snapshot-nav-reset');
   }

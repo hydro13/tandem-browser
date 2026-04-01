@@ -1,4 +1,10 @@
 #!/bin/bash
+
+branch=$(git branch --show-current)
+if [ "$branch" != "main" ]; then
+  exit 0
+fi
+
 # Auto-bump version + update CHANGELOG + update about.html on every commit
 
 # Get last commit message

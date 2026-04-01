@@ -7,6 +7,18 @@ All notable changes to Tandem Browser will be documented in this file.
 ### Added
 - `POST /tabs/open` now accepts `inheritSessionFrom` and copies IndexedDB data from the source tab into the new tab before reloading the destination, preserving Discord-style IndexedDB-backed logins.
 
+## [v0.66.0] - 2026-04-02
+
+### Added
+- `X-Tab-Id` header support for background-tab targeting on `GET /snapshot`, `GET /page-content`, `GET /page-html`, `POST /execute-js`, `POST /wait`, `GET /links`, and `GET /forms`
+- Snapshot refs now remember which tab produced them, so ref follow-up actions stay attached to the correct tab
+
+### Changed
+- `skill/SKILL.md` now reflects the current Tandem API targeting model and includes ClawHub frontmatter metadata
+
+### Fixed
+- `/find/click` and `/find/fill` now catch thrown route errors and return JSON `500` responses instead of dropping the connection
+
 ## [v0.65.5] - 2026-03-21
 
 - fix: CodeQL config — exclude security scanner modules from XSS taint analysis

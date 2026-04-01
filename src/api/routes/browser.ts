@@ -3,7 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import type { RouteContext} from '../context';
-import { getActiveWC, execInActiveTab, getSessionWC, execInSessionTab, getSessionPartition } from '../context';
+import { getActiveWC, getSessionWC, execInSessionTab, getSessionPartition, resolveRequestedTab } from '../context';
 import { tandemDir } from '../../utils/paths';
 import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
@@ -15,6 +15,69 @@ import { injectionScannerMiddleware } from '../middleware/injection-scanner';
 
 /** Maximum allowed code length for JS execution endpoints (1 MB) */
 const MAX_CODE_LENGTH = 1_048_576;
+
+function sendRequestedTabNotFound(res: Response, tabId: string): void {
+  res.status(404).json({ error: `Tab ${tabId} not found` });
+}
+
+function buildPageContentScript(settleMs: number, maxWait: number, targetLength: number): string {
+  return `
+    new Promise((resolve) => {
+      const extract = () => {
+        const title = document.title;
+        const url = window.location.href;
+        const meta = document.querySelector('meta[name="description"]');
+        const description = meta ? meta.getAttribute('content') : '';
+        const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
+        return { title, url, description, text, length: text.length };
+      };
+
+      const deadline = Date.now() + ${maxWait};
+      let timer = null;
+      let observer = null;
+
+      const cleanupAndResolve = () => {
+        if (timer) clearTimeout(timer);
+        if (observer) observer.disconnect();
+        resolve(extract());
+      };
+
+      const quick = extract();
+      if (quick.length > ${targetLength}) {
+        resolve(quick);
+        return;
+      }
+
+      const onSettle = () => {
+        const current = extract();
+        if (current.length < ${targetLength} && Date.now() < deadline) {
+          timer = setTimeout(onSettle, 500);
+        } else {
+          cleanupAndResolve();
+        }
+      };
+
+      const onMutation = () => {
+        if (Date.now() >= deadline) {
+          cleanupAndResolve();
+          return;
+        }
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(onSettle, ${settleMs});
+      };
+
+      observer = new MutationObserver(onMutation);
+
+      observer.observe(document.body, {
+        childList: true, subtree: true,
+        characterData: true, attributes: false
+      });
+
+      timer = setTimeout(onSettle, ${settleMs});
+      setTimeout(cleanupAndResolve, ${maxWait});
+    })
+  `;
+}
 
 export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
@@ -67,100 +130,16 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       const settleMs = parseInt(req.query.settle as string) || 800;
       const maxWait = parseInt(req.query.timeout as string) || 10000;
       const targetLength = parseInt(req.query.minLength as string) || 1000;
-
-      // For background tabs (X-Tab-Id), use a simple synchronous extraction via DevTools
-      // to avoid executeJavaScript hanging on non-active tabs
-      const tabId = req.headers['x-tab-id'] as string | undefined;
-      if (tabId) {
-        const tab = ctx.tabManager.listTabs().find(t => t.id === tabId);
-        if (!tab) { res.status(404).json({ error: `Tab ${tabId} not found` }); return; }
-        const wcId = tab.webContentsId;
-        await ctx.devToolsManager.attachToTab(wcId, { makePrimary: false });
-        const r = await ctx.devToolsManager.sendCommandToTab(wcId, 'Runtime.evaluate', {
-          expression: `(() => {
-            const title = document.title;
-            const url = window.location.href;
-            const meta = document.querySelector('meta[name="description"]');
-            const description = meta ? meta.getAttribute('content') : '';
-            const text = document.body ? document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim() : '';
-            return JSON.stringify({ title, url, description, text, length: text.length });
-          })()`,
-          returnByValue: true,
-        });
-        const parsed = JSON.parse(r.result?.value ?? '{}');
-        res.json(parsed);
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
         return;
       }
 
-      const content = await execInSessionTab(ctx, req, `
-        new Promise((resolve) => {
-          const extract = () => {
-            const title = document.title;
-            const url = window.location.href;
-            const meta = document.querySelector('meta[name="description"]');
-            const description = meta ? meta.getAttribute('content') : '';
-            const text = document.body.innerText.replace(/\\n{3,}/g, '\\n\\n').trim();
-            return { title, url, description, text, length: text.length };
-          };
-
-          const deadline = Date.now() + ${maxWait};
-          let timer = null;
-          let observer = null;
-
-          const cleanupAndResolve = () => {
-            if (timer) clearTimeout(timer);
-            if (observer) observer.disconnect();
-            resolve(extract());
-          };
-
-          // Quick check: if content is already substantial, return immediately
-          // But for SPA docs, we sometimes want to wait anyway if it's too short
-          const quick = extract();
-          if (quick.length > ${targetLength}) {
-            resolve(quick);
-            return;
-          }
-
-          // SPA wait: use MutationObserver to detect when DOM settles
-          // Real sliding timeout: reset the settle timer on every mutation
-          const onSettle = () => {
-            // Wait period elapsed with no mutations
-            const current = extract();
-            // If we are settled but still suspiciously short, it might mean the
-            // API fetch is still ongoing and hasn't mutated the DOM yet.
-            // In this case, we extend the wait until the hard deadline.
-            if (current.length < ${targetLength} && Date.now() < deadline) {
-              // Check again in 500ms
-              timer = setTimeout(onSettle, 500);
-            } else {
-              cleanupAndResolve();
-            }
-          };
-
-          const onMutation = () => {
-            if (Date.now() >= deadline) {
-              cleanupAndResolve();
-              return;
-            }
-            // Reset settle timer
-            if (timer) clearTimeout(timer);
-            timer = setTimeout(onSettle, ${settleMs});
-          };
-
-          observer = new MutationObserver(onMutation);
-
-          observer.observe(document.body, {
-            childList: true, subtree: true,
-            characterData: true, attributes: false
-          });
-
-          // Start the initial settle timer (in case no mutations happen)
-          timer = setTimeout(onSettle, ${settleMs});
-
-          // Hard deadline safety
-          setTimeout(cleanupAndResolve, ${maxWait});
-        })
-      `);
+      const script = buildPageContentScript(settleMs, maxWait, targetLength);
+      const content = requestedTab.tab
+        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, script)
+        : await execInSessionTab(ctx, req, script);
       res.json(content);
     } catch (e) {
       handleRouteError(res, e);
@@ -169,7 +148,15 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
 
   router.get('/page-html', injectionScannerMiddleware, async (req: Request, res: Response) => {
     try {
-      const html = await execInSessionTab(ctx, req, 'document.documentElement.outerHTML');
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+        return;
+      }
+
+      const html = requestedTab.tab
+        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, 'document.documentElement.outerHTML')
+        : await execInSessionTab(ctx, req, 'document.documentElement.outerHTML');
       res.type('html').send(html);
     } catch (e) {
       handleRouteError(res, e);
@@ -227,14 +214,25 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      const tabId = req.body.tabId as string | undefined;
-      const wc = tabId ? ctx.tabManager.getWebContents(tabId) : await getActiveWC(ctx);
-      if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+      const requestedTab = resolveRequestedTab(ctx, req, { allowBody: true });
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+        return;
+      }
+
       const timeout = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Execution timed out')), DEFAULT_TIMEOUT_MS)
       );
       const result = await Promise.race([
-        wc.executeJavaScript(script),
+        requestedTab.tab
+          ? ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, script)
+          : (async () => {
+              const wc = await getActiveWC(ctx);
+              if (!wc) {
+                throw new Error('No active tab');
+              }
+              return wc.executeJavaScript(script);
+            })(),
         timeout,
       ]);
       res.json({ ok: true, result });
@@ -396,6 +394,12 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   router.post('/wait', async (req: Request, res: Response) => {
     const { selector, timeout = 10000 } = req.body;
     try {
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+        return;
+      }
+
       const code = selector ? `
         new Promise((res, rej) => {
           const check = () => {
@@ -413,7 +417,13 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
           setTimeout(() => res({ ok: true, ready: false, timeout: true }), ${timeout});
         })
       `;
-      const result = await execInActiveTab(ctx, code);
+      const result = requestedTab.tab
+        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, code)
+        : await (async () => {
+            const wc = await getActiveWC(ctx);
+            if (!wc) throw new Error('No active tab');
+            return wc.executeJavaScript(code);
+          })();
       res.json(result);
     } catch (e) {
       handleRouteError(res, e);
@@ -424,15 +434,28 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // LINKS
   // ═══════════════════════════════════════════════
 
-  router.get('/links', async (_req: Request, res: Response) => {
+  router.get('/links', async (req: Request, res: Response) => {
     try {
-      const links = await execInActiveTab(ctx, `
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+        return;
+      }
+
+      const script = `
         Array.from(document.querySelectorAll('a[href]')).map(a => ({
           text: a.textContent?.trim().substring(0, 100),
           href: a.href,
           visible: a.offsetParent !== null
         })).filter(l => l.href && !l.href.startsWith('javascript:'))
-      `);
+      `;
+      const links = requestedTab.tab
+        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, script)
+        : await (async () => {
+            const wc = await getActiveWC(ctx);
+            if (!wc) throw new Error('No active tab');
+            return wc.executeJavaScript(script);
+          })();
       res.json({ links });
     } catch (e) {
       handleRouteError(res, e);
@@ -443,9 +466,15 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // FORMS
   // ═══════════════════════════════════════════════
 
-  router.get('/forms', async (_req: Request, res: Response) => {
+  router.get('/forms', async (req: Request, res: Response) => {
     try {
-      const forms = await execInActiveTab(ctx, `
+      const requestedTab = resolveRequestedTab(ctx, req);
+      if (requestedTab.requestedTabId && !requestedTab.tab) {
+        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+        return;
+      }
+
+      const script = `
         Array.from(document.querySelectorAll('form')).map((form, i) => ({
           index: i,
           action: form.action,
@@ -459,7 +488,14 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
             value: f.value || ''
           }))
         }))
-      `);
+      `;
+      const forms = requestedTab.tab
+        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, script)
+        : await (async () => {
+            const wc = await getActiveWC(ctx);
+            if (!wc) throw new Error('No active tab');
+            return wc.executeJavaScript(script);
+          })();
       res.json({ forms });
     } catch (e) {
       handleRouteError(res, e);

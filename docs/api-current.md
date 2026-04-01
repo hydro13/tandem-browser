@@ -35,6 +35,30 @@ cookies or localStorage.
 If the source tab does not exist, Tandem still opens the tab and ignores the
 inheritance request.
 
+## `X-Tab-Id` Background Targeting
+
+Use `X-Tab-Id: <tabId>` when you want to inspect or evaluate a background tab
+without focusing it first.
+
+### Current route support
+
+- `GET /snapshot`
+- `GET /page-content`
+- `GET /page-html`
+- `POST /execute-js`
+- `POST /wait`
+- `GET /links`
+- `GET /forms`
+
+`POST /execute-js` also still accepts `tabId` in the JSON body, but the header
+is the preferred targeting mechanism.
+
+### Snapshot refs
+
+Snapshot refs now remember which tab produced them, so `/snapshot/text`,
+`/snapshot/click`, and `/snapshot/fill` keep resolving against that source tab
+instead of whichever tab happens to be active later.
+
 ## Injection Scanner Middleware
 
 The injection scanner sits on agent-facing content routes:

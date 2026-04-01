@@ -117,7 +117,7 @@ export class TandemAPI {
         // Block everything else
         callback(new Error('CORS not allowed'));
       },
-      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tandem-Extension-Id'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id'],
     }));
     this.app.use(express.json({ limit: '50mb' }));
     this.app.use(createRateLimitMiddleware({

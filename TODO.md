@@ -14,7 +14,7 @@ Last updated: March 17, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.62.16`
+- Current app version: `0.66.0`
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -86,6 +86,7 @@ Last updated: March 17, 2026
 
 ## Recently Completed
 
+- [x] API `X-Tab-Id` targeting for `/snapshot`, `/page-content`, `/page-html`, and `/execute-js`, with background-tab-safe CDP evaluation and tab-scoped snapshot refs
 - [x] Password manager: local SQLite + AES-256-GCM vault, master password, autofill, password generator, and `GET /passwords/suggest`
 - [x] Behavioral learning models: profile compiler, typing timing model, mouse trajectory replay, and fallback humanization behavior
 - [x] SPA rendering fix for `/page-content` on dynamic pages; see `docs/archive/plans/spa-rendering-bug.md`
