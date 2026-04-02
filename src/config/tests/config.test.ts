@@ -81,6 +81,7 @@ describe('ConfigManager', () => {
       expect(config.stealth.stealthLevel).toBe('medium');
       expect(config.stealth.acceptLanguage).toBe('auto');
       expect(config.stealth.customAcceptLanguage).toBe('');
+      expect(config.stealth.skipHosts).toEqual(['x.com', 'twitter.com', 'abs.twimg.com']);
     });
 
     it('loads with correct autonomy defaults', () => {

@@ -76,23 +76,11 @@ export function isGoogleAuthUrl(rawValue: string): boolean {
   );
 }
 
-/**
- * Sites that actively detect stealth patches and break when injected.
- * These sites get no stealth injection — they run as a normal browser.
- */
-const STEALTH_SKIP_HOSTS = new Set([
-  'x.com',
-  'twitter.com',
-  'abs.twimg.com',
-  'zhipin.com',
-  'login.zhipin.com',
-]);
-
-export function shouldSkipStealth(rawValue: string): boolean {
+export function shouldSkipStealth(rawValue: string, skipHosts: Array<string> = []): boolean {
   const parsed = tryParseUrl(rawValue);
   if (!parsed || !urlHasProtocol(parsed, 'http:', 'https:')) return false;
   const host = parsed.hostname.replace(/^www\./, '');
-  return STEALTH_SKIP_HOSTS.has(host);
+  return new Set(skipHosts).has(host);
 }
 
 export function isSearchEngineResultsUrl(rawValue: string): boolean {
