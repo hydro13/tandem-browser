@@ -11,7 +11,7 @@ const log = createLogger('PanelManager');
 
 export interface ActivityEvent {
   id: number;
-  type: 'navigate' | 'click' | 'scroll' | 'input' | 'tab-switch' | 'tab-open' | 'tab-close';
+  type: 'navigate' | 'click' | 'scroll' | 'input' | 'tab-switch' | 'tab-open' | 'tab-close' | 'press-key' | 'press-key-combo';
   timestamp: number;
   data: Record<string, unknown>;
 }

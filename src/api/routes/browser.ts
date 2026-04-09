@@ -378,6 +378,105 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══════════════════════════════════════════════
+  // PRESS KEY — via sendInputEvent (keyDown/char/keyUp)
+  // ═══════════════════════════════════════════════
+
+  /** Map common key name aliases to Electron's expected key strings */
+  function normalizeKeyName(key: string): string {
+    const map: Record<string, string> = {
+      'enter': 'Return',
+      'return': 'Return',
+      'esc': 'Escape',
+      'escape': 'Escape',
+      'pagedown': 'PageDown',
+      'pageup': 'PageUp',
+      'arrowup': 'Up',
+      'arrowdown': 'Down',
+      'arrowleft': 'Left',
+      'arrowright': 'Right',
+      'backspace': 'Backspace',
+      'delete': 'Delete',
+      'tab': 'Tab',
+      'home': 'Home',
+      'end': 'End',
+      'space': ' ',
+      'insert': 'Insert',
+    };
+    return map[key.toLowerCase()] || key;
+  }
+
+  /** Check if a key produces a printable character */
+  function isPrintableKey(key: string): boolean {
+    // Single characters are printable (letters, digits, punctuation)
+    if (key.length === 1) return true;
+    // Space
+    if (key === ' ') return true;
+    return false;
+  }
+
+  router.post('/press-key', async (req: Request, res: Response) => {
+    const { key, modifiers = [] } = req.body;
+    if (!key) { res.status(400).json({ error: 'key required' }); return; }
+    try {
+      const wc = await getSessionWC(ctx, req);
+      if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+
+      const normalizedKey = normalizeKeyName(key);
+      const mods = (modifiers as string[]).map((m: string) => m.toLowerCase()) as Electron.InputEvent['modifiers'];
+
+      // keyDown
+      wc.sendInputEvent({ type: 'keyDown', keyCode: normalizedKey, modifiers: mods });
+
+      // For printable characters without modifiers (or with shift only), send a char event
+      if (isPrintableKey(normalizedKey) && modifiers.every((m: string) => m.toLowerCase() === 'shift')) {
+        wc.sendInputEvent({ type: 'char', keyCode: normalizedKey, modifiers: mods });
+      }
+
+      // keyUp
+      wc.sendInputEvent({ type: 'keyUp', keyCode: normalizedKey, modifiers: mods });
+
+      ctx.panelManager.logActivity('press-key', { key: normalizedKey, modifiers });
+      res.json({ ok: true, key: normalizedKey, modifiers });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // ═══════════════════════════════════════════════
+  // PRESS KEY COMBO — multiple keys in sequence
+  // ═══════════════════════════════════════════════
+
+  router.post('/press-key-combo', async (req: Request, res: Response) => {
+    const { keys } = req.body;
+    if (!Array.isArray(keys) || keys.length === 0) {
+      res.status(400).json({ error: 'keys array required' });
+      return;
+    }
+    try {
+      const wc = await getSessionWC(ctx, req);
+      if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+
+      const pressedKeys: string[] = [];
+      for (const key of keys) {
+        const normalizedKey = normalizeKeyName(key);
+        wc.sendInputEvent({ type: 'keyDown', keyCode: normalizedKey });
+        if (isPrintableKey(normalizedKey)) {
+          wc.sendInputEvent({ type: 'char', keyCode: normalizedKey });
+        }
+        wc.sendInputEvent({ type: 'keyUp', keyCode: normalizedKey });
+        pressedKeys.push(normalizedKey);
+        // Small delay between key presses
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+
+      ctx.panelManager.logActivity('press-key-combo', { keys: pressedKeys });
+      res.json({ ok: true, keys: pressedKeys });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // ═══════════════════════════════════════════════
   // WINGMAN ALERT
   // ═══════════════════════════════════════════════
 

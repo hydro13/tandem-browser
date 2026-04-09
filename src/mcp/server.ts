@@ -247,6 +247,47 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// tandem_press_key — Send a keyboard event
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_press_key',
+  'Send a keyboard event (keyDown + keyUp) to the browser tab. Common key names: PageDown, PageUp, Escape, Enter, Tab, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Backspace, Delete, Home, End, Space. For modifier combos use the modifiers param: ["control"], ["shift"], ["meta", "shift"], ["alt"]. Supports targeting a background tab by ID.',
+  {
+    key: z.string().describe('Key to press (e.g. "PageDown", "Escape", "Enter", "Tab", "a", "ArrowDown")'),
+    modifiers: z.array(z.string()).optional().describe('Optional modifier keys: "control", "shift", "alt", "meta" (e.g. ["control", "shift"])'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ key, modifiers, tabId }) => {
+    const body: Record<string, unknown> = { key };
+    if (modifiers && modifiers.length > 0) body.modifiers = modifiers;
+    const result = await apiCall('POST', '/press-key', body, tabHeaders(tabId));
+    const detail = modifiers && modifiers.length > 0 ? `${modifiers.join('+')}+${key}` : key;
+    await logActivity('press_key', detail);
+    return { content: [{ type: 'text', text: `Pressed key: ${detail} — ${JSON.stringify(result)}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_press_key_combo — Send multiple key presses in sequence
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_press_key_combo',
+  'Send multiple key presses in sequence with a small delay between each. Useful for things like pressing Tab 3 times then Enter, or typing a sequence of arrow key navigations. Uses the same key names as tandem_press_key.',
+  {
+    keys: z.array(z.string()).describe('Array of key names to press in sequence (e.g. ["Tab", "Tab", "Tab", "Enter"])'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ keys, tabId }) => {
+    const result = await apiCall('POST', '/press-key-combo', { keys }, tabHeaders(tabId));
+    const detail = keys.join(' → ');
+    await logActivity('press_key_combo', detail);
+    return { content: [{ type: 'text', text: `Pressed keys: ${detail} — ${JSON.stringify(result)}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // tandem_snapshot — Get accessibility tree with @ref IDs
 // ═══════════════════════════════════════════════
 

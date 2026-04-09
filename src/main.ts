@@ -13,7 +13,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Main] Unhandled rejection:', reason);
 });
 
-import { webContents, type WebContents } from 'electron';
+import { nativeTheme, webContents, type WebContents } from 'electron';
 import fs from 'fs';
 import { app, BrowserWindow, session, ipcMain } from 'electron';
 
@@ -21,25 +21,15 @@ import { app, BrowserWindow, session, ipcMain } from 'electron';
 // Default Electron renderer heap is ~1.5GB which causes OOM on sites like zhipin.com.
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 app.commandLine.appendSwitch('enable-precise-memory-info');
-
-// Fix Google cross-site auth (CookieMismatch when YouTube → accounts.google.com).
-// Two Chromium features break cookie sharing between related Google domains
-// (youtube.com, google.com, accounts.google.com) that Electron can't handle:
-//
-// 1. ThirdPartyStoragePartitioning — partitions cookies by top-level site, so a
-//    .google.com cookie set under youtube.com lives in a different partition than
-//    the same cookie under google.com. Chrome solves this with Related Website Sets
-//    (RWS) that treat Google domains as related. Electron doesn't support RWS.
-//
-// 2. TrackingProtection3pcd — blocks third-party cookies entirely in cross-site
-//    contexts, preventing Google auth cookies from being sent during redirects.
-//
-// Disabling both restores pre-partitioning cookie behavior. Not detectable by
-// websites: these control internal Chromium storage boundaries, not any JS API.
-// Google cancelled third-party cookie deprecation in April 2025, so this matches
-// how mainstream Chrome users experience the web.
+// Disable Chromium features that break Electron:
+// - WebContentsForceDark: forces dark mode on sites that don't support it (unreadable pages)
+// - ThirdPartyStoragePartitioning: partitions cookies by top-level site, breaking Google
+//   cross-site auth (Electron doesn't support Related Website Sets)
+// - TrackingProtection3pcd: blocks third-party cookies in cross-site contexts,
+//   preventing Google auth cookies during youtube.com → accounts.google.com redirects
 app.commandLine.appendSwitch('disable-features',
-  'ThirdPartyStoragePartitioning,TrackingProtection3pcd');
+  'WebContentsForceDark,ThirdPartyStoragePartitioning,TrackingProtection3pcd');
+nativeTheme.themeSource = 'system';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
