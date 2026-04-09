@@ -19,13 +19,16 @@ const log = createLogger('StealthManager');
 export class StealthManager {
   private session: Session;
   private partitionSeed: string;
+  private readonly originalUserAgent: string;
 
   // Match latest stable Chrome on macOS
-  private readonly USER_AGENT = 
+  private readonly USER_AGENT =
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
 
   constructor(session: Session, partition: string = 'persist:tandem') {
     this.session = session;
+    // Store the real Electron UA before overwriting — needed for Google auth
+    this.originalUserAgent = session.getUserAgent();
     // Generate a deterministic seed from the partition name for consistent noise per session
     this.partitionSeed = crypto.createHash('sha256').update(partition).digest('hex');
   }
@@ -48,8 +51,10 @@ export class StealthManager {
         // but keep everything else — TotalRecall V2 works with default Electron UA on Google
         const url = _details.url || '';
         if (isGoogleAuthUrl(url)) {
-          // Remove our fake UA, let Electron's real one through
-          delete headers['User-Agent'];
+          // Restore the real Electron UA — deleting the header doesn't work because
+          // session.setUserAgent() bakes Chrome/131 into Chromium's default headers.
+          // We must overwrite it with the original Electron UA.
+          headers['User-Agent'] = this.originalUserAgent;
           // Also remove fake Sec-CH-UA headers — session.setUserAgent() causes Chromium
           // to auto-send Chrome-like client hints at the session level. If we let the
           // real Electron UA through but keep Chrome Sec-CH-UA, Google detects the
