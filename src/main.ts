@@ -32,6 +32,7 @@ import { tandemDir } from './utils/paths';
 import { createLogger } from './utils/logger';
 import { createManagerRegistry, destroyRuntime, initializeRuntimeManagers, registerRuntimeIpcHandlers } from './bootstrap/runtime';
 import { registerInitialTabLifecycle } from './bootstrap/tab-session';
+import { IpcChannels } from './shared/ipc-channels';
 import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 import { isGoogleAuthUrl, shouldSkipStealth, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
 
@@ -50,8 +51,8 @@ const pendingContextMenuWebContents: WebContents[] = [];
 let pendingTabRegister: PendingTabRegister | null = null;
 
 function registerEarlyShellAuthIpc(): void {
-  try { ipcMain.removeHandler('get-api-token'); } catch { /* handler may not exist yet */ }
-  ipcMain.handle('get-api-token', async () => {
+  try { ipcMain.removeHandler(IpcChannels.GET_API_TOKEN); } catch { /* handler may not exist yet */ }
+  ipcMain.handle(IpcChannels.GET_API_TOKEN, async () => {
     try {
       return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
     } catch {
@@ -61,8 +62,8 @@ function registerEarlyShellAuthIpc(): void {
 }
 
 function registerEarlyTabRegisterIpc(): void {
-  ipcMain.removeAllListeners('tab-register');
-  ipcMain.on('tab-register', (_event, data: PendingTabRegister) => {
+  ipcMain.removeAllListeners(IpcChannels.TAB_REGISTER);
+  ipcMain.on(IpcChannels.TAB_REGISTER, (_event, data: PendingTabRegister) => {
     if (runtime?.tabManager) {
       return;
     }
@@ -315,7 +316,7 @@ async function createWindow(): Promise<BrowserWindow> {
         // Sidebar webviews: allow auth popups, open other links in a new tab
         if (isSidebarWebview && !isAuth) {
           if (url && url !== 'about:blank' && mainWindow) {
-            mainWindow.webContents.send('open-url-in-new-tab', url);
+            mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
           }
           return { action: 'deny' };
         }
@@ -340,7 +341,7 @@ async function createWindow(): Promise<BrowserWindow> {
         }
         // All other popups → new tab
         if (url && url !== 'about:blank' && mainWindow) {
-          mainWindow.webContents.send('open-url-in-new-tab', url);
+          mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
         }
         return { action: 'deny' };
       });
@@ -358,7 +359,7 @@ async function createWindow(): Promise<BrowserWindow> {
             if (!isGoogleAuthUrl(url)) {
               win.close();
               if (mainWindow) {
-                mainWindow.webContents.send('reload-sidebar-webview', sidebarId);
+                mainWindow.webContents.send(IpcChannels.RELOAD_SIDEBAR_WEBVIEW, sidebarId);
               }
             }
           });
@@ -380,7 +381,7 @@ async function createWindow(): Promise<BrowserWindow> {
           return;
         }
         if (!currentTabManager.hasWebContents(contents.id)) {
-          mainWindow.webContents.send('open-url-in-new-tab', url);
+          mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, url);
           contents.stop();
         }
       });
@@ -396,7 +397,7 @@ async function createWindow(): Promise<BrowserWindow> {
           contents.setWindowOpenHandler(({ url: targetUrl }) => {
             log.info(`[ExtPopup] window.open intercepted from extension popup: ${targetUrl}`);
             if (mainWindow && targetUrl && targetUrl !== 'about:blank') {
-              mainWindow.webContents.send('open-url-in-new-tab', targetUrl);
+              mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, targetUrl);
             }
             return { action: 'deny' };
           });

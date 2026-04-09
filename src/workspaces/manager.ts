@@ -4,6 +4,7 @@ import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 import type { BrowserWindow } from 'electron';
 import type { SyncManager } from '../sync/manager';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('WorkspaceManager');
 
@@ -291,7 +292,7 @@ export class WorkspaceManager {
 
   private notifySwitch(ws: Workspace): void {
     if (this.mainWindow && !this.mainWindow.isDestroyed()) {
-      this.mainWindow.webContents.send('workspace-switched', ws);
+      this.mainWindow.webContents.send(IpcChannels.WORKSPACE_SWITCHED, ws);
     }
   }
 

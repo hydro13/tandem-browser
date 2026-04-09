@@ -5,6 +5,7 @@ import type { DrawOverlayManager } from '../draw/overlay';
 import type { WingmanStream } from './wingman-stream';
 import { createLogger } from '../utils/logger';
 import { hostnameMatches, tryParseUrl, urlHasProtocol } from '../utils/security';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('ActivityTracker');
 const PANEL_ACTIVITY_TYPES: ReadonlySet<ActivityEvent['type']> = new Set([
@@ -83,7 +84,7 @@ export class ActivityTracker {
       if (parsedUrl && urlHasProtocol(parsedUrl, 'http:', 'https:') && !hostnameMatches(parsedUrl, 'duckduckgo.com')) {
         setTimeout(() => {
           try {
-            this.win.webContents.send('auto-snapshot-request', { url });
+            this.win.webContents.send(IpcChannels.AUTO_SNAPSHOT_REQUEST, { url });
           } catch (e) { log.warn('Auto-snapshot send failed (window may be closed):', e instanceof Error ? e.message : String(e)); }
         }, 3000);
       }

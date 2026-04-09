@@ -5,6 +5,7 @@ import fs from 'fs';
 import type { ExtensionManager } from './manager';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('ExtensionToolbar');
 
@@ -359,7 +360,7 @@ export class ExtensionToolbar {
         click: () => {
           // Open options page in a new Tandem tab
           if (this.mainWindow && ext.optionsUrl) {
-            this.mainWindow.webContents.send('open-url-in-new-tab', ext.optionsUrl);
+            this.mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, ext.optionsUrl);
           }
         },
       }));
@@ -382,7 +383,7 @@ export class ExtensionToolbar {
       click: () => {
         // Send removal request to the renderer to handle with confirmation
         if (this.mainWindow) {
-          this.mainWindow.webContents.send('extension-remove-request', {
+          this.mainWindow.webContents.send(IpcChannels.EXTENSION_REMOVE_REQUEST, {
             id: ext.id,
             diskId: ext.diskId,
             name: ext.name,
@@ -432,41 +433,41 @@ export class ExtensionToolbar {
   notifyToolbarUpdate(session: Session): void {
     if (!this.mainWindow || this.mainWindow.isDestroyed()) return;
     const extensions = this.getToolbarExtensions(session);
-    this.mainWindow.webContents.send('extension-toolbar-update', extensions);
+    this.mainWindow.webContents.send(IpcChannels.EXTENSION_TOOLBAR_UPDATE, extensions);
   }
 
   /** Register IPC handlers for toolbar operations */
   registerIpcHandlers(session: Session): void {
-    ipcMain.handle('extension-toolbar-list', () => {
+    ipcMain.handle(IpcChannels.EXTENSION_TOOLBAR_LIST, () => {
       return this.getToolbarExtensions(session);
     });
 
-    ipcMain.handle('extension-popup-open', (_event, extensionId: string, anchorBounds?: { x: number; y: number }) => {
+    ipcMain.handle(IpcChannels.EXTENSION_POPUP_OPEN, (_event, extensionId: string, anchorBounds?: { x: number; y: number }) => {
       this.openPopup(extensionId, session, anchorBounds);
       return { ok: true };
     });
 
-    ipcMain.handle('extension-popup-close', () => {
+    ipcMain.handle(IpcChannels.EXTENSION_POPUP_CLOSE, () => {
       this.closePopup();
       return { ok: true };
     });
 
-    ipcMain.handle('extension-pin', (_event, extensionId: string, pinned: boolean) => {
+    ipcMain.handle(IpcChannels.EXTENSION_PIN, (_event, extensionId: string, pinned: boolean) => {
       this.setPin(extensionId, pinned);
       this.notifyToolbarUpdate(session);
       return { ok: true };
     });
 
-    ipcMain.handle('extension-context-menu', (_event, extensionId: string) => {
+    ipcMain.handle(IpcChannels.EXTENSION_CONTEXT_MENU, (_event, extensionId: string) => {
       this.showContextMenu(extensionId, session);
       return { ok: true };
     });
 
-    ipcMain.handle('extension-options', (_event, extensionId: string) => {
+    ipcMain.handle(IpcChannels.EXTENSION_OPTIONS, (_event, extensionId: string) => {
       const extensions = this.getToolbarExtensions(session);
       const ext = extensions.find(e => e.id === extensionId || e.diskId === extensionId);
       if (ext?.optionsUrl && this.mainWindow) {
-        this.mainWindow.webContents.send('open-url-in-new-tab', ext.optionsUrl);
+        this.mainWindow.webContents.send(IpcChannels.OPEN_URL_IN_NEW_TAB, ext.optionsUrl);
       }
       return { ok: true };
     });

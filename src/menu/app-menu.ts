@@ -7,6 +7,7 @@ import type { VoiceManager } from '../voice/recognition';
 import type { PiPManager } from '../pip/manager';
 import type { ConfigManager } from '../config/manager';
 import type { VideoRecorderManager } from '../video/recorder';
+import { IpcChannels } from '../shared/ipc-channels';
 
 export interface MenuDeps {
   mainWindow: BrowserWindow | null;
@@ -20,7 +21,7 @@ export interface MenuDeps {
 }
 
 export function buildAppMenu(deps: MenuDeps): void {
-  const send = (action: string) => deps.mainWindow?.webContents.send('shortcut', action);
+  const send = (action: string) => deps.mainWindow?.webContents.send(IpcChannels.SHORTCUT, action);
 
   const template: Electron.MenuItemConstructorOptions[] = [
     {

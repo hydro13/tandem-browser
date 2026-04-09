@@ -26,6 +26,7 @@ import type { SnapshotManager } from '../snapshot/manager';
 import type { VideoRecorderManager } from '../video/recorder';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('IpcHandlers');
 
@@ -73,85 +74,85 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
   const ipcChannels = [
-    'tab-update',
-    'chat-send',
-    'chat-send-legacy',
-    'voice-transcript',
-    'voice-status-update',
-    'activity-webview-event',
-    'form-submitted',
-    'show-app-menu',
-    'window-minimize',
-    'window-maximize',
-    'window-close',
-    'show-screenshot-menu',
-    'recording-chunk',
+    IpcChannels.TAB_UPDATE,
+    IpcChannels.CHAT_SEND,
+    IpcChannels.CHAT_SEND_LEGACY,
+    IpcChannels.VOICE_TRANSCRIPT,
+    IpcChannels.VOICE_STATUS_UPDATE,
+    IpcChannels.ACTIVITY_WEBVIEW_EVENT,
+    IpcChannels.FORM_SUBMITTED,
+    IpcChannels.SHOW_APP_MENU,
+    IpcChannels.WINDOW_MINIMIZE,
+    IpcChannels.WINDOW_MAXIMIZE,
+    IpcChannels.WINDOW_CLOSE,
+    IpcChannels.SHOW_SCREENSHOT_MENU,
+    IpcChannels.RECORDING_CHUNK,
   ];
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
   }
   const ipcHandlers = [
-    'snap-for-wingman',
-    'quick-screenshot',
-    'show-screenshot-menu',
-    'bookmark-page',
-    'unbookmark-page',
-    'is-bookmarked',
-    'tab-new',
-    'tab-close',
-    'tab-focus',
-    'tab-focus-index',
-    'tab-list',
-    'emergency-stop',
-    'show-tab-context-menu',
-    'chat-send-image',
-    'chat-persist-message',
-    'navigate',
-    'go-back',
-    'go-forward',
-    'reload',
-    'get-page-content',
-    'get-page-status',
-    'execute-js',
-    'get-api-token',
-    'is-window-maximized',
-    'start-recording',
-    'stop-recording',
-    'get-desktop-source',
+    IpcChannels.SNAP_FOR_WINGMAN,
+    IpcChannels.QUICK_SCREENSHOT,
+    IpcChannels.SHOW_SCREENSHOT_MENU,
+    IpcChannels.BOOKMARK_PAGE,
+    IpcChannels.UNBOOKMARK_PAGE,
+    IpcChannels.IS_BOOKMARKED,
+    IpcChannels.TAB_NEW,
+    IpcChannels.TAB_CLOSE,
+    IpcChannels.TAB_FOCUS,
+    IpcChannels.TAB_FOCUS_INDEX,
+    IpcChannels.TAB_LIST,
+    IpcChannels.EMERGENCY_STOP,
+    IpcChannels.SHOW_TAB_CONTEXT_MENU,
+    IpcChannels.CHAT_SEND_IMAGE,
+    IpcChannels.CHAT_PERSIST_MESSAGE,
+    IpcChannels.NAVIGATE,
+    IpcChannels.GO_BACK,
+    IpcChannels.GO_FORWARD,
+    IpcChannels.RELOAD,
+    IpcChannels.GET_PAGE_CONTENT,
+    IpcChannels.GET_PAGE_STATUS,
+    IpcChannels.EXECUTE_JS,
+    IpcChannels.GET_API_TOKEN,
+    IpcChannels.IS_WINDOW_MAXIMIZED,
+    IpcChannels.START_RECORDING,
+    IpcChannels.STOP_RECORDING,
+    IpcChannels.GET_DESKTOP_SOURCE,
   ];
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
 
   // Listen for tab metadata updates from renderer
-  ipcMain.on('tab-update', (_event, data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
+  ipcMain.on(IpcChannels.TAB_UPDATE, (_event, data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
     tabManager.updateTab(data.tabId, data);
     eventStream.handleTabEvent('tab-updated', { tabId: data.tabId, url: data.url, title: data.title });
     syncTabsToContext(tabManager, contextBridge);
   });
 
   // ═══ Chat IPC — Robin sends messages from renderer ═══
-  ipcMain.on('chat-send', (_event, text: string) => {
+  ipcMain.on(IpcChannels.CHAT_SEND, (_event, text: string) => {
     if (text) {
       panelManager.addChatMessage('robin', text);
     }
   });
 
   // Legacy webhook-based path kept as a fallback during OpenClaw chat migration.
-  ipcMain.on('chat-send-legacy', (_event, text: string) => {
+  ipcMain.on(IpcChannels.CHAT_SEND_LEGACY, (_event, text: string) => {
     if (text) {
       panelManager.addChatMessage('robin', text);
     }
   });
 
   // ═══ Chat Image IPC — Robin pastes image from clipboard ═══
-  ipcMain.handle('chat-send-image', async (_event, data: { text: string; image: string }) => {
+  ipcMain.handle(IpcChannels.CHAT_SEND_IMAGE, async (_event, data: { text: string; image: string }) => {
     const filename = panelManager.saveImage(data.image);
     const msg = panelManager.addChatMessage('robin', data.text || '', filename);
     return { ok: true, message: msg };
   });
 
-  ipcMain.handle('chat-persist-message', async (_event, data: {
+  ipcMain.handle(IpcChannels.CHAT_PERSIST_MESSAGE, async (_event, data: {
     from: 'robin' | 'wingman' | 'kees' | 'claude';
     text?: string;
     image?: string;
@@ -179,7 +180,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Screenshot Snap — composites webview + canvas, saves + clipboard ═══
-  ipcMain.handle('snap-for-wingman', async () => {
+  ipcMain.handle(IpcChannels.SNAP_FOR_WINGMAN, async () => {
     try {
       const activeTab = tabManager.getActiveTab();
       if (!activeTab) return { ok: false, error: 'No active tab' };
@@ -192,7 +193,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Quick Screenshot (no draw mode) ═══
-  ipcMain.handle('quick-screenshot', async () => {
+  ipcMain.handle(IpcChannels.QUICK_SCREENSHOT, async () => {
     try {
       const activeTab = tabManager.getActiveTab();
       if (!activeTab) return { ok: false, error: 'No active tab' };
@@ -204,7 +205,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle('capture-screenshot', async (_event, data: {
+  ipcMain.handle(IpcChannels.CAPTURE_SCREENSHOT, async (_event, data: {
     mode: 'page' | 'application' | 'region';
     region?: { x: number; y: number; width: number; height: number };
   }) => {
@@ -233,28 +234,28 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle('show-screenshot-menu', async (_event, anchor: { x?: number; y?: number }) => {
+  ipcMain.handle(IpcChannels.SHOW_SCREENSHOT_MENU, async (_event, anchor: { x?: number; y?: number }) => {
     const menu = Menu.buildFromTemplate([
       {
         label: 'Web Page',
-        click: () => _win.webContents.send('screenshot-mode-selected', 'page'),
+        click: () => _win.webContents.send(IpcChannels.SCREENSHOT_MODE_SELECTED, 'page'),
       },
       {
         label: 'Application',
-        click: () => _win.webContents.send('screenshot-mode-selected', 'application'),
+        click: () => _win.webContents.send(IpcChannels.SCREENSHOT_MODE_SELECTED, 'application'),
       },
       {
         label: 'Region',
-        click: () => _win.webContents.send('screenshot-mode-selected', 'region'),
+        click: () => _win.webContents.send(IpcChannels.SCREENSHOT_MODE_SELECTED, 'region'),
       },
       { type: 'separator' },
       {
         label: 'Record Application',
-        click: () => _win.webContents.send('recording-mode-selected', 'application'),
+        click: () => _win.webContents.send(IpcChannels.RECORDING_MODE_SELECTED, 'application'),
       },
       {
         label: 'Record Region',
-        click: () => _win.webContents.send('recording-mode-selected', 'region'),
+        click: () => _win.webContents.send(IpcChannels.RECORDING_MODE_SELECTED, 'region'),
       },
     ]);
 
@@ -268,21 +269,21 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Recording IPC ═══
-  ipcMain.handle('start-recording', async (_event, data: {
+  ipcMain.handle(IpcChannels.START_RECORDING, async (_event, data: {
     mode: 'application' | 'region';
     region?: { x: number; y: number; width: number; height: number };
   }) => {
     return videoRecorderManager.startRecording(data.mode, data.region);
   });
 
-  ipcMain.on('recording-chunk', (_event, data: ArrayBuffer) => {
+  ipcMain.on(IpcChannels.RECORDING_CHUNK, (_event, data: ArrayBuffer) => {
     videoRecorderManager.writeChunk(Buffer.from(data));
   });
 
-  ipcMain.handle('stop-recording', async () => {
+  ipcMain.handle(IpcChannels.STOP_RECORDING, async () => {
     const result = await videoRecorderManager.stopRecording();
     if (result.ok && result.recording) {
-      _win.webContents.send('recording-finished', {
+      _win.webContents.send(IpcChannels.RECORDING_FINISHED, {
         path: result.recording.filePath,
         filename: result.recording.filename,
         duration: result.recording.duration,
@@ -292,14 +293,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Native Speech Transcription (Apple Speech / Whisper) ═══
-  ipcMain.handle('transcribe-audio', async (_event, data: { buffer: ArrayBuffer; language?: string }) => {
+  ipcMain.handle(IpcChannels.TRANSCRIBE_AUDIO, async (_event, data: { buffer: ArrayBuffer; language?: string }) => {
     const { transcribeAudio } = await import('../voice/speech-transcriber');
     const buffer = Buffer.from(data.buffer);
     const language = data.language || 'nl-BE';
     return transcribeAudio(buffer, language);
   });
 
-  ipcMain.handle('get-speech-backend', async () => {
+  ipcMain.handle(IpcChannels.GET_SPEECH_BACKEND, async () => {
     const { detectBackend } = await import('../voice/speech-transcriber');
     return { backend: detectBackend() };
   });
@@ -307,7 +308,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
 
   // ═══ Microphone Permission Request ═══
-  ipcMain.handle('request-mic-permission', async () => {
+  ipcMain.handle(IpcChannels.REQUEST_MIC_PERMISSION, async () => {
     if (process.platform !== 'darwin') return { granted: true };
     const { systemPreferences } = require('electron');
     const status = systemPreferences.getMediaAccessStatus('microphone');
@@ -319,7 +320,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Desktop Source for Renderer Video Capture ═══
-  ipcMain.handle('get-desktop-source', async () => {
+  ipcMain.handle(IpcChannels.GET_DESKTOP_SOURCE, async () => {
     try {
       // On macOS, check Screen Recording permission before attempting capture
       if (process.platform === 'darwin') {
@@ -356,19 +357,19 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Voice IPC ═══
-  ipcMain.on('voice-transcript', (_event, data: { text: string; isFinal: boolean }) => {
+  ipcMain.on(IpcChannels.VOICE_TRANSCRIPT, (_event, data: { text: string; isFinal: boolean }) => {
     voiceManager.handleTranscript(data.text, data.isFinal);
     eventStream.handleVoiceInput(data);
   });
 
-  ipcMain.on('voice-status-update', (_event, data: { listening: boolean }) => {
+  ipcMain.on(IpcChannels.VOICE_STATUS_UPDATE, (_event, data: { listening: boolean }) => {
     voiceManager.setListening(data.listening);
     eventStream.handleVoiceStatus(data);
     contextBridge.setVoiceActive(data.listening);
   });
 
   // ═══ Activity tracking: webview events from renderer ═══
-  ipcMain.on('activity-webview-event', (_event, data: { type: string; url?: string; tabId?: string }) => {
+  ipcMain.on(IpcChannels.ACTIVITY_WEBVIEW_EVENT, (_event, data: { type: string; url?: string; tabId?: string }) => {
     // Feed into EventStreamManager for SSE
     const activeTab = tabManager.getActiveTab();
     eventStream.handleWebviewEvent({ ...data, title: activeTab?.title });
@@ -464,7 +465,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // ═══ Form submit tracking ═══
-  ipcMain.on('form-submitted', (_event, data: { url: string; fields: Array<{ name: string; type: string; id: string; value: string }> }) => {
+  ipcMain.on(IpcChannels.FORM_SUBMITTED, (_event, data: { url: string; fields: Array<{ name: string; type: string; id: string; value: string }> }) => {
     if (data.url && data.fields) {
       formMemory.recordForm(data.url, data.fields);
     }
@@ -473,14 +474,14 @@ export function registerIpcHandlers(deps: IpcDeps): void {
 
   // Tab management IPC for renderer shortcuts
   // Bookmark IPC handlers
-  ipcMain.handle('bookmark-page', async (_event, url: string, title: string) => {
+  ipcMain.handle(IpcChannels.BOOKMARK_PAGE, async (_event, url: string, title: string) => {
     const existing = bookmarkManager.findByUrl(url);
     if (existing) return { ok: true, bookmark: existing, alreadyBookmarked: true };
     const bookmark = bookmarkManager.add(title || url, url);
     return { ok: true, bookmark, alreadyBookmarked: false };
   });
 
-  ipcMain.handle('unbookmark-page', async (_event, url: string) => {
+  ipcMain.handle(IpcChannels.UNBOOKMARK_PAGE, async (_event, url: string) => {
     const existing = bookmarkManager.findByUrl(url);
     if (existing) {
       bookmarkManager.remove(existing.id);
@@ -489,11 +490,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { ok: false };
   });
 
-  ipcMain.handle('is-bookmarked', async (_event, url: string) => {
+  ipcMain.handle(IpcChannels.IS_BOOKMARKED, async (_event, url: string) => {
     return bookmarkManager.isBookmarked(url);
   });
 
-  ipcMain.handle('tab-new', async (_event, url?: string) => {
+  ipcMain.handle(IpcChannels.TAB_NEW, async (_event, url?: string) => {
     const targetUrl = url || `file://${path.join(__dirname, '..', '..', 'shell', 'newtab.html')}`;
     const tab = await tabManager.openTab(targetUrl);
     if (tab) {
@@ -504,7 +505,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return tab;
   });
 
-  ipcMain.handle('tab-close', async (_event, tabId: string) => {
+  ipcMain.handle(IpcChannels.TAB_CLOSE, async (_event, tabId: string) => {
     // Capture tab info before closing
     const closingTab = tabManager.getTab(tabId);
     const result = await tabManager.closeTab(tabId);
@@ -521,7 +522,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return result;
   });
 
-  ipcMain.handle('tab-focus', async (_event, tabId: string) => {
+  ipcMain.handle(IpcChannels.TAB_FOCUS, async (_event, tabId: string) => {
     behaviorObserver.recordTabSwitch(tabId);
     const tabs = tabManager.listTabs();
     const tab = tabs.find(t => t.id === tabId);
@@ -537,28 +538,28 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return result;
   });
 
-  ipcMain.handle('tab-focus-index', async (_event, index: number) => {
+  ipcMain.handle(IpcChannels.TAB_FOCUS_INDEX, async (_event, index: number) => {
     return tabManager.focusByIndex(index);
   });
 
-  ipcMain.handle('tab-list', async () => {
+  ipcMain.handle(IpcChannels.TAB_LIST, async () => {
     return tabManager.listTabs();
   });
 
   // ═══ Tab Context Menu — right-click on tab bar ═══
-  ipcMain.handle('show-tab-context-menu', async (_event, tabId: string) => {
+  ipcMain.handle(IpcChannels.SHOW_TAB_CONTEXT_MENU, async (_event, tabId: string) => {
     contextMenuManager.showTabContextMenu(tabId);
   });
 
   // ═══ Emergency Stop — Escape key from renderer ═══
-  ipcMain.handle('emergency-stop', async () => {
+  ipcMain.handle(IpcChannels.EMERGENCY_STOP, async () => {
     const result = taskManager.emergencyStop();
     panelManager.addChatMessage('wingman', `🛑 Emergency stop! ${result.stopped} tasks stopped.`);
     return result;
   });
 
   // Navigation IPC handlers
-  ipcMain.handle('navigate', async (_event, url: string) => {
+  ipcMain.handle(IpcChannels.NAVIGATE, async (_event, url: string) => {
     const wc = await tabManager.getActiveWebContents();
     if (wc) {
       void wc.loadURL(url);
@@ -567,7 +568,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { success: false, error: 'No active tab' };
   });
 
-  ipcMain.handle('go-back', async () => {
+  ipcMain.handle(IpcChannels.GO_BACK, async () => {
     const wc = await tabManager.getActiveWebContents();
     if (wc && wc.navigationHistory.canGoBack()) {
       wc.navigationHistory.goBack();
@@ -576,7 +577,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { success: false };
   });
 
-  ipcMain.handle('go-forward', async () => {
+  ipcMain.handle(IpcChannels.GO_FORWARD, async () => {
     const wc = await tabManager.getActiveWebContents();
     if (wc && wc.navigationHistory.canGoForward()) {
       wc.navigationHistory.goForward();
@@ -585,7 +586,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { success: false };
   });
 
-  ipcMain.handle('reload', async () => {
+  ipcMain.handle(IpcChannels.RELOAD, async () => {
     const wc = await tabManager.getActiveWebContents();
     if (wc) {
       wc.reload();
@@ -594,7 +595,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     return { success: false };
   });
 
-  ipcMain.handle('get-page-content', async () => {
+  ipcMain.handle(IpcChannels.GET_PAGE_CONTENT, async () => {
     const wc = await tabManager.getActiveWebContents();
     if (!wc) return { success: false, error: 'No active tab' };
 
@@ -608,7 +609,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle('get-page-status', async () => {
+  ipcMain.handle(IpcChannels.GET_PAGE_STATUS, async () => {
     const wc = await tabManager.getActiveWebContents();
     if (!wc) return { success: false, error: 'No active tab' };
 
@@ -624,7 +625,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle('execute-js', async (_event, code: string) => {
+  ipcMain.handle(IpcChannels.EXECUTE_JS, async (_event, code: string) => {
     const wc = await tabManager.getActiveWebContents();
     if (!wc) return { success: false, error: 'No active tab' };
 
@@ -636,7 +637,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle('get-api-token', async () => {
+  ipcMain.handle(IpcChannels.GET_API_TOKEN, async () => {
     try {
       return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
     } catch {
@@ -645,8 +646,8 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
   // App menu popup (frameless window on Linux)
-  ipcMain.on('show-app-menu', (_event, data: { x: number; y: number }) => {
-    const send = (action: string) => _win.webContents.send('shortcut', action);
+  ipcMain.on(IpcChannels.SHOW_APP_MENU, (_event, data: { x: number; y: number }) => {
+    const send = (action: string) => _win.webContents.send(IpcChannels.SHORTCUT, action);
     
     const template: Electron.MenuItemConstructorOptions[] = [
       {
@@ -728,16 +729,16 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   });
 
     // Window controls (frameless window on Linux)
-  ipcMain.on('panel-open-changed', (_event, data: { open: boolean }) => {
+  ipcMain.on(IpcChannels.PANEL_OPEN_CHANGED, (_event, data: { open: boolean }) => {
     // Update internal state only — do NOT send panel-toggle IPC back to avoid feedback loop
     panelManager.setPanelOpenSilent(data.open);
   });
 
-  ipcMain.on('window-minimize', () => {
+  ipcMain.on(IpcChannels.WINDOW_MINIMIZE, () => {
     _win.minimize();
   });
 
-  ipcMain.on('window-maximize', () => {
+  ipcMain.on(IpcChannels.WINDOW_MAXIMIZE, () => {
     if (_win.isMaximized()) {
       _win.unmaximize();
     } else {
@@ -745,11 +746,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.on('window-close', () => {
+  ipcMain.on(IpcChannels.WINDOW_CLOSE, () => {
     _win.close();
   });
 
-  ipcMain.handle('is-window-maximized', () => {
+  ipcMain.handle(IpcChannels.IS_WINDOW_MAXIMIZED, () => {
     return _win.isMaximized();
   });
 

@@ -3,6 +3,7 @@ import { webContents } from 'electron';
 import type { SyncManager } from '../sync/manager';
 import type { SessionRestoreManager } from '../session/restore';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('TabManager');
 
@@ -340,7 +341,7 @@ export class TabManager {
     }
 
     // Now notify renderer of source indicator (after focus is done)
-    this.win.webContents.send('tab-source-changed', { tabId: id, source });
+    this.win.webContents.send(IpcChannels.TAB_SOURCE_CHANGED, { tabId: id, source });
 
     if (inheritedTab) {
       await this.restoreIndexedDbFromSource(inheritedTab.id, id, resolvedUrl);
@@ -430,7 +431,7 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.source = source;
-    this.win.webContents.send('tab-source-changed', { tabId, source });
+    this.win.webContents.send(IpcChannels.TAB_SOURCE_CHANGED, { tabId, source });
     return true;
   }
 
@@ -465,7 +466,7 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.pinned = true;
-    this.win.webContents.send('tab-pin-changed', { tabId, pinned: true });
+    this.win.webContents.send(IpcChannels.TAB_PIN_CHANGED, { tabId, pinned: true });
     this.onTabsChanged();
     return true;
   }
@@ -475,7 +476,7 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return false;
     tab.pinned = false;
-    this.win.webContents.send('tab-pin-changed', { tabId, pinned: false });
+    this.win.webContents.send(IpcChannels.TAB_PIN_CHANGED, { tabId, pinned: false });
     this.onTabsChanged();
     return true;
   }

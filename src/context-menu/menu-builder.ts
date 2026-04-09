@@ -3,6 +3,7 @@ import { Menu, MenuItem, clipboard, dialog, webContents } from 'electron';
 import type { ContextMenuParams, ContextMenuDeps } from './types';
 import { getPasswordManager } from '../passwords/manager';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('ContextMenu');
 
@@ -389,7 +390,7 @@ export class ContextMenuBuilder {
         label: 'Ask Wingman about Selection',
         click: () => {
           this.deps.panelManager.togglePanel(true);
-          this.deps.win.webContents.send('wingman-chat-inject',
+          this.deps.win.webContents.send(IpcChannels.WINGMAN_CHAT_INJECT,
             `What can you tell me about this: "${truncatedForPrompt}"`
           );
         },
@@ -403,7 +404,7 @@ export class ContextMenuBuilder {
         label: 'Ask Wingman about this Image',
         click: () => {
           this.deps.panelManager.togglePanel(true);
-          this.deps.win.webContents.send('wingman-chat-inject',
+          this.deps.win.webContents.send(IpcChannels.WINGMAN_CHAT_INJECT,
             `Analyze this image: ${safeSrc}`
           );
         },
@@ -432,14 +433,14 @@ export class ContextMenuBuilder {
           ? 'Please summarize this page:\\n\\n' + excerpt
           : 'Please summarize the current page for me.';
 
-        this.deps.win.webContents.send('wingman-chat-inject', prompt);
+        this.deps.win.webContents.send(IpcChannels.WINGMAN_CHAT_INJECT, prompt);
       },
     }));
 
     menu.append(new MenuItem({
       label: 'Screenshot this Page',
       click: () => {
-        this.deps.win.webContents.send('shortcut', 'quick-screenshot');
+        this.deps.win.webContents.send(IpcChannels.SHORTCUT, 'quick-screenshot');
       },
     }));
 
@@ -461,7 +462,7 @@ export class ContextMenuBuilder {
           this.deps.bookmarkManager.add(pageTitle || pageUrl, pageUrl);
         }
         // Notify renderer to update bookmark star
-        this.deps.win.webContents.send('bookmark-status-changed', {
+        this.deps.win.webContents.send(IpcChannels.BOOKMARK_STATUS_CHANGED, {
           url: pageUrl,
           bookmarked: !currentlyBookmarked,
         });
@@ -675,7 +676,7 @@ export class ContextMenuBuilder {
     this.addSeparator(menu);
 
     const notifyAdded = (boardId: string) => {
-      this.deps.win.webContents.send('pinboard-item-added', boardId);
+      this.deps.win.webContents.send(IpcChannels.PINBOARD_ITEM_ADDED, boardId);
     };
 
     // Save page to Pinboard (always available)

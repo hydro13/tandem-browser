@@ -3,6 +3,7 @@ import { syncTabsToContext } from '../ipc/handlers';
 import type { Logger } from '../utils/logger';
 import { CDP_ATTACH_DELAY_MS } from '../utils/constants';
 import type { PendingTabRegister, RuntimeManagers } from './types';
+import { IpcChannels } from '../shared/ipc-channels';
 
 interface RegisterInitialTabLifecycleOptions {
   win: BrowserWindow;
@@ -78,7 +79,7 @@ function processInitialTabRegistration(
 
   const tab = runtime.tabManager.registerInitialTab(data.webContentsId, data.url);
   if (canUseWindow(win)) {
-    win.webContents.send('tab-registered', { tabId: tab.id });
+    win.webContents.send(IpcChannels.TAB_REGISTERED, { tabId: tab.id });
   }
   runtime.eventStream.handleTabEvent('tab-opened', { tabId: tab.id, url: data.url });
   syncTabsToContext(runtime.tabManager, runtime.contextBridge);
@@ -97,7 +98,7 @@ function processInitialTabRegistration(
 export function registerInitialTabLifecycle(opts: RegisterInitialTabLifecycleOptions): void {
   const { win, runtime, canUseWindow, pendingTabRegister, setPendingTabRegister, log } = opts;
 
-  ipcMain.on('tab-register', (_event, data: PendingTabRegister) => {
+  ipcMain.on(IpcChannels.TAB_REGISTER, (_event, data: PendingTabRegister) => {
     if (runtime.tabManager.count !== 0) {
       return;
     }

@@ -1,5 +1,6 @@
 import type { BrowserWindow } from 'electron';
 import type { PanelManager } from '../panel/manager';
+import { IpcChannels } from '../shared/ipc-channels';
 
 /**
  * VoiceManager — Manages voice input via Web Speech API in the SHELL.
@@ -28,7 +29,7 @@ export class VoiceManager {
   toggleVoice(): boolean {
     this.listening = !this.listening;
     if (this.canSendToRenderer()) {
-      this.win.webContents.send('voice-toggle', { listening: this.listening });
+      this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: this.listening });
     }
     if (this.listening) {
       // Ensure panel is open and on chat tab
@@ -42,7 +43,7 @@ export class VoiceManager {
     if (!this.listening) {
       this.listening = true;
       if (this.canSendToRenderer()) {
-        this.win.webContents.send('voice-toggle', { listening: true });
+        this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: true });
       }
       this.panelManager.togglePanel(true);
     }
@@ -53,7 +54,7 @@ export class VoiceManager {
     if (this.listening) {
       this.listening = false;
       if (this.canSendToRenderer()) {
-        this.win.webContents.send('voice-toggle', { listening: false });
+        this.win.webContents.send(IpcChannels.VOICE_TOGGLE, { listening: false });
       }
     }
   }
@@ -66,7 +67,7 @@ export class VoiceManager {
     }
     // Send live transcript to renderer for display
     if (this.canSendToRenderer()) {
-      this.win.webContents.send('voice-transcript-display', { text, isFinal });
+      this.win.webContents.send(IpcChannels.VOICE_TRANSCRIPT_DISPLAY, { text, isFinal });
     }
   }
 
