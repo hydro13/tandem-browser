@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: March 17, 2026
+Last updated: April 9, 2026
 
 ## Purpose
 
@@ -14,7 +14,7 @@ Last updated: March 17, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.67.0`
+- Current app version: `0.68.0`
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -24,6 +24,7 @@ Last updated: March 17, 2026
 
 ### Product Features
 
+- [ ] Update `skill/SKILL.md` to document MCP as a first-class connection method alongside direct HTTP, with examples for Claude Code, Cursor, and other MCP clients
 - [ ] Remove the remaining legacy OpenClaw compatibility IPC and unused webhook chat code after the signed gateway-chat path has shipped for a release or two
 - [ ] `WebSocket /watch/live` for live watch updates
 - [ ] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
@@ -86,6 +87,9 @@ Last updated: March 17, 2026
 
 ## Recently Completed
 
+- [x] MCP Server — Full API Coverage: expanded from 24 to 63 tools across 4 phases (tab targeting + snapshots, devtools + network, workspaces + sessions, tab locks + content). MCP is now a first-class connection method alongside direct HTTP.
+- [x] Preload sandbox fix: added esbuild bundling step so the split preload modules work with Electron's `sandbox: true`
+- [x] Security dependency updates: resolved all 28 Dependabot alerts (electron, hono, lodash, brace-expansion, path-to-regexp)
 - [x] Workspace API handoff for OpenClaw: `/tabs/open` now honors `workspaceId`, `/workspaces/:id/activate` and `/workspaces/:id/tabs` exist, and `/wingman-alert` can bring the requested workspace into view before notifying the user
 - [x] API `X-Tab-Id` targeting for `/snapshot`, `/page-content`, `/page-html`, and `/execute-js`, with background-tab-safe CDP evaluation and tab-scoped snapshot refs
 - [x] Password manager: local SQLite + AES-256-GCM vault, master password, autofill, password generator, and `GET /passwords/suggest`
