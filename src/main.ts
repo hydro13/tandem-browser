@@ -13,7 +13,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Main] Unhandled rejection:', reason);
 });
 
-import { webContents, type WebContents } from 'electron';
+import { nativeTheme, webContents, type WebContents } from 'electron';
 import fs from 'fs';
 import { app, BrowserWindow, session, ipcMain } from 'electron';
 
@@ -21,6 +21,8 @@ import { app, BrowserWindow, session, ipcMain } from 'electron';
 // Default Electron renderer heap is ~1.5GB which causes OOM on sites like zhipin.com.
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=4096');
 app.commandLine.appendSwitch('enable-precise-memory-info');
+app.commandLine.appendSwitch('disable-features', 'WebContentsForceDark');
+nativeTheme.themeSource = 'system';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
