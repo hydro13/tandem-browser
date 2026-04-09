@@ -67,7 +67,7 @@
     "@types/turndown": "^5.0.6",
     "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.0.18",
-    "electron": "^40.6.0",
+    "electron": "^40.8.5",
     "electron-builder": "^26.0.0",
     "esbuild": "^0.28.0",
     "eslint": "^10.0.3",
