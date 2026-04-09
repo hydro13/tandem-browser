@@ -13,16 +13,24 @@ const server = new McpServer({
   version: '0.1.0',
 });
 
+/** Build X-Tab-Id headers when a tabId is provided */
+function tabHeaders(tabId?: string): Record<string, string> | undefined {
+  return tabId ? { 'X-Tab-Id': tabId } : undefined;
+}
+
 // ═══════════════════════════════════════════════
 // tandem_navigate — Navigate to a URL
 // ═══════════════════════════════════════════════
 
 server.tool(
   'tandem_navigate',
-  'Navigate the active browser tab to a URL',
-  { url: z.string().describe('The URL to navigate to') },
-  async ({ url }) => {
-    await apiCall('POST', '/navigate', { url });
+  'Navigate a browser tab to a URL. Supports targeting a background tab by ID.',
+  {
+    url: z.string().describe('The URL to navigate to'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ url, tabId }) => {
+    await apiCall('POST', '/navigate', { url }, tabHeaders(tabId));
     await logActivity('navigate', url);
     return { content: [{ type: 'text', text: `Navigated to ${url}` }] };
   }
@@ -82,9 +90,12 @@ function truncateToWords(text: string, maxWords: number): string {
 
 server.tool(
   'tandem_read_page',
-  'Read the current page content as markdown text (max 2000 words)',
-  async () => {
-    const data = await apiCall('GET', '/page-content');
+  'Read page content as markdown text (max 2000 words). Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/page-content', undefined, tabHeaders(tabId));
     const title = data.title || 'Untitled';
     const url = data.url || '';
     const description = data.description || '';
@@ -108,9 +119,12 @@ server.tool(
 
 server.tool(
   'tandem_screenshot',
-  'Take a screenshot of the current browser tab',
-  async () => {
-    const base64 = await apiCall('GET', '/screenshot');
+  'Take a screenshot of a browser tab. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const base64 = await apiCall('GET', '/screenshot', undefined, tabHeaders(tabId));
     await logActivity('screenshot');
     return {
       content: [{
@@ -128,9 +142,12 @@ server.tool(
 
 server.tool(
   'tandem_get_links',
-  'Get all links on the current page with their text and URLs',
-  async () => {
-    const data = await apiCall('GET', '/links');
+  'Get all links on the page with their text and URLs. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/links', undefined, tabHeaders(tabId));
     const links: Array<{ text: string; href: string; visible: boolean }> = data.links || [];
 
     let text = `Found ${links.length} links:\n\n`;
@@ -150,10 +167,13 @@ server.tool(
 
 server.tool(
   'tandem_wait_for_load',
-  'Wait for the current page to finish loading',
-  { timeout: z.number().optional().default(10000).describe('Timeout in milliseconds (default: 10000)') },
-  async ({ timeout }) => {
-    const result = await apiCall('POST', '/wait', { timeout });
+  'Wait for a page to finish loading. Supports targeting a background tab by ID.',
+  {
+    timeout: z.number().optional().default(10000).describe('Timeout in milliseconds (default: 10000)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ timeout, tabId }) => {
+    const result = await apiCall('POST', '/wait', { timeout }, tabHeaders(tabId));
     await logActivity('wait_for_load');
 
     if (result.timeout) {
@@ -169,12 +189,13 @@ server.tool(
 
 server.tool(
   'tandem_click',
-  'Click an element on the page by CSS selector',
+  'Click an element on the page by CSS selector. Supports targeting a background tab by ID.',
   {
     selector: z.string().describe('CSS selector of the element to click'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ selector }) => {
-    const result = await apiCall('POST', '/click', { selector });
+  async ({ selector, tabId }) => {
+    const result = await apiCall('POST', '/click', { selector }, tabHeaders(tabId));
     await logActivity('click', selector);
     return { content: [{ type: 'text', text: `Clicked: ${selector} — ${JSON.stringify(result)}` }] };
   }
@@ -186,14 +207,15 @@ server.tool(
 
 server.tool(
   'tandem_type',
-  'Type text into an input field by CSS selector',
+  'Type text into an input field by CSS selector. Supports targeting a background tab by ID.',
   {
     selector: z.string().describe('CSS selector of the input field'),
     text: z.string().describe('Text to type'),
     clear: z.boolean().optional().default(false).describe('Clear the field before typing'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ selector, text, clear }) => {
-    await apiCall('POST', '/type', { selector, text, clear });
+  async ({ selector, text, clear, tabId }) => {
+    await apiCall('POST', '/type', { selector, text, clear }, tabHeaders(tabId));
     await logActivity('type', `${selector}: "${text.substring(0, 50)}"`);
     return { content: [{ type: 'text', text: `Typed "${text}" into ${selector}` }] };
   }
@@ -205,15 +227,154 @@ server.tool(
 
 server.tool(
   'tandem_scroll',
-  'Scroll the page up or down',
+  'Scroll the page up or down. Supports targeting a background tab by ID.',
   {
     direction: z.enum(['up', 'down']).describe('Scroll direction'),
     amount: z.number().optional().default(500).describe('Scroll amount in pixels (default: 500)'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
   },
-  async ({ direction, amount }) => {
-    await apiCall('POST', '/scroll', { direction, amount });
+  async ({ direction, amount, tabId }) => {
+    await apiCall('POST', '/scroll', { direction, amount }, tabHeaders(tabId));
     await logActivity('scroll', `${direction} ${amount}px`);
     return { content: [{ type: 'text', text: `Scrolled ${direction} ${amount}px` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_snapshot — Get accessibility tree with @ref IDs
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_snapshot',
+  'Get the accessibility tree of the page with @ref IDs for element interaction. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+    compact: z.boolean().optional().describe('Return a compact snapshot (fewer details)'),
+    interactive: z.boolean().optional().describe('Only include interactive elements'),
+    selector: z.string().optional().describe('CSS selector to scope the snapshot to a subtree'),
+  },
+  async ({ tabId, compact, interactive, selector }) => {
+    const params = new URLSearchParams();
+    if (compact) params.set('compact', 'true');
+    if (interactive) params.set('interactive', 'true');
+    if (selector) params.set('selector', selector);
+    const qs = params.toString();
+    const endpoint = qs ? `/snapshot?${qs}` : '/snapshot';
+    const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
+    await logActivity('snapshot', `${data.count ?? 0} nodes`);
+    return { content: [{ type: 'text', text: data.snapshot || '' }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_snapshot_click — Click element by @ref from snapshot
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_snapshot_click',
+  'Click an element by its @ref ID from a previous snapshot. Supports targeting a background tab by ID.',
+  {
+    ref: z.string().describe('The @ref ID of the element to click (e.g. "@e1")'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ ref, tabId }) => {
+    await apiCall('POST', '/snapshot/click', { ref }, tabHeaders(tabId));
+    await logActivity('snapshot_click', ref);
+    return { content: [{ type: 'text', text: `Clicked element ${ref}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_snapshot_fill — Fill input by @ref from snapshot
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_snapshot_fill',
+  'Fill an input element by its @ref ID from a previous snapshot. Supports targeting a background tab by ID.',
+  {
+    ref: z.string().describe('The @ref ID of the input element (e.g. "@e3")'),
+    value: z.string().describe('The value to fill into the input'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ ref, value, tabId }) => {
+    await apiCall('POST', '/snapshot/fill', { ref, value }, tabHeaders(tabId));
+    await logActivity('snapshot_fill', `${ref}: "${value.substring(0, 50)}"`);
+    return { content: [{ type: 'text', text: `Filled element ${ref} with "${value}"` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_find — Find elements by semantic locator
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_find',
+  'Find elements on the page by semantic locator (role, text, label, or placeholder). Supports targeting a background tab by ID.',
+  {
+    by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
+    value: z.string().describe('Value to search for'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ by, value, tabId }) => {
+    const result = await apiCall('POST', '/find', { by, value }, tabHeaders(tabId));
+    await logActivity('find', `${by}="${value}"`);
+    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_find_click — Find and click element
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_find_click',
+  'Find an element by semantic locator and click it. Supports targeting a background tab by ID.',
+  {
+    by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
+    value: z.string().describe('Value to search for'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ by, value, tabId }) => {
+    const result = await apiCall('POST', '/find/click', { by, value }, tabHeaders(tabId));
+    await logActivity('find_click', `${by}="${value}"`);
+    return { content: [{ type: 'text', text: `Clicked element found by ${by}="${value}" (ref: ${result.ref})` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_find_fill — Find and fill element
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_find_fill',
+  'Find an input element by semantic locator and fill it with text. Supports targeting a background tab by ID.',
+  {
+    by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
+    value: z.string().describe('Value to search for the element'),
+    text: z.string().describe('Text to fill into the input'),
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ by, value, text, tabId }) => {
+    const result = await apiCall('POST', '/find/fill', { by, value, fillValue: text }, tabHeaders(tabId));
+    await logActivity('find_fill', `${by}="${value}": "${text.substring(0, 50)}"`);
+    return { content: [{ type: 'text', text: `Filled element found by ${by}="${value}" with "${text}" (ref: ${result.ref})` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_get_forms — Get all forms on page with fields
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_get_forms',
+  'Get all forms on the page with their fields and attributes. Supports targeting a background tab by ID.',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('GET', '/forms', undefined, tabHeaders(tabId));
+    await logActivity('get_forms');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
   }
 );
 

@@ -10,7 +10,7 @@ function getToken(): string {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any -- MCP relays many heterogeneous Tandem API responses
-export async function apiCall(method: string, endpoint: string, body?: any): Promise<any> {
+export async function apiCall(method: string, endpoint: string, body?: any, headers?: Record<string, string>): Promise<any> {
   const token = getToken();
 
   let response: Response;
@@ -19,7 +19,8 @@ export async function apiCall(method: string, endpoint: string, body?: any): Pro
       method,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${token}`,
+        ...headers,
       },
       body: body ? JSON.stringify(body) : undefined
     });
