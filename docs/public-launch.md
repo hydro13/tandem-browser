@@ -5,25 +5,25 @@ repository to the public.
 
 ## GitHub Repository Description
 
-First-party OpenClaw companion browser for human-AI collaboration with local API control and built-in security.
+Agent-first browser for human-AI collaboration — 231 MCP tools, 300+ HTTP endpoints, built-in security.
 
 ## Short Tagline
 
-An OpenClaw-first browser for browsing together.
+An agent-first browser for human-AI collaboration.
 
 ## Social / Announcement One-Liner
 
-Tandem Browser is now public: a first-party OpenClaw companion browser for human-AI collaboration, released as a developer preview.
+Tandem Browser is now public: an agent-first browser for human-AI collaboration with 231 MCP tools and 300+ HTTP endpoints, released as a developer preview.
 
 ## Launch Post
 
 Tandem Browser is now public.
 
-Tandem is a first-party OpenClaw companion browser built for human-AI
-collaboration on the local machine. The human browses normally. OpenClaw gets a
-local browser API for navigation, extraction, automation, screenshots, session
-work, and observability, while websites continue to see a normal Chromium
-browser instead of an "AI browser" fingerprint.
+Tandem is an agent-first browser built for human-AI collaboration on the local
+machine. The human browses normally. Any AI agent that speaks MCP (231 tools) or
+HTTP (300+ endpoints) gets full browser control for navigation, extraction,
+automation, screenshots, session work, and observability, while websites
+continue to see a normal Chromium browser instead of an "AI browser" fingerprint.
 
 This is a public developer preview, not a polished end-user release yet.
 macOS is the primary platform today, Linux is secondary, and there are still
@@ -31,10 +31,10 @@ known rough edges in some workflows. But the core repo, API surface, test
 baseline, and product direction are now ready for public review.
 
 The point of publishing this is also to let other contributors help improve the
-browser. If you care about OpenClaw workflows, local-first browsing, security,
+browser. If you care about agent workflows, local-first browsing, MCP tooling, security,
 or agent-facing browser infrastructure, contributions are welcome.
 
-If you maintain OpenClaw-adjacent tooling, browser automation systems, Electron
+If you maintain MCP-compatible agents, browser automation systems, Electron
 infrastructure, or local-first agent products, this is the layer where those
 concerns meet a real browser shell.
 
@@ -43,6 +43,7 @@ Repository:
 
 ## Suggested GitHub Topics
 
+- `mcp`
 - `openclaw`
 - `electron`
 - `browser`
@@ -53,10 +54,12 @@ Repository:
 - `security`
 - `agent-tools`
 - `browser-automation`
+- `mcp-server`
 
 ## Maintainer Notes
 
-- Position Tandem as a first-party OpenClaw companion browser.
+- Position Tandem as an agent-first browser for human-AI collaboration.
+- OpenClaw is the origin story and Wingman integration, not the exclusive focus.
 - Keep the wording `developer preview` until packaging and remaining product
   rough edges are addressed.
 - Avoid framing Tandem as a gimmick, wrapper, or generic browser shell with AI
