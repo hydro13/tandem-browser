@@ -105,9 +105,13 @@
     abortController = new AbortController();
 
     try {
+      const token = window.__TANDEM_TOKEN__ || '';
       const res = await fetch(
         `${API_BASE}/history/search?q=${encodeURIComponent(query)}`,
-        { signal: abortController.signal }
+        {
+          signal: abortController.signal,
+          headers: { Authorization: `Bearer ${token}` }
+        }
       );
       if (!res.ok) return;
       const data = await res.json();
