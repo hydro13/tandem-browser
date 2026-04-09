@@ -2,7 +2,14 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { apiCall, truncateToWords } from './api-client.js';
 import { API_PORT } from '../utils/constants';
-import { createLogger } from '../utils/logger';
+// MCP uses stdio for protocol messages — ALL logging must go to stderr.
+// createLogger uses console.info/debug which go to stdout and break the protocol.
+const log = {
+  info:  (...args: unknown[]) => console.error('[McpServer]', ...args),
+  warn:  (...args: unknown[]) => console.error('[McpServer]', ...args),
+  error: (...args: unknown[]) => console.error('[McpServer]', ...args),
+  debug: (...args: unknown[]) => console.error('[McpServer]', ...args),
+};
 
 // Tool registration imports
 import { registerNavigationTools } from './tools/navigation.js';
@@ -36,7 +43,7 @@ import { registerMediaTools } from './tools/media.js';
 import { registerEventTools } from './tools/events.js';
 import { registerSystemTools } from './tools/system.js';
 
-const log = createLogger('McpServer');
+// log is defined above — stderr-only for MCP stdio safety
 
 const server = new McpServer({
   name: 'tandem-browser',
