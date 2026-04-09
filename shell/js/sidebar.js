@@ -61,7 +61,12 @@
     };
 
     function getIconSvg(slug) {
-      return WORKSPACE_ICONS[slug] || WORKSPACE_ICONS.home;
+      if (WORKSPACE_ICONS[slug]) return WORKSPACE_ICONS[slug];
+      // If the slug isn't a known icon name, render it directly (supports emoji icons)
+      if (slug && typeof slug === 'string' && slug.trim()) {
+        return `<span class="workspace-emoji-icon">${slug}</span>`;
+      }
+      return WORKSPACE_ICONS.home;
     }
 
     async function loadQuickLinksConfig() {
@@ -2050,7 +2055,7 @@
         targets.forEach(ws => {
           const si = document.createElement('div');
           si.className = 'tandem-ctx-submenu-item';
-          const icon = WORKSPACE_ICONS[ws.icon] || WORKSPACE_ICONS['home'];
+          const icon = getIconSvg(ws.icon);
           si.innerHTML = '<span class="ws-ctx-icon">' + icon + '</span><span>' + ws.name + '</span>';
           si.addEventListener('click', () => {
             closeCtxMenu();

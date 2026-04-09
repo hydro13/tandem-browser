@@ -494,6 +494,11 @@
       width: 20px;
       height: 20px;
     }
+    .workspace-emoji-icon {
+      font-size: 16px;
+      line-height: 20px;
+      text-align: center;
+    }
     .workspace-add-btn {
       opacity: 0.4;
       transition: opacity 0.15s;
