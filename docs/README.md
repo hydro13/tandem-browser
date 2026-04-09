@@ -3,12 +3,13 @@
 This directory contains both public project documentation and maintainer-facing
 working material.
 
-Tandem itself is a public developer preview and is intentionally positioned as
-an OpenClaw-first browser environment, so documentation should stay consistent
-with that framing.
+Tandem itself is a public developer preview positioned as an agent-first browser
+for human-AI collaboration, so documentation should stay consistent with that
+framing.
 
-That positioning is first-party, not incidental: Tandem is maintained in the
-same ecosystem as OpenClaw and should be documented accordingly.
+Tandem was originally built for OpenClaw and continues to be maintained in the
+same ecosystem, but the MCP server (231 tools) and HTTP API (300+ endpoints)
+make it equally accessible to any MCP-compatible agent.
 
 ## Start Here
 

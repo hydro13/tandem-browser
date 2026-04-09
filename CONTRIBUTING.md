@@ -32,13 +32,14 @@ The repository is currently maintained as a public developer preview.
 Please keep changes honest about current product maturity. Do not present
 unfinished features as production-ready.
 
-Tandem is also intentionally OpenClaw-first. Contributions should preserve that
-positioning in public docs, UX wording, and architecture decisions unless the
-project direction explicitly changes.
+Tandem is an agent-first browser for human-AI collaboration. Contributions
+should preserve that positioning in public docs, UX wording, and architecture
+decisions. OpenClaw remains an important runtime and the origin of the project,
+but Tandem is open to any MCP-compatible agent.
 
 Public-facing changes should also avoid framing Tandem as a gimmick or a loose
-plugin integration. The project is intended as a first-party OpenClaw companion
-browser maintained from the same ecosystem.
+plugin integration. The project is an agent-first browser with a full MCP server
+and HTTP API, not a generic browser shell with AI bolted on.
 
 ## Good First Contribution Areas
 
@@ -47,7 +48,8 @@ Useful contribution areas right now include:
 - bug fixes with clear reproduction steps
 - Linux testing and platform-specific fixes
 - browser API improvements for tabs, sessions, snapshots, and devtools
-- OpenClaw workflow polish and Tandem skill ergonomics
+- MCP tool improvements and new tool proposals
+- agent workflow polish and Tandem skill ergonomics
 - security review and containment hardening
 - UI polish in the shared human + Wingman workflow
 - docs cleanup where public setup or project status is confusing

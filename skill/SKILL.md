@@ -7,8 +7,8 @@ metadata: {"openclaw":{"emoji":"🚲","requires":{"bins":["curl","node"]}}}
 clawhub: true
 ---
 # Tandem Browser
-Tandem Browser is a first-party OpenClaw companion browser with a local HTTP API
-at `http://127.0.0.1:8765`.
+Tandem Browser is an agent-first browser for human-AI collaboration. Any AI
+agent that speaks MCP or HTTP can control it.
 
 Use this skill when the task should happen in the user's real Tandem browser
 instead of a sandbox browser, especially for:
@@ -18,7 +18,29 @@ instead of a sandbox browser, especially for:
 - reading SPA state, network activity, or session-scoped browser data
 - coordinating with the user without overwriting the tab they are actively using
 
-## Setup
+## Connecting to Tandem
+
+### Option 1: MCP Server (recommended)
+
+The MCP server exposes 231 tools with full API parity. Add to your MCP client
+configuration (e.g. `~/.claude/settings.json` for Claude Code):
+
+```json
+{
+  "mcpServers": {
+    "tandem": {
+      "command": "node",
+      "args": ["/path/to/tandem-browser/dist/mcp/server.js"]
+    }
+  }
+}
+```
+
+Start Tandem (`npm start`), and the agent has 231 tools available immediately.
+All MCP tools mirror the HTTP API below, so the same capabilities are available
+through either connection method.
+
+### Option 2: HTTP API
 
 Normal Tandem routes require the bearer token from `~/.tandem/api-token`.
 
