@@ -23,7 +23,7 @@ That is not something you bolt onto Chrome after the fact. It has to be in the
 browser.
 
 The human browses normally. AI agents connect via a built-in **MCP server**
-(63 tools) or a **local HTTP API** (300+ endpoints) on `127.0.0.1:8765` for
+(82 tools) or a **local HTTP API** (300+ endpoints) on `127.0.0.1:8765` for
 navigation, extraction, automation, and observability. Tandem is not a generic
 "AI browser" shell — it is an agent-first browser environment designed so a
 human and an AI can browse together on the same machine.
@@ -47,7 +47,7 @@ With Tandem, any AI agent gets:
 
 - a browser designed from the start for human + agent collaboration on the
   same machine
-- a **63-tool MCP server** for direct integration with Claude Code, Cursor,
+- a **82-tool MCP server** for direct integration with Claude Code, Cursor,
   Windsurf, or any MCP-compatible client
 - a **300+ endpoint HTTP API** for tabs, navigation, snapshots, sessions,
   devtools, network mocking, and controlled automation
@@ -82,7 +82,7 @@ genuinely useful.
 
 Tandem is built around collaboration with AI agents.
 
-- **MCP server** (63 tools): the recommended way for Claude Code, Cursor, and other MCP clients to connect — zero config, full browser control
+- **MCP server** (82 tools): the recommended way for Claude Code, Cursor, and other MCP clients to connect — zero config, full browser control
 - **HTTP API** (300+ endpoints): for agents that prefer direct HTTP, or for custom integrations
 - the right-side Wingman workflow supports OpenClaw as a primary runtime, with the MCP server opening Tandem to any agent ecosystem
 - the security model is shaped by the fact that an AI agent has access to a live browser
@@ -111,7 +111,7 @@ Examples:
 ## What Tandem Does
 
 - Human + AI shared browsing with one local browser session
-- **MCP server** with 63 tools for direct agent integration (snapshots,
+- **MCP server** with 82 tools for direct agent integration (snapshots,
   devtools, network, sessions, workspaces, tab locks, and more)
 - **HTTP API** with 300+ endpoints for tabs, navigation, screenshots, content
   extraction, sessions, devtools surfaces, and automation
@@ -187,7 +187,7 @@ Add to your MCP client configuration (e.g. `~/.claude/settings.json`):
 }
 ```
 
-Start Tandem (`npm start`), and the agent has 63 tools available immediately.
+Start Tandem (`npm start`), and the agent has 82 tools available immediately.
 
 ### Option 2: HTTP API (for custom integrations)
 

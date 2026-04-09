@@ -4,12 +4,23 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## [v0.68.1] - 2026-04-09
 
-- fix: add auth header to URL autocomplete API calls
+### Added
 
-The history search API requires Authorization: Bearer token.
-The autocomplete was silently getting 401 responses, showing no suggestions.
+- Chrome-style URL bar autocomplete from browsing history — dropdown with matching URLs, inline completion, keyboard navigation
+- MCP bookmark management tools: `tandem_bookmarks_list`, `tandem_bookmark_add`, `tandem_bookmark_delete`, `tandem_bookmark_update`, `tandem_bookmark_folder_add`, `tandem_bookmark_move`, `tandem_bookmark_check`
+- MCP history and site memory tools: `tandem_history_list`, `tandem_history_clear`, `tandem_activity_log`, `tandem_site_memory_list`, `tandem_site_memory_get`, `tandem_site_memory_search`
+- MCP keyboard input tools: `tandem_press_key`, `tandem_press_key_combo` with `POST /press-key` and `POST /press-key-combo` HTTP endpoints
+- MCP live preview tools: `tandem_preview_create`, `tandem_preview_update`, `tandem_preview_list`, `tandem_preview_delete`
+- MCP server now exposes **82 tools** total (up from 63 in v0.68.0)
 
-## Unreleased
+### Fixed
+
+- Dark mode rendering: disabled Chromium's `WebContentsForceDark` that forcefully darkened websites without native dark mode support; set `nativeTheme.themeSource = 'system'` so sites receive OS preference naturally
+- Google CookieMismatch: restored real Electron UA for Google auth URLs (session.setUserAgent baked fake Chrome UA into defaults — must overwrite, not delete); disabled cookie partitioning features that Electron can't handle without Related Website Sets; fixed Sec-CH-UA header mismatch for Google auth
+- Stealth UA auto-sync: replaced hardcoded `Chrome/131` with dynamic version from `process.versions.chrome` to prevent version mismatch detection
+- Workspace emoji icons: `getIconSvg()` now renders emoji strings directly instead of falling back to default SVG
+- History date formatting: fixed `Invalid Date` in `tandem_history_list` (field name mismatch: `visitedAt` → `lastVisitTime`)
+- URL autocomplete auth: added missing `Authorization: Bearer` header to history search API calls
 
 ## [v0.68.0] - 2026-04-09
 

@@ -14,7 +14,8 @@ Last updated: April 9, 2026
 
 ## Current Snapshot
 
-- Current app version: `0.68.0`
+- Current app version: `0.68.1`
+- MCP server: 82 tools
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -87,7 +88,16 @@ Last updated: April 9, 2026
 
 ## Recently Completed
 
-- [x] MCP Server — Full API Coverage: expanded from 24 to 63 tools across 4 phases (tab targeting + snapshots, devtools + network, workspaces + sessions, tab locks + content). MCP is now a first-class connection method alongside direct HTTP.
+- [x] URL bar autocomplete from browsing history (Chrome-style dropdown with inline completion)
+- [x] MCP bookmark management: list, add, delete, update, folders, move, check (7 tools)
+- [x] MCP history and site memory: list, clear, activity log, site memory search (6 tools)
+- [x] MCP keyboard input: press-key and press-key-combo with new HTTP endpoints (2 tools)
+- [x] MCP live preview: create, update, list, delete HTML previews in browser (4 tools)
+- [x] Dark mode rendering fix: disabled Chromium WebContentsForceDark, set nativeTheme to system
+- [x] Google CookieMismatch fix: restored real Electron UA for Google auth, disabled cookie partitioning, fixed Sec-CH-UA mismatch
+- [x] Stealth UA auto-sync: dynamic version from process.versions.chrome instead of hardcoded Chrome/131
+- [x] Workspace emoji icons: emoji strings now render directly in sidebar
+- [x] MCP Server — Full API Coverage: expanded from 24 to 82 tools. MCP is now a first-class connection method alongside direct HTTP.
 - [x] Preload sandbox fix: added esbuild bundling step so the split preload modules work with Electron's `sandbox: true`
 - [x] Security dependency updates: resolved all 28 Dependabot alerts (electron, hono, lodash, brace-expansion, path-to-regexp)
 - [x] Workspace API handoff for OpenClaw: `/tabs/open` now honors `workspaceId`, `/workspaces/:id/activate` and `/workspaces/:id/tabs` exist, and `/wingman-alert` can bring the requested workspace into view before notifying the user
