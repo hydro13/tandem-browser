@@ -2452,6 +2452,235 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// tandem_pinboard_list — List all pinboards
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_list',
+  'List all pinboards (without items)',
+  async () => {
+    const data = await apiCall('GET', '/pinboards');
+    await logActivity('pinboard_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_create — Create a new pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_create',
+  'Create a new pinboard',
+  {
+    name: z.string().describe('Name of the pinboard'),
+    emoji: z.string().optional().describe('Optional emoji icon for the pinboard'),
+  },
+  async ({ name, emoji }) => {
+    const data = await apiCall('POST', '/pinboards', { name, emoji });
+    await logActivity('pinboard_create', name);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_get — Get a pinboard with its items
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_get',
+  'Get a pinboard by ID, including all its items',
+  {
+    id: z.string().describe('Pinboard ID'),
+  },
+  async ({ id }) => {
+    const data = await apiCall('GET', `/pinboards/${encodeURIComponent(id)}`);
+    await logActivity('pinboard_get', id);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_update — Update a pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_update',
+  'Update a pinboard name or emoji',
+  {
+    id: z.string().describe('Pinboard ID'),
+    name: z.string().optional().describe('New name'),
+    emoji: z.string().optional().describe('New emoji icon'),
+  },
+  async ({ id, name, emoji }) => {
+    const data = await apiCall('PUT', `/pinboards/${encodeURIComponent(id)}`, { name, emoji });
+    await logActivity('pinboard_update', id);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_delete — Delete a pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_delete',
+  'Delete a pinboard and all its items',
+  {
+    id: z.string().describe('Pinboard ID to delete'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ id }) => {
+    const data = await apiCall('DELETE', `/pinboards/${encodeURIComponent(id)}`);
+    await logActivity('pinboard_delete', id);
+    return { content: [{ type: 'text', text: data.ok ? `Deleted pinboard: ${id}` : `Pinboard not found: ${id}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_items — Get items for a pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_items',
+  'Get all items in a pinboard',
+  {
+    id: z.string().describe('Pinboard ID'),
+  },
+  async ({ id }) => {
+    const data = await apiCall('GET', `/pinboards/${encodeURIComponent(id)}/items`);
+    await logActivity('pinboard_items', id);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_add_item — Add an item to a pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_add_item',
+  'Add an item to a pinboard. Type must be link, image, text, or quote.',
+  {
+    id: z.string().describe('Pinboard ID'),
+    type: z.enum(['link', 'image', 'text', 'quote']).describe('Item type: link, image, text, or quote'),
+    url: z.string().optional().describe('URL for link or image items'),
+    title: z.string().optional().describe('Item title'),
+    content: z.string().optional().describe('Text content for text or quote items'),
+    thumbnail: z.string().optional().describe('Thumbnail URL'),
+    note: z.string().optional().describe('Optional note about the item'),
+    sourceUrl: z.string().optional().describe('Source URL for quote items'),
+  },
+  async ({ id, type, url, title, content, thumbnail, note, sourceUrl }) => {
+    const data = await apiCall('POST', `/pinboards/${encodeURIComponent(id)}/items`, {
+      type, url, title, content, thumbnail, note, sourceUrl,
+    });
+    await logActivity('pinboard_add_item', `${id}: ${type}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_pinboard_remove_item — Remove an item from a pinboard
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_pinboard_remove_item',
+  'Remove an item from a pinboard',
+  {
+    id: z.string().describe('Pinboard ID'),
+    itemId: z.string().describe('Item ID to remove'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ id, itemId }) => {
+    const data = await apiCall('DELETE', `/pinboards/${encodeURIComponent(id)}/items/${encodeURIComponent(itemId)}`);
+    await logActivity('pinboard_remove_item', `${id}/${itemId}`);
+    return { content: [{ type: 'text', text: data.ok ? `Removed item ${itemId} from pinboard ${id}` : `Item or pinboard not found` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_watch_list — List all website watches
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_watch_list',
+  'List all website watches (site monitoring)',
+  async () => {
+    const data = await apiCall('GET', '/watch/list');
+    await logActivity('watch_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_watch_add — Add a website watch
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_watch_add',
+  'Add a website to the watch list for monitoring changes',
+  {
+    url: z.string().describe('URL to monitor'),
+    intervalMinutes: z.number().optional().describe('Check interval in minutes (default: 30)'),
+  },
+  async ({ url, intervalMinutes }) => {
+    const data = await apiCall('POST', '/watch/add', { url, intervalMinutes });
+    await logActivity('watch_add', url);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_watch_remove — Remove a website watch
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_watch_remove',
+  'Remove a website from the watch list',
+  {
+    url: z.string().optional().describe('URL of the watch to remove'),
+    id: z.string().optional().describe('ID of the watch to remove'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ url, id }) => {
+    const data = await apiCall('DELETE', '/watch/remove', { url, id });
+    await logActivity('watch_remove', id || url || '');
+    return { content: [{ type: 'text', text: data.ok ? `Removed watch: ${id || url}` : `Watch not found: ${id || url}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_watch_check — Force check a watched website
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_watch_check',
+  'Force an immediate check of a watched website for changes',
+  {
+    url: z.string().optional().describe('URL of the watch to check'),
+    id: z.string().optional().describe('ID of the watch to check'),
+  },
+  async ({ url, id }) => {
+    const data = await apiCall('POST', '/watch/check', { url, id });
+    await logActivity('watch_check', id || url || '');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // Start the server
 // ═══════════════════════════════════════════════
 
