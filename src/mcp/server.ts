@@ -2311,6 +2311,147 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// tandem_extensions_list — List browser extensions
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extensions_list',
+  'List all loaded and available browser extensions with conflict info.',
+  async () => {
+    const data = await apiCall('GET', '/extensions/list');
+    await logActivity('extensions_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_extension_load — Load an extension from disk
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extension_load',
+  'Load a browser extension from a local directory path.',
+  {
+    path: z.string().describe('Absolute path to the extension directory'),
+  },
+  async ({ path: extPath }) => {
+    const data = await apiCall('POST', '/extensions/load', { path: extPath });
+    await logActivity('extension_load', extPath);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_extension_install — Install extension from CWS
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extension_install',
+  'Install a browser extension from the Chrome Web Store. Accepts a CWS URL or extension ID.',
+  {
+    input: z.string().describe('Chrome Web Store URL or extension ID'),
+  },
+  async ({ input }) => {
+    const data = await apiCall('POST', '/extensions/install', { input });
+    await logActivity('extension_install', input);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_extension_uninstall — Uninstall an extension
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extension_uninstall',
+  'Uninstall a browser extension by its ID. Removes from session and disk.',
+  {
+    id: z.string().describe('Extension ID (32 lowercase a-p characters)'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ id }) => {
+    const data = await apiCall('DELETE', `/extensions/uninstall/${encodeURIComponent(id)}`);
+    await logActivity('extension_uninstall', id);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_device_profiles — List device emulation profiles
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_device_profiles',
+  'List all available device emulation profiles (e.g. iPhone, iPad, Pixel).',
+  async () => {
+    const data = await apiCall('GET', '/device/profiles');
+    await logActivity('device_profiles');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_device_status — Get current device emulation status
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_device_status',
+  'Get the current device emulation status for the active tab.',
+  async () => {
+    const data = await apiCall('GET', '/device/status');
+    await logActivity('device_status');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_device_emulate — Emulate a device
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_device_emulate',
+  'Emulate a device in the active tab. Provide a profile name OR custom dimensions (width + height).',
+  {
+    device: z.string().optional().describe('Device profile name (e.g. "iPhone 15 Pro"). Use tandem_device_profiles to list available profiles.'),
+    width: z.number().optional().describe('Custom viewport width in pixels'),
+    height: z.number().optional().describe('Custom viewport height in pixels'),
+    deviceScaleFactor: z.number().optional().describe('Device scale factor (e.g. 2 for retina)'),
+    mobile: z.boolean().optional().describe('Whether to emulate a mobile device'),
+    userAgent: z.string().optional().describe('Custom user agent string'),
+  },
+  async ({ device, width, height, deviceScaleFactor, mobile, userAgent }) => {
+    const body: Record<string, unknown> = {};
+    if (device) body.device = device;
+    if (width !== undefined) body.width = width;
+    if (height !== undefined) body.height = height;
+    if (deviceScaleFactor !== undefined) body.deviceScaleFactor = deviceScaleFactor;
+    if (mobile !== undefined) body.mobile = mobile;
+    if (userAgent !== undefined) body.userAgent = userAgent;
+    const data = await apiCall('POST', '/device/emulate', body);
+    await logActivity('device_emulate', device || `${width}x${height}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_device_reset — Reset device emulation
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_device_reset',
+  'Reset device emulation on the active tab back to normal desktop mode.',
+  async () => {
+    const data = await apiCall('POST', '/device/reset');
+    await logActivity('device_reset');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // Start the server
 // ═══════════════════════════════════════════════
 
