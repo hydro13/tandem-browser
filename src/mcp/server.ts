@@ -434,12 +434,15 @@ server.tool(
 
 server.tool(
   'tandem_open_tab',
-  'Open a new browser tab, optionally with a URL',
+  'Open a new browser tab, optionally with a URL and workspace assignment',
   {
     url: z.string().optional().describe('URL to open (default: new tab page)'),
+    workspaceId: z.string().optional().describe('Optional workspace ID to assign the new tab to'),
   },
-  async ({ url }) => {
-    const result = await apiCall('POST', '/tabs/open', { url: url || undefined, source: 'wingman' });
+  async ({ url, workspaceId }) => {
+    const body: Record<string, unknown> = { url: url || undefined, source: 'wingman' };
+    if (workspaceId) body.workspaceId = workspaceId;
+    const result = await apiCall('POST', '/tabs/open', body);
     await logActivity('open_tab', url || 'new tab');
     return { content: [{ type: 'text', text: `Opened tab: ${result.tab?.id || 'unknown'} — ${url || 'new tab'}` }] };
   }
@@ -1036,6 +1039,183 @@ server.tool(
   async () => {
     const data = await apiCall('GET', '/network/mocks');
     return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Workspace management tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_workspace_list',
+  'List all workspaces and the currently active workspace',
+  async () => {
+    const data = await apiCall('GET', '/workspaces');
+    await logActivity('workspace_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_workspace_create',
+  'Create a new workspace for organizing tabs',
+  {
+    name: z.string().describe('Name for the new workspace'),
+    icon: z.string().optional().describe('Optional icon for the workspace'),
+    color: z.string().optional().describe('Optional color for the workspace'),
+  },
+  async ({ name, icon, color }) => {
+    const body: Record<string, unknown> = { name };
+    if (icon) body.icon = icon;
+    if (color) body.color = color;
+    const data = await apiCall('POST', '/workspaces', body);
+    await logActivity('workspace_create', name);
+    return { content: [{ type: 'text', text: `Created workspace: ${JSON.stringify(data.workspace)}` }] };
+  }
+);
+
+server.tool(
+  'tandem_workspace_activate',
+  'Switch to a workspace by its ID',
+  {
+    id: z.string().describe('Workspace ID to activate'),
+  },
+  async ({ id }) => {
+    const data = await apiCall('POST', `/workspaces/${id}/activate`);
+    await logActivity('workspace_activate', id);
+    return { content: [{ type: 'text', text: `Activated workspace: ${JSON.stringify(data.workspace)}` }] };
+  }
+);
+
+server.tool(
+  'tandem_workspace_delete',
+  'Delete a workspace by its ID. This removes the workspace and ungroups its tabs.',
+  {
+    id: z.string().describe('Workspace ID to delete'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ id }) => {
+    await apiCall('DELETE', `/workspaces/${id}`);
+    await logActivity('workspace_delete', id);
+    return { content: [{ type: 'text', text: `Deleted workspace: ${id}` }] };
+  }
+);
+
+server.tool(
+  'tandem_workspace_move_tab',
+  'Move a tab into a workspace',
+  {
+    id: z.string().describe('Workspace ID to move the tab into'),
+    tabId: z.string().describe('Tab ID to move'),
+  },
+  async ({ id, tabId }) => {
+    await apiCall('POST', `/workspaces/${id}/tabs`, { tabId });
+    await logActivity('workspace_move_tab', `tab ${tabId} → workspace ${id}`);
+    return { content: [{ type: 'text', text: `Moved tab ${tabId} to workspace ${id}` }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Session management tools
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_session_list',
+  'List all isolated browser sessions with tab counts',
+  async () => {
+    const data = await apiCall('GET', '/sessions/list');
+    await logActivity('session_list');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+server.tool(
+  'tandem_session_create',
+  'Create a new isolated browser session with its own cookies and storage',
+  {
+    name: z.string().describe('Name for the new session'),
+    partition: z.string().optional().describe('Optional partition identifier for session isolation'),
+  },
+  async ({ name, partition }) => {
+    const body: Record<string, unknown> = { name };
+    if (partition) body.partition = partition;
+    const data = await apiCall('POST', '/sessions/create', body);
+    await logActivity('session_create', name);
+    return { content: [{ type: 'text', text: `Created session: ${data.name} (partition: ${data.partition})` }] };
+  }
+);
+
+server.tool(
+  'tandem_session_switch',
+  'Switch the active browser session',
+  {
+    name: z.string().describe('Name of the session to switch to'),
+  },
+  async ({ name }) => {
+    const data = await apiCall('POST', '/sessions/switch', { name });
+    await logActivity('session_switch', name);
+    return { content: [{ type: 'text', text: `Switched to session: ${data.active}` }] };
+  }
+);
+
+server.tool(
+  'tandem_session_destroy',
+  'Destroy an isolated browser session and close all its tabs',
+  {
+    name: z.string().describe('Name of the session to destroy'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+    openWorldHint: false,
+  },
+  async ({ name }) => {
+    await apiCall('POST', '/sessions/destroy', { name });
+    await logActivity('session_destroy', name);
+    return { content: [{ type: 'text', text: `Destroyed session: ${name}` }] };
+  }
+);
+
+server.tool(
+  'tandem_session_fetch',
+  'Perform a fetch request within the context of a browser session (same-origin, includes cookies/auth). The request runs inside the active tab using the page\'s session credentials.',
+  {
+    url: z.string().describe('URL to fetch (must be same-origin as the active tab)'),
+    method: z.string().optional().describe('HTTP method (default: GET)'),
+    body: z.string().optional().describe('Request body (for POST/PUT/PATCH)'),
+    sessionName: z.string().optional().describe('Optional session name to target (uses active session if omitted)'),
+  },
+  async ({ url, method, body, sessionName }) => {
+    const payload: Record<string, unknown> = { url };
+    if (method) payload.method = method;
+    if (body) payload.body = body;
+    const headers = sessionName ? { 'X-Session': sessionName } : undefined;
+    const data = await apiCall('POST', '/sessions/fetch', payload, headers);
+    await logActivity('session_fetch', `${method || 'GET'} ${url}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// Wingman alert tool
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_wingman_alert',
+  'Show a native OS notification alert to the user via the Wingman system',
+  {
+    message: z.string().describe('Alert message to display'),
+    level: z.enum(['info', 'warning', 'error']).optional().describe('Alert level (default: info)'),
+  },
+  async ({ message, level }) => {
+    const title = level === 'error' ? 'Error' : level === 'warning' ? 'Warning' : 'Info';
+    await apiCall('POST', '/wingman-alert', { title, body: message });
+    await logActivity('wingman_alert', `[${level || 'info'}] ${message.substring(0, 80)}`);
+    return { content: [{ type: 'text', text: `Alert sent: [${level || 'info'}] ${message}` }] };
   }
 );
 
