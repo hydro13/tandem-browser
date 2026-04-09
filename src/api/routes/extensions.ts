@@ -8,6 +8,7 @@ import { ChromeExtensionImporter } from '../../extensions/chrome-importer';
 import { GalleryLoader } from '../../extensions/gallery-loader';
 import { handleRouteError } from '../../utils/errors';
 import { createLogger } from '../../utils/logger';
+import { IpcChannels } from '../../shared/ipc-channels';
 import { createRateLimitMiddleware } from '../rate-limit';
 
 const log = createLogger('ExtensionRoutes');
@@ -108,7 +109,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
         return;
       }
       // Notify renderer to refresh extension toolbar
-      ctx.win.webContents.send('extension-toolbar-refresh');
+      ctx.win.webContents.send(IpcChannels.EXTENSION_TOOLBAR_REFRESH);
       res.json(result);
     } catch (e) {
       log.error('Extension install error:', e);
@@ -189,7 +190,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
       }
 
       // Notify renderer to refresh extension toolbar
-      ctx.win.webContents.send('extension-toolbar-refresh');
+      ctx.win.webContents.send(IpcChannels.EXTENSION_TOOLBAR_REFRESH);
       res.json({ success: true });
     } catch (e) {
       log.error('Extension uninstall error:', e);
@@ -458,7 +459,7 @@ export function registerExtensionRoutes(router: Router, ctx: RouteContext): void
 
       // Notify renderer to refresh extension toolbar after updates
       if (results.some(r => r.success)) {
-        ctx.win.webContents.send('extension-toolbar-refresh');
+        ctx.win.webContents.send(IpcChannels.EXTENSION_TOOLBAR_REFRESH);
       }
 
       res.json({ results });

@@ -1,5 +1,6 @@
 import type { BrowserWindow} from 'electron';
 import { Notification } from 'electron';
+import { IpcChannels } from '../shared/ipc-channels';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -11,5 +12,5 @@ export function wingmanAlert(title: string, body: string): void {
   if (Notification.isSupported()) {
     new Notification({ title: `🧀 ${title}`, body }).show();
   }
-  mainWindow?.webContents.send('wingman-alert', { title, body });
+  mainWindow?.webContents.send(IpcChannels.WINGMAN_ALERT, { title, body });
 }

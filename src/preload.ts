@@ -1,299 +1,300 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ActivityEvent, ChatMessage } from './panel/manager';
 import type { ToolbarExtension } from './extensions/toolbar';
+import { IpcChannels } from './shared/ipc-channels';
 contextBridge.exposeInMainWorld('__TANDEM_TOKEN__', '');
 contextBridge.exposeInMainWorld('__TANDEM_VERSION__', process.env.npm_package_version || '');
 
 contextBridge.exposeInMainWorld('tandem', {
-  getApiToken: () => ipcRenderer.invoke('get-api-token'),
+  getApiToken: () => ipcRenderer.invoke(IpcChannels.GET_API_TOKEN),
 
   // Navigation
-  navigate: (url: string) => ipcRenderer.invoke('navigate', url),
-  goBack: () => ipcRenderer.invoke('go-back'),
-  goForward: () => ipcRenderer.invoke('go-forward'),
-  reload: () => ipcRenderer.invoke('reload'),
+  navigate: (url: string) => ipcRenderer.invoke(IpcChannels.NAVIGATE, url),
+  goBack: () => ipcRenderer.invoke(IpcChannels.GO_BACK),
+  goForward: () => ipcRenderer.invoke(IpcChannels.GO_FORWARD),
+  reload: () => ipcRenderer.invoke(IpcChannels.RELOAD),
 
   // Page content
-  getPageContent: () => ipcRenderer.invoke('get-page-content'),
-  getPageStatus: () => ipcRenderer.invoke('get-page-status'),
-  executeJS: (code: string) => ipcRenderer.invoke('execute-js', code),
+  getPageContent: () => ipcRenderer.invoke(IpcChannels.GET_PAGE_CONTENT),
+  getPageStatus: () => ipcRenderer.invoke(IpcChannels.GET_PAGE_STATUS),
+  executeJS: (code: string) => ipcRenderer.invoke(IpcChannels.EXECUTE_JS, code),
 
   // Tab management
-  newTab: (url?: string) => ipcRenderer.invoke('tab-new', url),
-  closeTab: (tabId: string) => ipcRenderer.invoke('tab-close', tabId),
-  focusTab: (tabId: string) => ipcRenderer.invoke('tab-focus', tabId),
-  focusTabByIndex: (index: number) => ipcRenderer.invoke('tab-focus-index', index),
-  listTabs: () => ipcRenderer.invoke('tab-list'),
-  showTabContextMenu: (tabId: string) => ipcRenderer.invoke('show-tab-context-menu', tabId),
+  newTab: (url?: string) => ipcRenderer.invoke(IpcChannels.TAB_NEW, url),
+  closeTab: (tabId: string) => ipcRenderer.invoke(IpcChannels.TAB_CLOSE, tabId),
+  focusTab: (tabId: string) => ipcRenderer.invoke(IpcChannels.TAB_FOCUS, tabId),
+  focusTabByIndex: (index: number) => ipcRenderer.invoke(IpcChannels.TAB_FOCUS_INDEX, index),
+  listTabs: () => ipcRenderer.invoke(IpcChannels.TAB_LIST),
+  showTabContextMenu: (tabId: string) => ipcRenderer.invoke(IpcChannels.SHOW_TAB_CONTEXT_MENU, tabId),
 
   // Tab events to main
   sendTabUpdate: (data: { tabId: string; title?: string; url?: string; favicon?: string }) => {
-    ipcRenderer.send('tab-update', data);
+    ipcRenderer.send(IpcChannels.TAB_UPDATE, data);
   },
   registerTab: (webContentsId: number, url: string) => {
-    ipcRenderer.send('tab-register', { webContentsId, url });
+    ipcRenderer.send(IpcChannels.TAB_REGISTER, { webContentsId, url });
   },
 
   // Events from main process
   onWingmanAlert: (callback: (data: { title: string; body: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { title: string; body: string }) => callback(data);
-    ipcRenderer.on('wingman-alert', handler);
-    return () => ipcRenderer.removeListener('wingman-alert', handler);
+    ipcRenderer.on(IpcChannels.WINGMAN_ALERT, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WINGMAN_ALERT, handler);
   },
   onNavigated: (callback: (url: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
-    ipcRenderer.on('navigated', handler);
-    return () => ipcRenderer.removeListener('navigated', handler);
+    ipcRenderer.on(IpcChannels.NAVIGATED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.NAVIGATED, handler);
   },
   onShortcut: (callback: (action: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, action: string) => callback(action);
-    ipcRenderer.on('shortcut', handler);
-    return () => ipcRenderer.removeListener('shortcut', handler);
+    ipcRenderer.on(IpcChannels.SHORTCUT, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.SHORTCUT, handler);
   },
   onScreenshotModeSelected: (callback: (mode: 'page' | 'application' | 'region') => void) => {
     const handler = (_event: Electron.IpcRendererEvent, mode: 'page' | 'application' | 'region') => callback(mode);
-    ipcRenderer.on('screenshot-mode-selected', handler);
-    return () => ipcRenderer.removeListener('screenshot-mode-selected', handler);
+    ipcRenderer.on(IpcChannels.SCREENSHOT_MODE_SELECTED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.SCREENSHOT_MODE_SELECTED, handler);
   },
     onTabRegistered: (callback: (data: { tabId: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { tabId: string }) => callback(data);
-    ipcRenderer.on('tab-registered', handler);
-    return () => ipcRenderer.removeListener('tab-registered', handler);
+    ipcRenderer.on(IpcChannels.TAB_REGISTERED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.TAB_REGISTERED, handler);
   },
 
   // Panel
   onPanelToggle: (callback: (data: { open: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { open: boolean }) => callback(data);
-    ipcRenderer.on('panel-toggle', handler);
-    return () => ipcRenderer.removeListener('panel-toggle', handler);
+    ipcRenderer.on(IpcChannels.PANEL_TOGGLE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.PANEL_TOGGLE, handler);
   },
   onActivityEvent: (callback: (event: ActivityEvent) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: ActivityEvent) => callback(data);
-    ipcRenderer.on('activity-event', handler);
-    return () => ipcRenderer.removeListener('activity-event', handler);
+    ipcRenderer.on(IpcChannels.ACTIVITY_EVENT, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.ACTIVITY_EVENT, handler);
   },
   onChatMessage: (callback: (msg: ChatMessage) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: ChatMessage) => callback(data);
-    ipcRenderer.on('chat-message', handler);
-    return () => ipcRenderer.removeListener('chat-message', handler);
+    ipcRenderer.on(IpcChannels.CHAT_MESSAGE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.CHAT_MESSAGE, handler);
   },
   sendChatMessage: (text: string) => {
-    ipcRenderer.send('chat-send', text);
+    ipcRenderer.send(IpcChannels.CHAT_SEND, text);
   },
   sendLegacyChatMessage: (text: string) => {
-    ipcRenderer.send('chat-send-legacy', text);
+    ipcRenderer.send(IpcChannels.CHAT_SEND_LEGACY, text);
   },
-  sendChatImage: (text: string, image: string) => ipcRenderer.invoke('chat-send-image', { text, image }),
+  sendChatImage: (text: string, image: string) => ipcRenderer.invoke(IpcChannels.CHAT_SEND_IMAGE, { text, image }),
   persistChatMessage: (data: {
     from: 'robin' | 'wingman' | 'kees' | 'claude';
     text?: string;
     image?: string;
     notifyWebhook?: boolean;
-  }) => ipcRenderer.invoke('chat-persist-message', data),
+  }) => ipcRenderer.invoke(IpcChannels.CHAT_PERSIST_MESSAGE, data),
 
   // Draw overlay
   onDrawMode: (callback: (data: { enabled: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { enabled: boolean }) => callback(data);
-    ipcRenderer.on('draw-mode', handler);
-    return () => ipcRenderer.removeListener('draw-mode', handler);
+    ipcRenderer.on(IpcChannels.DRAW_MODE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.DRAW_MODE, handler);
   },
   onDrawClear: (callback: () => void) => {
     const handler = () => callback();
-    ipcRenderer.on('draw-clear', handler);
-    return () => ipcRenderer.removeListener('draw-clear', handler);
+    ipcRenderer.on(IpcChannels.DRAW_CLEAR, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.DRAW_CLEAR, handler);
   },
   onScreenshotTaken: (callback: (data: { path: string; filename: string; appPath?: string; base64?: string }) => void) => {
     const handler = (
       _event: Electron.IpcRendererEvent,
       data: { path: string; filename: string; appPath?: string; base64?: string },
     ) => callback(data);
-    ipcRenderer.on('screenshot-taken', handler);
-    return () => ipcRenderer.removeListener('screenshot-taken', handler);
+    ipcRenderer.on(IpcChannels.SCREENSHOT_TAKEN, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.SCREENSHOT_TAKEN, handler);
   },
-  snapForWingman: () => ipcRenderer.invoke('snap-for-wingman'),
+  snapForWingman: () => ipcRenderer.invoke(IpcChannels.SNAP_FOR_WINGMAN),
   /** @deprecated Use snapForWingman */
-  snapForKees: () => ipcRenderer.invoke('snap-for-wingman'),
-  quickScreenshot: () => ipcRenderer.invoke('quick-screenshot'),
+  snapForKees: () => ipcRenderer.invoke(IpcChannels.SNAP_FOR_WINGMAN),
+  quickScreenshot: () => ipcRenderer.invoke(IpcChannels.QUICK_SCREENSHOT),
   captureScreenshot: (
     mode: 'page' | 'application' | 'region',
     region?: { x: number; y: number; width: number; height: number },
-  ) => ipcRenderer.invoke('capture-screenshot', { mode, region }),
-  showScreenshotMenu: (anchor: { x: number; y: number }) => ipcRenderer.invoke('show-screenshot-menu', anchor),
+  ) => ipcRenderer.invoke(IpcChannels.CAPTURE_SCREENSHOT, { mode, region }),
+  showScreenshotMenu: (anchor: { x: number; y: number }) => ipcRenderer.invoke(IpcChannels.SHOW_SCREENSHOT_MENU, anchor),
 
   // Recording
-  getDesktopSource: () => ipcRenderer.invoke('get-desktop-source'),
+  getDesktopSource: () => ipcRenderer.invoke(IpcChannels.GET_DESKTOP_SOURCE),
   startRecording: (mode: 'application' | 'region', region?: { x: number; y: number; width: number; height: number }) =>
-    ipcRenderer.invoke('start-recording', { mode, region }),
-  stopRecording: () => ipcRenderer.invoke('stop-recording'),
-  sendRecordingChunk: (data: ArrayBuffer) => ipcRenderer.send('recording-chunk', data),
+    ipcRenderer.invoke(IpcChannels.START_RECORDING, { mode, region }),
+  stopRecording: () => ipcRenderer.invoke(IpcChannels.STOP_RECORDING),
+  sendRecordingChunk: (data: ArrayBuffer) => ipcRenderer.send(IpcChannels.RECORDING_CHUNK, data),
   onRecordingModeSelected: (callback: (mode: 'application' | 'region') => void) => {
     const handler = (_event: Electron.IpcRendererEvent, mode: 'application' | 'region') => callback(mode);
-    ipcRenderer.on('recording-mode-selected', handler);
-    return () => ipcRenderer.removeListener('recording-mode-selected', handler);
+    ipcRenderer.on(IpcChannels.RECORDING_MODE_SELECTED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.RECORDING_MODE_SELECTED, handler);
   },
   onRecordingFinished: (callback: (data: { path: string; filename: string; duration: number }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { path: string; filename: string; duration: number }) => callback(data);
-    ipcRenderer.on('recording-finished', handler);
-    return () => ipcRenderer.removeListener('recording-finished', handler);
+    ipcRenderer.on(IpcChannels.RECORDING_FINISHED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.RECORDING_FINISHED, handler);
   },
 
   // Voice
   onVoiceToggle: (callback: (data: { listening: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { listening: boolean }) => callback(data);
-    ipcRenderer.on('voice-toggle', handler);
-    return () => ipcRenderer.removeListener('voice-toggle', handler);
+    ipcRenderer.on(IpcChannels.VOICE_TOGGLE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.VOICE_TOGGLE, handler);
   },
   onVoiceTranscript: (callback: (data: { text: string; isFinal: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { text: string; isFinal: boolean }) => callback(data);
-    ipcRenderer.on('voice-transcript-display', handler);
-    return () => ipcRenderer.removeListener('voice-transcript-display', handler);
+    ipcRenderer.on(IpcChannels.VOICE_TRANSCRIPT_DISPLAY, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.VOICE_TRANSCRIPT_DISPLAY, handler);
   },
   sendVoiceTranscript: (text: string, isFinal: boolean) => {
-    ipcRenderer.send('voice-transcript', { text, isFinal });
+    ipcRenderer.send(IpcChannels.VOICE_TRANSCRIPT, { text, isFinal });
   },
   sendVoiceStatus: (listening: boolean) => {
-    ipcRenderer.send('voice-status-update', { listening });
+    ipcRenderer.send(IpcChannels.VOICE_STATUS_UPDATE, { listening });
   },
 
   // Activity tracking
   sendWebviewEvent: (data: { type: string; url?: string; tabId?: string }) => {
-    ipcRenderer.send('activity-webview-event', data);
+    ipcRenderer.send(IpcChannels.ACTIVITY_WEBVIEW_EVENT, data);
   },
   onAutoSnapshotRequest: (callback: (data: { url: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { url: string }) => callback(data);
-    ipcRenderer.on('auto-snapshot-request', handler);
-    return () => ipcRenderer.removeListener('auto-snapshot-request', handler);
+    ipcRenderer.on(IpcChannels.AUTO_SNAPSHOT_REQUEST, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.AUTO_SNAPSHOT_REQUEST, handler);
   },
 
   // Wingman typing indicator
   onWingmanTyping: (callback: (data: { typing: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { typing: boolean }) => callback(data);
-    ipcRenderer.on('wingman-typing', handler);
-    return () => ipcRenderer.removeListener('wingman-typing', handler);
+    ipcRenderer.on(IpcChannels.WINGMAN_TYPING, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WINGMAN_TYPING, handler);
   },
   /** @deprecated Use onWingmanTyping */
   onKeesTyping: (callback: (data: { typing: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { typing: boolean }) => callback(data);
-    ipcRenderer.on('wingman-typing', handler);
-    return () => ipcRenderer.removeListener('wingman-typing', handler);
+    ipcRenderer.on(IpcChannels.WINGMAN_TYPING, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WINGMAN_TYPING, handler);
   },
 
   // Live mode change events
   onLiveModeChanged: (callback: (data: { enabled: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { enabled: boolean }) => callback(data);
-    ipcRenderer.on('live-mode-changed', handler);
-    return () => ipcRenderer.removeListener('live-mode-changed', handler);
+    ipcRenderer.on(IpcChannels.LIVE_MODE_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.LIVE_MODE_CHANGED, handler);
   },
 
   // Emergency stop — stops all agent activity
-  emergencyStop: () => ipcRenderer.invoke('emergency-stop'),
+  emergencyStop: () => ipcRenderer.invoke(IpcChannels.EMERGENCY_STOP),
 
   // Task approval events from main
   onApprovalRequest: (callback: (data: { requestId: string; taskId: string; stepId: string; description: string; action: Record<string, unknown>; riskLevel: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { requestId: string; taskId: string; stepId: string; description: string; action: Record<string, unknown>; riskLevel: string }) => callback(data);
-    ipcRenderer.on('approval-request', handler);
-    return () => ipcRenderer.removeListener('approval-request', handler);
+    ipcRenderer.on(IpcChannels.APPROVAL_REQUEST, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.APPROVAL_REQUEST, handler);
   },
 
   // Tab source changes (robin/wingman control indicator)
   onTabSourceChanged: (callback: (data: { tabId: string; source: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { tabId: string; source: string }) => callback(data);
-    ipcRenderer.on('tab-source-changed', handler);
-    return () => ipcRenderer.removeListener('tab-source-changed', handler);
+    ipcRenderer.on(IpcChannels.TAB_SOURCE_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.TAB_SOURCE_CHANGED, handler);
   },
 
   // Download complete notification
   onDownloadComplete: (callback: (data: { id: string; filename: string; savePath: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { id: string; filename: string; savePath: string }) => callback(data);
-    ipcRenderer.on('download-complete', handler);
-    return () => ipcRenderer.removeListener('download-complete', handler);
+    ipcRenderer.on(IpcChannels.DOWNLOAD_COMPLETE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.DOWNLOAD_COMPLETE, handler);
   },
 
   // Open URL in new tab (from popup redirect)
   onOpenUrlInNewTab: (callback: (url: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, url: string) => callback(url);
-    ipcRenderer.on('open-url-in-new-tab', handler);
-    return () => ipcRenderer.removeListener('open-url-in-new-tab', handler);
+    ipcRenderer.on(IpcChannels.OPEN_URL_IN_NEW_TAB, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.OPEN_URL_IN_NEW_TAB, handler);
   },
 
   // Wingman chat injection (from context menu)
   onWingmanChatInject: (callback: (text: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, text: string) => callback(text);
-    ipcRenderer.on('wingman-chat-inject', handler);
-    return () => ipcRenderer.removeListener('wingman-chat-inject', handler);
+    ipcRenderer.on(IpcChannels.WINGMAN_CHAT_INJECT, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WINGMAN_CHAT_INJECT, handler);
   },
   /** @deprecated Use onWingmanChatInject */
   onKeesChatInject: (callback: (text: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, text: string) => callback(text);
-    ipcRenderer.on('wingman-chat-inject', handler);
-    return () => ipcRenderer.removeListener('wingman-chat-inject', handler);
+    ipcRenderer.on(IpcChannels.WINGMAN_CHAT_INJECT, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WINGMAN_CHAT_INJECT, handler);
   },
 
   // Bookmark status change (from context menu)
   onBookmarkStatusChanged: (callback: (data: { url: string; bookmarked: boolean }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { url: string; bookmarked: boolean }) => callback(data);
-    ipcRenderer.on('bookmark-status-changed', handler);
-    return () => ipcRenderer.removeListener('bookmark-status-changed', handler);
+    ipcRenderer.on(IpcChannels.BOOKMARK_STATUS_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.BOOKMARK_STATUS_CHANGED, handler);
   },
 
   // Bookmark toggle
-  bookmarkPage: (url: string, title: string) => ipcRenderer.invoke('bookmark-page', url, title),
-  unbookmarkPage: (url: string) => ipcRenderer.invoke('unbookmark-page', url),
-  isBookmarked: (url: string) => ipcRenderer.invoke('is-bookmarked', url),
+  bookmarkPage: (url: string, title: string) => ipcRenderer.invoke(IpcChannels.BOOKMARK_PAGE, url, title),
+  unbookmarkPage: (url: string) => ipcRenderer.invoke(IpcChannels.UNBOOKMARK_PAGE, url),
+  isBookmarked: (url: string) => ipcRenderer.invoke(IpcChannels.IS_BOOKMARKED, url),
 
   // Extension toolbar
-  getToolbarExtensions: () => ipcRenderer.invoke('extension-toolbar-list'),
-  openExtensionPopup: (extensionId: string, anchorBounds?: { x: number; y: number }) => ipcRenderer.invoke('extension-popup-open', extensionId, anchorBounds),
-  closeExtensionPopup: () => ipcRenderer.invoke('extension-popup-close'),
-  pinExtension: (extensionId: string, pinned: boolean) => ipcRenderer.invoke('extension-pin', extensionId, pinned),
-  showExtensionContextMenu: (extensionId: string) => ipcRenderer.invoke('extension-context-menu', extensionId),
-  showExtensionOptions: (extensionId: string) => ipcRenderer.invoke('extension-options', extensionId),
+  getToolbarExtensions: () => ipcRenderer.invoke(IpcChannels.EXTENSION_TOOLBAR_LIST),
+  openExtensionPopup: (extensionId: string, anchorBounds?: { x: number; y: number }) => ipcRenderer.invoke(IpcChannels.EXTENSION_POPUP_OPEN, extensionId, anchorBounds),
+  closeExtensionPopup: () => ipcRenderer.invoke(IpcChannels.EXTENSION_POPUP_CLOSE),
+  pinExtension: (extensionId: string, pinned: boolean) => ipcRenderer.invoke(IpcChannels.EXTENSION_PIN, extensionId, pinned),
+  showExtensionContextMenu: (extensionId: string) => ipcRenderer.invoke(IpcChannels.EXTENSION_CONTEXT_MENU, extensionId),
+  showExtensionOptions: (extensionId: string) => ipcRenderer.invoke(IpcChannels.EXTENSION_OPTIONS, extensionId),
   onExtensionToolbarUpdate: (callback: (extensions: ToolbarExtension[]) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, extensions: ToolbarExtension[]) => callback(extensions);
-    ipcRenderer.on('extension-toolbar-update', handler);
-    return () => ipcRenderer.removeListener('extension-toolbar-update', handler);
+    ipcRenderer.on(IpcChannels.EXTENSION_TOOLBAR_UPDATE, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.EXTENSION_TOOLBAR_UPDATE, handler);
   },
   onExtensionRemoveRequest: (callback: (data: { id: string; diskId: string; name: string }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, data: { id: string; diskId: string; name: string }) => callback(data);
-    ipcRenderer.on('extension-remove-request', handler);
-    return () => ipcRenderer.removeListener('extension-remove-request', handler);
+    ipcRenderer.on(IpcChannels.EXTENSION_REMOVE_REQUEST, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.EXTENSION_REMOVE_REQUEST, handler);
   },
   onExtensionToolbarRefresh: (callback: () => void) => {
     const handler = () => callback();
-    ipcRenderer.on('extension-toolbar-refresh', handler);
-    return () => ipcRenderer.removeListener('extension-toolbar-refresh', handler);
+    ipcRenderer.on(IpcChannels.EXTENSION_TOOLBAR_REFRESH, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.EXTENSION_TOOLBAR_REFRESH, handler);
   },
 
   // Sidebar webview reload (after Google auth popup)
   onReloadSidebarWebview: (callback: (id: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, id: string) => callback(id);
-    ipcRenderer.on('reload-sidebar-webview', handler);
-    return () => ipcRenderer.removeListener('reload-sidebar-webview', handler);
+    ipcRenderer.on(IpcChannels.RELOAD_SIDEBAR_WEBVIEW, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.RELOAD_SIDEBAR_WEBVIEW, handler);
   },
 
   // Workspace switching
   onWorkspaceSwitched: (callback: (workspace: { id: string; name: string; icon: string; color: string; tabIds: number[] }) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, workspace: { id: string; name: string; icon: string; color: string; tabIds: number[] }) => callback(workspace);
-    ipcRenderer.on('workspace-switched', handler);
-    return () => ipcRenderer.removeListener('workspace-switched', handler);
+    ipcRenderer.on(IpcChannels.WORKSPACE_SWITCHED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.WORKSPACE_SWITCHED, handler);
   },
 
   onPinboardItemAdded: (callback: (boardId: string) => void) => {
     const handler = (_event: Electron.IpcRendererEvent, boardId: string) => callback(boardId);
-    ipcRenderer.on('pinboard-item-added', handler);
-    return () => ipcRenderer.removeListener('pinboard-item-added', handler);
+    ipcRenderer.on(IpcChannels.PINBOARD_ITEM_ADDED, handler);
+    return () => ipcRenderer.removeListener(IpcChannels.PINBOARD_ITEM_ADDED, handler);
   },
 
   // Chrome-style compact title bar: platform detection and window controls
-  setPanelOpen: (open: boolean) => ipcRenderer.send('panel-open-changed', { open }),
-  requestMicPermission: () => ipcRenderer.invoke('request-mic-permission'),
+  setPanelOpen: (open: boolean) => ipcRenderer.send(IpcChannels.PANEL_OPEN_CHANGED, { open }),
+  requestMicPermission: () => ipcRenderer.invoke(IpcChannels.REQUEST_MIC_PERMISSION),
 
-  transcribeAudio: (buffer: ArrayBuffer, language?: string) => ipcRenderer.invoke('transcribe-audio', { buffer, language }),
-  getSpeechBackend: () => ipcRenderer.invoke('get-speech-backend'),
+  transcribeAudio: (buffer: ArrayBuffer, language?: string) => ipcRenderer.invoke(IpcChannels.TRANSCRIBE_AUDIO, { buffer, language }),
+  getSpeechBackend: () => ipcRenderer.invoke(IpcChannels.GET_SPEECH_BACKEND),
   getPlatform: () => process.platform,
-  showAppMenu: (x: number, y: number) => ipcRenderer.send('show-app-menu', { x, y }),
-  minimizeWindow: () => ipcRenderer.send('window-minimize'),
-  maximizeWindow: () => ipcRenderer.send('window-maximize'),
-  closeWindow: () => ipcRenderer.send('window-close'),
-  isWindowMaximized: () => ipcRenderer.invoke('is-window-maximized'),
+  showAppMenu: (x: number, y: number) => ipcRenderer.send(IpcChannels.SHOW_APP_MENU, { x, y }),
+  minimizeWindow: () => ipcRenderer.send(IpcChannels.WINDOW_MINIMIZE),
+  maximizeWindow: () => ipcRenderer.send(IpcChannels.WINDOW_MAXIMIZE),
+  closeWindow: () => ipcRenderer.send(IpcChannels.WINDOW_CLOSE),
+  isWindowMaximized: () => ipcRenderer.invoke(IpcChannels.IS_WINDOW_MAXIMIZED),
 });

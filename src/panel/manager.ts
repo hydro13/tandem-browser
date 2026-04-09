@@ -5,6 +5,7 @@ import type { ConfigManager } from '../config/manager';
 import { wingmanAlert } from '../notifications/alert';
 import { tandemDir, ensureDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('PanelManager');
 
@@ -99,7 +100,7 @@ export class PanelManager {
     }
     // Push to renderer for real-time display
     if (this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
-      this.win.webContents.send('activity-event', event);
+      this.win.webContents.send(IpcChannels.ACTIVITY_EVENT, event);
     }
     return event;
   }
@@ -145,7 +146,7 @@ export class PanelManager {
     this.chatMessages.push(msg);
     this.saveChatHistory();
     if (opts.emitIpc !== false && this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
-      this.win.webContents.send('chat-message', msg);
+      this.win.webContents.send(IpcChannels.CHAT_MESSAGE, msg);
     }
     // Clear typing indicator when wingman sends a message
     if ((from === 'wingman' || from === 'kees') && this.wingmanTyping) {
@@ -237,7 +238,7 @@ export class PanelManager {
   setWingmanTyping(typing: boolean): void {
     this.wingmanTyping = typing;
     if (this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
-      this.win.webContents.send('wingman-typing', { typing });
+      this.win.webContents.send(IpcChannels.WINGMAN_TYPING, { typing });
     }
   }
 
@@ -260,7 +261,7 @@ export class PanelManager {
   togglePanel(open?: boolean): boolean {
     this.panelOpen = open !== undefined ? open : !this.panelOpen;
     if (this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
-      this.win.webContents.send('panel-toggle', { open: this.panelOpen });
+      this.win.webContents.send(IpcChannels.PANEL_TOGGLE, { open: this.panelOpen });
     }
     return this.panelOpen;
   }
@@ -273,7 +274,7 @@ export class PanelManager {
   /** Notify UI about live mode change */
   sendLiveModeChanged(enabled: boolean): void {
     if (this.win && !this.win.isDestroyed() && !this.win.webContents.isDestroyed()) {
-      this.win.webContents.send('live-mode-changed', { enabled });
+      this.win.webContents.send(IpcChannels.LIVE_MODE_CHANGED, { enabled });
     }
   }
 

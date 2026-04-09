@@ -2,6 +2,7 @@ import type { BrowserWindow } from 'electron';
 import { Notification } from 'electron';
 import path from 'path';
 import os from 'os';
+import { IpcChannels } from '../shared/ipc-channels';
 
 /**
  * DownloadItem — Tracked download entry.
@@ -80,7 +81,7 @@ export class DownloadManager {
           }
           // Also notify renderer
           if (win && !win.isDestroyed()) {
-            win.webContents.send('download-complete', { id, filename, savePath });
+            win.webContents.send(IpcChannels.DOWNLOAD_COMPLETE, { id, filename, savePath });
           }
         } else if (state === 'cancelled') {
           entry.status = 'cancelled';

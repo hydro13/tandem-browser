@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { IpcChannels } from '../../shared/ipc-channels';
 
 const mockTabWebContents = new Map<number, any>();
 
@@ -280,7 +281,7 @@ describe('TabManager', () => {
       const tab = await tm.openTab('https://test.com');
       tm.pinTab(tab.id);
       expect(win.webContents.send).toHaveBeenCalledWith(
-        'tab-pin-changed',
+        IpcChannels.TAB_PIN_CHANGED,
         { tabId: tab.id, pinned: true }
       );
     });

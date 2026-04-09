@@ -7,6 +7,7 @@ import os from 'os';
 import type { ConfigManager } from '../config/manager';
 import type { GooglePhotosManager } from '../integrations/google-photos';
 import { createLogger } from '../utils/logger';
+import { IpcChannels } from '../shared/ipc-channels';
 
 const log = createLogger('DrawOverlay');
 
@@ -44,7 +45,7 @@ export class DrawOverlayManager {
   /** Toggle draw mode on/off */
   toggleDrawMode(enabled?: boolean): boolean {
     this.drawMode = enabled !== undefined ? enabled : !this.drawMode;
-    this.win.webContents.send('draw-mode', { enabled: this.drawMode });
+    this.win.webContents.send(IpcChannels.DRAW_MODE, { enabled: this.drawMode });
     return this.drawMode;
   }
 
@@ -90,7 +91,7 @@ export class DrawOverlayManager {
       this.lastScreenshotPath = filePath;
 
       // Step 4: Notify renderer of new screenshot (annotations remain for further editing)
-      this.win.webContents.send('screenshot-taken', { path: filePath, filename });
+      this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, { path: filePath, filename });
 
       return { ok: true, path: filePath };
     } catch (e) {
@@ -167,7 +168,7 @@ export class DrawOverlayManager {
       const { picturesPath, appPath, filename } = this.persistScreenshotBuffer(buffer, currentUrl);
 
       // Step 4: Notify renderer of new screenshot (annotations remain)
-      this.win.webContents.send('screenshot-taken', {
+      this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, {
         path: picturesPath,
         appPath,
         filename,
@@ -197,7 +198,7 @@ export class DrawOverlayManager {
       const { picturesPath, appPath, filename, base64 } = this.persistScreenshotBuffer(buffer, currentUrl);
 
       // Notify renderer
-      this.win.webContents.send('screenshot-taken', {
+      this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, {
         path: picturesPath,
         appPath,
         filename,
@@ -226,7 +227,7 @@ export class DrawOverlayManager {
             fs.unlinkSync(tmpPath);
           }
           const { picturesPath, appPath, filename, base64 } = this.persistScreenshotBuffer(buffer, currentUrl);
-          this.win.webContents.send('screenshot-taken', { path: picturesPath, appPath, filename, base64 });
+          this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, { path: picturesPath, appPath, filename, base64 });
           return { ok: true, path: picturesPath };
         } catch (scErr) {
           log.warn('screencapture failed, falling back to capturePage:', scErr);
@@ -242,7 +243,7 @@ export class DrawOverlayManager {
       const buffer = nativeImg.toPNG();
       const { picturesPath, appPath, filename, base64 } = this.persistScreenshotBuffer(buffer, currentUrl);
 
-      this.win.webContents.send('screenshot-taken', {
+      this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, {
         path: picturesPath,
         appPath,
         filename,
@@ -279,7 +280,7 @@ export class DrawOverlayManager {
       const buffer = nativeImg.toPNG();
       const { picturesPath, appPath, filename, base64 } = this.persistScreenshotBuffer(buffer, currentUrl);
 
-      this.win.webContents.send('screenshot-taken', {
+      this.win.webContents.send(IpcChannels.SCREENSHOT_TAKEN, {
         path: picturesPath,
         appPath,
         filename,
