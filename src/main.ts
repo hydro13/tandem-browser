@@ -432,7 +432,7 @@ async function createWindow(): Promise<BrowserWindow> {
     title: 'Tandem Browser',
     ...platformWindowOptions,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload', 'index.js'),
       partition,
       webviewTag: true,
       contextIsolation: true,
