@@ -1860,6 +1860,178 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════
+// tandem_password_status — Check password vault status
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_status',
+  'Check the password manager vault status (locked/unlocked, new vault)',
+  async () => {
+    const data = await apiCall('GET', '/passwords/status');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_unlock — Unlock the password vault
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_unlock',
+  'Unlock the password vault with the master password',
+  {
+    masterPassword: z.string().describe('The master password to unlock the vault'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ masterPassword }) => {
+    const data = await apiCall('POST', '/passwords/unlock', { password: masterPassword });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_lock — Lock the password vault
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_lock',
+  'Lock the password vault',
+  async () => {
+    const data = await apiCall('POST', '/passwords/lock');
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_generate — Generate a secure password
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_generate',
+  'Generate a random secure password string. Returns a JSON object with a "password" field containing the generated password.',
+  {
+    length: z.number().optional().describe('Password length (default: 24)'),
+  },
+  async ({ length }) => {
+    const query = length ? `?length=${length}` : '';
+    const data = await apiCall('GET', `/passwords/generate${query}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_suggest — Suggest saved passwords for a URL
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_suggest',
+  'Suggest saved password identities for a given URL/domain',
+  {
+    url: z.string().describe('The URL or domain to look up saved passwords for'),
+  },
+  async ({ url }) => {
+    const data = await apiCall('GET', `/passwords/suggest?domain=${encodeURIComponent(url)}`);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_password_save — Save a password entry
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_password_save',
+  'Save a new password entry to the vault',
+  {
+    url: z.string().describe('The URL or domain to associate with this password'),
+    username: z.string().describe('The username or email'),
+    password: z.string().describe('The password to save'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ url, username, password }) => {
+    const data = await apiCall('POST', '/passwords/save', { domain: url, username, payload: password });
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_forms_saved — List saved form data
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_forms_saved',
+  'List saved form autofill data. Optionally filter by domain to get form data for a specific site.',
+  {
+    domain: z.string().optional().describe('Optional domain to filter saved form data'),
+  },
+  async ({ domain }) => {
+    const path = domain ? `/forms/memory/${encodeURIComponent(domain)}` : '/forms/memory';
+    const data = await apiCall('GET', path);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_form_fill — Get autofill data for a domain
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_form_fill',
+  'Get saved form fill data for a domain, ready to inject into form fields',
+  {
+    tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
+  },
+  async ({ tabId }) => {
+    const data = await apiCall('POST', '/forms/fill', tabId ? { domain: tabId } : {}, tabHeaders(tabId));
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_forms_clear — Clear saved form data for a domain
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_forms_clear',
+  'Delete all saved form autofill data for a specific domain',
+  {
+    domain: z.string().describe('The domain to clear saved form data for'),
+  },
+  {
+    destructiveHint: true,
+    readOnlyHint: false,
+  },
+  async ({ domain }) => {
+    const data = await apiCall('DELETE', `/forms/memory/${encodeURIComponent(domain)}`);
+    await logActivity('forms_clear', domain);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
+// tandem_extract_url — Extract content from a URL
+// ═══════════════════════════════════════════════
+
+server.tool(
+  'tandem_extract_url',
+  'Extract and parse content from a URL using headless rendering. Returns structured content.',
+  {
+    url: z.string().describe('The URL to extract content from'),
+  },
+  async ({ url }) => {
+    const data = await apiCall('POST', '/content/extract/url', { url });
+    await logActivity('extract_url', url);
+    return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+  }
+);
+
+// ═══════════════════════════════════════════════
 // Start the server
 // ═══════════════════════════════════════════════
 
