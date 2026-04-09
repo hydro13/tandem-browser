@@ -1536,11 +1536,11 @@ server.tool(
     if (offset !== undefined) params.set('offset', String(offset));
     const qs = params.toString();
     const data = await apiCall('GET', qs ? `/history?${qs}` : '/history');
-    const entries: Array<{ url: string; title: string; visitedAt: number; visitCount?: number }> = data.entries || [];
+    const entries: Array<{ url: string; title: string; lastVisitTime: string; visitCount?: number }> = data.entries || [];
 
     let text = `Browsing history (${entries.length} of ${data.total ?? '?'}):\n\n`;
     for (const entry of entries) {
-      const time = new Date(entry.visitedAt).toLocaleString();
+      const time = new Date(entry.lastVisitTime).toLocaleString();
       const visits = entry.visitCount ? ` (${entry.visitCount} visits)` : '';
       text += `- [${entry.title || entry.url}](${entry.url}) — ${time}${visits}\n`;
     }
