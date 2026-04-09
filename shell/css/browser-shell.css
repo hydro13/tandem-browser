@@ -513,6 +513,70 @@
       border-color: var(--accent);
     }
 
+    /* ═══ URL Autocomplete Dropdown ═══ */
+    .toolbar {
+      position: relative;
+    }
+
+    .url-autocomplete-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 60px;
+      right: 60px;
+      background: var(--surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 9999;
+      overflow: hidden;
+      max-height: 380px;
+      overflow-y: auto;
+      margin-top: 2px;
+    }
+
+    .url-autocomplete-item {
+      padding: 8px 14px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .url-autocomplete-item:hover,
+    .url-autocomplete-item.selected {
+      background: var(--hover-bg);
+    }
+
+    .url-autocomplete-item.selected {
+      border-left-color: var(--accent);
+    }
+
+    .url-autocomplete-title {
+      font-size: 13px;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .url-autocomplete-title strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .url-autocomplete-url {
+      font-size: 11px;
+      color: var(--text-dim);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    .url-autocomplete-url strong {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
     .status-dot {
       width: 10px;
       height: 10px;

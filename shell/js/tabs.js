@@ -385,10 +385,9 @@
 
     urlBar.addEventListener('focus', () => urlBar.select());
     urlBar.addEventListener('click', () => urlBar.select());
-    urlBar.addEventListener('keydown', (event) => {
-      if (event.key !== 'Enter') return;
 
-      let url = urlBar.value.trim();
+    function navigateToInput(raw) {
+      let url = raw.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         if (url.includes('.') && !url.includes(' ')) {
           url = 'https://' + url;
@@ -396,11 +395,21 @@
           url = 'https://duckduckgo.com/?q=' + encodeURIComponent(url);
         }
       }
-
       const entry = tabs.get(activeTabId);
       if (entry) {
         entry.webview.loadURL(url);
       }
+    }
+
+    // URL autocomplete integration
+    if (window.__urlAutocomplete) {
+      window.__urlAutocomplete.init(urlBar, (url) => navigateToInput(url));
+    }
+
+    urlBar.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      // If autocomplete handled this event via stopImmediatePropagation, we won't reach here.
+      navigateToInput(urlBar.value);
     });
 
     btnNewTab.addEventListener('click', () => {
