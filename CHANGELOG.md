@@ -4,6 +4,37 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## Unreleased
 
+## [v0.68.0] - 2026-04-09
+
+### Added
+
+- MCP server expanded from 24 to 63 tools — full API coverage for any MCP-connected agent (Claude Code, Cursor, OpenClaw, or third-party)
+- MCP tab targeting: optional `tabId` parameter on all read/interaction tools for background tab operations via `X-Tab-Id`
+- MCP accessibility snapshots: `tandem_snapshot`, `tandem_snapshot_click`, `tandem_snapshot_fill` with `@ref` IDs
+- MCP semantic locators: `tandem_find`, `tandem_find_click`, `tandem_find_fill` for role/text/label/placeholder queries
+- MCP DevTools tools: console log inspection, network monitoring, DOM queries, performance metrics, storage inspection, JS evaluation via CDP
+- MCP network tools: network log, API endpoint discovery, HAR export, request mocking/unmocking
+- MCP workspace tools: create, activate, delete, move tabs between workspaces
+- MCP session tools: isolated session create/switch/destroy, same-origin fetch relay
+- MCP tab locks: acquire/release for multi-agent coordination
+- MCP content tools: structured content extraction, raw HTML, cookie management
+- `tandem_wingman_alert` MCP tool for agent→human escalation with notification levels
+- `tandem_scroll` now supports `target` (top/bottom) and `selector` (scroll-into-view) parameters
+- `tandem_open_tab` now accepts optional `workspaceId` parameter via MCP
+- esbuild bundling for preload scripts to support Electron sandbox mode with modular source files
+
+### Fixed
+
+- Preload module split (PR #49) broke all renderer→main IPC because `sandbox: true` only allows `require('electron')` in preload scripts; resolved by bundling with esbuild
+
+### Security
+
+- Updated electron 40.6.0 → 40.8.5 (17 alerts resolved)
+- Updated hono → 4.12.12, @hono/node-server → 1.19.13 (6 alerts resolved)
+- Updated lodash → 4.18.1 (2 alerts: code injection, prototype pollution)
+- Fixed brace-expansion and path-to-regexp vulnerabilities
+- Resolved all 28 Dependabot security alerts → 0 vulnerabilities
+
 ## [v0.67.0] - 2026-04-02
 
 ### Added

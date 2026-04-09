@@ -5,8 +5,8 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/package-json/v/hydro13/tandem-browser)](package.json)
 
-Tandem Browser is a local-first Electron browser built specifically for
-human-AI collaboration with OpenClaw.
+Tandem Browser is a local-first Electron browser built for human-AI
+collaboration. Any AI agent that speaks MCP or HTTP can control it.
 
 ![Tandem Browser — homescreen with OpenClaw sidebar](docs/screenshots/tandem-homescreen-hero.jpg)
 
@@ -22,33 +22,34 @@ means page JavaScript cannot fingerprint or observe the agent layer.
 That is not something you bolt onto Chrome after the fact. It has to be in the
 browser.
 
-The human browses normally. OpenClaw gets a local API on `127.0.0.1:8765` for
+The human browses normally. AI agents connect via a built-in **MCP server**
+(63 tools) or a **local HTTP API** (300+ endpoints) on `127.0.0.1:8765` for
 navigation, extraction, automation, and observability. Tandem is not a generic
-"AI browser" shell with OpenClaw added later. It is an OpenClaw-first browser
-environment designed so the human and OpenClaw can browse together on the same
-machine.
+"AI browser" shell — it is an agent-first browser environment designed so a
+human and an AI can browse together on the same machine.
 
-Tandem is built by an OpenClaw maintainer with OpenClaw as the primary AI
-runtime.
+Tandem was originally built for OpenClaw and continues to be developed by an
+OpenClaw maintainer, but the MCP server makes it equally accessible to Claude
+Code, Cursor, Windsurf, or any other MCP-compatible agent.
 
 **The left sidebar brings your communication and tools into the browser.** Built-in panels for Telegram, WhatsApp, Discord, Slack, Gmail, Google Calendar, Instagram, and X — all persistent, all in their own isolated session alongside your main browsing. Next to the messengers: Workspaces, Pinboards, Bookmarks, History, Downloads, and Personal News. The sidebar is resizable, pinnable, and rendered with frosted glass so it stays out of the way when you don't need it.
 
-**The right-side Wingman panel** is where OpenClaw lives. Chat, activity feed, screenshots, and agent context — all in one place, connected to the local API so the agent can see what you're looking at and act on it.
+**The right-side Wingman panel** is where the AI agent lives. Chat, activity feed, screenshots, and agent context — all in one place, connected to the local API so the agent can see what you're looking at and act on it.
 
-## Why Tandem For OpenClaw?
+## Why Tandem?
 
-OpenClaw does not need Tandem in order to use a real browser context. Tandem
-exists because raw browser access alone is not the product goal.
+Raw browser access alone is not the product goal. Tandem adds the missing
+layer: a browser built for human + AI collaboration on the real web, with
+multiple security layers, review points, and a shared live workflow that keeps
+both the human and the agent safer.
 
-Tandem adds the missing layer: a browser built for human + AI collaboration on
-the real web, with multiple security layers, review points, and a shared live
-workflow that keeps both the human and the agent safer.
-
-With Tandem, OpenClaw gets:
+With Tandem, any AI agent gets:
 
 - a browser designed from the start for human + agent collaboration on the
   same machine
-- a 300+ endpoint local API for tabs, navigation, snapshots, sessions,
+- a **63-tool MCP server** for direct integration with Claude Code, Cursor,
+  Windsurf, or any MCP-compatible client
+- a **300+ endpoint HTTP API** for tabs, navigation, snapshots, sessions,
   devtools, network mocking, and controlled automation
 - an eight-layer security model built around the fact that an AI has access to
   live web content — including the first browser-level prompt injection defense
@@ -56,9 +57,6 @@ With Tandem, OpenClaw gets:
   situations, with explicit handoff points instead of silent automation
 - a local-first workflow with no dependency on a remote browser vendor or
   cloud automation service
-
-Tandem and OpenClaw's built-in browser tools are complementary. Use whichever
-fits the task.
 
 ## Status
 
@@ -74,37 +72,38 @@ This repository is a public `developer preview` — real project, early public s
 - official release format today: source code only
 - official binaries: not published yet
 
-The goal of making the repository public is to let other contributors, maintainers, and OpenClaw-adjacent builders help improve the browser over time — not just to show it.
+The goal of making the repository public is to let other contributors and builders help improve the browser over time — not just to show it.
 If you want to help shape Tandem, now is the right time. The browser still has
 rough edges, and extra engineering eyes on bugs, architecture, UX, Linux
-behavior, extension compatibility, and OpenClaw workflow polish would be
+behavior, extension compatibility, and agent workflow polish would be
 genuinely useful.
 
-## OpenClaw-First Positioning
+## Agent-First Positioning
 
-Tandem is built around collaboration with OpenClaw.
+Tandem is built around collaboration with AI agents.
 
-- the right-side Wingman workflow is designed around OpenClaw as the primary AI runtime
-- the local browser API exists so OpenClaw can inspect, navigate, extract, and automate safely
-- the security model is shaped by the fact that OpenClaw has access to a live browser
-- the repository may still be useful for general Electron browser experimentation, but the product itself is intentionally OpenClaw-first
+- **MCP server** (63 tools): the recommended way for Claude Code, Cursor, and other MCP clients to connect — zero config, full browser control
+- **HTTP API** (300+ endpoints): for agents that prefer direct HTTP, or for custom integrations
+- the right-side Wingman workflow supports OpenClaw as a primary runtime, with the MCP server opening Tandem to any agent ecosystem
+- the security model is shaped by the fact that an AI agent has access to a live browser
+- the repository may still be useful for general Electron browser experimentation, but the product itself is intentionally agent-first
 
-## Typical OpenClaw Workflows
+## Typical Agent Workflows
 
-Tandem is most useful when OpenClaw needs more than a single scripted page
+Tandem is most useful when an AI agent needs more than a single scripted page
 action.
 
 Examples:
 
-- research workflows across multiple tabs, where OpenClaw opens, inspects, and
+- research workflows across multiple tabs, where the agent opens, inspects, and
   summarizes pages while the human keeps browsing
 - autonomous agent workspace, where the agent creates its own dedicated
   workspace, opens and manages tabs there independently from the user's
-  browsing, and calls `POST /wingman-alert` with `workspaceId` to instantly
-  surface the right workspace to the user when human help is needed
-- SPA inspection, where OpenClaw uses snapshots, DOM search, and network or
-  devtools surfaces instead of guessing from raw HTML alone
-- session-aware tasks, where OpenClaw can operate inside the human's real
+  browsing, and calls `tandem_wingman_alert` to instantly surface the right
+  workspace to the user when human help is needed
+- SPA inspection, where the agent uses accessibility snapshots, semantic
+  locators, and devtools surfaces instead of guessing from raw HTML alone
+- session-aware tasks, where the agent can operate inside the human's real
   authenticated browser context
 - human-in-the-loop workflows, where captchas, risky actions, or uncertain
   cases are surfaced back to the human instead of hidden
@@ -112,20 +111,21 @@ Examples:
 ## What Tandem Does
 
 - Human + AI shared browsing with one local browser session
-- Local HTTP API for tabs, navigation, screenshots, content extraction,
-  sessions, devtools surfaces, and automation
-- Background-tab-safe API targeting via `X-Tab-Id` for snapshots, page reads,
+- **MCP server** with 63 tools for direct agent integration (snapshots,
+  devtools, network, sessions, workspaces, tab locks, and more)
+- **HTTP API** with 300+ endpoints for tabs, navigation, screenshots, content
+  extraction, sessions, devtools surfaces, and automation
+- Background-tab-safe targeting via `X-Tab-Id` for snapshots, page reads,
   JS evaluation, waits, links, and form inspection without forcing focus
 - Security-by-default browsing with multi-layer filtering and review points
-- OpenClaw-first runtime integration for chat, browser control, and local agent workflows
+- Agent-first runtime integration for chat, browser control, and local workflows
 - Local-first persistence for sessions, history, workspaces, bookmarks, and
   settings
 - Chrome-style extension loading and related compatibility work
 
-
 ## Security Principles
 
-Tandem treats security as part of the OpenClaw integration story, not as a
+Tandem treats security as part of the agent integration story, not as a
 separate afterthought.
 
 The high-level rules are:
@@ -170,10 +170,26 @@ npm start
 
 On macOS, the start script clears Electron quarantine flags before launch.
 
-## First OpenClaw Check
+## Connecting An Agent
 
-If you want the shortest possible proof that Tandem is useful to OpenClaw, do
-this:
+### Option 1: MCP (recommended for Claude Code, Cursor, etc.)
+
+Add to your MCP client configuration (e.g. `~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "tandem": {
+      "command": "node",
+      "args": ["/path/to/tandem-browser/dist/mcp/server.js"]
+    }
+  }
+}
+```
+
+Start Tandem (`npm start`), and the agent has 63 tools available immediately.
+
+### Option 2: HTTP API (for custom integrations)
 
 ```bash
 npm install
@@ -186,66 +202,25 @@ curl -sS http://127.0.0.1:8765/tabs/list \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-If those return live JSON, Tandem is up and OpenClaw has a usable control
+If those return live JSON, Tandem is up and the agent has a usable control
 surface.
 
-## OpenClaw Integration
+### Option 3: OpenClaw (Wingman chat integration)
 
-Tandem is designed first and foremost for OpenClaw.
+Tandem was originally built for OpenClaw and includes deep integration:
 
-The browser can run without OpenClaw for shell or API development work, but the
-full product experience expects a local OpenClaw gateway and configuration on
-the same machine.
-
-If you are only working on browser shell, tabs, screenshots, security, or API
-behavior, you do not need every OpenClaw feature running first.
-
-If you are evaluating Tandem as a product, assume OpenClaw integration is a
-core part of the intended workflow rather than an optional extra. Tandem should
-be understood as a purpose-built OpenClaw companion browser.
-
-## How OpenClaw Connects To Tandem
-
-OpenClaw does not discover Tandem automatically just because both are installed.
-The connection works when these pieces are in place on the same machine:
-
-- Tandem is running and serving its local API on `http://127.0.0.1:8765`
+- Tandem serves its local API on `http://127.0.0.1:8765`
 - OpenClaw uses the Tandem skill and sends requests to that local API
 - OpenClaw reads the Tandem bearer token from `~/.tandem/api-token`
 - For the in-app Wingman chat experience, the local OpenClaw gateway also needs
   to be running on `ws://127.0.0.1:18789`
-- No extra local Tandem chat bridge, polling job, or custom OpenClaw skill is
-  required for stock Wingman chat
-
-In practice, Tandem is the browser surface and local API. OpenClaw is the agent
-runtime that uses that API.
-
-## Minimum Setup For Testers
-
-If you want to test Tandem with an existing OpenClaw installation, the minimum
-setup is:
-
-- Tandem Browser checked out and started locally
-- a valid Tandem API token in `~/.tandem/api-token`
-- OpenClaw installed on the same machine
 
 The easiest way to get OpenClaw working with Tandem is to point it at this
 repository. Clone it, run `npm install && npm start`, then tell OpenClaw:
 "read `skill/SKILL.md` in the Tandem repo — that is your instruction manual for
-working with this browser." OpenClaw will handle the rest from the skill
-documentation.
-
-For full Wingman chat integration inside Tandem, also ensure:
-
-- the OpenClaw gateway is running locally
-- `~/.openclaw/openclaw.json` exists and contains the gateway auth token
-- do not add a separate legacy Tandem `/chat` polling or webhook bridge unless
-  you are debugging an old local setup
+working with this browser."
 
 ## Verify The Connection
-
-Use these commands to verify that Tandem is reachable and that OpenClaw has the
-information it needs:
 
 ```bash
 TOKEN="$(cat ~/.tandem/api-token)"
@@ -254,15 +229,12 @@ curl -sS http://127.0.0.1:8765/status
 
 curl -sS http://127.0.0.1:8765/tabs/list \
   -H "Authorization: Bearer $TOKEN"
-
-test -f ~/.openclaw/openclaw.json && echo "OpenClaw config found"
 ```
 
 Expected result:
 
 - `/status` returns a live Tandem status payload
 - `/tabs/list` returns JSON instead of `401 Unauthorized`
-- the OpenClaw config file exists if you want Wingman chat inside Tandem
 
 ## Public API Snapshot
 
@@ -305,16 +277,16 @@ The local API binds to `127.0.0.1:8765`.
 
 ## Contributing Focus
 
-This repo is public because Tandem should be buildable with other OpenClaw
-maintainers and contributors, not only observed from a distance.
+This repo is public because Tandem should be buildable with contributors, not
+only observed from a distance.
 
 Good contribution areas right now:
 
-- OpenClaw workflow polish and skill ergonomics
+- MCP tool improvements and new tool proposals
 - browser API improvements for tabs, snapshots, sessions, and devtools
 - Linux quality and cross-platform testing
 - security review and containment hardening
-- UI polish for the shared human + OpenClaw browsing workflow
+- UI polish for the shared human + agent browsing workflow
 - bug reports with reproduction steps and logs
 - code review, issue triage, and docs cleanup
 
@@ -338,7 +310,7 @@ documents are maintainer workflow material. They remain in the repository for
 engineering context, but they are not the primary public entry points.
 
 Contributions are welcome. If you want to help improve Tandem as an
-OpenClaw-first browser, start with [CONTRIBUTING.md](CONTRIBUTING.md). Even if
+agent-first browser, start with [CONTRIBUTING.md](CONTRIBUTING.md). Even if
 you are not ready to ship a large feature, smaller fixes, validation work,
 security review, Linux testing, docs improvements, and focused issue reports
 are all useful contributions.
