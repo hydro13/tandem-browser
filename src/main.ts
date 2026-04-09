@@ -201,22 +201,50 @@ async function createWindow(): Promise<BrowserWindow> {
   stealth.registerWith(dispatcher);
 
   // Cookie fix: ensure SameSite=None cookies have Secure flag (priority 10, response headers)
+  // Case-insensitive header lookup — Chromium may use any casing for Set-Cookie
   dispatcher.registerHeadersReceived({
     name: 'CookieFix',
     priority: 10,
     handler: (_details, responseHeaders) => {
-      const cookieHeaders = responseHeaders['set-cookie'] || responseHeaders['Set-Cookie'];
-      if (cookieHeaders) {
-        const fixedCookies = cookieHeaders.map((cookie: string) => {
-          if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
-            return cookie + '; Secure';
-          }
-          return cookie;
-        });
-        delete responseHeaders['Set-Cookie'];
-        responseHeaders['set-cookie'] = fixedCookies;
+      // Find all Set-Cookie header keys regardless of casing
+      const setCookieKeys = Object.keys(responseHeaders).filter(
+        k => k.toLowerCase() === 'set-cookie'
+      );
+      for (const key of setCookieKeys) {
+        const cookieHeaders = responseHeaders[key];
+        if (Array.isArray(cookieHeaders)) {
+          const fixedCookies = cookieHeaders.map((cookie: string) => {
+            if (/SameSite=None/i.test(cookie) && !/;\s*Secure/i.test(cookie)) {
+              return cookie + '; Secure';
+            }
+            return cookie;
+          });
+          // Normalize to lowercase key
+          delete responseHeaders[key];
+          responseHeaders['set-cookie'] = fixedCookies;
+        }
       }
       return responseHeaders;
+    }
+  });
+
+  // Safety net: fix SameSite=None cookies in the jar that weren't caught by the header handler
+  // (e.g. cookies set via document.cookie or already present before the handler was attached)
+  ses.cookies.on('changed', (_event, cookie, _cause, removed) => {
+    if (removed) return;
+    if (cookie.sameSite === 'no_restriction' && !cookie.secure) {
+      const url = `https://${cookie.domain?.replace(/^\./, '') || 'unknown'}${cookie.path || '/'}`;
+      ses.cookies.set({
+        url,
+        name: cookie.name,
+        value: cookie.value,
+        domain: cookie.domain || undefined,
+        path: cookie.path || undefined,
+        secure: true,
+        httpOnly: cookie.httpOnly || undefined,
+        sameSite: 'no_restriction',
+        expirationDate: cookie.expirationDate || undefined,
+      }).catch(() => { /* best effort — cookie may be read-only or expired */ });
     }
   });
 

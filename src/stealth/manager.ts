@@ -50,6 +50,20 @@ export class StealthManager {
         if (isGoogleAuthUrl(url)) {
           // Remove our fake UA, let Electron's real one through
           delete headers['User-Agent'];
+          // Also remove fake Sec-CH-UA headers — session.setUserAgent() causes Chromium
+          // to auto-send Chrome-like client hints at the session level. If we let the
+          // real Electron UA through but keep Chrome Sec-CH-UA, Google detects the
+          // mismatch and flags the session (CookieMismatch).
+          delete headers['Sec-CH-UA'];
+          delete headers['Sec-CH-UA-Mobile'];
+          delete headers['Sec-CH-UA-Platform'];
+          delete headers['Sec-CH-UA-Full-Version-List'];
+          // Catch any other Sec-CH-UA-* variants (e.g. Sec-CH-UA-Arch, Sec-CH-UA-Model)
+          for (const key of Object.keys(headers)) {
+            if (key.toLowerCase().startsWith('sec-ch-ua')) {
+              delete headers[key];
+            }
+          }
           return headers;
         }
 
