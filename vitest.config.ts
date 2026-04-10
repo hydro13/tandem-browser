@@ -5,6 +5,9 @@ export default defineConfig({
     include: [
       'src/**/tests/**/*.test.ts',
     ],
+    setupFiles: [
+      'src/api/tests/setup.ts',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
