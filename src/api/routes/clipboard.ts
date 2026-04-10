@@ -47,11 +47,26 @@ export function registerClipboardRoutes(router: Router, ctx: RouteContext): void
   // ═══ POST /clipboard/save — Save clipboard content as file ═══
   router.post('/clipboard/save', (req: Request, res: Response) => {
     try {
-      const { filename, format, quality, directory } = req.body;
+      const { filename } = req.body;
       if (typeof filename !== 'string' || !filename) {
         res.status(400).json({ error: 'filename is required (string)' });
         return;
       }
+      // Validate format — only allow known safe values
+      const VALID_FORMATS = ['png', 'jpg', 'txt'] as const;
+      const rawFormat = req.body.format;
+      const format = typeof rawFormat === 'string' && VALID_FORMATS.includes(rawFormat as typeof VALID_FORMATS[number])
+        ? rawFormat as 'png' | 'jpg' | 'txt'
+        : undefined;
+      // Validate quality — must be number in range
+      const rawQuality = req.body.quality;
+      const quality = typeof rawQuality === 'number' && rawQuality >= 1 && rawQuality <= 100
+        ? rawQuality
+        : undefined;
+      // Validate directory — must be string, sanitization happens in ClipboardManager via resolvePathInAllowedRoots
+      const rawDir = req.body.directory;
+      const directory = typeof rawDir === 'string' && rawDir.length > 0 ? rawDir : undefined;
+
       const result = ctx.clipboardManager.saveAs({ filename, format, quality, directory });
       res.json({ ok: true, path: result.path, size: result.size });
     } catch (e) {
