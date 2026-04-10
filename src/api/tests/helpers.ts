@@ -526,6 +526,14 @@ export function createMockContext(): RouteContext {
       reorderItems: vi.fn().mockReturnValue(true),
       destroy: vi.fn(),
     } as any,
+
+    // ── clipboardManager ────────────────────────
+    clipboardManager: {
+      read: vi.fn().mockReturnValue({ hasText: false, hasImage: false, hasHTML: false, formats: [] }),
+      writeText: vi.fn(),
+      writeImage: vi.fn(),
+      saveAs: vi.fn().mockReturnValue({ path: '/tmp/test.png', size: 1024 }),
+    } as any,
   };
 
   return ctx;

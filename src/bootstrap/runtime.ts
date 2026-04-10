@@ -50,6 +50,7 @@ import { HeadlessManager } from '../headless/manager';
 import { BehaviorObserver } from '../behavior/observer';
 import { WorkflowEngine } from '../workflow/engine';
 import { WorkspaceManager } from '../workspaces/manager';
+import { ClipboardManager } from '../clipboard/manager';
 import { DEFAULT_PARTITION } from '../utils/constants';
 import type { RuntimeManagers } from './types';
 
@@ -174,6 +175,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.contentExtractor = new ContentExtractor();
   runtime.workflowEngine = new WorkflowEngine();
   runtime.loginManager = new LoginManager();
+  runtime.clipboardManager = new ClipboardManager();
   runtime.sessionRestoreManager = new SessionRestoreManager(runtime.syncManager);
 
   runtime.workspaceManager.setMainWindow(win);
@@ -315,6 +317,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     syncManager: runtime.syncManager,
     pinboardManager: runtime.pinboardManager,
     googlePhotosManager: runtime.googlePhotosManager,
+    clipboardManager: runtime.clipboardManager,
   };
 }
 

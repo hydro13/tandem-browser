@@ -46,6 +46,7 @@ import type { SidebarManager } from './sidebar/manager';
 import type { WorkspaceManager } from './workspaces/manager';
 import type { SyncManager } from './sync/manager';
 import type { PinboardManager } from './pinboards/manager';
+import type { ClipboardManager } from './clipboard/manager';
 import type { GooglePhotosManager } from './integrations/google-photos';
 
 export interface ManagerRegistry {
@@ -92,4 +93,5 @@ export interface ManagerRegistry {
   syncManager: SyncManager;
   pinboardManager: PinboardManager;
   googlePhotosManager: GooglePhotosManager;
+  clipboardManager: ClipboardManager;
 }
