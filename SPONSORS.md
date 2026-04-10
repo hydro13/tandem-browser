@@ -47,7 +47,7 @@ no ads. Sponsorship goes directly to:
 
 | | Supporter | Power User | Champion |
 |---|----------|------------|----------|
-| **Monthly** | $5 | $15 | $30 |
+| **Monthly** | $5 | $14 | $29 |
 | Sponsor badge on your GitHub profile | ✓ | ✓ | ✓ |
 | Name on the Tandem sponsors page | ✓ | ✓ | ✓ |
 | Early access to release notes | | ✓ | ✓ |
@@ -58,7 +58,7 @@ no ads. Sponsorship goes directly to:
 
 | | Startup | Business | Enterprise |
 |---|---------|----------|------------|
-| **Monthly** | $50 | $150 | $500 |
+| **Monthly** | $49 | $149 | $499 |
 | Company name on sponsors page | ✓ | ✓ | ✓ |
 | Logo on the Tandem website | | ✓ | ✓ |
 | Logo on the GitHub README | | ✓ | ✓ |
