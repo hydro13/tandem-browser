@@ -132,32 +132,20 @@ Each module is a self-contained subsystem with its own manager.
 
 ### Active Documentation
 
-| Directory | Contents | When to read |
-|-----------|----------|-------------|
-| [implementations/](implementations/) | Current feature implementation docs (14 features) | When working on a specific subsystem |
-| [plans/](plans/) | Design proposals for not-yet-implemented features (16 plans) | When planning new work |
-| [templates/](templates/) | Templates for new feature docs, phase files, handoffs | When starting a new feature track |
+| Path | Contents | When to read |
+|------|----------|-------------|
+| [plans/](plans/) | Design docs for upcoming features (ad blocker, private browsing, split screen, tab emojis, tab snoozing, search in tabs) | When planning new work |
+| [templates/](templates/) | Standard patterns for contributing (manager pattern, design template, phase template) | When starting a new feature |
 | [research/](research/) | Opera gap analysis, feature inventories | For competitive context |
-| [security-shield/](security-shield/) | Security architecture specs and phase docs | When working on security |
-| [security-upgrade/](security-upgrade/) | Security intelligence upgrade (9 phases) | When working on security evolution |
-| [Browser-extensions/](Browser-extensions/) | Extension system docs (10 phases) | When working on extensions |
-| [agent-tools/](agent-tools/) | Agent tool development (3 phases + docs) | When adding MCP/API tools |
 | [screenshots/](screenshots/) | Product screenshots for README and website | For marketing/docs |
+| [api-current.md](api-current.md) | Current API surface overview | When working on API endpoints |
+| [public-launch.md](public-launch.md) | Launch copy, taglines, GitHub topics | For marketing |
 
-### Reference Documentation
+### Archive (Historical)
 
-| File | Contents |
-|------|----------|
-| [api-current.md](api-current.md) | Current API notes for live features |
-| [public-launch.md](public-launch.md) | Launch copy, taglines, GitHub topics |
-
-### Internal (Historical)
-
-| Directory | Contents | Note |
-|-----------|----------|------|
-| [internal/](internal/) | ROADMAP.md, STATUS.md | Historical snapshots, NOT the active backlog |
-| [archive/](archive/) | Completed/superseded docs, old plans, past code reviews | Read only for context on past decisions |
-| [temp/](temp/) | Working documents, migration notes | May be stale |
+| Directory | Contents |
+|-----------|----------|
+| [archive/](archive/) | All completed work: security-shield, security-upgrade, Browser-extensions, agent-tools, code-quality, code-review-fixes, security-fixes, implementations, internal docs, and completed design plans. Read only for historical context. |
 
 ## Website
 
