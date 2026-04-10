@@ -6,6 +6,8 @@ import type { SyncManager } from '../sync/manager';
 
 const log = createLogger('PinboardManager');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface Pinboard {
   id: string;
   name: string;
@@ -42,83 +44,41 @@ interface PinboardStore {
   lastModified: string;
 }
 
+// ─── Storage path ───────────────────────────────────────────────────
+
+const STORAGE_DIR = ensureDir(tandemDir('pinboards'));
+const STORAGE_PATH = path.join(STORAGE_DIR, 'boards.json');
+
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
- * PinboardManager — CRUD operations for pinboards with JSON storage.
+ * PinboardManager — CRUD operations for pinboards and their items.
  *
- * Storage: ~/.tandem/pinboards/boards.json
+ * Persistence: ~/.tandem/pinboards/boards.json
+ * API routes:  src/api/routes/pinboards.ts
+ * MCP tools:   src/mcp/tools/pinboards.ts
  */
 export class PinboardManager {
-  private storePath: string;
+
+  // === 1. Private state ===
+
   private store: PinboardStore;
   private syncManager: SyncManager | null = null;
 
+  // === 2. Constructor ===
+
   constructor() {
-    const dir = ensureDir(tandemDir('pinboards'));
-    this.storePath = path.join(dir, 'boards.json');
     this.store = this.load();
   }
+
+  // === 3. Dependency setters ===
 
   setSyncManager(sm: SyncManager): void {
     this.syncManager = sm;
     this.mergeFromSync();
   }
 
-  private mergeFromSync(): void {
-    if (!this.syncManager?.isConfigured()) return;
-    try {
-      const shared = this.syncManager.readShared<PinboardStore>('pinboards.json');
-      if (!shared) return;
-      const localTime = new Date(this.store.lastModified).getTime() || 0;
-      const sharedTime = new Date(shared.lastModified).getTime() || 0;
-      // If local has no boards yet (fresh install / new device), always prefer shared
-      const localEmpty = this.store.boards.length === 0;
-      if (localEmpty || sharedTime > localTime) {
-        this.store = shared;
-        this.save();
-        log.info('Pinboards loaded from sync (newer version found)');
-      }
-    } catch (e) {
-      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : e);
-    }
-  }
-
-  private load(): PinboardStore {
-    try {
-      if (fs.existsSync(this.storePath)) {
-        return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
-      }
-    } catch (e) { log.warn('Pinboards file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
-    return { boards: [], lastModified: new Date().toISOString() };
-  }
-
-  private save(): void {
-    this.store.lastModified = new Date().toISOString();
-    fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
-    this.syncManager?.writeShared('pinboards.json', this.store);
-  }
-
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-  }
-
-  private async fetchOGMeta(url: string): Promise<OGMeta> {
-    try {
-      const res = await fetch(url, {
-        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Tandem/1.0)' },
-        signal: AbortSignal.timeout(5000),
-      });
-      const html = await res.text();
-      const og = (prop: string): string | undefined => {
-        const m = html.match(new RegExp(`<meta[^>]*property=["']og:${prop}["'][^>]*content=["']([^"']+)["']`, 'i'))
-               || html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:${prop}["']`, 'i'));
-        return m?.[1];
-      };
-      const title = og('title') || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
-      return { title, description: og('description'), image: og('image') };
-    } catch {
-      return {};
-    }
-  }
+  // === 4. Public methods ===
 
   // --- Board CRUD ---
 
@@ -250,7 +210,78 @@ export class PinboardManager {
     return true;
   }
 
+  // === 5. Sync integration ===
+
+  private mergeFromSync(): void {
+    if (!this.syncManager?.isConfigured()) return;
+    try {
+      const shared = this.syncManager.readShared<PinboardStore>('pinboards.json');
+      if (!shared) return;
+      const localTime = new Date(this.store.lastModified).getTime() || 0;
+      const sharedTime = new Date(shared.lastModified).getTime() || 0;
+      // If local has no boards yet (fresh install / new device), always prefer shared
+      const localEmpty = this.store.boards.length === 0;
+      if (localEmpty || sharedTime > localTime) {
+        this.store = shared;
+        this.save();
+        log.info('Pinboards loaded from sync (newer version found)');
+      }
+    } catch (e) {
+      log.warn('mergeFromSync failed:', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // === 6. Cleanup ===
+
   destroy(): void {
-    // Cleanup — currently noop (no file watchers or timers)
+    // Currently noop (no file watchers or timers)
+  }
+
+  // === 7. Private I/O ===
+
+  private load(): PinboardStore {
+    try {
+      if (fs.existsSync(STORAGE_PATH)) {
+        return JSON.parse(fs.readFileSync(STORAGE_PATH, 'utf-8'));
+      }
+    } catch (e) {
+      log.warn('Pinboards file corrupted, starting fresh:', e instanceof Error ? e.message : String(e));
+    }
+    return { boards: [], lastModified: new Date().toISOString() };
+  }
+
+  private save(): void {
+    try {
+      this.store.lastModified = new Date().toISOString();
+      fs.writeFileSync(STORAGE_PATH, JSON.stringify(this.store, null, 2));
+      if (this.syncManager?.isConfigured()) {
+        this.syncManager.writeShared('pinboards.json', this.store);
+      }
+    } catch (e) {
+      log.warn('Failed to save pinboards:', e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+
+  private async fetchOGMeta(url: string): Promise<OGMeta> {
+    try {
+      const res = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Tandem/1.0)' },
+        signal: AbortSignal.timeout(5000),
+      });
+      const html = await res.text();
+      const og = (prop: string): string | undefined => {
+        const m = html.match(new RegExp(`<meta[^>]*property=["']og:${prop}["'][^>]*content=["']([^"']+)["']`, 'i'))
+               || html.match(new RegExp(`<meta[^>]*content=["']([^"']+)["'][^>]*property=["']og:${prop}["']`, 'i'));
+        return m?.[1];
+      };
+      const title = og('title') || html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1]?.trim();
+      return { title, description: og('description'), image: og('image') };
+    } catch {
+      return {};
+    }
   }
 }
