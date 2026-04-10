@@ -79,6 +79,11 @@ function buildPageContentScript(settleMs: number, maxWait: number, targetLength:
   `;
 }
 
+/**
+ * Register core browser action routes (navigate, click, type, scroll, key press, screenshots, etc.).
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // NAVIGATE

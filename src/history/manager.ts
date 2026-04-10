@@ -44,6 +44,7 @@ export class HistoryManager {
     this.store = this.load();
   }
 
+  /** Wire up sync manager for cross-device history publishing. */
   setSyncManager(sm: SyncManager): void {
     this.syncManager = sm;
   }
@@ -72,6 +73,7 @@ export class HistoryManager {
     }, 2000);
   }
 
+  /** Flush pending history writes to disk on shutdown. */
   destroy(): void {
     if (this.saveTimer) {
       clearTimeout(this.saveTimer);

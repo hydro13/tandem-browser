@@ -3,6 +3,11 @@ import type { RouteContext} from '../context';
 import { getActiveWC, getSessionWC } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
+/**
+ * Register content extraction and URL-fetch routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerContentRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // CONTENT EXTRACTION
