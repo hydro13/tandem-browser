@@ -1,7 +1,7 @@
 {
   "name": "tandem-browser",
   "version": "0.70.0",
-  "description": "Local-first Electron browser for human-AI collaboration with 233-tool MCP server, 300+ endpoint HTTP API, and built-in security controls",
+  "description": "Local-first Electron browser for human-AI collaboration with 236-tool MCP server, 300+ endpoint HTTP API, and built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
   "license": "MIT",
@@ -34,12 +34,13 @@
     "mcp": "node dist/mcp/server.js",
     "postinstall": "electron-rebuild -f -w better-sqlite3",
     "rebuild": "electron-rebuild -f -w better-sqlite3",
-    "verify": "npm run compile && npm run lint && npm test",
+    "verify": "npm run compile && npm run lint && npm test && npm run check-consistency",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:security": "vitest run src/security/tests/",
     "test:extensions": "vitest run src/extensions/tests/",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "check-consistency": "node scripts/check-consistency.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
