@@ -8,7 +8,7 @@ for human-AI collaboration, so documentation should stay consistent with that
 framing.
 
 Tandem was originally built for OpenClaw and continues to be maintained in the
-same ecosystem, but the MCP server (231 tools) and HTTP API (300+ endpoints)
+same ecosystem, but the MCP server (236 tools) and HTTP API (300+ endpoints)
 make it equally accessible to any MCP-compatible agent.
 
 ## Start Here

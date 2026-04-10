@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/package-json/v/hydro13/tandem-browser)](package.json)
 
-**231 MCP tools. Plug in any AI. No scraping. No API wrangling.**
+**236 MCP tools. Plug in any AI. No scraping. No API wrangling.**
 
 Tandem is a local-first Electron browser where a human and an AI agent browse
 together. The agent sees what you see, navigates your tabs, reads your pages,
@@ -40,7 +40,7 @@ either protocol.
 | **System** | 6 | Browser status, headless mode, Google Photos, security overrides |
 | **Awareness** | 2 | Activity digest, real-time focus detection — the AI knows what you're doing |
 
-**233 tools total** — full parity with the HTTP API.
+**236 tools total** — full parity with the HTTP API.
 
 ## Why Not Just Use Playwright?
 
@@ -100,7 +100,7 @@ Add to your MCP configuration:
 }
 ```
 
-Start Tandem, and 233 tools are available immediately.
+Start Tandem, and 236 tools are available immediately.
 
 ### Cursor / Windsurf / Other MCP Clients
 

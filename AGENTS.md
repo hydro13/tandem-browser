@@ -16,7 +16,7 @@ how it works, and why it exists.
 
 - **Repo:** `hydro13/tandem-browser` (GitHub: hydro13)
 - **Stack:** Electron 40 + TypeScript + Express.js API (`localhost:8765`) +
-  MCP server (231 tools)
+  MCP server (236 tools)
 - **Goal:** An agent-first browser where any AI (via MCP, HTTP API, or
   WebSocket) and a human browse together
 - **Philosophy:** Local-first, privacy-first, no cloud dependencies in the
@@ -34,12 +34,12 @@ tandem-browser/
 ├── src/                          # TypeScript application code
 │   ├── api/server.ts             # Express API bootstrap
 │   ├── main.ts                   # Electron main process
-│   ├── security/                 # 6-layer shield + intelligence upgrade
+│   ├── security/                 # 8-layer shield + intelligence upgrade
 │   ├── extensions/               # Browser extension system (12 files)
 │   ├── snapshot/                 # Accessibility tree with @refs
 │   ├── network/                  # Inspector + mocking
 │   ├── sessions/                 # Multi-session isolation
-│   ├── mcp/                      # MCP server (231 tools, full API parity)
+│   ├── mcp/                      # MCP server (236 tools, full API parity)
 │   │   ├── server.ts             # MCP server entry point
 │   │   └── tools/                # Tool definitions (one file per domain)
 │   ├── agents/                   # TaskManager, X-Scout, TabLockManager

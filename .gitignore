@@ -9,3 +9,9 @@ src/security/blocklists/data/
 
 # Native binaries (compiled locally)
 native/speech/tandem-speech
+
+# macOS system files
+.DS_Store
+
+# Cowork workspace (local only, not for the repo)
+.cowork/

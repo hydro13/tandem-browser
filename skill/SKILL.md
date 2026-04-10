@@ -22,7 +22,7 @@ instead of a sandbox browser, especially for:
 
 ### Option 1: MCP Server (recommended)
 
-The MCP server exposes 231 tools with full API parity. Add to your MCP client
+The MCP server exposes 236 tools with full API parity. Add to your MCP client
 configuration (e.g. `~/.claude/settings.json` for Claude Code):
 
 ```json
@@ -36,7 +36,7 @@ configuration (e.g. `~/.claude/settings.json` for Claude Code):
 }
 ```
 
-Start Tandem (`npm start`), and the agent has 231 tools available immediately.
+Start Tandem (`npm start`), and the agent has 236 tools available immediately.
 All MCP tools mirror the HTTP API below, so the same capabilities are available
 through either connection method.
 
