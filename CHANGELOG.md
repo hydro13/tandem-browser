@@ -2,6 +2,10 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.69.3] - 2026-04-10
+
+- fix: add .nojekyll to enable static GitHub Pages
+
 ## [v0.69.2] - 2026-04-10
 
 - fix: move FUNDING.yml to correct location (.github/)

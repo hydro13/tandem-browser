@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.69.2",
+  "version": "0.69.3",
   "description": "Local-first Electron browser for human-AI collaboration with 231-tool MCP server, 300+ endpoint HTTP API, and built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
