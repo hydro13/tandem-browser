@@ -2,7 +2,6 @@ import path from 'path';
 import os from 'os';
 import fs from 'fs';
 import { clipboard, nativeImage } from 'electron';
-import { ensureDir } from '../utils/paths';
 import { resolvePathInAllowedRoots } from '../utils/security';
 import { createLogger } from '../utils/logger';
 
@@ -107,16 +106,26 @@ export class ClipboardManager {
   }
 
   saveAs(options: ClipboardSaveOptions): ClipboardSaveResult {
-    const { filename, quality = 90 } = options;
+    const { quality = 90 } = options;
 
-    // Validate filename — no path separators allowed
-    if (!filename || filename.includes('/') || filename.includes('\\') || filename.includes('..')) {
-      throw new Error('Invalid filename: must not contain path separators or ".."');
+    // Sanitize filename — only allow simple filenames, no path traversal
+    const filename = path.basename(String(options.filename || ''));
+    if (!filename || filename.startsWith('.')) {
+      throw new Error('Invalid filename: must be a simple filename without path separators');
     }
 
-    const dir = options.directory || DEFAULT_SAVE_DIR;
-    const fullPath = resolvePathInAllowedRoots(path.join(dir, filename), ALLOWED_SAVE_ROOTS);
-    ensureDir(path.dirname(fullPath));
+    // Sanitize directory — resolve to an allowed root, default to safe location
+    const rawDir = typeof options.directory === 'string' ? options.directory : DEFAULT_SAVE_DIR;
+    const safePath = resolvePathInAllowedRoots(
+      path.join(path.resolve(rawDir), filename),
+      ALLOWED_SAVE_ROOTS,
+    );
+
+    // Only create directories under allowed roots (safePath already validated)
+    const safeDir = path.dirname(safePath);
+    if (!fs.existsSync(safeDir)) {
+      fs.mkdirSync(safeDir, { recursive: true });
+    }
 
     // Detect format from filename extension if not specified
     const ext = path.extname(filename).toLowerCase().replace('.', '');
@@ -138,9 +147,9 @@ export class ClipboardManager {
       buffer = format === 'jpg' ? img.toJPEG(quality) : img.toPNG();
     }
 
-    fs.writeFileSync(fullPath, buffer);
-    log.info(`Saved clipboard to ${fullPath} (${buffer.length} bytes)`);
+    fs.writeFileSync(safePath, buffer);
+    log.info(`Saved clipboard to ${safePath} (${buffer.length} bytes)`);
 
-    return { path: fullPath, size: buffer.length };
+    return { path: safePath, size: buffer.length };
   }
 }
