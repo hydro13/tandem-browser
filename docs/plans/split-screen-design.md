@@ -1,7 +1,7 @@
 # Design: Split Screen
 
 > **Date:** 2026-02-28
-> **Status:** Draft
+> **Status:** Planned
 > **Effort:** Medium (3-5d)
 > **Author:** Kees
 
@@ -9,22 +9,22 @@
 
 ## Problem / Motivation
 
-Power users willen twee websites next to elkaar bekijken without te hoeven wisselen between tabs. Think about: documentatie links + code rechts, vergelijken or producten, or a video kijken terwijl you aantekeningen maakt.
+Power users want to view two websites side by side without having to switch between tabs. Think of: documentation on the left + code on the right, comparing products, or watching a video while taking notes.
 
-**Opera has:** Split Screen with 2-4 panes (vertical, horizontal, grid). Drag tab to beneden to te split, or Shift+click twee tabs → rechtermuisklik → Split Screen. Elk panel has own navigatie.
-**Tandem currently has:** Één webview simultaneously in the main content area. No multi-pane support.
-**Gap:** Completely missing — no manier to twee page's next to elkaar te tonen.
+**Opera has:** Split Screen with 2-4 panes (vertical, horizontal, grid). Drag a tab to the bottom to split, or Shift+click two tabs → right-click → Split Screen. Each panel has its own navigation.
+**Tandem currently has:** One webview at a time in the main content area. No multi-pane support.
+**Gap:** Completely missing — no way to show two pages side by side.
 
 ---
 
 ## User Experience — How It Works
 
-> Robin opens Tandem and navigeert to a API documentatie page. He wil simultaneously are applicatie testen.
-> He opens a second tab with are app, selecteert beide tabs (Shift+click), rechtermuisklik → "Split Screen".
-> The window splitst vertical: links the docs, rechts are app. Between the twee panels zit a sleepbare divider.
-> Robin clicks op the linker panel — the URL bar shows the docs URL. He navigeert to a andere docs page.
-> The rechter panel blijft ongewijzigd op are app. Robin sleept the divider to links to are app meer ruimte te geven.
-> If he complete is, clicks he rechtermuisklik → "Exit Split Screen" and keert terug to normaal single-tab browsen.
+> Robin opens Tandem and navigates to an API documentation page. He wants to simultaneously test his application.
+> He opens a second tab with his app, selects both tabs (Shift+click), right-clicks → "Split Screen".
+> The window splits vertically: docs on the left, his app on the right. Between the two panels is a draggable divider.
+> Robin clicks on the left panel — the URL bar shows the docs URL. He navigates to a different docs page.
+> The right panel remains unchanged on his app. Robin drags the divider to the left to give his app more space.
+> When he's done, he right-clicks → "Exit Split Screen" and returns to normal single-tab browsing.
 
 ---
 
@@ -47,25 +47,25 @@ Power users willen twee websites next to elkaar bekijken without te hoeven wisse
 │                     ↑ draggable divider       │
 └──────────────────────────────────────────────┘
 
-API: POST /split/open → SplitScreenManager → setBounds() op BrowserViews
+API: POST /split/open → SplitScreenManager → setBounds() on BrowserViews
      POST /split/close → SplitScreenManager → delete secondary view
-     GET  /split/status → huidige layout info
+     GET  /split/status → current layout info
 ```
 
 ### New Files
 
 | File | Responsibility |
 |---------|---------------------|
-| `src/split-screen/manager.ts` | SplitScreenManager — layout state, BrowserView lifecycle, bounds berekening |
+| `src/split-screen/manager.ts` | SplitScreenManager — layout state, BrowserView lifecycle, bounds calculation |
 | `src/api/routes/split.ts` | REST API endpoints for split screen |
 
 ### Modify Existing Files
 
 | File | Change | Function |
 |---------|-----------|---------|
-| `src/registry.ts` | `splitScreenManager` add about `ManagerRegistry` | `interface ManagerRegistry` |
-| `src/api/server.ts` | Split routes registreren | `setupRoutes()` |
-| `src/main.ts` | SplitScreenManager instantiëren, registreren, cleanup | `startAPI()`, `app.on('will-quit')` |
+| `src/registry.ts` | Add `splitScreenManager` to `ManagerRegistry` | `interface ManagerRegistry` |
+| `src/api/server.ts` | Register Split routes | `setupRoutes()` |
+| `src/main.ts` | Instantiate SplitScreenManager, register, cleanup | `startAPI()`, `app.on('will-quit')` |
 | `shell/index.html` | Divider element + split screen controls in toolbar | `<!-- Main layout -->` section |
 | `shell/js/main.js` | Divider drag logic, active pane focus, split keyboard shortcuts | event handlers |
 | `shell/css/main.css` | Styling for divider, active pane indicator | new CSS classes |
@@ -75,11 +75,11 @@ API: POST /split/open → SplitScreenManager → setBounds() op BrowserViews
 | Method | Endpoint | Description |
 |---------|---------|--------------|
 | POST | `/split/open` | Start split screen with `{tabId1, tabId2, layout}` — layout: `'vertical'` or `'horizontal'` |
-| POST | `/split/close` | Closes split screen, keert terug to single view |
-| GET | `/split/status` | Huidige split state: active/inactive, pane info, layout |
-| POST | `/split/layout` | Wissel layout: vertical ↔ horizontal |
-| POST | `/split/focus/:paneIndex` | Focus specifiek panel (0=links/boven, 1=rechts/under) |
-| POST | `/split/resize` | Set divider positie if ratio (0.0-1.0) |
+| POST | `/split/close` | Close split screen, return to single view |
+| GET | `/split/status` | Current split state: active/inactive, pane info, layout |
+| POST | `/split/layout` | Switch layout: vertical ↔ horizontal |
+| POST | `/split/focus/:paneIndex` | Focus specific panel (0=left/top, 1=right/bottom) |
+| POST | `/split/resize` | Set divider position as ratio (0.0-1.0) |
 
 ### No new npm packages needed? ✅
 
@@ -96,28 +96,22 @@ API: POST /split/open → SplitScreenManager → setBounds() op BrowserViews
 
 ## Risks / Pitfalls
 
-- **Single-webview aanname:** The huidige shell gaat out or één `<webview>` tag. Split screen requires that we the webview-container layout dynamisch aanpassen. The existing `<webview>` can blijven if "pane 0" — the second pane is a new element.
-- **BrowserView vs webview tag:** Electron's `BrowserView` is krachtiger but complexer. We kiezen for a second `<webview>` tag in the shell HTML — this is eenvoudiger, past bij the existing pattern, and vermijdt the BrowserView→WebContentsView migratie.
-- **Focus management:** If the actieve pane wisselt, must the toolbar (URL bar, back/forward) the juiste webContents aansturen. Dit requires a `activePaneIndex` state in the shell.
-- **Tab registratie:** The second pane webview must also geregistreerd be bij TabManager zodat navigatie-events correct verwerkt be.
+- **Single-webview assumption:** The current shell assumes one `<webview>` tag. Split screen requires dynamically adjusting the webview container layout. The existing `<webview>` can remain as "pane 0" — the second pane is a new element.
+- **BrowserView vs webview tag:** Electron's `BrowserView` is more powerful but more complex. We choose a second `<webview>` tag in the shell HTML — this is simpler, fits the existing pattern, and avoids the BrowserView→WebContentsView migration.
+- **Focus management:** When the active pane switches, the toolbar (URL bar, back/forward) must target the correct webContents. This requires an `activePaneIndex` state in the shell.
+- **Tab registration:** The second pane webview must also be registered with TabManager so navigation events are processed correctly.
 
 ---
 
-## Anti-detect considerations
+## Anti-detect Considerations
 
-- ✅ Alles via shell layout and Electron main process — no injection into the webview
-- ✅ Split screen is purely a UI-laag (twee webviews next to elkaar) — websites in the webviews zien only hun own page
-- ✅ Divider and controls zitten in the shell, not in the webview
-
----
-
-## Decisions Needed from Robin
-
-- [ ] Wil you also 4-pane grid (2x2) support, or is 2-pane (vertical/horizontal) genoeg for V1?
-- [ ] Drag tab to beneden if trigger for split screen — wil you this in phase 2, or only via context menu?
+- ✅ Everything via shell layout and Electron main process — no injection into the webview
+- ✅ Split screen is purely a UI layer (two webviews side by side) — websites in the webviews only see their own page
+- ✅ Divider and controls are in the shell, not in the webview
 
 ---
 
-## Approval
+## Open Questions
 
-Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________
+- [ ] Support 4-pane grid (2x2) as well, or is 2-pane (vertical/horizontal) enough for V1?
+- [ ] Drag tab to bottom as trigger for split screen — include in phase 2, or only via context menu?

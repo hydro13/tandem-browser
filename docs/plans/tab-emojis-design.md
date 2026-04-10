@@ -1,7 +1,7 @@
 # Design: Tab Emojis
 
 > **Date:** 2026-02-28
-> **Status:** Draft
+> **Status:** Planned
 > **Effort:** Easy (1-2d)
 > **Author:** Kees
 
@@ -9,27 +9,27 @@
 
 ## Problem / Motivation
 
-Tabs in Tandem are functioneel but visual eentonig. Wanneer Robin 15+ tabs open has, are favicon + title soms not genoeg to snel the juiste tab te vinden — vooral bij multiple tabs or the same site.
+Tabs in Tandem are functional but visually monotonous. When Robin has 15+ tabs open, favicon + title are sometimes not enough to quickly find the right tab — especially with multiple tabs from the same site.
 
-**Opera has:** Tab Emojis — hover over a tab shows a emoji-selector. Klik op "+" to a emoji if badge about the tab toe te wijzen. Persistent across sessions.
+**Opera has:** Tab Emojis — hover over a tab shows an emoji selector. Click "+" to assign an emoji as a badge on the tab. Persistent across sessions.
 
 **Tandem currently has:** Nothing. Tabs show only a favicon, title, source indicator (👤), and a close button. No personalization option.
 
-**Gap:** Completely missing. No emoji-toewijzing, no opslag, no UI.
+**Gap:** Completely missing. No emoji assignment, no storage, no UI.
 
 ---
 
 ## User Experience — How It Works
 
-> Robin has 12 tabs open. Drie daarvan are GitHub-repositories — allemaal with hetzelfde favicon.
+> Robin has 12 tabs open. Three of them are GitHub repositories — all with the same favicon.
 >
-> He hovert over the first GitHub-tab. Next to the title appears a klein "+" icoontje. He clicks erop → a compact emoji-picker popup appears (default browser emoji's or a grid or populaire emoji's).
+> He hovers over the first GitHub tab. Next to the title a small "+" icon appears. He clicks it → a compact emoji picker popup appears (default browser emojis or a grid of popular emojis).
 >
-> He chooses 🔥 for the hoofdproject, 🧪 for the test-repo, and 📚 for the docs-repo.
+> He chooses 🔥 for the main project, 🧪 for the test repo, and 📚 for the docs repo.
 >
-> Nu shows elke tab are emoji if badge vóór the title. Robin vindt in één oogopslag welke tab welk goal dient.
+> Now each tab shows its emoji as a badge before the title. Robin can tell at a glance which tab serves which purpose.
 >
-> The next dag opens Robin Tandem — the emoji's stand er still. Ze are opgeslagen per URL-domain+pad.
+> The next day Robin opens Tandem — the emojis are still there. They are stored per URL domain+path.
 
 ---
 
@@ -41,7 +41,7 @@ Tabs in Tandem are functioneel but visual eentonig. Wanneer Robin 15+ tabs open 
                     ┌────────────────────┐
                     │ Shell UI            │
                     │ emoji picker popup  │
-                    │ badge op tab        │
+                    │ badge on tab        │
                     └─────────┬──────────┘
                               │ fetch()
                     ┌─────────▼──────────┐
@@ -67,27 +67,27 @@ Tabs in Tandem are functioneel but visual eentonig. Wanneer Robin 15+ tabs open 
 
 | File | Responsibility |
 |---------|---------------------|
-| — | No — alles past in existing modules |
+| — | None — everything fits in existing modules |
 
 ### Modify Existing Files
 
 | File | Change | Function |
 |---------|-----------|---------|
-| `src/tabs/manager.ts` | `emoji` field op `Tab` interface + `setEmoji()` / `getEmoji()` + persistentie laden/save | `class TabManager` |
+| `src/tabs/manager.ts` | `emoji` field on `Tab` interface + `setEmoji()` / `getEmoji()` + persistence load/save | `class TabManager` |
 | `src/api/routes/tabs.ts` | Emoji set/delete endpoints | `function registerTabRoutes()` |
-| `shell/index.html` | Emoji badge in tab element + emoji picker popup op hover | Tab creation in JS |
+| `shell/index.html` | Emoji badge in tab element + emoji picker popup on hover | Tab creation in JS |
 | `shell/css/main.css` | `.tab-emoji` badge styling | Tab styling section |
 
 ### New API Endpoints
 
 | Method | Endpoint | Description |
 |---------|---------|--------------|
-| POST | `/tabs/:id/emoji` | Zet emoji for tab (body: `{ emoji: "🔥" }`) |
-| DELETE | `/tabs/:id/emoji` | Delete emoji or tab |
+| POST | `/tabs/:id/emoji` | Set emoji for tab (body: `{ emoji: "🔥" }`) |
+| DELETE | `/tabs/:id/emoji` | Remove emoji from tab |
 
-### Persistentie
+### Persistence
 
-Opslag in `~/.tandem/tab-emojis.json`:
+Storage in `~/.tandem/tab-emojis.json`:
 ```json
 {
   "github.com/hydro13/tandem-browser": "🔥",
@@ -96,7 +96,7 @@ Opslag in `~/.tandem/tab-emojis.json`:
 }
 ```
 
-Key = URL hostname + pathname (without query/hash). Bij the openen or a tab is gekeken or er a opgeslagen emoji is for that URL.
+Key = URL hostname + pathname (without query/hash). When opening a tab, it checks whether there is a stored emoji for that URL.
 
 ### No new npm packages needed? ✅
 
@@ -106,34 +106,28 @@ Key = URL hostname + pathname (without query/hash). Bij the openen or a tab is g
 
 | Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | Volledige implementatie: Tab interface uitbreiden, API endpoints, persistentie, shell emoji picker + badge | 1 | — |
+| 1 | Full implementation: extend Tab interface, API endpoints, persistence, shell emoji picker + badge | 1 | — |
 
 ---
 
 ## Risks / Pitfalls
 
-- **Emoji rendering:** Not alle emoji's renderen even goed op alle OS'and. Mitigation: usage native OS emoji rendering (no custom font). Tandem draait toch op macOS/Linux.
-- **URL-matching te strikt:** If the emoji op exact pad zit, matcht `github.com/hydro13/tandem-browser` not with `github.com/hydro13/tandem-browser/issues`. Mitigation: match op langste prefix, or sta Robin toe te kiezen: per-page or per-domain.
-- **Tab-emojis.json groeit:** Bij veel sites can the file large be. Mitigation: LRU-limiet or 500 entries, oudste be removed.
+- **Emoji rendering:** Not all emojis render equally well on all OSes. Mitigation: use native OS emoji rendering (no custom font). Tandem runs on macOS/Linux anyway.
+- **URL matching too strict:** If the emoji is tied to an exact path, `github.com/hydro13/tandem-browser` won't match `github.com/hydro13/tandem-browser/issues`. Mitigation: match on longest prefix, or let Robin choose: per-page or per-domain.
+- **tab-emojis.json grows:** With many sites the file can become large. Mitigation: LRU limit of 500 entries, oldest are removed.
 
 ---
 
-## Anti-detect considerations
+## Anti-detect Considerations
 
-- ✅ Alles via shell + main process — no injection into the webview
-- ✅ Emoji picker is a shell-overlay, not visible for the website
-- ✅ Opslag is purely local filesystem
-
----
-
-## Decisions Needed from Robin
-
-- [ ] Emoji-picker: simpel grid or ~50 populaire emoji's, or full OS emoji picker?
-- [ ] Persistentie-scope: per exacte URL, per domain+pad, or per domain?
-- [ ] Must emoji visible blijven wanneer tab erg narrow is (then overlapt the with favicon)?
+- ✅ Everything via shell + main process — no injection into the webview
+- ✅ Emoji picker is a shell overlay, not visible to the website
+- ✅ Storage is purely local filesystem
 
 ---
 
-## Approval
+## Open Questions
 
-Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________
+- [ ] Emoji picker: simple grid of ~50 popular emojis, or full OS emoji picker?
+- [ ] Persistence scope: per exact URL, per domain+path, or per domain?
+- [ ] Should the emoji remain visible when a tab is very narrow (where it would overlap with the favicon)?

@@ -1,29 +1,29 @@
 # Design: [Feature Name]
 
 > **Date:** YYYY-MM-DD
-> **Status:** Draft / Under review / Goedgekeurd / Afgewezen
+> **Status:** Draft / Under review / Approved / Rejected
 > **Effort:** Easy (1-2d) / Medium (3-5d) / Hard (1-2wk)
-> **Author:** Kees
+> **Author:** [Name]
 
 ---
 
 ## Problem / Motivation
 
-[Why willen we this bouwen? Welk probleem lost the op?
-Refereer to gap analyse if relevant.]
+[Why do we want to build this? What problem does it solve?
+Reference the gap analysis if relevant.]
 
-**Opera has:** [description or Opera's implementatie]
-**Tandem currently has:** [wat we nu hebben or juist missen]
-**Gap:** [the verschil]
+**Opera has:** [description of Opera's implementation]
+**Tandem currently has:** [what we currently have or are missing]
+**Gap:** [the difference]
 
 ---
 
 ## User Experience — How It Works
 
-[Vertel the verhaal vanuit Robin's perspectief]
+[Tell the story from Robin's perspective]
 
-> Robin opens Tandem. He clicks op [X]. Er appears [Y].
-> He can nu [Z] doen without [pijnpunt].
+> Robin opens Tandem. He clicks on [X]. [Y] appears.
+> He can now do [Z] without [pain point].
 
 ---
 
@@ -39,26 +39,26 @@ Refereer to gap analyse if relevant.]
 
 | File | Responsibility |
 |---------|---------------------|
-| `src/[module]/manager.ts` | [Wat] |
-| `shell/[component].js` | [Wat] |
+| `src/[module]/manager.ts` | [What] |
+| `shell/[component].js` | [What] |
 
 ### Modify Existing Files
 
 | File | Change | Function |
 |---------|-----------|---------|
-| `src/api/server.ts` | `TandemAPIOptions` uitbreiden | `class TandemAPI` |
-| `src/main.ts` | Manager instantiëren + registreren | `startAPI()` |
-| `shell/index.html` | UI add | `// === [SECTIE] ===` |
+| `src/api/server.ts` | Extend `TandemAPIOptions` | `class TandemAPI` |
+| `src/main.ts` | Instantiate + register manager | `startAPI()` |
+| `shell/index.html` | Add UI | `// === [SECTION] ===` |
 
 ### New API Endpoints
 
 | Method | Endpoint | Description |
 |---------|---------|--------------|
-| GET | `/[endpoint]` | [wat doet the] |
-| POST | `/[endpoint]` | [wat doet the] |
+| GET | `/[endpoint]` | [what it does] |
+| POST | `/[endpoint]` | [what it does] |
 
 ### No new npm packages needed? ✅ / New packages:
-- `[package]@[version]` — [reden]
+- `[package]@[version]` — [reason]
 
 ---
 
@@ -66,34 +66,28 @@ Refereer to gap analyse if relevant.]
 
 | Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | [Basis/backend] | 1 | — |
-| 2 | [UI/uitbreiding] | 1 | Phase 1 |
+| 1 | [Core/backend] | 1 | — |
+| 2 | [UI/extension] | 1 | Phase 1 |
 | 3 | [Polish/tests] | 1 | Phase 2 |
 
 ---
 
 ## Risks / Pitfalls
 
-- **[Risk 1]:** [Hoe mitigeren]
-- **[Risk 2]:** [Hoe mitigeren]
+- **[Risk 1]:** [How to mitigate]
+- **[Risk 2]:** [How to mitigate]
 
 ---
 
-## Anti-detect considerations
+## Anti-detect Considerations
 
-[Are er anti-detect implicaties? Bv. iets wat in the webview terechtkomt?]
-- ✅ Alles via Electron main process / shell — no injection into the webview
-- ⚠️ [Eventuele aandachtspunten]
+[Are there anti-detect implications? E.g. anything that ends up in the webview?]
+- ✅ Everything via Electron main process / shell — no injection into the webview
+- ⚠️ [Any concerns]
 
 ---
 
-## Decisions Needed from Robin
+## Open Questions
 
-- [ ] [Question 1: bv. wil you X or Y if UI approach?]
+- [ ] [Question 1: e.g. do you want X or Y as UI approach?]
 - [ ] [Question 2]
-
----
-
-## Approval
-
-Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

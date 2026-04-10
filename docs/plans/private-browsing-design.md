@@ -1,7 +1,7 @@
 # Design: Private Browsing Window
 
 > **Date:** 2026-02-28
-> **Status:** Draft
+> **Status:** Planned
 > **Effort:** Easy (1-2d)
 > **Author:** Kees
 
@@ -76,10 +76,10 @@ Electron's `session.fromPartition()` without a `persist:` prefix creates an ephe
 
 | File | Change | Function |
 |---------|-----------|---------|
-| `src/main.ts` | `createPrivateWindow()` function + Cmd+Shift+N accelerator registration | `createWindow()` (if referentie) |
+| `src/main.ts` | `createPrivateWindow()` function + Cmd+Shift+N accelerator registration | `createWindow()` (as reference) |
 | `src/api/routes/browser.ts` | `POST /window/private` endpoint | `function registerBrowserRoutes()` |
 | `shell/index.html` | Private indicator in the tab bar + purple theme detection | Tab bar section |
-| `shell/css/main.css` | `.private-mode` class for purple header styling | Root variabelen |
+| `shell/css/main.css` | `.private-mode` class for purple header styling | Root variables |
 
 ### New API Endpoints
 
@@ -95,7 +95,7 @@ Electron's `session.fromPartition()` without a `persist:` prefix creates an ephe
 
 | Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | Volledige implementatie: `createPrivateWindow()`, ephemere partition, cleanup on close, shortcut, visual indicator, API endpoint | 1 | — |
+| 1 | Full implementation: `createPrivateWindow()`, ephemeral partition, cleanup on close, shortcut, visual indicator, API endpoint | 1 | — |
 
 ---
 
@@ -108,23 +108,17 @@ Electron's `session.fromPartition()` without a `persist:` prefix creates an ephe
 
 ---
 
-## Anti-detect considerations
+## Anti-detect Considerations
 
-- ✅ Ephemere partition is a default Electron feature — no detecteerbaar verschil vanuit the webview
+- ✅ Ephemeral partition is a default Electron feature — no detectable difference from the webview
 - ⚠️ **Note:** the User-Agent and fingerprint must be identical to the normal window. A different partition must not produce a different fingerprint profile. This is the default behavior in Electron (same Chromium instance), but verify that Tandem's stealth patches are also active in the new partition.
-- ✅ Visual indicator (paarse header) is shell-side, onzichtbaar for websites
+- ✅ Visual indicator (purple header) is shell-side, invisible to websites
 
 ---
 
-## Decisions Needed from Robin
+## Open Questions
 
 - [ ] Wingman available in the private window? Opera disables Aria.
 - [ ] Load extensions in private mode? Default off, optionally enabled?
 - [ ] Should the private window get its own API port, or use the same 8765?
 - [ ] Visual: dark-purple header, or a different color/indicator?
-
----
-
-## Approval
-
-Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________

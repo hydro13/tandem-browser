@@ -1,7 +1,7 @@
 # Design: Search in Tabs (Ctrl+Space)
 
 > **Date:** 2026-02-28
-> **Status:** Draft
+> **Status:** Planned
 > **Effort:** Easy (1-2d)
 > **Author:** Kees
 
@@ -9,27 +9,27 @@
 
 ## Problem / Motivation
 
-With 20+ tabs open is the lastig to the juiste tab te vinden. Robin must door the tab bar scrollen and elk tabje visual scannen. Dit kost tijd and is frustrerend, vooral if the tab-titels afgekort are.
+With 20+ tabs open it becomes difficult to find the right tab. Robin has to scroll through the tab bar and visually scan each tab. This costs time and is frustrating, especially when tab titles are truncated.
 
-**Opera has:** Search in Tabs — Ctrl+Space opens a zoek-popup. Real-time filteren or open tabs op title and URL. Shows favicon, title, URL. Recent closed tabs also visible. Pijltjestoetsen + Enter to te navigeren.
+**Opera has:** Search in Tabs — Ctrl+Space opens a search popup. Real-time filtering of open tabs by title and URL. Shows favicon, title, URL. Recently closed tabs also visible. Arrow keys + Enter to navigate.
 
-**Tandem currently has:** `GET /tabs/list` API endpoint via `function registerTabRoutes()` in `src/api/routes/tabs.ts`. `class TabManager` has `listTabs()` and `closedTabs` array. Maar: no zoek-UI in the shell.
+**Tandem currently has:** `GET /tabs/list` API endpoint via `function registerTabRoutes()` in `src/api/routes/tabs.ts`. `class TabManager` has `listTabs()` and `closedTabs` array. But: no search UI in the shell.
 
-**Gap:** The data is er (API + manager), but the gebruikersinterface ontbreekt fully. Dit is a purely shell/UI feature.
+**Gap:** The data is there (API + manager), but the user interface is completely missing. This is a purely shell/UI feature.
 
 ---
 
 ## User Experience — How It Works
 
-> Robin has 25 tabs open. He weet that ergens a Stack Overflow tab open staat over "TypeScript generics", but can hem not vinden in the overvolle tab bar.
+> Robin has 25 tabs open. He knows that somewhere a Stack Overflow tab is open about "TypeScript generics", but can't find it in the crowded tab bar.
 >
-> He drukt **Ctrl+Space** (or Cmd+Space op macOS — nee, that conflicteert with Spotlight. We use **Ctrl+Space**).
+> He presses **Ctrl+Space** (or Cmd+Space on macOS — no, that conflicts with Spotlight. We use **Ctrl+Space**).
 >
-> A overlay appears midden at the top the window — a zoekbalk with a list or alle open tabs eronder. Robin begint te typen: "generics".
+> An overlay appears centered at the top of the window — a search bar with a list of all open tabs below it. Robin starts typing: "generics".
 >
-> The list filtert real-time: er blijven 2 tabs over — the Stack Overflow page and a TypeScript docs tab. Robin drukt ↓ and Enter → Tandem schakelt direct to that tab. The overlay disappears.
+> The list filters in real-time: 2 tabs remain — the Stack Overflow page and a TypeScript docs tab. Robin presses ↓ and Enter → Tandem switches directly to that tab. The overlay disappears.
 >
-> Later Robin wants to find a tab that he accidentally closed. He presses Ctrl+Space and scrolls down — under the open tabs there is a "Recently Closed" section with the last 10 closed tabs. He clicks one → the tab is reopened.
+> Later Robin wants to find a tab he accidentally closed. He presses Ctrl+Space and scrolls down — below the open tabs there is a "Recently Closed" section with the last 10 closed tabs. He clicks one → the tab is reopened.
 
 ---
 
@@ -45,15 +45,15 @@ With 20+ tabs open is the lastig to the juiste tab te vinden. Robin must door th
     │  ┌─────────────────────────┐  │
     │  │ #tab-search-overlay     │  │
     │  │ ┌─────────────────────┐ │  │
-    │  │ │ <input> zoekbalk    │ │  │
+    │  │ │ <input> search bar  │ │  │
     │  │ └─────────────────────┘ │  │
     │  │ ┌─────────────────────┐ │  │
-    │  │ │ Tab resultaten list │ │  │
+    │  │ │ Tab results list    │ │  │
     │  │ │ - favicon + title   │ │  │
     │  │ │ - URL (dim)         │ │  │
     │  │ └─────────────────────┘ │  │
     │  │ ┌─────────────────────┐ │  │
-    │  │ │ Recent closed     │ │  │
+    │  │ │ Recently closed     │ │  │
     │  │ └─────────────────────┘ │  │
     │  └─────────────────────────┘  │
     │              │                 │
@@ -67,27 +67,27 @@ With 20+ tabs open is the lastig to the juiste tab te vinden. Robin must door th
 
 | File | Responsibility |
 |---------|---------------------|
-| — | No — purely shell UI toevoeging |
+| — | None — purely a shell UI addition |
 
 ### Modify Existing Files
 
 | File | Change | Function |
 |---------|-----------|---------|
-| `src/api/routes/tabs.ts` | New endpoint `GET /tabs/closed` for recent closed tabs | `function registerTabRoutes()` |
-| `src/tabs/manager.ts` | Publieke methode `getClosedTabs()` | `class TabManager` |
-| `shell/index.html` | Zoek-overlay HTML + JS (event listeners, fetch, rendering) | New section `// === TAB SEARCH ===` |
-| `shell/css/main.css` | Overlay styling (centered popup, transparante achtergrond, resultaten list) | New `.tab-search-*` klassen |
+| `src/api/routes/tabs.ts` | New endpoint `GET /tabs/closed` for recently closed tabs | `function registerTabRoutes()` |
+| `src/tabs/manager.ts` | Public method `getClosedTabs()` | `class TabManager` |
+| `shell/index.html` | Search overlay HTML + JS (event listeners, fetch, rendering) | New section `// === TAB SEARCH ===` |
+| `shell/css/main.css` | Overlay styling (centered popup, transparent background, results list) | New `.tab-search-*` classes |
 
 ### New API Endpoints
 
 | Method | Endpoint | Description |
 |---------|---------|--------------|
-| GET | `/tabs/closed` | List recent closed tabs (max 10) |
+| GET | `/tabs/closed` | List recently closed tabs (max 10) |
 
-The existing endpoints be hergebruikt:
-- `GET /tabs/list` — haal alle open tabs op (bestaand)
-- `POST /tabs/focus` — schakel to a tab (bestaand)
-- `POST /tabs/open` — heropen a closed tab (bestaand)
+The existing endpoints are reused:
+- `GET /tabs/list` — get all open tabs (existing)
+- `POST /tabs/focus` — switch to a tab (existing)
+- `POST /tabs/open` — reopen a closed tab (existing)
 
 ### No new npm packages needed? ✅
 
@@ -97,34 +97,28 @@ The existing endpoints be hergebruikt:
 
 | Phase | Scope | Sessions | Depends on |
 |------|--------|---------|----------------|
-| 1 | Volledige implementatie: overlay UI, keyboard shortcut, zoeklogica, recent closed endpoint + UI | 1 | — |
+| 1 | Full implementation: overlay UI, keyboard shortcut, search logic, recently closed endpoint + UI | 1 | — |
 
 ---
 
 ## Risks / Pitfalls
 
-- **Ctrl+Space conflict:** Op sommige systemen is Ctrl+Space already bezet (input method switch op Linux). Mitigation: configureerbare shortcut, fallback op Cmd+K or Cmd+E.
-- **Focus-management:** Wanneer the overlay open is, must keyboard input to the zoekbalk gaan, not to the webview. Mitigation: overlay overlay with `tabIndex` and `focus()` op the input.
-- **Snelheid bij veel tabs:** Bij 100+ tabs must filtering instant are. Mitigation: client-side filtering op already-geladen data (no API call per keystroke).
+- **Ctrl+Space conflict:** On some systems Ctrl+Space is already taken (input method switch on Linux). Mitigation: configurable shortcut, fallback to Cmd+K or Cmd+E.
+- **Focus management:** When the overlay is open, keyboard input must go to the search bar, not to the webview. Mitigation: overlay with `tabIndex` and `focus()` on the input.
+- **Speed with many tabs:** With 100+ tabs, filtering must be instant. Mitigation: client-side filtering on already-loaded data (no API call per keystroke).
 
 ---
 
-## Anti-detect considerations
+## Anti-detect Considerations
 
 - ✅ Fully shell-side — no webview interaction
-- ✅ Keyboard shortcut is afgevangen in the shell, not in the page
-- ✅ Overlay is a shell-element boven the webview, onzichtbaar for websites
+- ✅ Keyboard shortcut is captured in the shell, not in the page
+- ✅ Overlay is a shell element above the webview, invisible to websites
 
 ---
 
-## Decisions Needed from Robin
+## Open Questions
 
-- [ ] Keyboard shortcut: Ctrl+Space, or liever Cmd+K / Cmd+E?
-- [ ] Must the overlay also bookmarks doorzoeken, or only open tabs + recent closed?
-- [ ] Positie: centered at the top (Chrome-style command palette), or dropdown vanuit tab bar?
-
----
-
-## Approval
-
-Robin: [ ] Go / [ ] No-go / [ ] Go with adjustment: ___________
+- [ ] Keyboard shortcut: Ctrl+Space, or prefer Cmd+K / Cmd+E?
+- [ ] Should the overlay also search bookmarks, or only open tabs + recently closed?
+- [ ] Position: centered at the top (Chrome-style command palette), or dropdown from tab bar?
