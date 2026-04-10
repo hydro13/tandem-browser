@@ -185,6 +185,7 @@ export class SecurityManager {
     this.setupPermissionHandler(deps.session);
   }
 
+  /** Register the Guardian's request interceptors with the network dispatcher. */
   registerWith(dispatcher: RequestDispatcher): void {
     this.guardian.registerWith(dispatcher);
   }
@@ -449,20 +450,34 @@ export class SecurityManager {
 
   // --- Public accessors for route handlers (src/security/routes.ts) ---
 
+  /** Get the security event/domain database. */
   getDb(): SecurityDB { return this.db; }
+  /** Get the domain/URL blocklist shield. */
   getShield(): NetworkShield { return this.shield; }
+  /** Get the request guardian (mode enforcement, blocking). */
   getGuardian(): Guardian { return this.guardian; }
+  /** Get the outbound data exfiltration guard. */
   getOutboundGuard(): OutboundGuard { return this.outboundGuard; }
+  /** Get the CDP-based script analysis guard (null until DevTools attached). */
   getScriptGuard(): ScriptGuard | null { return this.scriptGuard; }
+  /** Get the page content analyzer (null until DevTools attached). */
   getContentAnalyzer(): ContentAnalyzer | null { return this.contentAnalyzer; }
+  /** Get the runtime behavior monitor (null until DevTools attached). */
   getBehaviorMonitor(): BehaviorMonitor | null { return this.behaviorMonitor; }
+  /** Get the DevTools CDP manager reference. */
   getDevToolsManager(): DevToolsManager | null { return this.devToolsManager; }
+  /** Get the Gatekeeper WebSocket server (null until HTTP server starts). */
   getGatekeeperWs(): GatekeeperWebSocket | null { return this.gatekeeperWs; }
+  /** Get the threat intelligence correlation engine. */
   getThreatIntel(): ThreatIntel { return this.threatIntel; }
+  /** Get the blocklist source updater. */
   getBlocklistUpdater(): BlocklistUpdater { return this.blocklistUpdater; }
+  /** Get the analyzer plugin manager. */
   getAnalyzerManager(): AnalyzerManager { return this.analyzerManager; }
+  /** Get a snapshot of all containment incidents (most recent first). */
   getContainmentIncidents(): SecurityContainmentIncident[] { return [...this.containmentIncidents]; }
 
+  /** Tear down all security subsystems, clear timers, and close the database. */
   destroy(): void {
     if (this.correlationInterval) clearInterval(this.correlationInterval);
     if (this.blocklistInterval) clearInterval(this.blocklistInterval);

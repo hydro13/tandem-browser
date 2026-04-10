@@ -2,6 +2,11 @@ import type { Router, Request, Response } from 'express';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
 
+/**
+ * Register network inspector and mock/intercept routes.
+ * @param router - Express router to attach routes to
+ * @param ctx - shared manager registry and main BrowserWindow
+ */
 export function registerNetworkRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
   // NETWORK INSPECTOR — Phase 3.8

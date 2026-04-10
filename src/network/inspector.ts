@@ -333,6 +333,11 @@ export class NetworkInspector {
     })).sort((a, b) => b.requests - a.requests);
   }
 
+  /**
+   * Export logged requests as a HAR 1.2 archive.
+   * @param limit - max entries to include (default 100)
+   * @param domain - optional domain filter
+   */
   toHar(limit: number = 100, domain?: string): HarExport {
     const entries = this.getLog(limit, domain).map((request) => this.toHarEntry(request));
     const startedDateTime = entries[0]?.startedDateTime ?? new Date().toISOString();

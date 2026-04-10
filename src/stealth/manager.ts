@@ -37,6 +37,7 @@ export class StealthManager {
       `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${chromeVersion} Safari/537.36`;
   }
 
+  /** Apply stealth patches to the Electron session (User-Agent override). */
   async apply(): Promise<void> {
     // Set realistic User-Agent globally (LinkedIn etc. block "Electron" UA)
     // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
