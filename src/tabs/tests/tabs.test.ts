@@ -452,4 +452,82 @@ describe('TabManager', () => {
       });
     });
   });
+
+  // ─── Emoji Methods ──────────────────────────────────
+
+  describe('setEmoji()', () => {
+    it('sets emoji on a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      const result = tm.setEmoji(tab.id, '🔥');
+      expect(result).toBe(true);
+      expect(tab.emoji).toBe('🔥');
+      expect(tab.emojiFlash).toBe(false);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: '🔥', flash: false },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.setEmoji('nonexistent', '🔥')).toBe(false);
+    });
+
+    it('clears flash when setting emoji', async () => {
+      const tab = await tm.openTab('https://test.com');
+      tm.flashEmoji(tab.id, '⚡');
+      expect(tab.emojiFlash).toBe(true);
+      tm.setEmoji(tab.id, '🔥');
+      expect(tab.emojiFlash).toBe(false);
+    });
+  });
+
+  describe('clearEmoji()', () => {
+    it('clears emoji from a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      tm.setEmoji(tab.id, '🔥');
+      const result = tm.clearEmoji(tab.id);
+      expect(result).toBe(true);
+      expect(tab.emoji).toBeNull();
+      expect(tab.emojiFlash).toBe(false);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: null, flash: false },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.clearEmoji('nonexistent')).toBe(false);
+    });
+  });
+
+  describe('flashEmoji()', () => {
+    it('sets emoji with flash on a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      const result = tm.flashEmoji(tab.id, '⚡');
+      expect(result).toBe(true);
+      expect(tab.emoji).toBe('⚡');
+      expect(tab.emojiFlash).toBe(true);
+      expect(win.webContents.send).toHaveBeenCalledWith(
+        IpcChannels.TAB_EMOJI_CHANGED,
+        { tabId: tab.id, emoji: '⚡', flash: true },
+      );
+    });
+
+    it('returns false for unknown tab', () => {
+      expect(tm.flashEmoji('nonexistent', '⚡')).toBe(false);
+    });
+  });
+
+  describe('getEmoji()', () => {
+    it('returns emoji for a tab', async () => {
+      const tab = await tm.openTab('https://test.com');
+      expect(tm.getEmoji(tab.id)).toBeNull();
+      tm.setEmoji(tab.id, '🔥');
+      expect(tm.getEmoji(tab.id)).toBe('🔥');
+    });
+
+    it('returns null for unknown tab', () => {
+      expect(tm.getEmoji('nonexistent')).toBeNull();
+    });
+  });
 });
