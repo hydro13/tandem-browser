@@ -183,6 +183,18 @@ contributors, not yet a polished mass-user release.
 - Binaries: not published yet (source-only)
 - Current version: see [package.json](package.json)
 
+## Community
+
+Have a question, idea, or want to show what you've built with Tandem?
+Join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions).
+
+- **Q&A** — troubleshooting, "how do I…" questions
+- **Ideas** — feature proposals before they become issues
+- **Show and Tell** — your setups, workflows, and screenshots
+
+For bugs and concrete feature requests, open an
+[issue](https://github.com/hydro13/tandem-browser/issues).
+
 ## Contributing
 
 Good contribution areas:
@@ -205,6 +217,7 @@ Start with [CONTRIBUTING.md](CONTRIBUTING.md) and [PROJECT.md](PROJECT.md).
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 | [skill/SKILL.md](skill/SKILL.md) | Agent instruction manual |
 | [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+| [Discussions](https://github.com/hydro13/tandem-browser/discussions) | Community Q&A, ideas, show & tell |
 | [docs/](docs/) | Full documentation |
 
 ## License
