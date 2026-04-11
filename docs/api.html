@@ -117,7 +117,7 @@ footer a:hover{color:var(--text2)}
 <div class="hero-stats">
 <div class="stat"><span class="stat-num">280+</span><span class="stat-label">Endpoints</span></div>
 <div class="stat"><span class="stat-num">19</span><span class="stat-label">Domains</span></div>
-<div class="stat"><span class="stat-num">236</span><span class="stat-label">MCP tools</span></div>
+<div class="stat"><span class="stat-num">239</span><span class="stat-label">MCP tools</span></div>
 </div>
 </div>
 
@@ -126,7 +126,7 @@ footer a:hover{color:var(--text2)}
 <section>
 <div class="toc">
 <a href="#browser">Browser <span class="count">16</span></a>
-<a href="#tabs">Tabs <span class="count">8</span></a>
+<a href="#tabs">Tabs <span class="count">10</span></a>
 <a href="#snapshots">Snapshots <span class="count">8</span></a>
 <a href="#content">Content <span class="count">17</span></a>
 <a href="#devtools">DevTools <span class="count">16</span></a>
@@ -188,6 +188,8 @@ footer a:hover{color:var(--text2)}
 <div class="endpoint"><span class="method post">POST</span><span class="path">/tabs/source <span class="desc">Set tab source (agent owner)</span></span></div>
 <div class="endpoint"><span class="method post">POST</span><span class="path">/tabs/reconcile <span class="desc">Reconcile tabs with renderer</span></span></div>
 <div class="endpoint"><span class="method post">POST</span><span class="path">/tabs/cleanup <span class="desc">Cleanup zombie tabs</span></span></div>
+<div class="endpoint"><span class="method post">POST</span><span class="path">/tabs/:id/emoji <span class="desc">Set or flash emoji badge on tab</span></span></div>
+<div class="endpoint"><span class="method delete">DELETE</span><span class="path">/tabs/:id/emoji <span class="desc">Remove emoji badge from tab</span></span></div>
 </div>
 </section>
 

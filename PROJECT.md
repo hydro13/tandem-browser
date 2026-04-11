@@ -10,7 +10,7 @@ bicycle: two riders, one machine, each contributing what the other can't do
 alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while AI agents operate through a built-in **MCP server** (236 tools) or a full
+while AI agents operate through a built-in **MCP server** (239 tools) or a full
 local **HTTP API** on `127.0.0.1:8765` with 300+ endpoints for navigation,
 interaction, data extraction, automation, sessions, sync, extensions, and
 developer tooling. Websites see a normal Chrome browser on macOS. They don't see
@@ -192,15 +192,17 @@ New Tab
 ─────────────────
 Reload
 Duplicate Tab
-Copy Page Address
-─────────────────
-Move to Workspace  ▶  [workspace icon + name per workspace]
-─────────────────
+Add to / Remove from Quick Links
+Pin Tab / Unpin Tab
 Mute Tab / Unmute Tab
+Let Wingman handle this tab / Take back from Wingman
+Set Emoji...  ▶  [50 popular emojis grid, + Remove Emoji if set]
 ─────────────────
 Close Tab
 Close Other Tabs
 Close Tabs to the Right
+─────────────────
+Reopen Closed Tab
 ```
 
 ---
@@ -211,7 +213,7 @@ Most endpoints require the `Authorization: Bearer <token>` header. The token is 
 
 Current route modules:
 - `browser.ts` — navigation, screenshots, page actions
-- `tabs.ts` — tab management, groups, focus
+- `tabs.ts` — tab management, groups, focus, emoji badges
 - `snapshots.ts` — accessibility tree and `@ref` interaction surfaces
 - `devtools.ts` — CDP bridge (console, network, DOM, storage)
 - `extensions.ts` — extension management and helper routes

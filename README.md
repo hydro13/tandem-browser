@@ -7,7 +7,7 @@
 [![Coverage](https://codecov.io/gh/hydro13/tandem-browser/branch/main/graph/badge.svg)](https://codecov.io/gh/hydro13/tandem-browser)
 [![Ask a question](https://img.shields.io/badge/discussions-Q%26A-blue)](https://github.com/hydro13/tandem-browser/discussions/categories/q-a)
 
-**236 MCP tools. Plug in any AI. No scraping. No API wrangling.**
+**239 MCP tools. Plug in any AI. No scraping. No API wrangling.**
 
 Tandem is a local-first Electron browser where a human and an AI agent browse
 together. The agent sees what you see, navigates your tabs, reads your pages,
@@ -25,7 +25,7 @@ either protocol.
 | Category | Tools | Examples |
 |----------|-------|---------|
 | **Navigation & Input** | 10 | Navigate, click, type, scroll, press keys, wait for load |
-| **Tabs & Workspaces** | 10 | Open/close/focus tabs, create workspaces, move tabs between them |
+| **Tabs & Workspaces** | 13 | Open/close/focus tabs, emoji badges, create workspaces, move tabs between them |
 | **Page Content** | 8 | Read page, get HTML, extract content, get links, forms, screenshots |
 | **Accessibility Snapshots** | 7 | Accessibility tree with `@ref` IDs, click/fill by ref, semantic find |
 | **DevTools** | 12 | Console logs, network requests, DOM queries, XPath, performance, storage |
@@ -42,7 +42,7 @@ either protocol.
 | **System** | 6 | Browser status, headless mode, Google Photos, security overrides |
 | **Awareness** | 2 | Activity digest, real-time focus detection — the AI knows what you're doing |
 
-**236 tools total** — full parity with the HTTP API.
+**239 tools total** — full parity with the HTTP API.
 
 ## Why Not Just Use Playwright?
 
@@ -102,7 +102,7 @@ Add to your MCP configuration:
 }
 ```
 
-Start Tandem, and 236 tools are available immediately.
+Start Tandem, and 239 tools are available immediately.
 
 ### Cursor / Windsurf / Other MCP Clients
 

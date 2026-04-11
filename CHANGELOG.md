@@ -2,6 +2,23 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.71.0] - 2026-04-11
+
+- feat: tab emoji badges — assign emoji to tabs for quick visual identification
+
+New endpoints:
+- POST /tabs/:id/emoji — set or flash an emoji badge on a tab
+- DELETE /tabs/:id/emoji — remove emoji badge from a tab
+
+New MCP tools:
+- tandem_tab_emoji_set — set emoji badge on a tab
+- tandem_tab_emoji_remove — remove emoji badge from a tab
+- tandem_tab_emoji_flash — flash a pulsing emoji to attract user attention
+
+Emoji badges are per tab session. The AI can flash emojis to signal the user
+(e.g. "this tab is ready for review"). Users assign emojis via right-click
+context menu. Everything runs in the shell — no injection into webviews.
+
 ## [v0.70.0] - 2026-04-10
 
 - feat: add awareness tools — digest and focus for shared human-AI context
