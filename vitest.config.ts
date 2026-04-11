@@ -44,6 +44,12 @@ export default defineConfig({
         'src/events/**',
         'src/notifications/**',
         'src/claronote/**',
+        // Electron-dependent modules missed in first pass
+        'src/behavior/observer.ts',
+        'src/extensions/toolbar.ts',
+        'src/mcp/server.ts',
+        'src/mcp/api-client.ts',
+        'src/agents/x-scout.ts',
         // Security modules that need CDP, webContents, or SQLite at runtime
         'src/security/behavior-monitor.ts',
         'src/security/content-analyzer.ts',
