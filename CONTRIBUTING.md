@@ -54,8 +54,10 @@ Useful contribution areas right now include:
 - UI polish in the shared human + Wingman workflow
 - docs cleanup where public setup or project status is confusing
 
-If you are unsure where to start, opening an issue with a concrete bug report,
-validation result, or implementation question is already useful.
+If you are unsure where to start, open a thread in
+[Discussions](https://github.com/hydro13/tandem-browser/discussions) — Q&A for
+questions, Ideas for proposals that need exploration. For concrete bugs and
+well-defined feature requests, open an issue.
 
 ## Development Workflow
 

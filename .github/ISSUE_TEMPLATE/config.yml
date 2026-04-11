@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Ask a question
+    url: https://github.com/hydro13/tandem-browser/discussions/categories/q-a
+    about: Not sure it's a bug? Ask in Q&A Discussions first.
+  - name: Share an idea
+    url: https://github.com/hydro13/tandem-browser/discussions/categories/ideas
+    about: Have a rough idea that isn't a concrete feature request yet? Start a Discussion.
+  - name: Show what you built
+    url: https://github.com/hydro13/tandem-browser/discussions/categories/show-and-tell
+    about: Share your Tandem setup, workflows, or integrations with the community.
   - name: Security issue
     url: https://github.com/hydro13/tandem-browser/security
     about: Use private security reporting if available. Do not post exploit details publicly.
