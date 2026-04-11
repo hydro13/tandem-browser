@@ -2131,9 +2131,13 @@
         const tabEl = document.querySelector('.tab[data-tab-id="' + domTabId + '"]');
         const tabEmojiSpan = tabEl ? tabEl.querySelector('.tab-emoji') : null;
         const currentEmoji = (tabEmojiSpan && tabEmojiSpan.style.display !== 'none') ? tabEmojiSpan.textContent : '';
-        emojiItem.innerHTML = currentEmoji
-          ? '<span>Emoji: ' + currentEmoji + '</span><span class="ctx-arrow">▶</span>'
-          : '<span>Set Emoji...</span><span class="ctx-arrow">▶</span>';
+        const emojiLabel = document.createElement('span');
+        emojiLabel.textContent = currentEmoji ? ('Emoji: ' + currentEmoji) : 'Set Emoji...';
+        const emojiArrow = document.createElement('span');
+        emojiArrow.className = 'ctx-arrow';
+        emojiArrow.textContent = '▶';
+        emojiItem.appendChild(emojiLabel);
+        emojiItem.appendChild(emojiArrow);
 
         const emojiSub = document.createElement('div');
         emojiSub.className = 'tandem-ctx-submenu tandem-emoji-grid';
