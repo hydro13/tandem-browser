@@ -7,6 +7,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('PasswordManager');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface VaultItem {
     id?: number;
     domain: string;
@@ -16,10 +18,22 @@ export interface VaultItem {
     updated_at?: string;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * PasswordManager — encrypted credential vault backed by SQLite.
+ *
+ * Persistence: ~/.tandem/security/vault.db
+ */
 export class PasswordManager {
+
+    // === 1. Private state ===
+
     private db: Database.Database;
     private vaultKey: Buffer | null = null;
     private isUnlocked: boolean = false;
+
+    // === 2. Constructor ===
 
     constructor() {
         const dir = tandemDir('security');
@@ -30,24 +44,7 @@ export class PasswordManager {
         this.init();
     }
 
-    private init() {
-        this.db.exec(`
-      CREATE TABLE IF NOT EXISTS vault (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        domain TEXT NOT NULL,
-        username TEXT NOT NULL,
-        encryptedBlob BLOB NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE(domain, username)
-      );
-
-      CREATE TABLE IF NOT EXISTS vault_meta (
-        key TEXT PRIMARY KEY,
-        value BLOB NOT NULL
-      );
-    `);
-    }
+    // === 4. Public methods ===
 
     /**
      * Initializes or verifies the master password.
@@ -105,9 +102,9 @@ export class PasswordManager {
         const encrypted = PasswordCrypto.encrypt(JSON.stringify(payload), this.vaultKey, salt);
 
         const stmt = this.db.prepare(`
-      INSERT INTO vault (domain, username, encryptedBlob) 
+      INSERT INTO vault (domain, username, encryptedBlob)
       VALUES (?, ?, ?)
-      ON CONFLICT(domain, username) DO UPDATE SET 
+      ON CONFLICT(domain, username) DO UPDATE SET
         encryptedBlob = excluded.encryptedBlob,
         updated_at = CURRENT_TIMESTAMP
     `);
@@ -160,6 +157,27 @@ export class PasswordManager {
     public isNewVault(): boolean {
         const meta = this.db.prepare('SELECT key FROM vault_meta WHERE key = ?').get('master_verification');
         return !meta;
+    }
+
+    // === 7. Private helpers ===
+
+    private init() {
+        this.db.exec(`
+      CREATE TABLE IF NOT EXISTS vault (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        domain TEXT NOT NULL,
+        username TEXT NOT NULL,
+        encryptedBlob BLOB NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(domain, username)
+      );
+
+      CREATE TABLE IF NOT EXISTS vault_meta (
+        key TEXT PRIMARY KEY,
+        value BLOB NOT NULL
+      );
+    `);
     }
 }
 let _instance: PasswordManager | null = null;

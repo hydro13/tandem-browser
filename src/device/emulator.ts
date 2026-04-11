@@ -3,6 +3,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('DeviceEmulator');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface DeviceProfile {
   name: string;
   width: number;
@@ -13,7 +15,20 @@ export interface DeviceProfile {
   userAgent: string;
 }
 
-// Built-in device profiles
+export interface EmulationState {
+  active: boolean;
+  profile?: DeviceProfile;
+  custom?: {
+    width: number;
+    height: number;
+    deviceScaleFactor?: number;
+    mobile?: boolean;
+    userAgent?: string;
+  };
+}
+
+// ─── Built-in profiles ──────────────────────────────────────────────
+
 export const DEVICE_PROFILES: Record<string, DeviceProfile> = {
   'iPhone 15': {
     name: 'iPhone 15',
@@ -71,22 +86,18 @@ export const DEVICE_PROFILES: Record<string, DeviceProfile> = {
   },
 };
 
-export interface EmulationState {
-  active: boolean;
-  profile?: DeviceProfile;
-  custom?: {
-    width: number;
-    height: number;
-    deviceScaleFactor?: number;
-    mobile?: boolean;
-    userAgent?: string;
-  };
-}
+// ─── Manager ────────────────────────────────────────────────────────
 
+/**
+ * DeviceEmulator — emulates mobile/tablet devices via Electron's device emulation API.
+ */
 export class DeviceEmulator {
+
+  // === 1. Private state ===
+
   private state: EmulationState = { active: false };
 
-  // ─── Enable emulation ─────────────────────────
+  // === 4. Public methods ===
 
   async emulateDevice(wc: WebContents, deviceName: string): Promise<DeviceProfile> {
     const profile = DEVICE_PROFILES[deviceName];
@@ -126,8 +137,6 @@ export class DeviceEmulator {
     this.state = { active: false };
   }
 
-  // ─── Persistence: re-apply after navigation ──
-
   /**
    * Called from main.ts after did-finish-load.
    * Re-applies the current emulation if active.
@@ -142,8 +151,6 @@ export class DeviceEmulator {
     }
   }
 
-  // ─── Status ───────────────────────────────────
-
   getStatus(): EmulationState {
     return { ...this.state };
   }
@@ -152,7 +159,7 @@ export class DeviceEmulator {
     return Object.values(DEVICE_PROFILES);
   }
 
-  // ─── Internal ────────────────────────────────
+  // === 7. Private helpers ===
 
   private async applyProfile(wc: WebContents, profile: DeviceProfile): Promise<void> {
     // Electron native device emulation API

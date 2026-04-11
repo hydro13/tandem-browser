@@ -7,6 +7,8 @@ import { assertChromeExtensionId, assertPathWithinRoot, resolvePathWithinRoot } 
 
 const log = createLogger('ExtensionLoader');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 interface LoadedExtension {
   id: string;
   name: string;
@@ -21,22 +23,31 @@ interface TandemExtensionMeta {
   [key: string]: unknown;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
  * ExtensionLoader — Loads unpacked Chrome extensions into the browser session.
- * 
+ *
  * Extensions are stored in ~/.tandem/extensions/
  * Each subfolder is an unpacked extension with a manifest.json.
- * 
+ *
  * Uses Electron's session.extensions.loadExtension() API.
  * Only supports manually-loaded local extensions — no extension store.
  */
 export class ExtensionLoader {
+
+  // === 1. Private state ===
+
   private extensionsDir: string;
   private loaded: LoadedExtension[] = [];
+
+  // === 2. Constructor ===
 
   constructor() {
     this.extensionsDir = ensureDir(tandemDir('extensions'));
   }
+
+  // === 4. Public methods ===
 
   /**
    * Load all extensions from ~/.tandem/extensions/ into the given session.
@@ -166,6 +177,8 @@ export class ExtensionLoader {
 
     return results;
   }
+
+  // === 7. Private helpers ===
 
   private getMetaPath(extPath: string): string {
     return resolvePathWithinRoot(extPath, '.tandem-meta.json');

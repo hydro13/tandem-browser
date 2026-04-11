@@ -6,6 +6,8 @@ import type { HistoryEntry } from '../history/manager';
 
 const log = createLogger('SyncManager');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface SyncConfig {
   enabled: boolean;
   syncRoot: string;
@@ -32,10 +34,22 @@ interface TabsFile {
   tabs: RemoteTab[];
 }
 
+// ─── Constants ──────────────────────────────────────────────────────
+
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * SyncManager — cross-device sync via a shared filesystem folder.
+ */
 export class SyncManager {
+
+  // === 1. Private state ===
+
   private config: SyncConfig | null = null;
+
+  // === 4. Public methods ===
 
   /** Sanitize a hostname for use as directory name */
   static sanitizeDeviceName(name: string): string {
@@ -155,6 +169,15 @@ export class SyncManager {
     return this.config;
   }
 
+  // === 6. Cleanup ===
+
+  /** Clean up resources (currently a no-op). */
+  destroy(): void {
+    // nothing to clean up
+  }
+
+  // === 7. Private I/O ===
+
   /** Atomic write: write to temp file, then rename */
   private atomicWrite(filePath: string, data: unknown): void {
     const dir = path.dirname(filePath);
@@ -170,10 +193,5 @@ export class SyncManager {
       // Clean up tmp file if rename failed
       try { fs.unlinkSync(tmpPath); } catch { /* ignore */ }
     }
-  }
-
-  /** Clean up resources (currently a no-op). */
-  destroy(): void {
-    // nothing to clean up
   }
 }

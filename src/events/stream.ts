@@ -1,8 +1,6 @@
 import type { Request, Response } from 'express';
 
-// ═══════════════════════════════════════════════
-// Event Types
-// ═══════════════════════════════════════════════
+// ─── Types ──────────────────────────────────────────────────────────
 
 export type BrowserEventType =
   | 'navigation'     | 'page-loaded'   | 'tab-opened'
@@ -20,51 +18,28 @@ export interface BrowserEvent {
   data?: Record<string, unknown>;
 }
 
-// ═══════════════════════════════════════════════
-// EventStreamManager
-// ═══════════════════════════════════════════════
+// ─── Constants ──────────────────────────────────────────────────────
 
 const MAX_EVENTS = 100;
 const SCROLL_DEBOUNCE_MS = 5000;
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * EventStreamManager — real-time browser event bus with SSE streaming.
+ */
 export class EventStreamManager {
+
+  // === 1. Private state ===
+
   private listeners = new Set<(event: BrowserEvent) => void>();
   private recentEvents: BrowserEvent[] = [];
   private eventCounter = 0;
   private lastScrollTime = 0;
 
-  // ─── Emit ────────────────────────────────────
+  // === 4. Public methods ===
 
-  private emit(event: BrowserEvent): void {
-    // Ring buffer: push and trim
-    this.recentEvents.push(event);
-    if (this.recentEvents.length > MAX_EVENTS) {
-      this.recentEvents.shift();
-    }
-
-    // Notify all subscribers
-    for (const listener of this.listeners) {
-      try {
-        listener(event);
-      } catch {
-        // Don't let a broken listener crash the stream
-      }
-    }
-  }
-
-  private createEvent(type: BrowserEventType, opts: { tabId?: string; url?: string; title?: string; data?: Record<string, unknown> } = {}): BrowserEvent {
-    return {
-      id: ++this.eventCounter,
-      type,
-      timestamp: Date.now(),
-      tabId: opts.tabId,
-      url: opts.url,
-      title: opts.title,
-      data: opts.data,
-    };
-  }
-
-  // ─── IPC Handlers ────────────────────────────
+  // --- IPC Handlers ---
 
   /** Handle webview events from IPC (activity-webview-event) */
   handleWebviewEvent(data: { type: string; url?: string; tabId?: string; title?: string }): void {
@@ -157,7 +132,7 @@ export class EventStreamManager {
     }));
   }
 
-  // ─── Subscribe / Query ───────────────────────
+  // --- Subscribe / Query ---
 
   /** Subscribe to events. Returns an unsubscribe function. */
   subscribe(cb: (event: BrowserEvent) => void): () => void {
@@ -173,7 +148,7 @@ export class EventStreamManager {
     return this.recentEvents.slice(-limit);
   }
 
-  // ─── SSE Handler ─────────────────────────────
+  // --- SSE Handler ---
 
   /** Express middleware for SSE endpoint: GET /events/stream */
   sseHandler = (req: Request, res: Response): void => {
@@ -220,4 +195,35 @@ export class EventStreamManager {
       unsubscribe();
     });
   };
+
+  // === 7. Private helpers ===
+
+  private emit(event: BrowserEvent): void {
+    // Ring buffer: push and trim
+    this.recentEvents.push(event);
+    if (this.recentEvents.length > MAX_EVENTS) {
+      this.recentEvents.shift();
+    }
+
+    // Notify all subscribers
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch {
+        // Don't let a broken listener crash the stream
+      }
+    }
+  }
+
+  private createEvent(type: BrowserEventType, opts: { tabId?: string; url?: string; title?: string; data?: Record<string, unknown> } = {}): BrowserEvent {
+    return {
+      id: ++this.eventCounter,
+      type,
+      timestamp: Date.now(),
+      tabId: opts.tabId,
+      url: opts.url,
+      title: opts.title,
+      data: opts.data,
+    };
+  }
 }
