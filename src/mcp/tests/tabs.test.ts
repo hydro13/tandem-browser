@@ -131,4 +131,49 @@ describe('MCP tab tools', () => {
       await expect(handler({ tabId: 'bad' })).rejects.toThrow('tab not found');
     });
   });
+
+  // ── tandem_tab_emoji_set ─────────────────────────────────────────
+  describe('tandem_tab_emoji_set', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_set');
+
+    it('sets emoji on a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1', emoji: '🔥' });
+      expectTextContent(result, 'Set emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/t1/emoji', { emoji: '🔥' });
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_set', 't1: 🔥');
+    });
+  });
+
+  // ── tandem_tab_emoji_remove ──────────────────────────────────────
+  describe('tandem_tab_emoji_remove', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_remove');
+
+    it('removes emoji from a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1' });
+      expectTextContent(result, 'Removed emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('DELETE', '/tabs/t1/emoji');
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_remove', 't1');
+    });
+  });
+
+  // ── tandem_tab_emoji_flash ───────────────────────────────────────
+  describe('tandem_tab_emoji_flash', () => {
+    const handler = getHandler(tools, 'tandem_tab_emoji_flash');
+
+    it('flashes emoji on a tab', async () => {
+      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      const result = await handler({ tabId: 't1', emoji: '🔥' });
+      expectTextContent(result, 'Flashing emoji');
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/t1/emoji', { emoji: '🔥', flash: true });
+      expect(mockLogActivity).toHaveBeenCalledWith('tab_emoji_flash', 't1: 🔥');
+    });
+  });
 });
