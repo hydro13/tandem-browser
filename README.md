@@ -5,6 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/github/package-json/v/hydro13/tandem-browser)](package.json)
 [![Coverage](https://codecov.io/gh/hydro13/tandem-browser/branch/main/graph/badge.svg)](https://codecov.io/gh/hydro13/tandem-browser)
+[![Ask a question](https://img.shields.io/badge/discussions-Q%26A-blue)](https://github.com/hydro13/tandem-browser/discussions/categories/q-a)
 
 **236 MCP tools. Plug in any AI. No scraping. No API wrangling.**
 
