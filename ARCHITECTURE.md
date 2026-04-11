@@ -241,6 +241,87 @@ Shell communicates with main process through `contextBridge` (defined in
 - **API routes:** kebab-case paths (`/tabs/list`, `/workspace/move-tab`)
 - **MCP tools:** snake_case (`tandem_click`, `tandem_read_page`)
 
+## Testing Strategy
+
+### Framework and Configuration
+
+Vitest with v8 coverage. Configuration in `vitest.config.ts`:
+
+```
+include:  src/**/tests/**/*.test.ts
+setup:    src/api/tests/setup.ts   (patches supertest for IPv4/IPv6)
+coverage: v8, reporters: text + html + json-summary
+```
+
+Key commands:
+
+| Command | Purpose |
+|---------|---------|
+| `npm test` | Run all tests once (`vitest run`) |
+| `npm run verify` | Compile + lint + test + consistency check |
+| `npx vitest run --coverage` | Tests with coverage report |
+
+### Test Location Convention
+
+Tests live alongside their domain in `src/<domain>/tests/<name>.test.ts`:
+
+```
+src/
+├── bookmarks/
+│   ├── manager.ts
+│   └── tests/
+│       └── bookmarks.test.ts
+├── api/
+│   ├── routes/
+│   │   ├── tabs.ts
+│   │   └── content.ts
+│   └── tests/
+│       └── routes/
+│           ├── tabs.test.ts
+│           └── content.test.ts
+└── mcp/
+    ├── tools/
+    │   ├── tabs.ts
+    │   └── content.ts
+    └── tests/
+        ├── tabs.test.ts
+        └── content.test.ts
+```
+
+API route tests mirror route filenames under `src/api/tests/routes/`.
+MCP tool tests mirror tool filenames under `src/mcp/tests/`.
+
+### Test Categories
+
+| Category | Location | Files | What they test |
+|----------|----------|-------|----------------|
+| Manager unit tests | `src/<domain>/tests/` | 22 | Core manager logic (bookmarks, history, config, tabs, etc.) |
+| API route tests | `src/api/tests/routes/` | 15 | HTTP endpoints via supertest, auth, error handling |
+| MCP tool tests | `src/mcp/tests/` | 31 | Tool registration, argument validation, manager delegation |
+| Security tests | `src/security/tests/` | 11 | Shield layers, threat detection, crypto, evolution engine |
+| Extension tests | `src/extensions/tests/` | 4 | Extension loading, action polyfill, native messaging, trust |
+| Utility tests | `src/utils/tests/` | 4 | Logger, constants, security helpers, general utils |
+
+87 test files total.
+
+### Writing New Tests
+
+1. Create `src/<domain>/tests/<feature>.test.ts`
+2. Mock Electron — `vi.mock('electron')` (most managers need `BrowserWindow`)
+3. Mock the filesystem — `vi.mock('fs/promises')` for managers that persist to `~/.tandem/`
+4. Test the public API — the same methods that routes and MCP tools call
+5. Verify both success and error paths — use `handleRouteError` patterns for API tests
+
+### CI Integration
+
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `verify.yml` | Every push and PR | `npm run verify` + coverage upload to Codecov |
+| `codeql.yml` | PRs to main + weekly (Monday 04:00 UTC) | CodeQL security analysis |
+
+Both checks must pass before merge. Coverage is tracked via Codecov with a
+README badge.
+
 ## Key Design Constraints
 
 1. **Local-first** — no data leaves the machine through Tandem
