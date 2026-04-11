@@ -3,6 +3,8 @@ import path from 'path';
 import type { EventStreamManager, BrowserEvent, BrowserEventType } from '../events/stream';
 import { tandemDir } from '../utils/paths';
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface ContextSnapshot {
   url: string;
   domain: string;
@@ -23,13 +25,18 @@ export interface ContextSummary {
   text: string; // Pre-formatted text version
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
  * ContextBridge — Makes everything Tandem reads available to external tools.
- * 
+ *
  * Stores context snapshots per URL in ~/.tandem/context/
  * Searchable, queryable via API. This is the bridge between Tandem and OpenClaw.
  */
 export class ContextBridge {
+
+  // === 1. Private state ===
+
   private contextDir: string;
   private indexPath: string;
   private index: Map<string, ContextSnapshot> = new Map();
@@ -42,6 +49,8 @@ export class ContextBridge {
   private unsubscribe: (() => void) | null = null;
   private contextChangeListeners = new Set<() => void>();
 
+  // === 2. Constructor ===
+
   constructor() {
     this.contextDir = tandemDir('context');
     this.indexPath = path.join(this.contextDir, '_index.json');
@@ -53,38 +62,18 @@ export class ContextBridge {
     this.loadIndex();
   }
 
-  /** Load the index from disk */
-  private loadIndex(): void {
-    try {
-      if (fs.existsSync(this.indexPath)) {
-        const raw: ContextSnapshot[] = JSON.parse(fs.readFileSync(this.indexPath, 'utf-8'));
-        for (const snap of raw) {
-          this.index.set(snap.url, snap);
-        }
-      }
-    } catch {
-      // Start fresh
-    }
+  // === 3. Dependency setters ===
+
+  /** Connect to EventStreamManager and start tracking live context */
+  connectEventStream(eventStream: EventStreamManager): void {
+    this.eventStream = eventStream;
+
+    this.unsubscribe = eventStream.subscribe((event) => {
+      this.handleEvent(event);
+    });
   }
 
-  /** Save the index to disk */
-  private saveIndex(): void {
-    try {
-      const entries = Array.from(this.index.values());
-      fs.writeFileSync(this.indexPath, JSON.stringify(entries, null, 2));
-    } catch {
-      // Silent fail
-    }
-  }
-
-  /** Extract domain from URL */
-  private getDomain(url: string): string {
-    try {
-      return new URL(url).hostname;
-    } catch {
-      return 'unknown';
-    }
-  }
+  // === 4. Public methods ===
 
   /**
    * Record a context snapshot for a page visit.
@@ -178,19 +167,6 @@ export class ContextBridge {
     return snap;
   }
 
-  // ═══════════════════════════════════════════════
-  // Live Context (Phase 2.2)
-  // ═══════════════════════════════════════════════
-
-  /** Connect to EventStreamManager and start tracking live context */
-  connectEventStream(eventStream: EventStreamManager): void {
-    this.eventStream = eventStream;
-
-    this.unsubscribe = eventStream.subscribe((event) => {
-      this.handleEvent(event);
-    });
-  }
-
   /** Update live tab list (call from main.ts when tabs change) */
   updateTabs(tabs: Array<{ id: string; title: string; url: string; active: boolean }>): void {
     this.openTabs = tabs.map(t => ({ id: t.id, title: t.title, url: t.url }));
@@ -215,45 +191,6 @@ export class ContextBridge {
   onContextChange(cb: () => void): () => void {
     this.contextChangeListeners.add(cb);
     return () => { this.contextChangeListeners.delete(cb); };
-  }
-
-  private notifyContextChange(): void {
-    for (const cb of this.contextChangeListeners) {
-      try { cb(); } catch { /* ignore */ }
-    }
-  }
-
-  private handleEvent(event: BrowserEvent): void {
-    // Update active tab on navigation/page-loaded/tab-focused
-    if ((event.type === 'navigation' || event.type === 'page-loaded' || event.type === 'tab-focused') && event.tabId) {
-      this.activeTab = {
-        tabId: event.tabId,
-        url: event.url || this.activeTab?.url || '',
-        title: event.title || this.activeTab?.title || '',
-      };
-    }
-
-    // Track voice status
-    if (event.type === 'voice-input' && event.data) {
-      if ('listening' in event.data) {
-        this.voiceActive = event.data.listening as boolean;
-      }
-    }
-
-    // Notify listeners on meaningful events
-    const meaningfulEvents: BrowserEventType[] = ['navigation', 'page-loaded', 'tab-opened', 'tab-closed', 'tab-focused'];
-    if (meaningfulEvents.includes(event.type)) {
-      this.notifyContextChange();
-    }
-  }
-
-  private timeAgo(timestamp: number): string {
-    const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    if (seconds < 5) return 'just now';
-    if (seconds < 60) return `${seconds}s ago`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m ago`;
-    return `${Math.floor(minutes / 60)}h ago`;
   }
 
   /**
@@ -319,6 +256,8 @@ export class ContextBridge {
     };
   }
 
+  // === 6. Cleanup ===
+
   /** Cleanup */
   destroy(): void {
     if (this.unsubscribe) {
@@ -326,5 +265,79 @@ export class ContextBridge {
       this.unsubscribe = null;
     }
     this.contextChangeListeners.clear();
+  }
+
+  // === 7. Private I/O ===
+
+  /** Load the index from disk */
+  private loadIndex(): void {
+    try {
+      if (fs.existsSync(this.indexPath)) {
+        const raw: ContextSnapshot[] = JSON.parse(fs.readFileSync(this.indexPath, 'utf-8'));
+        for (const snap of raw) {
+          this.index.set(snap.url, snap);
+        }
+      }
+    } catch {
+      // Start fresh
+    }
+  }
+
+  /** Save the index to disk */
+  private saveIndex(): void {
+    try {
+      const entries = Array.from(this.index.values());
+      fs.writeFileSync(this.indexPath, JSON.stringify(entries, null, 2));
+    } catch {
+      // Silent fail
+    }
+  }
+
+  /** Extract domain from URL */
+  private getDomain(url: string): string {
+    try {
+      return new URL(url).hostname;
+    } catch {
+      return 'unknown';
+    }
+  }
+
+  private notifyContextChange(): void {
+    for (const cb of this.contextChangeListeners) {
+      try { cb(); } catch { /* ignore */ }
+    }
+  }
+
+  private handleEvent(event: BrowserEvent): void {
+    // Update active tab on navigation/page-loaded/tab-focused
+    if ((event.type === 'navigation' || event.type === 'page-loaded' || event.type === 'tab-focused') && event.tabId) {
+      this.activeTab = {
+        tabId: event.tabId,
+        url: event.url || this.activeTab?.url || '',
+        title: event.title || this.activeTab?.title || '',
+      };
+    }
+
+    // Track voice status
+    if (event.type === 'voice-input' && event.data) {
+      if ('listening' in event.data) {
+        this.voiceActive = event.data.listening as boolean;
+      }
+    }
+
+    // Notify listeners on meaningful events
+    const meaningfulEvents: BrowserEventType[] = ['navigation', 'page-loaded', 'tab-opened', 'tab-closed', 'tab-focused'];
+    if (meaningfulEvents.includes(event.type)) {
+      this.notifyContextChange();
+    }
+  }
+
+  private timeAgo(timestamp: number): string {
+    const seconds = Math.floor((Date.now() - timestamp) / 1000);
+    if (seconds < 5) return 'just now';
+    if (seconds < 60) return `${seconds}s ago`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m ago`;
+    return `${Math.floor(minutes / 60)}h ago`;
   }
 }

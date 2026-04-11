@@ -5,9 +5,19 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('NetworkMocker');
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * NetworkMocker — intercepts and mocks network requests via CDP Fetch domain.
+ */
 export class NetworkMocker {
+
+  // === 1. Private state ===
+
   private rules: MockRule[] = [];
   private fetchEnabled = false;
+
+  // === 2. Constructor ===
 
   constructor(private devtools: DevToolsManager) {
     // Register CDP event subscriber for Fetch.requestPaused
@@ -17,6 +27,8 @@ export class NetworkMocker {
       handler: (_method: string, params: Record<string, unknown>) => this.handleRequestPaused(params),
     });
   }
+
+  // === 4. Public methods ===
 
   /** Add a mock/intercept rule */
   async addRule(rule: Omit<MockRule, 'id' | 'createdAt'>): Promise<MockRule> {
@@ -78,6 +90,21 @@ export class NetworkMocker {
   getRules(): MockRule[] {
     return [...this.rules];
   }
+
+  // === 6. Cleanup ===
+
+  /** Cleanup — called from will-quit handler */
+  destroy(): void {
+    this.rules = [];
+    this.devtools.unsubscribe('NetworkMocker');
+    // Don't await disableFetch here — app is quitting
+    if (this.fetchEnabled) {
+      this.devtools.sendCommand('Fetch.disable', {}).catch(e => log.warn('Fetch.disable on destroy failed:', e instanceof Error ? e.message : e));
+      this.fetchEnabled = false;
+    }
+  }
+
+  // === 7. Private helpers ===
 
   /** Enable CDP Fetch domain to intercept requests */
   private async enableFetch(): Promise<void> {
@@ -219,17 +246,6 @@ export class NetworkMocker {
       try {
         await this.devtools.sendCommand('Fetch.continueRequest', { requestId });
       } catch { /* ignore */ }
-    }
-  }
-
-  /** Cleanup — called from will-quit handler */
-  destroy(): void {
-    this.rules = [];
-    this.devtools.unsubscribe('NetworkMocker');
-    // Don't await disableFetch here — app is quitting
-    if (this.fetchEnabled) {
-      this.devtools.sendCommand('Fetch.disable', {}).catch(e => log.warn('Fetch.disable on destroy failed:', e instanceof Error ? e.message : e));
-      this.fetchEnabled = false;
     }
   }
 }

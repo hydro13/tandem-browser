@@ -14,6 +14,8 @@ try {
   ffmpegPath = 'ffmpeg';
 }
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 interface Recording {
   id: string;
   filename: string;
@@ -25,7 +27,17 @@ interface Recording {
   region?: { x: number; y: number; width: number; height: number };
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * VideoRecorderManager — records the browser window to MP4 via ffmpeg.
+ *
+ * Persistence: ~/Movies/Tandem/ and ~/.tandem/recordings/
+ */
 export class VideoRecorderManager {
+
+  // === 1. Private state ===
+
   private recording = false;
   private currentRecordingId: string | null = null;
   private startTime = 0;
@@ -38,6 +50,8 @@ export class VideoRecorderManager {
   private currentRegion?: { x: number; y: number; width: number; height: number };
   private writeStream: fs.WriteStream | null = null;
 
+  // === 2. Constructor ===
+
   constructor() {
     this.recordingsDir = tandemDir('recordings');
     this.tmpDir = path.join(this.recordingsDir, 'tmp');
@@ -48,26 +62,7 @@ export class VideoRecorderManager {
     this.loadIndex();
   }
 
-  private getIndexPath(): string {
-    return path.join(this.recordingsDir, 'index.json');
-  }
-
-  private loadIndex(): void {
-    try {
-      const p = this.getIndexPath();
-      if (fs.existsSync(p)) {
-        this.recordings = JSON.parse(fs.readFileSync(p, 'utf-8'));
-      }
-    } catch {
-      this.recordings = [];
-    }
-  }
-
-  private saveIndex(): void {
-    try {
-      fs.writeFileSync(this.getIndexPath(), JSON.stringify(this.recordings, null, 2));
-    } catch { /* ignore */ }
-  }
+  // === 4. Public methods ===
 
   startRecording(mode: 'application' | 'region', region?: { x: number; y: number; width: number; height: number }): { ok: boolean; id?: string; error?: string } {
     if (this.recording) return { ok: false, error: 'Already recording' };
@@ -167,30 +162,6 @@ export class VideoRecorderManager {
     return { ok: true, recording: rec };
   }
 
-  private convertToMp4(inputPath: string, outputPath: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      execFile(ffmpegPath, [
-        '-i', inputPath,
-        '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '23',
-        '-r', '30',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-movflags', '+faststart',
-        '-y',
-        outputPath,
-      ], { timeout: 300_000 }, (err, _stdout, stderr) => {
-        if (err) {
-          log.warn('ffmpeg stderr:', stderr);
-          reject(err);
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
   isRecording(): boolean {
     return this.recording;
   }
@@ -237,5 +208,52 @@ export class VideoRecorderManager {
           log.warn('Force-stop conversion failed, keeping webm:', e instanceof Error ? e.message : e);
         });
     }
+  }
+
+  // === 7. Private I/O ===
+
+  private getIndexPath(): string {
+    return path.join(this.recordingsDir, 'index.json');
+  }
+
+  private loadIndex(): void {
+    try {
+      const p = this.getIndexPath();
+      if (fs.existsSync(p)) {
+        this.recordings = JSON.parse(fs.readFileSync(p, 'utf-8'));
+      }
+    } catch {
+      this.recordings = [];
+    }
+  }
+
+  private saveIndex(): void {
+    try {
+      fs.writeFileSync(this.getIndexPath(), JSON.stringify(this.recordings, null, 2));
+    } catch { /* ignore */ }
+  }
+
+  private convertToMp4(inputPath: string, outputPath: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      execFile(ffmpegPath, [
+        '-i', inputPath,
+        '-c:v', 'libx264',
+        '-preset', 'fast',
+        '-crf', '23',
+        '-r', '30',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-movflags', '+faststart',
+        '-y',
+        outputPath,
+      ], { timeout: 300_000 }, (err, _stdout, stderr) => {
+        if (err) {
+          log.warn('ffmpeg stderr:', stderr);
+          reject(err);
+        } else {
+          resolve();
+        }
+      });
+    });
   }
 }

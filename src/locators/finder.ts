@@ -2,6 +2,8 @@ import type { DevToolsManager } from '../devtools/manager';
 import type { SnapshotManager } from '../snapshot/manager';
 import type { AccessibilityNode } from '../snapshot/types';
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export type LocatorStrategy = 'role' | 'text' | 'placeholder' | 'label' | 'testid';
 
 export interface LocatorQuery {
@@ -20,11 +22,21 @@ export interface LocatorResult {
   count?: number;      // Number of matches
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * LocatorFinder — finds elements by role, text, placeholder, label, or test ID.
+ */
 export class LocatorFinder {
+
+  // === 2. Constructor ===
+
   constructor(
     private devTools: DevToolsManager,
     private snapshot: SnapshotManager,
   ) {}
+
+  // === 4. Public methods ===
 
   async find(query: LocatorQuery): Promise<LocatorResult> {
     switch (query.by) {
@@ -50,7 +62,9 @@ export class LocatorFinder {
     }
   }
 
-  // ─── Role ─────────────────────────────────────
+  // === 7. Private helpers ===
+
+  // --- Role ---
 
   private async findByRole(query: LocatorQuery): Promise<LocatorResult> {
     const tree = await this.snapshot.getAccessibilityTree({ interactive: false });
@@ -76,7 +90,7 @@ export class LocatorFinder {
     return true;
   }
 
-  // ─── Text ─────────────────────────────────────
+  // --- Text ---
 
   private async findByText(query: LocatorQuery): Promise<LocatorResult> {
     const tree = await this.snapshot.getAccessibilityTree({ interactive: false });
@@ -132,7 +146,7 @@ export class LocatorFinder {
     }
   }
 
-  // ─── Placeholder ──────────────────────────────
+  // --- Placeholder ---
 
   private async findByPlaceholder(query: LocatorQuery): Promise<LocatorResult> {
     const exact = query.exact !== false;
@@ -150,7 +164,7 @@ export class LocatorFinder {
     return this.findAllByCssSelector(selector);
   }
 
-  // ─── Label ────────────────────────────────────
+  // --- Label ---
 
   private async findByLabel(query: LocatorQuery): Promise<LocatorResult> {
     try {
@@ -212,7 +226,7 @@ export class LocatorFinder {
     return result.found ? [result] : [];
   }
 
-  // ─── TestID ───────────────────────────────────
+  // --- TestID ---
 
   private async findByTestId(query: LocatorQuery): Promise<LocatorResult> {
     const exact = query.exact !== false;
@@ -230,7 +244,7 @@ export class LocatorFinder {
     return this.findAllByCssSelector(selector);
   }
 
-  // ─── Helpers ──────────────────────────────────
+  // --- CSS / DOM helpers ---
 
   private async findByCssSelector(selector: string): Promise<LocatorResult> {
     try {
@@ -302,7 +316,7 @@ export class LocatorFinder {
     }
   }
 
-  // ─── Tree walker ──────────────────────────────
+  // --- Tree walker ---
 
   private walkTree(
     nodes: AccessibilityNode[],

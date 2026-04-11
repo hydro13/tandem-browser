@@ -5,6 +5,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('BookmarkManager');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 /**
  * Bookmark — A single bookmark or folder.
  */
@@ -24,14 +26,21 @@ interface BookmarkStore {
   lastModified: string;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
  * BookmarkManager — CRUD operations for bookmarks with folder support.
- * 
+ *
  * Storage: ~/.tandem/bookmarks.json
  */
 export class BookmarkManager {
+
+  // === 1. Private state ===
+
   private storePath: string;
   private store: BookmarkStore;
+
+  // === 2. Constructor ===
 
   constructor() {
     const dir = ensureDir(tandemDir());
@@ -39,23 +48,7 @@ export class BookmarkManager {
     this.store = this.load();
   }
 
-  private load(): BookmarkStore {
-    try {
-      if (fs.existsSync(this.storePath)) {
-        return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
-      }
-    } catch (e) { log.warn('Bookmarks file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
-    return { bookmarks: [], lastModified: new Date().toISOString() };
-  }
-
-  private save(): void {
-    this.store.lastModified = new Date().toISOString();
-    fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
-  }
-
-  private generateId(): string {
-    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
-  }
+  // === 4. Public methods ===
 
   /** Reload bookmarks from disk (e.g. after Chrome import overwrites the file) */
   reload(): void {
@@ -141,18 +134,6 @@ export class BookmarkManager {
     return removed;
   }
 
-  private removeFromList(id: string, list: Bookmark[]): boolean {
-    const idx = list.findIndex(b => b.id === id);
-    if (idx !== -1) {
-      list.splice(idx, 1);
-      return true;
-    }
-    for (const item of list) {
-      if (item.children && this.removeFromList(id, item.children)) return true;
-    }
-    return false;
-  }
-
   /** Update a bookmark */
   update(id: string, data: { name?: string; url?: string }): Bookmark | null {
     const bookmark = this.findById(id, this.store.bookmarks);
@@ -217,6 +198,38 @@ export class BookmarkManager {
     const barFolder = this.store.bookmarks.find(b => b.name === 'Bookmarks Bar' || b.name === 'Bladwijzerbalk');
     if (barFolder && barFolder.children) return barFolder.children;
     return this.store.bookmarks.filter(b => b.type === 'url').slice(0, 20);
+  }
+
+  // === 7. Private I/O ===
+
+  private load(): BookmarkStore {
+    try {
+      if (fs.existsSync(this.storePath)) {
+        return JSON.parse(fs.readFileSync(this.storePath, 'utf-8'));
+      }
+    } catch (e) { log.warn('Bookmarks file corrupted, starting fresh:', e instanceof Error ? e.message : String(e)); }
+    return { bookmarks: [], lastModified: new Date().toISOString() };
+  }
+
+  private save(): void {
+    this.store.lastModified = new Date().toISOString();
+    fs.writeFileSync(this.storePath, JSON.stringify(this.store, null, 2));
+  }
+
+  private generateId(): string {
+    return Date.now().toString(36) + Math.random().toString(36).substring(2, 8);
+  }
+
+  private removeFromList(id: string, list: Bookmark[]): boolean {
+    const idx = list.findIndex(b => b.id === id);
+    if (idx !== -1) {
+      list.splice(idx, 1);
+      return true;
+    }
+    for (const item of list) {
+      if (item.children && this.removeFromList(id, item.children)) return true;
+    }
+    return false;
   }
 
   /** Find a bookmark by ID in the tree */
