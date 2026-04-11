@@ -5,6 +5,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('HeadlessManager');
 
+// ─── Constants ──────────────────────────────────────────────────────
+
 /** Page load timeout in milliseconds */
 const PAGE_LOAD_TIMEOUT_MS = 30000;
 
@@ -25,6 +27,8 @@ const CAPTCHA_SELECTORS = [
   '.cf-browser-verification',
 ];
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface HeadlessStatus {
   active: boolean;
   url: string | null;
@@ -34,17 +38,24 @@ export interface HeadlessStatus {
   captchaDetected: boolean;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
  * HeadlessManager — Background BrowserWindow for the AI wingman to browse solo.
- * 
+ *
  * Uses the same persist:tandem partition (cookies shared).
  * Same stealth patches as main window.
  * Auto-shows on captcha detection or errors.
  */
 export class HeadlessManager {
+
+  // === 1. Private state ===
+
   private window: BrowserWindow | null = null;
   private captchaDetected = false;
   private captchaCheckInterval: ReturnType<typeof setInterval> | null = null;
+
+  // === 4. Public methods ===
 
   /** Open a URL in the background window */
   async open(url: string): Promise<{ ok: boolean; error?: string }> {
@@ -143,6 +154,15 @@ export class HeadlessManager {
     this.captchaDetected = false;
   }
 
+  // === 6. Cleanup ===
+
+  /** Destroy everything */
+  destroy(): void {
+    this.close();
+  }
+
+  // === 7. Private helpers ===
+
   /** Create or reuse the hidden window */
   private async ensureWindow(): Promise<void> {
     if (this.window && !this.window.isDestroyed()) return;
@@ -231,10 +251,5 @@ export class HeadlessManager {
         this.captchaDetected = false;
       }
     } catch (e) { log.warn('Captcha detection check failed (window may be destroyed):', e instanceof Error ? e.message : String(e)); }
-  }
-
-  /** Destroy everything */
-  destroy(): void {
-    this.close();
   }
 }

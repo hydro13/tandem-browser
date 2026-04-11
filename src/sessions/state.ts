@@ -4,8 +4,18 @@ import * as crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
 import { assertSinglePathSegment, resolvePathWithinRoot } from '../utils/security';
 
+/**
+ * StateManager — saves and restores Electron session cookies to/from disk.
+ *
+ * Persistence: ~/.tandem/sessions/{name}.json (or .enc if encrypted)
+ */
 export class StateManager {
+
+  // === 1. Private state ===
+
   private stateDir: string;
+
+  // === 2. Constructor ===
 
   constructor() {
     this.stateDir = tandemDir('sessions');
@@ -14,10 +24,7 @@ export class StateManager {
     }
   }
 
-  private getStateFilePath(name: string, extension: 'enc' | 'json'): string {
-    const safeName = assertSinglePathSegment(name, 'state name');
-    return resolvePathWithinRoot(this.stateDir, `${safeName}.${extension}`);
-  }
+  // === 4. Public methods ===
 
   /** Save session cookies to disk */
   async save(name: string, partition: string): Promise<string> {
@@ -102,6 +109,13 @@ export class StateManager {
     return fs.readdirSync(this.stateDir)
       .filter(f => f.endsWith('.json') || f.endsWith('.enc'))
       .map(f => f.replace(/\.(json|enc)$/, ''));
+  }
+
+  // === 7. Private I/O ===
+
+  private getStateFilePath(name: string, extension: 'enc' | 'json'): string {
+    const safeName = assertSinglePathSegment(name, 'state name');
+    return resolvePathWithinRoot(this.stateDir, `${safeName}.${extension}`);
   }
 
   private encrypt(data: string, key: string): string {

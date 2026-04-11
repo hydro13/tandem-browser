@@ -2,6 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import { tandemDir } from '../utils/paths';
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface ClaroNoteAuth {
   token: string;
   user: {
@@ -29,12 +31,24 @@ export interface CreateNoteResponse {
   key: string;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * ClaroNoteManager — integration with the ClaroNote transcription API.
+ *
+ * Persistence: ~/.tandem/claronote-auth.json
+ */
 export class ClaroNoteManager {
+
+  // === 1. Private state ===
+
   private authFile: string;
   private baseUrl = 'https://api.claronote.com';
   private isRecording: boolean = false;
   private recordingStartTime: number = 0;
-  
+
+  // === 2. Constructor ===
+
   constructor() {
     const baseDir = tandemDir();
     if (!fs.existsSync(baseDir)) {
@@ -43,7 +57,9 @@ export class ClaroNoteManager {
     this.authFile = path.join(baseDir, 'claronote-auth.json');
   }
 
-  // ═══ Authentication ═══
+  // === 4. Public methods ===
+
+  // --- Authentication ---
 
   /** Authenticate with ClaroNote and persist the token to disk. */
   async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
@@ -59,16 +75,16 @@ export class ClaroNoteManager {
           user: response.user,
           expiresAt: Date.now() + (24 * 60 * 60 * 1000) // 24 hours
         };
-        
+
         fs.writeFileSync(this.authFile, JSON.stringify(auth, null, 2));
         return { success: true };
       } else {
         return { success: false, error: 'Invalid response format' };
       }
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
@@ -84,15 +100,15 @@ export class ClaroNoteManager {
   getAuth(): ClaroNoteAuth | null {
     try {
       if (!fs.existsSync(this.authFile)) return null;
-      
+
       const auth: ClaroNoteAuth = JSON.parse(fs.readFileSync(this.authFile, 'utf-8'));
-      
+
       // Check if token is expired
       if (auth.expiresAt && Date.now() > auth.expiresAt) {
         void this.logout();
         return null;
       }
-      
+
       return auth;
     } catch {
       return null;
@@ -104,7 +120,7 @@ export class ClaroNoteManager {
   async getMe(): Promise<any> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
-    
+
     return await this.apiRequest('GET', '/auth/me', null, auth.token);
   }
 
@@ -113,7 +129,7 @@ export class ClaroNoteManager {
     return this.getAuth() !== null;
   }
 
-  // ═══ Recording ═══
+  // --- Recording ---
 
   /** Start tracking a recording session (actual MediaRecorder lives in renderer). */
   async startRecording(): Promise<{ success: boolean; error?: string }> {
@@ -126,12 +142,12 @@ export class ClaroNoteManager {
       // We just track the state here
       this.isRecording = true;
       this.recordingStartTime = Date.now();
-      
+
       return { success: true };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to start recording' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to start recording'
       };
     }
   }
@@ -153,23 +169,23 @@ export class ClaroNoteManager {
 
       // Stop recording
       this.isRecording = false;
-      
+
       // Return success - the actual upload will be handled by the renderer process
       // For now, we'll just return a placeholder
       return { success: true, noteId: 'pending' };
     } catch (error) {
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Failed to stop recording' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to stop recording'
       };
     }
   }
 
   /** Get the current recording state, including elapsed duration. */
-  getRecordingStatus(): { 
-    isRecording: boolean; 
-    duration?: number; 
-    startTime?: number; 
+  getRecordingStatus(): {
+    isRecording: boolean;
+    duration?: number;
+    startTime?: number;
   } {
     return {
       isRecording: this.isRecording,
@@ -178,13 +194,13 @@ export class ClaroNoteManager {
     };
   }
 
-  // ═══ Notes Management ═══
+  // --- Notes Management ---
 
   /** Fetch recent notes from ClaroNote, sorted newest first. */
   async getNotes(limit: number = 10): Promise<ClaroNote[]> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
-    
+
     const response = await this.apiRequest('GET', `/notes?limit=${limit}&sortBy=createdAt&sortOrder=desc`, null, auth.token);
     return response.data || response;
   }
@@ -193,11 +209,9 @@ export class ClaroNoteManager {
   async getNote(noteId: string): Promise<ClaroNote> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
-    
+
     return await this.apiRequest('GET', `/notes/${noteId}`, null, auth.token);
   }
-
-  // ═══ Public Methods for Audio Upload ═══
 
   /**
    * Upload an audio recording buffer to ClaroNote for transcription.
@@ -206,11 +220,11 @@ export class ClaroNoteManager {
   async uploadRecording(audioBuffer: Buffer, duration: number): Promise<string> {
     const auth = this.getAuth();
     if (!auth) throw new Error('Not authenticated');
-    
+
     return this.uploadAudioBuffer(audioBuffer, duration, auth.token);
   }
 
-  // ═══ Private Methods ═══
+  // === 7. Private helpers ===
 
   private async uploadAudioBuffer(audioBuffer: Buffer, duration: number, token: string): Promise<string> {
     // Step 1: Create note
@@ -263,7 +277,7 @@ export class ClaroNoteManager {
     }
 
     const response = await fetch(url, options);
-    
+
     if (!response.ok) {
       const errorText = await response.text();
       try {

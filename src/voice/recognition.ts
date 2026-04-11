@@ -4,26 +4,29 @@ import { IpcChannels } from '../shared/ipc-channels';
 
 /**
  * VoiceManager — Manages voice input via Web Speech API in the SHELL.
- * 
+ *
  * CRITICAL: Voice recognition runs in the Electron shell renderer,
  * NOT in any webview. Websites cannot detect it.
- * 
+ *
  * Flow: Cmd+M → shell starts SpeechRecognition → transcripts sent via IPC
  * → displayed in Wingman panel chat → sent as message on silence/Enter.
  */
 export class VoiceManager {
+
+  // === 1. Private state ===
+
   private win: BrowserWindow;
   private panelManager: PanelManager;
   private listening = false;
+
+  // === 2. Constructor ===
 
   constructor(win: BrowserWindow, panelManager: PanelManager) {
     this.win = win;
     this.panelManager = panelManager;
   }
 
-  private canSendToRenderer(): boolean {
-    return !this.win.isDestroyed() && !this.win.webContents.isDestroyed();
-  }
+  // === 4. Public methods ===
 
   /** Toggle voice on/off — tells renderer to start/stop SpeechRecognition */
   toggleVoice(): boolean {
@@ -84,5 +87,11 @@ export class VoiceManager {
   /** Is currently listening */
   isListening(): boolean {
     return this.listening;
+  }
+
+  // === 7. Private helpers ===
+
+  private canSendToRenderer(): boolean {
+    return !this.win.isDestroyed() && !this.win.webContents.isDestroyed();
   }
 }

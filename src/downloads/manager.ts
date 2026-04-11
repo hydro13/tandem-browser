@@ -4,6 +4,8 @@ import path from 'path';
 import os from 'os';
 import { IpcChannels } from '../shared/ipc-channels';
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 /**
  * DownloadItem — Tracked download entry.
  */
@@ -20,19 +22,28 @@ export interface DownloadEntry {
   mimeType: string;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
 /**
  * DownloadManager — Hooks into Electron's download system.
- * 
+ *
  * Tracks downloads, reports progress, sends notifications on completion.
  */
 export class DownloadManager {
+
+  // === 1. Private state ===
+
   private downloads: Map<string, DownloadEntry> = new Map();
   private downloadFolder: string;
   private idCounter = 0;
 
+  // === 2. Constructor ===
+
   constructor(downloadFolder?: string) {
     this.downloadFolder = downloadFolder || path.join(os.homedir(), 'Downloads');
   }
+
+  // === 4. Public methods ===
 
   /** Hook into an Electron session to intercept downloads */
   hookSession(ses: Electron.Session, win?: BrowserWindow): void {
