@@ -11,16 +11,23 @@ type ContextMenuListener = (event: Electron.Event, params: Electron.ContextMenuP
  * new webview as it's created via the 'web-contents-created' app event.
  */
 export class ContextMenuManager {
+
+  // === 1. Private state ===
+
   private builder: ContextMenuBuilder;
   private deps: ContextMenuDeps;
   /** Track registered webContents IDs → their context-menu listener for cleanup */
   private listeners: Map<number, { wc: WebContents; handler: ContextMenuListener }> = new Map();
   private lastPopupTime = 0;
 
+  // === 2. Constructor ===
+
   constructor(deps: ContextMenuDeps) {
     this.deps = deps;
     this.builder = new ContextMenuBuilder(deps);
   }
+
+  // === 4. Public methods ===
 
   /**
    * Register context-menu handling for a webview's webContents.
@@ -72,15 +79,6 @@ export class ContextMenuManager {
   }
 
   /**
-   * Find the tab ID that owns the given webContents by scanning TabManager.
-   */
-  private findTabIdForWebContents(wc: WebContents): string | undefined {
-    const tabs = this.deps.tabManager.listTabs();
-    const tab = tabs.find(t => t.webContentsId === wc.id);
-    return tab?.id;
-  }
-
-  /**
    * Show context menu for a tab in the tab bar (called via IPC from renderer).
    */
   showTabContextMenu(tabId: string): void {
@@ -89,6 +87,8 @@ export class ContextMenuManager {
       menu.popup({ window: this.deps.win });
     }
   }
+
+  // === 6. Cleanup ===
 
   /**
    * Cleanup on app quit — remove all context-menu listeners.
@@ -100,5 +100,16 @@ export class ContextMenuManager {
       }
     }
     this.listeners.clear();
+  }
+
+  // === 7. Private helpers ===
+
+  /**
+   * Find the tab ID that owns the given webContents by scanning TabManager.
+   */
+  private findTabIdForWebContents(wc: WebContents): string | undefined {
+    const tabs = this.deps.tabManager.listTabs();
+    const tab = tabs.find(t => t.webContentsId === wc.id);
+    return tab?.id;
   }
 }

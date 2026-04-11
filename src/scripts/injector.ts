@@ -3,6 +3,8 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('ScriptInjector');
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 export interface RegisteredScript {
   name: string;
   code: string;
@@ -17,11 +19,21 @@ export interface RegisteredStyle {
   addedAt: number;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * ScriptInjector — manages user scripts and styles injected into webview tabs.
+ */
 export class ScriptInjector {
+
+  // === 1. Private state ===
+
   private scripts = new Map<string, RegisteredScript>();
   private styles = new Map<string, RegisteredStyle>();
 
-  // ─── Scripts ──────────────────────────────────
+  // === 4. Public methods ===
+
+  // --- Scripts ---
 
   addScript(name: string, code: string): RegisteredScript {
     const entry: RegisteredScript = {
@@ -56,7 +68,7 @@ export class ScriptInjector {
     return Array.from(this.scripts.values());
   }
 
-  // ─── Styles ───────────────────────────────────
+  // --- Styles ---
 
   addStyle(name: string, css: string): RegisteredStyle {
     const entry: RegisteredStyle = {
@@ -91,7 +103,7 @@ export class ScriptInjector {
     return Array.from(this.styles.values());
   }
 
-  // ─── Injection ────────────────────────────────
+  // --- Injection ---
 
   /**
    * Called after every did-finish-load.

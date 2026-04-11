@@ -9,6 +9,8 @@ const log = createLogger('ClipboardManager');
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
+// ─── Types ──────────────────────────────────────────────────────────
+
 // Save directory is fixed — no user-controlled paths to prevent path injection
 
 const DEFAULT_SAVE_DIR = path.join(os.homedir(), 'Pictures', 'Tandem', 'clipboard');
@@ -41,7 +43,14 @@ export interface ClipboardSaveResult {
   size: number;
 }
 
+// ─── Manager ────────────────────────────────────────────────────────
+
+/**
+ * ClipboardManager — reads, writes, and saves clipboard content (text and images).
+ */
 export class ClipboardManager {
+
+  // === 4. Public methods ===
 
   read(): ClipboardContent {
     const formats = clipboard.availableFormats();

@@ -3,16 +3,23 @@ import path from 'path';
 
 /**
  * PiPManager — Picture-in-Picture always-on-top mini window.
- * 
+ *
  * A small frameless BrowserWindow that stays on top of everything.
  * Communicates with the main app via localhost API (not IPC).
  * Loads shell/pip.html as its UI.
  */
 export class PiPManager {
+
+  // === 1. Private state ===
+
   private pipWindow: BrowserWindow | null = null;
   private visible = false;
 
+  // === 2. Constructor ===
+
   constructor() {}
+
+  // === 4. Public methods ===
 
   /** Toggle the PiP window on/off */
   toggle(forceState?: boolean): boolean {
@@ -26,6 +33,26 @@ export class PiPManager {
 
     return this.visible;
   }
+
+  /** Get current PiP status */
+  getStatus(): { visible: boolean } {
+    return {
+      visible: this.visible && !!this.pipWindow && !this.pipWindow.isDestroyed(),
+    };
+  }
+
+  // === 6. Cleanup ===
+
+  /** Destroy the PiP window */
+  destroy(): void {
+    if (this.pipWindow && !this.pipWindow.isDestroyed()) {
+      this.pipWindow.close();
+    }
+    this.pipWindow = null;
+    this.visible = false;
+  }
+
+  // === 7. Private helpers ===
 
   /** Show the PiP window (create if needed) */
   private show(): void {
@@ -73,22 +100,6 @@ export class PiPManager {
     if (this.pipWindow && !this.pipWindow.isDestroyed()) {
       this.pipWindow.hide();
     }
-    this.visible = false;
-  }
-
-  /** Get current PiP status */
-  getStatus(): { visible: boolean } {
-    return {
-      visible: this.visible && !!this.pipWindow && !this.pipWindow.isDestroyed(),
-    };
-  }
-
-  /** Destroy the PiP window */
-  destroy(): void {
-    if (this.pipWindow && !this.pipWindow.isDestroyed()) {
-      this.pipWindow.close();
-    }
-    this.pipWindow = null;
     this.visible = false;
   }
 }
