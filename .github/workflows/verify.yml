@@ -25,3 +25,12 @@ jobs:
 
       - name: Run repository verification
         run: npm run verify
+
+      - name: Generate coverage report
+        run: npx vitest run --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/coverage-summary.json
+          fail_ci_if_error: false
