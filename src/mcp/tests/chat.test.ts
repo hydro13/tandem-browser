@@ -37,11 +37,11 @@ describe('MCP chat tools', () => {
 
     it('returns formatted chat history', async () => {
       mockApiCall.mockResolvedValueOnce({
-        messages: [{ from: 'robin', text: 'hi', timestamp: 1700000000000 }],
+        messages: [{ from: 'user', text: 'hi', timestamp: 1700000000000 }],
       });
       const result = await handler({ limit: 20 });
       const text = expectTextContent(result, 'Chat history (1 messages)');
-      expect(text).toContain('robin: hi');
+      expect(text).toContain('user: hi');
     });
 
     it('handles empty chat', async () => {

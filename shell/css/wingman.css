@@ -201,7 +201,7 @@
       font-size: 10px;
     }
 
-    .activity-item .a-source.robin {
+    .activity-item .a-source.user {
       color: var(--success);
     }
 
@@ -259,7 +259,7 @@
       min-width: 0;
     }
 
-    .chat-msg.robin {
+    .chat-msg.user {
       background: rgba(78, 204, 163, 0.2);
       border: 1px solid rgba(78, 204, 163, 0.3);
       align-self: flex-end;

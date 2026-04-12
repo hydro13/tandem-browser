@@ -28,7 +28,7 @@ export function createPanelApi() {
     },
     sendChatImage: (text: string, image: string) => ipcRenderer.invoke(IpcChannels.CHAT_SEND_IMAGE, { text, image }),
     persistChatMessage: (data: {
-      from: 'robin' | 'wingman' | 'claude';
+      from: 'user' | 'wingman' | 'claude';
       text?: string;
       image?: string;
       notifyWebhook?: boolean;

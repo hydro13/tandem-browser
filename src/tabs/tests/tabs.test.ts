@@ -98,7 +98,7 @@ describe('TabManager', () => {
     it('creates a new tab with default values', async () => {
       const tab = await tm.openTab('https://test.com');
       expect(tab.url).toBe('https://test.com');
-      expect(tab.source).toBe('robin');
+      expect(tab.source).toBe('user');
       expect(tab.pinned).toBe(false);
       expect(tab.partition).toBe('persist:tandem');
       expect(tm.count).toBe(1);
@@ -120,7 +120,7 @@ describe('TabManager', () => {
 
     it('does not focus when focus=false', async () => {
       const t1 = await tm.openTab('https://one.com');
-      await tm.openTab('https://two.com', undefined, 'robin', 'persist:tandem', false);
+      await tm.openTab('https://two.com', undefined, 'user', 'persist:tandem', false);
       expect(tm.getActiveTab()?.id).toBe(t1.id);
     });
 
@@ -141,7 +141,7 @@ describe('TabManager', () => {
       const inheritedTab = await tm.openTab(
         'https://discord.com/channels/123',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
         { inheritSessionFrom: sourceTab.id },
@@ -157,7 +157,7 @@ describe('TabManager', () => {
       const tab = await tm.openTab(
         'https://discord.com/channels/@me',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
         { inheritSessionFrom: 'tab-999' },
@@ -228,7 +228,7 @@ describe('TabManager', () => {
   describe('focusTab()', () => {
     it('activates the target tab and deactivates the previous', async () => {
       const t1 = await tm.openTab('https://one.com');
-      const t2 = await tm.openTab('https://two.com', undefined, 'robin', 'persist:tandem', false);
+      const t2 = await tm.openTab('https://two.com', undefined, 'user', 'persist:tandem', false);
       await tm.focusTab(t2.id);
       expect(tm.getActiveTab()?.id).toBe(t2.id);
       expect(tm.getTab(t1.id)?.active).toBe(false);

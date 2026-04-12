@@ -9,7 +9,7 @@ const log = createLogger('TabManager');
 
 // ─── Types ──────────────────────────────────────────────────────────
 
-export type TabSource = 'robin' | 'wingman';
+export type TabSource = 'user' | 'wingman';
 
 export interface Tab {
   id: string;
@@ -146,7 +146,7 @@ export class TabManager {
   async openTab(
     url: string = 'about:blank',
     groupId?: string,
-    source: TabSource = 'robin',
+    source: TabSource = 'user',
     partition: string = 'persist:tandem',
     focus: boolean = true,
     options?: OpenTabOptions,
@@ -447,7 +447,7 @@ export class TabManager {
       groupId: null,
       active: true,
       createdAt: Date.now(),
-      source: 'robin',
+      source: 'user',
       pinned: false,
       partition: 'persist:tandem',
       emoji: null,

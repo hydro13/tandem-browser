@@ -107,7 +107,7 @@ describe('Media Routes', () => {
     });
 
     it('supports ?since_id= for polling', async () => {
-      const newMessages = [{ id: 3, from: 'robin', text: 'new', ts: 2000 }];
+      const newMessages = [{ id: 3, from: 'user', text: 'new', ts: 2000 }];
       vi.mocked(ctx.panelManager.getChatMessagesSince).mockReturnValue(newMessages as any);
 
       const res = await request(app).get('/chat?since_id=2');
@@ -153,12 +153,12 @@ describe('Media Routes', () => {
       expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('wingman', 'hello', undefined);
     });
 
-    it('maps from=robin to sender robin', async () => {
+    it('maps from=user to sender user', async () => {
       await request(app)
         .post('/chat')
-        .send({ text: 'hi', from: 'robin' });
+        .send({ text: 'hi', from: 'user' });
 
-      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('robin', 'hi', undefined);
+      expect(ctx.panelManager.addChatMessage).toHaveBeenCalledWith('user', 'hi', undefined);
     });
 
     it('maps from=claude to sender claude', async () => {

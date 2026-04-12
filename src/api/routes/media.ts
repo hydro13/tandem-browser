@@ -80,7 +80,7 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
   router.post('/chat', (req: Request, res: Response) => {
     const { text, from, image } = req.body;
     if (!text && !image) { res.status(400).json({ error: 'text or image required' }); return; }
-    const sender: 'robin' | 'wingman' | 'claude' = (from === 'robin') ? 'robin' : (from === 'claude') ? 'claude' : 'wingman';
+    const sender: 'user' | 'wingman' | 'claude' = (from === 'user') ? 'user' : (from === 'claude') ? 'claude' : 'wingman';
     try {
       let savedImage: string | undefined;
       if (image) {

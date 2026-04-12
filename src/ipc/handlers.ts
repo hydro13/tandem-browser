@@ -131,29 +131,29 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     syncTabsToContext(tabManager, contextBridge);
   });
 
-  // ═══ Chat IPC — Robin sends messages from renderer ═══
+  // ═══ Chat IPC — User sends messages from renderer ═══
   ipcMain.on(IpcChannels.CHAT_SEND, (_event, text: string) => {
     if (text) {
-      panelManager.addChatMessage('robin', text);
+      panelManager.addChatMessage('user',text);
     }
   });
 
   // Legacy webhook-based path kept as a fallback during OpenClaw chat migration.
   ipcMain.on(IpcChannels.CHAT_SEND_LEGACY, (_event, text: string) => {
     if (text) {
-      panelManager.addChatMessage('robin', text);
+      panelManager.addChatMessage('user',text);
     }
   });
 
-  // ═══ Chat Image IPC — Robin pastes image from clipboard ═══
+  // ═══ Chat Image IPC — User pastes image from clipboard ═══
   ipcMain.handle(IpcChannels.CHAT_SEND_IMAGE, async (_event, data: { text: string; image: string }) => {
     const filename = panelManager.saveImage(data.image);
-    const msg = panelManager.addChatMessage('robin', data.text || '', filename);
+    const msg = panelManager.addChatMessage('user',data.text || '', filename);
     return { ok: true, message: msg };
   });
 
   ipcMain.handle(IpcChannels.CHAT_PERSIST_MESSAGE, async (_event, data: {
-    from: 'robin' | 'wingman' | 'claude';
+    from: 'user' | 'wingman' | 'claude';
     text?: string;
     image?: string;
     notifyWebhook?: boolean;
@@ -499,7 +499,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     const tab = await tabManager.openTab(targetUrl);
     if (tab) {
       eventStream.handleTabEvent('tab-opened', { tabId: tab.id, url: targetUrl });
-      activityTracker.onWebviewEvent({ type: 'tab-open', tabId: tab.id, url: targetUrl, source: 'robin' });
+      activityTracker.onWebviewEvent({ type: 'tab-open', tabId: tab.id, url: targetUrl, source: 'user' });
     }
     syncTabsToContext(tabManager, contextBridge);
     return tab;

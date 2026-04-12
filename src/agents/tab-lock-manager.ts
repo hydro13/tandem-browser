@@ -40,15 +40,15 @@ export class TabLockManager extends EventEmitter {
   acquire(tabId: string, agentId: string): { acquired: boolean; owner?: string } {
     this.cleanExpired();
 
-    // Robin always has priority
-    if (agentId === 'robin') {
+    // User always has priority
+    if (agentId === 'user') {
       const existing = this.locks.get(tabId);
-      if (existing && existing.agentId !== 'robin') {
-        this.emit('lock-overridden', { tabId, previousOwner: existing.agentId, newOwner: 'robin' });
+      if (existing && existing.agentId !== 'user') {
+        this.emit('lock-overridden', { tabId, previousOwner: existing.agentId, newOwner: 'user' });
       }
       this.locks.set(tabId, {
         tabId,
-        agentId: 'robin',
+        agentId: 'user',
         acquiredAt: Date.now(),
         expiresAt: Date.now() + this.lockTimeoutMs,
       });
@@ -73,13 +73,13 @@ export class TabLockManager extends EventEmitter {
   }
 
   /**
-   * Release a lock. Only the owner (or robin) can release.
+   * Release a lock. Only the owner (or user) can release.
    */
   release(tabId: string, agentId: string): boolean {
     const existing = this.locks.get(tabId);
     if (!existing) return true;
 
-    if (existing.agentId !== agentId && agentId !== 'robin') {
+    if (existing.agentId !== agentId && agentId !== 'user') {
       return false;
     }
 

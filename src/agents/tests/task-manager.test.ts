@@ -69,32 +69,32 @@ describe('TaskManager', () => {
 
   describe('createTask()', () => {
     it('creates a task with pending status', () => {
-      const task = tm.createTask('Test task', 'robin', 'claude', [
+      const task = tm.createTask('Test task', 'user', 'claude', [
         { description: 'Step 1', action: { type: 'navigate', params: { url: 'https://test.com' } }, riskLevel: 'low', requiresApproval: false },
       ]);
       expect(task.description).toBe('Test task');
       expect(task.status).toBe('pending');
-      expect(task.createdBy).toBe('robin');
+      expect(task.createdBy).toBe('user');
       expect(task.assignedTo).toBe('claude');
       expect(task.steps).toHaveLength(1);
       expect(task.steps[0].status).toBe('pending');
     });
 
     it('generates unique task IDs', () => {
-      const t1 = tm.createTask('Task 1', 'robin', 'claude', []);
-      const t2 = tm.createTask('Task 2', 'robin', 'claude', []);
+      const t1 = tm.createTask('Task 1', 'user', 'claude', []);
+      const t2 = tm.createTask('Task 2', 'user', 'claude', []);
       expect(t1.id).not.toBe(t2.id);
     });
 
     it('emits task-created event', () => {
       const handler = vi.fn();
       tm.on('task-created', handler);
-      const task = tm.createTask('Task', 'robin', 'claude', []);
+      const task = tm.createTask('Task', 'user', 'claude', []);
       expect(handler).toHaveBeenCalledWith(task);
     });
 
     it('persists task to filesystem', () => {
-      const task = tm.createTask('Task', 'robin', 'claude', []);
+      const task = tm.createTask('Task', 'user', 'claude', []);
       expect(fs.writeFileSync).toHaveBeenCalledWith(
         expect.stringContaining(task.id),
         expect.any(String)
@@ -164,7 +164,7 @@ describe('TaskManager', () => {
   describe('emergencyStop()', () => {
     it('pauses running tasks', () => {
       // Create a task and simulate it running
-      const task = tm.createTask('Task', 'robin', 'claude', [
+      const task = tm.createTask('Task', 'user', 'claude', [
         { description: 'Step', action: { type: 'click', params: {} }, riskLevel: 'medium', requiresApproval: true },
       ]);
 
@@ -216,7 +216,7 @@ describe('TaskManager', () => {
 
   describe('approval flow', () => {
     it('respondToApproval emits approval-response', () => {
-      const task = tm.createTask('Task', 'robin', 'claude', [
+      const task = tm.createTask('Task', 'user', 'claude', [
         { description: 'Step', action: { type: 'click', params: {} }, riskLevel: 'medium', requiresApproval: true },
       ]);
 
@@ -240,7 +240,7 @@ describe('TaskManager', () => {
     let task: AITask;
 
     beforeEach(() => {
-      task = tm.createTask('Lifecycle test', 'robin', 'claude', [
+      task = tm.createTask('Lifecycle test', 'user', 'claude', [
         { description: 'Step 1', action: { type: 'read_page', params: {} }, riskLevel: 'none', requiresApproval: false },
         { description: 'Step 2', action: { type: 'click', params: {} }, riskLevel: 'medium', requiresApproval: true },
       ]);

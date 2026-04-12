@@ -20,7 +20,7 @@ export interface ActivityEvent {
 
 export interface ChatMessage {
   id: number;
-  from: 'robin' | 'wingman' | 'claude';
+  from: 'user' | 'wingman' | 'claude';
   text: string;
   timestamp: number;
   image?: string;  // relative filename in ~/.tandem/chat-images/
@@ -114,7 +114,7 @@ export class PanelManager {
 
   /** Add a chat message */
   addChatMessage(
-    from: 'robin' | 'wingman' | 'claude',
+    from: 'user' | 'wingman' | 'claude',
     text: string,
     image?: string,
     opts: AddChatMessageOptions = {},
@@ -138,7 +138,7 @@ export class PanelManager {
 
     this.maybeNotifyForIncomingReply(msg);
 
-    // Fire webhook for robin messages (async, non-blocking)
+    // Fire webhook for user messages (async, non-blocking)
     if (opts.notifyWebhook !== false) {
       this.fireWebhook(msg).catch(e => log.warn('fireWebhook failed:', e instanceof Error ? e.message : e));
     }
@@ -240,8 +240,8 @@ export class PanelManager {
     if (!this.configManager) return;
     const config = this.configManager.getConfig();
     if (!config.webhook?.enabled || !config.webhook?.url) return;
-    // Only notify for robin messages (wingman messages come FROM OpenClaw, no need to echo back)
-    if (msg.from !== 'robin') return;
+    // Only notify for user messages (wingman messages come FROM OpenClaw, no need to echo back)
+    if (msg.from !== 'user') return;
     if (!config.webhook.notifyOnRobinChat) return;
 
     const url = config.webhook.url.replace(/\/$/, '');
@@ -254,7 +254,7 @@ export class PanelManager {
           ...(config.webhook.secret ? { 'Authorization': `Bearer ${config.webhook.secret}` } : {}),
         },
         body: JSON.stringify({
-          text: `[Tandem Chat] Robin: ${msg.text}${msg.image ? ' [image attached]' : ''}`,
+          text: `[Tandem Chat] User: ${msg.text}${msg.image ? ' [image attached]' : ''}`,
           mode: 'now',
         }),
         signal: AbortSignal.timeout(5000),
@@ -273,7 +273,7 @@ export class PanelManager {
 
   private maybeNotifyForIncomingReply(msg: ChatMessage): void {
     if (this.panelOpen) return;
-    if (msg.from === 'robin') return;
+    if (msg.from === 'user') return;
 
     const sender = this.getReplySenderLabel(msg.from);
     const body = this.buildReplyNotificationBody(msg);

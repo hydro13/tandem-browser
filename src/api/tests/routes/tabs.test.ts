@@ -38,28 +38,28 @@ describe('Tab Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
         undefined,
       );
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
-        { url: 'about:blank', source: 'robin', inheritSessionFrom: null, workspaceId: null },
+        { url: 'about:blank', source: 'user', inheritSessionFrom: null, workspaceId: null },
       );
     });
 
     it('opens a tab with explicit url and groupId', async () => {
       const res = await request(app)
         .post('/tabs/open')
-        .send({ url: 'https://example.com', groupId: 'g1', source: 'robin', focus: false });
+        .send({ url: 'https://example.com', groupId: 'g1', source: 'user', focus: false });
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'https://example.com',
         'g1',
-        'robin',
+        'user',
         'persist:tandem',
         false,
         undefined,
@@ -93,7 +93,7 @@ describe('Tab Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
         undefined,
@@ -109,7 +109,7 @@ describe('Tab Routes', () => {
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'https://discord.com/channels/@me',
         undefined,
-        'robin',
+        'user',
         'persist:tandem',
         true,
         { inheritSessionFrom: 'tab-9' },
@@ -118,7 +118,7 @@ describe('Tab Routes', () => {
         'tab-open',
         {
           url: 'https://discord.com/channels/@me',
-          source: 'robin',
+          source: 'user',
           inheritSessionFrom: 'tab-9',
           workspaceId: null,
         },
@@ -156,7 +156,7 @@ describe('Tab Routes', () => {
         'tab-open',
         {
           url: 'https://example.com',
-          source: 'robin',
+          source: 'user',
           inheritSessionFrom: null,
           workspaceId: 'ws-ai',
         },

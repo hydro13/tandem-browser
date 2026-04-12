@@ -57,11 +57,11 @@ describe('PanelManager reply notifications', () => {
     expect(wingmanAlert).not.toHaveBeenCalled();
   });
 
-  it('does not notify for Robin messages', () => {
+  it('does not notify for user messages', () => {
     const win = createWindowStub();
     const manager = new PanelManager(win as never);
 
-    manager.addChatMessage('robin', 'This is my own message.');
+    manager.addChatMessage('user', 'This is my own message.');
 
     expect(wingmanAlert).not.toHaveBeenCalled();
   });

@@ -13,7 +13,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
     const {
       url = 'about:blank',
       groupId,
-      source = 'robin',
+      source = 'user',
       focus = true,
       inheritSessionFrom,
       workspaceId,
@@ -31,7 +31,7 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      const tabSource = source === 'wingman' ? 'wingman' as const : 'robin' as const;
+      const tabSource = source === 'wingman' ? 'wingman' as const : 'user' as const;
       const tab = await ctx.tabManager.openTab(
         url,
         groupId,

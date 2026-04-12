@@ -154,8 +154,8 @@ export class ActivityTracker {
         break;
 
       case 'tab-open':
-        // Only stream user-initiated opens (source: 'robin'), not agent opens
-        if (data.source === 'robin') {
+        // Only stream user-initiated opens (source: 'user'), not agent opens
+        if (data.source === 'user') {
           void this.wingmanStream.emit({
             type: 'tab-opened',
             tabId,

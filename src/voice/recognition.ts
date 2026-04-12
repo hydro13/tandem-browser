@@ -65,8 +65,8 @@ export class VoiceManager {
   /** Handle transcript from renderer */
   handleTranscript(text: string, isFinal: boolean): void {
     if (isFinal && text.trim()) {
-      // Send as Robin's chat message
-      this.panelManager.addChatMessage('robin', `🎙️ ${text.trim()}`);
+      // Send as user's chat message
+      this.panelManager.addChatMessage('user', `🎙️ ${text.trim()}`);
     }
     // Send live transcript to renderer for display
     if (this.canSendToRenderer()) {

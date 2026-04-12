@@ -27,7 +27,7 @@ async function restoreSessionTabs(runtime: RuntimeManagers, initialTabId: string
   let firstRestoredTabId: string | null = null;
   for (const savedTab of saved.tabs) {
     try {
-      const tab = await runtime.tabManager.openTab(savedTab.url, savedTab.groupId ?? undefined, 'robin', 'persist:tandem', false);
+      const tab = await runtime.tabManager.openTab(savedTab.url, savedTab.groupId ?? undefined, 'user', 'persist:tandem', false);
       const targetWorkspaceId = savedTab.workspaceId && runtime.workspaceManager.get(savedTab.workspaceId)
         ? savedTab.workspaceId
         : defaultWorkspaceId;

@@ -189,8 +189,8 @@
         else if (event.data.selector) text = `${event.type}: ${event.data.selector}`;
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
-        const rawSource = event.data.source || 'robin';
-        const source = ['wingman', 'robin'].includes(rawSource) ? rawSource : 'robin';
+        const rawSource = event.data.source || 'user';
+        const source = ['wingman', 'user'].includes(rawSource) ? rawSource : 'user';
         const sourceEmoji = source === 'wingman' ? '🤖' : '👤';
         const item = document.createElement('div');
         item.className = 'activity-item';
@@ -227,7 +227,7 @@
         }
       });
 
-      // Robin claims an AI tab by focusing it (click on tab header)
+      // User claims an AI tab by focusing it (click on tab header)
       // The click handler already calls focusTab, we hook into it to also claim
       const origTabClickHandler = (tabId) => {
         // Check if this is an AI tab
@@ -235,11 +235,11 @@
         if (entry) {
           const sourceEl = entry.tabEl.querySelector('.tab-source');
           if (sourceEl && sourceEl.textContent === '🤖') {
-            // Claim the tab for Robin
+            // Claim the tab for User
             fetch('http://localhost:8765/tabs/source', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ tabId, source: 'robin' })
+              body: JSON.stringify({ tabId, source: 'user' })
             }).catch(() => { });
           }
         }
@@ -329,7 +329,7 @@
         const sourceClass = source || 'openclaw';
         let cls, name;
         if (role === 'user') {
-          cls = 'robin';
+          cls = 'user';
           name = 'You';
         } else if (sourceClass === 'claude') {
           cls = 'claude';
@@ -442,15 +442,15 @@
       }
 
       function switchBackend(id) {
-        // Store any locally typed Robin messages before clearing
+        // Store any locally typed user messages before clearing
         const localRobinMessages = [];
         for (const child of messagesEl.children) {
-          if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+          if (child.classList.contains('user') && child.dataset.localMessage === 'true') {
             localRobinMessages.push({
               role: 'user',
               text: child.querySelector('.msg-text').textContent,
               timestamp: child.querySelector('.msg-time').textContent,
-              source: 'robin'
+              source: 'user'
             });
           }
         }
@@ -470,7 +470,7 @@
               const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
               el.dataset.fromHistory = 'true';
             }
-            // Re-add local Robin messages
+            // Re-add local user messages
             for (const localMsg of localRobinMessages) {
               const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
               el.dataset.localMessage = 'true';
@@ -485,7 +485,7 @@
                 const el = appendMessage(m.role, m.text, m.timestamp, m.source, m.image);
                 el.dataset.fromHistory = 'true';
               }
-              // Re-add local Robin messages
+              // Re-add local user messages
               for (const localMsg of localRobinMessages) {
                 const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
                 el.dataset.localMessage = 'true';
@@ -538,15 +538,15 @@
         if (currentMode === 'both') return; // handled by dualMode
 
         if (type === 'historyReload') {
-          // Store any locally typed Robin messages before processing history
+          // Store any locally typed user messages before processing history
           const localRobinMessages = [];
           for (const child of messagesEl.children) {
-            if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+            if (child.classList.contains('user') && child.dataset.localMessage === 'true') {
               localRobinMessages.push({
                 role: 'user',
                 text: child.querySelector('.msg-text').textContent,
                 timestamp: child.querySelector('.msg-time').textContent,
-                source: 'robin'
+                source: 'user'
               });
             }
           }
@@ -571,7 +571,7 @@
             for (const localMsg of localRobinMessages) {
               let alreadyExists = false;
               for (const child of messagesEl.children) {
-                if (child.classList.contains('robin') &&
+                if (child.classList.contains('user') &&
                   child.querySelector('.msg-text').textContent === localMsg.text &&
                   child.dataset.fromHistory === 'true') {
                   alreadyExists = true;
@@ -608,7 +608,7 @@
             // Update existing streaming element content
             streamData.element.querySelector('.msg-text').innerHTML = escapeHtml(msg.text);
 
-            // Ensure streaming element stays at the end (after any Robin messages sent during streaming)
+            // Ensure streaming element stays at the end (after any user messages sent during streaming)
             const currentIndex = Array.from(messagesEl.children).indexOf(streamData.element);
             const lastIndex = messagesEl.children.length - 1;
             if (currentIndex !== lastIndex) {
@@ -650,15 +650,15 @@
       let dualStreamingConversations = {}; // per-backend conversation tracking
       dualMode.onMessage((msg, type, backendId) => {
         if (type === 'historyReload') {
-          // Store any locally typed Robin messages before clearing
+          // Store any locally typed user messages before clearing
           const localRobinMessages = [];
           for (const child of messagesEl.children) {
-            if (child.classList.contains('robin') && child.dataset.localMessage === 'true') {
+            if (child.classList.contains('user') && child.dataset.localMessage === 'true') {
               localRobinMessages.push({
                 role: 'user',
                 text: child.querySelector('.msg-text').textContent,
                 timestamp: child.querySelector('.msg-time').textContent,
-                source: 'robin'
+                source: 'user'
               });
             }
           }
@@ -674,7 +674,7 @@
               el.dataset.fromHistory = 'true';
             }
 
-            // Re-add local Robin messages that aren't in history
+            // Re-add local user messages that aren't in history
             for (const localMsg of localRobinMessages) {
               const el = appendMessage(localMsg.role, localMsg.text, localMsg.timestamp, localMsg.source, localMsg.image);
               el.dataset.localMessage = 'true';
@@ -838,7 +838,7 @@
           inputEl.style.height = '';
 
           // Show local preview immediately
-          const robinMsg = appendMessage('user', text || '', Date.now(), 'robin');
+          const robinMsg = appendMessage('user', text || '', Date.now(), 'user');
           robinMsg.dataset.localMessage = 'true';
           const msgText = robinMsg.querySelector('.msg-text');
           const img = document.createElement('img');
@@ -870,7 +870,7 @@
           if (target === 'both' && !openclawBackend.isConnected() && !claudeBackend.isConnected()) return;
 
           // Show user message (display original text with @-mention for clarity)
-          const robinMsg = appendMessage('user', text, Date.now(), 'robin');
+          const robinMsg = appendMessage('user', text, Date.now(), 'user');
           robinMsg.dataset.localMessage = 'true';
 
           dualMode.sendMessage(text);
@@ -881,11 +881,11 @@
 
           // OpenClaw: send through the official gateway chat path.
           if (activeId === 'openclaw') {
-            const robinMsg = appendMessage('user', text, Date.now(), 'robin');
+            const robinMsg = appendMessage('user', text, Date.now(), 'user');
             robinMsg.dataset.localMessage = 'true';
             const sentViaGateway = await router.sendMessage(text);
             if (sentViaGateway) {
-              void persistChatMessage('robin', text);
+              void persistChatMessage('user', text);
             } else {
               appendMessage('assistant', '⚠️ Wingman could not reach OpenClaw.', Date.now(), 'wingman');
             }
@@ -1017,8 +1017,8 @@
       if (window.tandem && window.tandem.onChatMessage) {
         window.tandem.onChatMessage((msg) => {
           // msg: {id, from, text, timestamp, image}
-          // Skip robin messages — already shown optimistically in the UI
-          if (msg.from === 'robin') return;
+          // Skip user messages — already shown optimistically in the UI
+          if (msg.from === 'user') return;
           const source = msg.from; // 'wingman' or 'claude'
           appendMessage('assistant', msg.text, msg.timestamp, source, msg.image);
           if (messagesEl) messagesEl.scrollTop = messagesEl.scrollHeight;

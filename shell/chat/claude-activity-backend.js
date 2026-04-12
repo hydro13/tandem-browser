@@ -2,9 +2,9 @@
  * ClaudeActivityBackend — Polls GET /chat for Claude MCP activity
  * Implements ChatBackend interface (see src/chat/interfaces.ts)
  *
- * Creates a chat loop: Robin (browser) <-> Claude (Cowork) via MCP.
+ * Creates a chat loop: User (browser) <-> Claude (Cowork) via MCP.
  * Claude writes via tandem_send_message MCP tool -> POST /chat from:"claude"
- * Robin writes via this backend -> POST /chat from:"robin"
+ * User writes via this backend -> POST /chat from:"user"
  * Claude reads via tandem_get_chat_history MCP tool -> GET /chat
  */
 class ClaudeActivityBackend {
@@ -57,7 +57,7 @@ class ClaudeActivityBackend {
       const res = await fetch(`${this._apiBase}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, from: 'robin' })
+        body: JSON.stringify({ text, from: 'user' })
       });
       if (res.ok) {
         const data = await res.json();
@@ -66,7 +66,7 @@ class ClaudeActivityBackend {
           id: data.message?.id?.toString() || crypto.randomUUID(),
           role: 'user',
           text,
-          source: 'robin',
+          source: 'user',
           timestamp: Date.now()
         });
       }
@@ -111,7 +111,7 @@ class ClaudeActivityBackend {
       for (const m of messages) {
         if (m.id > this._lastSeenId) {
           this._lastSeenId = m.id;
-          // Only emit Claude messages (not our own robin messages) during polling
+          // Only emit Claude messages (not our own user messages) during polling
           if (m.from === 'claude' || m.from === 'wingman') {
             this._emit('message', {
               id: m.id.toString(),
@@ -140,9 +140,9 @@ class ClaudeActivityBackend {
         if (m.id > this._lastSeenId) this._lastSeenId = m.id;
         parsed.push({
           id: m.id.toString(),
-          role: m.from === 'robin' ? 'user' : 'assistant',
+          role: m.from === 'user' ? 'user' : 'assistant',
           text: m.text,
-          source: m.from === 'robin' ? 'robin' : 'claude',
+          source: m.from === 'user' ? 'user' : 'claude',
           timestamp: m.timestamp || Date.now()
         });
       }

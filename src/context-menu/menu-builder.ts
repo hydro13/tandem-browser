@@ -623,7 +623,7 @@ export class ContextMenuBuilder {
     menu.append(new MenuItem({
       label: currentSource === 'wingman' ? 'Take back from Wingman' : 'Let Wingman handle this tab',
       click: () => {
-        const newSource = this.deps.tabManager.getTabSource(tabId) === 'wingman' ? 'robin' : 'wingman';
+        const newSource = this.deps.tabManager.getTabSource(tabId) === 'wingman' ? 'user' : 'wingman';
         this.deps.tabManager.setTabSource(tabId, newSource);
       },
     }));

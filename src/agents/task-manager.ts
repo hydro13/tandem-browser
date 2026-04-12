@@ -37,7 +37,7 @@ export interface TaskStep {
 export interface AITask {
   id: string;
   description: string;
-  createdBy: 'robin' | 'claude' | 'openclaw';
+  createdBy: 'user' | 'claude' | 'openclaw';
   assignedTo: 'claude' | 'openclaw';
   status: TaskStatus;
   steps: TaskStep[];
@@ -56,7 +56,7 @@ export interface TaskActivityEntry {
   target?: string;
   riskLevel?: RiskLevel;
   approved?: boolean;
-  approvedBy?: 'robin' | 'auto';
+  approvedBy?: 'user' | 'auto';
 }
 
 export interface AutonomySettings {
@@ -330,7 +330,7 @@ export class TaskManager extends EventEmitter {
       target: step.description,
       riskLevel: step.riskLevel,
       approved,
-      approvedBy: 'robin',
+      approvedBy: 'user',
     });
   }
 
@@ -428,7 +428,7 @@ export class TaskManager extends EventEmitter {
       agent: 'system',
       action: 'emergency-stop',
       target: `${stopped} tasks paused`,
-      approvedBy: 'robin',
+      approvedBy: 'user',
     });
 
     // Auto-reset after a brief moment so new tasks can be created

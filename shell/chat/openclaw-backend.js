@@ -89,7 +89,7 @@ class OpenClawBackend {
             id: m.id || crypto.randomUUID(),
             role: m.role,
             text,
-            source: m.role === 'user' ? 'robin' : 'openclaw',
+            source: m.role === 'user' ? 'user' : 'openclaw',
             timestamp: m.timestamp || m.createdAt || Date.now()
           });
         }
