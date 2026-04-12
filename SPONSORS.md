@@ -1,7 +1,9 @@
 # Sponsor Tandem Browser
 
-Tandem Browser is built and maintained full-time by one person.
-Your sponsorship directly funds continued development of an open source browser designed for real human-AI collaboration.
+Tandem Browser is building the browser layer for real human-AI collaboration.
+It is built and maintained full-time by one person, and your sponsorship directly funds the work that keeps that possible.
+
+If your company cares about secure browser agents, MCP-native workflows, or local-first AI infrastructure, this is a project worth supporting early.
 
 ## Why Tandem Matters
 
@@ -17,10 +19,13 @@ As models improve, the value of Tandem compounds with them. The intelligence com
 ## Why Sponsor Now
 
 Tandem is already real.
-It is open source, actively developed, used daily, and already has visible traction.
+It is open source, actively developed, used daily, and already showing visible traction.
 
 Sponsoring now helps keep the project moving while the category is still being defined.
-That means faster product development, stronger security maintenance, better cross-platform support, better docs, and a healthier contributor/community loop.
+That means faster product development, stronger security maintenance, better cross-platform support, better docs, and a healthier contributor and community loop.
+
+This is exactly the stage where independent infrastructure either compounds or stalls.
+Supporting Tandem now helps keep the browser layer for human-AI collaboration open, local-first, and shaped by real users instead of closed vendors.
 
 ## What Your Sponsorship Funds
 
@@ -48,7 +53,7 @@ Sponsorship helps keep independent infrastructure alive instead of forcing this 
 
 ## Current Traction
 
-- **500+ GitHub stars** and growing
+- **513 GitHub stars** and growing
 - **239 MCP tools** for deep agent integration
 - **300+ HTTP API endpoints** for programmatic control
 - **8-layer security stack** built in from the start
@@ -92,6 +97,10 @@ Every contribution helps keep Tandem moving.
 Tandem uses [GitHub Sponsors](https://github.com/sponsors/hydro13).
 GitHub handles the payments, and 100% goes to the maintainer.
 
+- Want to support the project as an individual? Pick any monthly tier or make a one-time contribution.
+- Want to support it as a company? The business tiers are the cleanest fit.
+- Want to understand the product first? Start with [tandembrowser.org](https://tandembrowser.org) and the [README](README.md).
+
 **[→ Sponsor Tandem Browser on GitHub](https://github.com/sponsors/hydro13)**
 
 ## What Sponsors Help Make Possible
@@ -117,4 +126,4 @@ Reach out directly:
 
 ---
 
-*Tandem Browser is MIT licensed and will remain open source. Sponsorship keeps the project moving and the maintainer fed.*
+*Tandem Browser is MIT licensed and will remain open source. Sponsorship keeps the project moving: product development, security maintenance, platform support, docs, and community support.*

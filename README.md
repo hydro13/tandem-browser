@@ -20,6 +20,12 @@ either protocol.
 
 Tandem is the local-first browser layer for real human-AI collaboration, not a wrapper or an automation toy.
 
+Want the fastest path in?
+- **Try Tandem locally** -> [Quick Start](#quick-start)
+- **Read the docs and API surfaces** -> [docs/](docs/) and [docs/INDEX.md](docs/INDEX.md)
+- **Ask questions or share workflows** -> [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions)
+- **Support development** -> [GitHub Sponsors](https://github.com/sponsors/hydro13)
+
 ![Tandem Browser — homescreen](docs/screenshots/tandem-homescreen-hero.jpg)
 
 ## What Can An Agent Do?
@@ -81,6 +87,7 @@ Depending on what you want to do:
 - **Try Tandem locally** -> follow the Quick Start above
 - **Connect an agent** -> see [Connect Your AI Agent](#connect-your-ai-agent)
 - **Explore the API and docs** -> browse [docs/](docs/) and [docs/INDEX.md](docs/INDEX.md)
+- **See the product story and website** -> visit [tandembrowser.org](https://tandembrowser.org)
 - **Ask questions or share workflows** -> join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions)
 - **Support development** -> sponsor Tandem on [GitHub Sponsors](https://github.com/sponsors/hydro13)
 

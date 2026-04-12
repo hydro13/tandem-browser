@@ -4,9 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tandem Browser — The AI browser where human and AI work as one</title>
-<meta name="description" content="Tandem Browser gives AI agents secure access to a real human browser. 239 MCP tools, 8-layer security, accessibility tree as universal API. Open source, MIT license.">
+<meta name="description" content="Tandem Browser is the local-first browser for real human-AI collaboration. 513 GitHub stars, 239 MCP tools, 300+ HTTP endpoints, strong security boundaries, open source MIT developer preview.">
 <meta property="og:title" content="Tandem Browser">
-<meta property="og:description" content="The AI browser where human and AI work as one. 239 MCP tools. 8-layer security. MIT license.">
+<meta property="og:description" content="Local-first browser for real human-AI collaboration. 513 GitHub stars, 239 MCP tools, 300+ HTTP endpoints, MIT developer preview.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tandembrowser.org">
 <link rel="canonical" href="https://tandembrowser.org">
@@ -51,16 +51,26 @@ color:var(--text);margin-bottom:1.5rem;animation:fadeUp .6s ease .1s both}
 .stat{display:flex;flex-direction:column}
 .stat-num{font-size:1.4rem;font-weight:600;color:var(--text)}
 .stat-label{font-size:.7rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
-.hero-actions{display:flex;gap:1rem;margin-top:2.5rem;animation:fadeUp .6s ease .4s both}
+.hero-actions{display:flex;gap:1rem;margin-top:2.5rem;animation:fadeUp .6s ease .4s both;flex-wrap:wrap}
 .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.7rem 1.4rem;border-radius:4px;font-family:var(--mono);font-size:.8rem;font-weight:500;transition:all .2s}
 .btn-primary{background:var(--accent);color:var(--bg);border:1px solid var(--accent)}
 .btn-primary:hover{background:var(--accent2);color:var(--bg);border-color:var(--accent2)}
 .btn-secondary{background:transparent;color:var(--text2);border:1px solid var(--border)}
 .btn-secondary:hover{border-color:var(--text3);color:var(--text)}
+.proof-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-top:1.5rem;animation:fadeUp .6s ease .45s both}
+.proof-card{padding:1rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.proof-card strong{display:block;font-size:.78rem;color:var(--text);margin-bottom:.25rem}
+.proof-card span{font-size:.72rem;color:var(--text3);line-height:1.6}
 
 section{max-width:960px;margin:0 auto;padding:4rem 2rem}
 .section-label{font-size:.7rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem}
 .section-title{font-family:var(--serif);font-size:1.6rem;font-weight:600;letter-spacing:-.02em;margin-bottom:1rem}
+.audience-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-top:2rem}
+.audience-card{padding:1.25rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.audience-card h3{font-size:.82rem;font-weight:600;color:var(--text);margin-bottom:.4rem}
+.audience-card p{font-size:.76rem;color:var(--text2);line-height:1.7}
+.company-line{margin-top:1.25rem;font-size:.82rem;color:var(--text2);max-width:680px}
+.company-line strong{color:var(--text)}
 
 .divider{max-width:960px;margin:0 auto;padding:0 2rem}
 .divider hr{border:none;border-top:1px solid var(--border)}
@@ -100,13 +110,14 @@ footer a:hover{color:var(--text2)}
 
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:700px){
-.concept,.security-grid,.riders{grid-template-columns:1fr}
+.concept,.security-grid,.riders,.proof-strip,.audience-grid{grid-template-columns:1fr}
 .hero-stats{flex-wrap:wrap;gap:1.5rem}
 .nav-links{display:none}
 .hero h1{font-size:1.8rem}
 }
 @media(max-width:500px){
 .security-grid{grid-template-columns:1fr 1fr}
+.proof-strip{grid-template-columns:1fr}
 }
 </style>
 </head>
@@ -123,25 +134,32 @@ footer a:hover{color:var(--text2)}
 <a href="#start">Get started</a>
 <a href="https://github.com/hydro13/tandem-browser">GitHub</a>
 <a href="https://github.com/hydro13/tandem-browser/discussions">Community</a>
-<a href="https://github.com/sponsors/hydro13" style="color:var(--accent)">Sponsor</a>
+<a href="/sponsor.html" style="color:var(--accent)">Sponsor</a>
 </div>
 </nav>
 </header>
 
 <div class="hero">
-<div class="hero-label">Open source &middot; MIT license &middot; v0.70.0</div>
-<h1>The browser where human and AI work <em>as one</em></h1>
-<p>Tandem Browser gives AI agents secure access to a real human browser. No API wrappers, no scraping, no bot detection. The accessibility tree of every website is the universal API. The AI rides alongside you &mdash; same tabs, same session, same&nbsp;screen.</p>
+<div class="hero-label">Open source &middot; MIT license &middot; developer preview &middot; v0.70.0</div>
+<h1>The local-first browser where human and AI work <em>as one</em></h1>
+<p>Tandem Browser gives AI agents secure access to a real human browser. No API wrappers, no scraping, no bot detection. The accessibility tree becomes the universal interaction layer. The AI rides alongside you, same tabs, same session, same screen.</p>
 <div class="hero-stats">
+<div class="stat"><span class="stat-num">513</span><span class="stat-label">GitHub stars</span></div>
 <div class="stat"><span class="stat-num">239</span><span class="stat-label">MCP tools</span></div>
 <div class="stat"><span class="stat-num">300+</span><span class="stat-label">HTTP endpoints</span></div>
 <div class="stat"><span class="stat-num">8</span><span class="stat-label">Security layers</span></div>
-<div class="stat"><span class="stat-num">0</span><span class="stat-label">Telemetry</span></div>
 </div>
 <div class="hero-actions">
 <a href="https://github.com/hydro13/tandem-browser" class="btn btn-primary">View on GitHub &rarr;</a>
-<a href="https://github.com/sponsors/hydro13" class="btn btn-secondary" style="border-color:var(--accent);color:var(--accent)">&hearts; Sponsor</a>
-<a href="#start" class="btn btn-secondary">Get started</a>
+<a href="/api" class="btn btn-secondary">Read docs</a>
+<a href="https://github.com/hydro13/tandem-browser/discussions" class="btn btn-secondary">Join discussions</a>
+<a href="/sponsor.html" class="btn btn-secondary" style="border-color:var(--accent);color:var(--accent)">&hearts; Sponsor</a>
+</div>
+<div class="proof-strip">
+<div class="proof-card"><strong>Built and used daily</strong><span>Founder-built product, shaped by real workflows instead of demos.</span></div>
+<div class="proof-card"><strong>Open source, MIT</strong><span>Real public repo, source available now, developer preview, not vaporware.</span></div>
+<div class="proof-card"><strong>Works with your AI stack</strong><span>MCP for agent clients, HTTP for custom tooling, local-first by default.</span></div>
+<div class="proof-card"><strong>Worth watching for teams</strong><span>Secure browser-based AI workflows without wrapper hell or detached automation.</span></div>
 </div>
 </div>
 
@@ -157,19 +175,46 @@ footer a:hover{color:var(--text2)}
 </div>
 <div class="concept-block">
 <h3>Tandem Browser</h3>
-<p>Uses the accessibility tree &mdash; the structure every website already has. The AI reads, clicks, fills, and navigates any site like a human. No wrappers needed. It works on every website that exists.</p>
+<p>Uses the accessibility tree, the structure every website already has. The AI reads, clicks, fills, and navigates any site like a human. No wrappers needed. It works on every website that exists.</p>
 </div>
 </div>
 <div class="concept" style="margin-top:1rem">
 <div class="concept-block">
 <h3>Anti-scraping doesn't apply</h3>
-<p>Tandem Browser is a real browser used by a real human. You browse in it daily. The AI rides alongside, using the same session, the same cookies. There's no bot to detect because there is no bot &mdash; just a person with an AI copilot.</p>
+<p>Tandem Browser is a real browser used by a real human. You browse in it daily. The AI rides alongside, using the same session and the same cookies. There is no bot to detect, just a person with an AI copilot.</p>
 </div>
 <div class="concept-block">
 <h3>AI evolves, Tandem Browser evolves</h3>
-<p>Smarter Claude? It automatically gets better at using Tandem Browser. New local model via Ollama? Plug it in. Tandem Browser doesn't chase AI evolution &mdash; it's the infrastructure AI evolves on. Automatically. Free.</p>
+<p>Smarter Claude? It automatically gets better at using Tandem Browser. New local model via Ollama? Plug it in. Tandem Browser does not chase AI evolution, it is the browser layer AI evolves on.</p>
 </div>
 </div>
+</section>
+
+<div class="divider"><hr></div>
+
+<section>
+<div class="section-label">Who this is for</div>
+<div class="section-title">Built for people already pushing real AI workflows</div>
+<p style="font-size:.85rem;color:var(--text2);max-width:620px">Tandem is for users who want real browser context, not toy abstractions. It fits best when the browser is part of the workflow, not a disposable automation target.</p>
+<div class="audience-grid">
+<div class="audience-card">
+<h3>AI power users</h3>
+<p>People who already live with Claude, OpenClaw, local models, or mixed-agent setups and want them operating in the same real browser.</p>
+</div>
+<div class="audience-card">
+<h3>MCP builders</h3>
+<p>Teams and developers who want a serious browser surface behind MCP, instead of one more pile of custom wrappers.</p>
+</div>
+<div class="audience-card">
+<h3>Privacy-minded operators</h3>
+<p>Users who want local-first control, authenticated sessions, and strong security boundaries between the web and the agent layer.</p>
+</div>
+<div class="audience-card">
+<h3>Teams exploring browser agents</h3>
+<p>Companies testing secure browser-based AI workflows, human-in-the-loop systems, and real authenticated automation.</p>
+</div>
+</div>
+<p class="company-line"><strong>For teams exploring secure browser-based AI workflows, Tandem is the local-first browser layer worth watching.</strong></p>
 </section>
 
 <div class="divider"><hr></div>
@@ -281,7 +326,7 @@ The browser opens. The API starts on <code>localhost:8765</code>.</p>
 <section>
 <div class="section-label">Support</div>
 <div class="section-title">Sponsor Tandem Browser</div>
-<p style="font-size:.85rem;color:var(--text2);max-width:580px">Tandem Browser is built and maintained full-time by one person. No company, no VC, no ads. Sponsorship goes directly to continued development, security maintenance, and community support.</p>
+<p style="font-size:.85rem;color:var(--text2);max-width:620px">Tandem Browser is built and maintained full-time by one person. No company, no VC, no ads. Sponsorship keeps the project moving in the places that matter: product development, security maintenance, cross-platform work, docs, and community support.</p>
 <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-top:2rem;max-width:580px">
 <div style="padding:1.25rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2);text-align:center">
 <div style="font-size:1.2rem;font-weight:600;color:var(--accent)">$5</div>
@@ -296,9 +341,11 @@ The browser opens. The API starts on <code>localhost:8765</code>.</p>
 <div style="font-size:.7rem;color:var(--text3);margin-top:.25rem">Champion</div>
 </div>
 </div>
-<p style="font-size:.75rem;color:var(--text3);margin-top:1rem">Company tiers from $49/month. One-time contributions welcome.</p>
-<div style="margin-top:1.25rem">
+<p style="font-size:.78rem;color:var(--text3);margin-top:1rem;max-width:620px">If your company cares about secure browser agents, MCP-native workflows, or local-first AI infrastructure, sponsorship helps keep this category moving in the open.</p>
+<p style="font-size:.75rem;color:var(--text3);margin-top:.75rem">Company tiers from $49/month. One-time contributions welcome.</p>
+<div style="margin-top:1.25rem;display:flex;gap:1rem;flex-wrap:wrap">
 <a href="https://github.com/sponsors/hydro13" class="btn btn-primary">&hearts; Sponsor on GitHub &rarr;</a>
+<a href="/sponsor.html" class="btn btn-secondary">See sponsor details</a>
 </div>
 </section>
 
@@ -308,8 +355,9 @@ The browser opens. The API starts on <code>localhost:8765</code>.</p>
 <div>&copy; 2026 Tandem Browser &middot; MIT License &middot; tandembrowser.org</div>
 <div>
 <a href="https://github.com/hydro13/tandem-browser">GitHub</a> &middot;
+<a href="/api">Docs</a> &middot;
 <a href="https://github.com/hydro13/tandem-browser/discussions">Community</a> &middot;
-<a href="https://github.com/sponsors/hydro13">Sponsor</a> &middot;
+<a href="/sponsor.html">Sponsor</a> &middot;
 <a href="https://github.com/hydro13/tandem-browser/issues">Issues</a>
 </div>
 </footer>
