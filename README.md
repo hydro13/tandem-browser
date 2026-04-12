@@ -18,6 +18,8 @@ Connect via **MCP** (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama, any
 MCP client) or a **300+ endpoint HTTP API**. Works with any AI that speaks
 either protocol.
 
+Tandem is the local-first browser layer for real human-AI collaboration, not a wrapper or an automation toy.
+
 ![Tandem Browser — homescreen](docs/screenshots/tandem-homescreen-hero.jpg)
 
 ## What Can An Agent Do?
@@ -71,6 +73,16 @@ npm start
 ```
 
 macOS is the primary platform. Linux works. Windows is not validated yet.
+
+## Start Here
+
+Depending on what you want to do:
+
+- **Try Tandem locally** -> follow the Quick Start above
+- **Connect an agent** -> see [Connect Your AI Agent](#connect-your-ai-agent)
+- **Explore the API and docs** -> browse [docs/](docs/) and [docs/INDEX.md](docs/INDEX.md)
+- **Ask questions or share workflows** -> join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions)
+- **Support development** -> sponsor Tandem on [GitHub Sponsors](https://github.com/sponsors/hydro13)
 
 ## Connect Your AI Agent
 
@@ -195,6 +207,8 @@ Join [GitHub Discussions](https://github.com/hydro13/tandem-browser/discussions)
 
 For bugs and concrete feature requests, open an
 [issue](https://github.com/hydro13/tandem-browser/issues).
+
+If Tandem is useful to you, or relevant to your company, sponsorship directly funds continued development and security work: [GitHub Sponsors](https://github.com/sponsors/hydro13).
 
 ## Contributing
 

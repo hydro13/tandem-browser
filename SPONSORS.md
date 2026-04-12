@@ -1,45 +1,59 @@
 # Sponsor Tandem Browser
 
-Tandem Browser is built and maintained full-time by one person. Your
-sponsorship directly funds continued development of the only open source
-browser designed from the ground up for human-AI collaboration.
+Tandem Browser is built and maintained full-time by one person.
+Your sponsorship directly funds continued development of an open source browser designed for real human-AI collaboration.
 
-## Why Tandem Exists
+## Why Tandem Matters
 
-Every AI agent today that needs to browse the web either scrapes pages blindly
-or wraps individual sites with custom API code. When a new site comes along,
-someone has to build another wrapper. When a site changes, the wrapper breaks.
+Most AI browser tooling still falls into the same trap.
+Either it scrapes pages blindly, or it relies on custom wrappers for individual sites. That works until the site changes, the wrapper breaks, or the workflow becomes too real for a toy abstraction.
 
-Tandem takes a different approach. It gives AI agents access to a real browser
-— the same one a human uses daily. The agent sees the accessibility tree of
-every website, clicks buttons, fills forms, reads content, and navigates tabs.
-No wrappers. No scraping. No bot detection. It works on every website that
-exists, today and tomorrow.
+Tandem takes a different path.
+It gives AI access to a real browser, the same one a human actually uses. Real tabs, real sessions, real cookies, real workflows. The human and the AI work in the same context, with strong security boundaries between the web and the agent layer.
 
-This is infrastructure. When AI models get smarter, Tandem automatically gets
-more capable — because the AI brings the intelligence, and Tandem provides
-the browser.
+This matters because browser-based AI is going to become infrastructure.
+As models improve, the value of Tandem compounds with them. The intelligence comes from the model. Tandem provides the browser layer it can safely act through.
+
+## Why Sponsor Now
+
+Tandem is already real.
+It is open source, actively developed, used daily, and already has visible traction.
+
+Sponsoring now helps keep the project moving while the category is still being defined.
+That means faster product development, stronger security maintenance, better cross-platform support, better docs, and a healthier contributor/community loop.
 
 ## What Your Sponsorship Funds
 
-I work on Tandem full-time. There is no company behind this, no VC funding,
-no ads. Sponsorship goes directly to:
+There is no VC, no ads, and no large team behind Tandem.
+Sponsorship goes directly into the work that keeps the project viable:
 
-- **Continued development** — new features, MCP tools, security layers, and
-  platform support (Linux, eventually Windows)
-- **Security maintenance** — keeping the 8-layer security shield current
-  against evolving threats, blocklist updates, vulnerability response
-- **Infrastructure** — CI/CD, testing, build systems, domain costs
-- **Community support** — reviewing PRs, responding to issues, writing docs
+- **Product development** — new browser features, MCP tools, HTTP API improvements, UX polish
+- **Security maintenance** — keeping the security model current as browser-based AI threat models evolve
+- **Platform support** — improving Linux quality and pushing toward stronger multi-platform support
+- **Documentation and onboarding** — guides, examples, release notes, contributor paths
+- **Community support** — issue triage, PR review, discussions, feedback loops
+
+## Why Companies Should Care
+
+If your company is exploring:
+- secure browser-based AI workflows
+- MCP-native tooling
+- local-first AI operations
+- human-in-the-loop agent systems
+- real authenticated browser automation without wrapper hell
+
+then Tandem is a project worth watching, testing, and supporting.
+
+Sponsorship helps keep independent infrastructure alive instead of forcing this category to be defined only by closed vendors and fragile automation stacks.
 
 ## Current Traction
 
-- **507+ GitHub stars** in the first two months
-- **236 MCP tools** — the most comprehensive agent-browser interface available
-- **300+ HTTP API endpoints** — full programmatic control
-- **8-layer security stack** — built-in, not bolted on
-- **Daily driver** — I use Tandem as my only browser, every day
-- **Active community** — featured by developers with 50K+ followings
+- **500+ GitHub stars** and growing
+- **239 MCP tools** for deep agent integration
+- **300+ HTTP API endpoints** for programmatic control
+- **8-layer security stack** built in from the start
+- **Daily-driver product** used in real work, not just demos
+- **External pickup** from creators and developers in the AI tools ecosystem
 
 ## Sponsor Tiers
 
@@ -69,29 +83,29 @@ no ads. Sponsorship goes directly to:
 
 ### One-Time Contributions
 
-Not ready for a monthly commitment? One-time sponsorships of any amount are
-welcome and appreciated. Every contribution helps keep the project moving.
+Not ready for a monthly commitment?
+One-time sponsorships of any amount are welcome and appreciated.
+Every contribution helps keep Tandem moving.
 
 ## How Sponsoring Works
 
-Tandem uses [GitHub Sponsors](https://github.com/sponsors/hydro13). GitHub
-handles all payments. No fees are taken from your sponsorship — 100% goes to
-the maintainer.
+Tandem uses [GitHub Sponsors](https://github.com/sponsors/hydro13).
+GitHub handles the payments, and 100% goes to the maintainer.
 
 **[→ Sponsor Tandem Browser on GitHub](https://github.com/sponsors/hydro13)**
 
-## What Sponsors Have Helped Build
+## What Sponsors Help Make Possible
 
-Everything in Tandem has been built during full-time, self-funded development.
-Sponsorship ensures this continues. Recent milestones:
+Recent Tandem milestones include:
 
-- MCP server with full API parity (236 tools across 32 modules)
-- 8-layer security shield with 811K+ blocklist entries
-- Chrome extension support with Web Store installation
-- Accessibility tree snapshots as universal agent API
-- Multi-agent workspace isolation with tab locking
-- Video recording with application and region capture
-- Prompt injection defense on all agent-facing content routes
+- MCP server with deep browser control surface
+- 8-layer security architecture for agent browsing
+- accessibility snapshots as a universal interaction layer
+- multi-agent workspace isolation with tab locking
+- Chrome extension support and local browser tooling
+- live previews, pinboards, network tooling, and session-aware workflows
+
+Sponsorship helps make the next layer possible.
 
 ## Questions?
 
@@ -103,5 +117,4 @@ Reach out directly:
 
 ---
 
-*Tandem Browser is MIT licensed and will always be open source. Sponsorship
-keeps the maintainer fed and the commits flowing.*
+*Tandem Browser is MIT licensed and will remain open source. Sponsorship keeps the project moving and the maintainer fed.*
