@@ -377,6 +377,34 @@ export function createMockContext(): RouteContext {
       sseHandler: vi.fn(),
       getRecent: vi.fn().mockReturnValue([]),
       subscribe: vi.fn().mockReturnValue(() => {}),
+      handleHandoffEvent: vi.fn(),
+    } as any,
+
+    // ── handoffManager ──────────────────────────
+    handoffManager: {
+      list: vi.fn().mockReturnValue([]),
+      get: vi.fn().mockReturnValue(null),
+      create: vi.fn().mockReturnValue({
+        id: 'handoff-1',
+        status: 'needs_human',
+        title: 'Need help',
+        body: '',
+        reason: 'human_help',
+        workspaceId: null,
+        tabId: null,
+        agentId: null,
+        source: null,
+        actionLabel: null,
+        taskId: null,
+        stepId: null,
+        open: true,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      }),
+      update: vi.fn().mockReturnValue(null),
+      resolve: vi.fn().mockReturnValue(null),
+      findOpenByTaskStep: vi.fn().mockReturnValue(null),
+      on: vi.fn(),
     } as any,
 
     // ── taskManager ─────────────────────────────

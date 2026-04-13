@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { buildTabOwnershipContext, type TabOwnershipContext } from '../tabs/context';
+import type { Handoff } from '../handoffs/manager';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -7,7 +8,8 @@ export type BrowserEventType =
   | 'navigation'     | 'page-loaded'   | 'tab-opened'
   | 'tab-closed'     | 'tab-focused'   | 'click'
   | 'form-submit'    | 'scroll'        | 'voice-input'
-  | 'screenshot'     | 'error';
+  | 'screenshot'     | 'error'
+  | 'handoff-created' | 'handoff-updated';
 
 export interface BrowserEvent {
   id: number;
@@ -151,6 +153,26 @@ export class EventStreamManager {
   handleError(message: string, data?: Record<string, unknown>, context?: TabOwnershipContext): void {
     this.emit(this.createEvent('error', {
       data: { message, ...data },
+      context,
+    }));
+  }
+
+  /** Emit a structured handoff lifecycle event. */
+  handleHandoffEvent(kind: 'created' | 'updated', handoff: Handoff, context?: TabOwnershipContext): void {
+    this.emit(this.createEvent(kind === 'created' ? 'handoff-created' : 'handoff-updated', {
+      tabId: handoff.tabId ?? undefined,
+      data: {
+        handoffId: handoff.id,
+        status: handoff.status,
+        title: handoff.title,
+        reason: handoff.reason,
+        open: handoff.open,
+        workspaceId: handoff.workspaceId,
+        tabId: handoff.tabId,
+        source: handoff.source,
+        agentId: handoff.agentId,
+        actionLabel: handoff.actionLabel,
+      },
       context,
     }));
   }

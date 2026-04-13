@@ -22,6 +22,7 @@ import { registerDataRoutes } from './routes/data';
 import { registerContentRoutes } from './routes/content';
 import { registerMediaRoutes } from './routes/media';
 import { registerMiscRoutes } from './routes/misc';
+import { registerHandoffRoutes } from './routes/handoffs';
 import { registerSidebarRoutes } from './routes/sidebar';
 import { registerWorkspaceRoutes } from './routes/workspaces';
 import { registerSyncRoutes } from './routes/sync';
@@ -424,6 +425,7 @@ export class TandemAPI {
     registerContentRoutes(router, ctx);
     registerMediaRoutes(router, ctx);
     registerMiscRoutes(router, ctx);
+    registerHandoffRoutes(router, ctx);
     registerSidebarRoutes(router, ctx);
     registerWorkspaceRoutes(router, ctx);
     registerSyncRoutes(router, ctx);

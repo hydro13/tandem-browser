@@ -179,13 +179,180 @@
       });
 
       // Activity events
+      const activityEl = document.getElementById('activity-feed');
+      const handoffListEl = document.getElementById('handoff-list');
+      const handoffEmptyEl = document.getElementById('handoff-empty');
+      const handoffCountEl = document.getElementById('handoff-count');
+      const activityTabButton = document.querySelector('[data-panel-tab="activity"]');
+      const openHandoffs = new Map();
+
+      function formatHandoffStatus(status) {
+        const labels = {
+          needs_human: 'Needs Human',
+          blocked: 'Blocked',
+          waiting_approval: 'Waiting Approval',
+          ready_to_resume: 'Ready To Resume',
+          completed_review: 'Completed Review',
+          resolved: 'Resolved',
+        };
+        return labels[status] || status;
+      }
+
+      function formatHandoffTime(timestamp) {
+        if (!timestamp) return '';
+        return new Date(timestamp).toLocaleTimeString('nl-BE', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/\n/g, '<br>');
+      }
+
+      function updateActivityTabBadge() {
+        const count = openHandoffs.size;
+        if (handoffCountEl) {
+          handoffCountEl.textContent = String(count);
+        }
+        if (activityTabButton) {
+          activityTabButton.textContent = count > 0 ? `Activity (${count})` : 'Activity';
+        }
+      }
+
+      async function activateHandoff(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/activate`, { method: 'POST' });
+      }
+
+      async function updateHandoffStatus(handoffId, payload) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
+      async function resolveHandoff(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/resolve`, { method: 'POST' });
+      }
+
+      async function hydrateHandoff(handoff) {
+        if (!handoff || !handoff.id) return handoff;
+        if (handoff.workspaceName || handoff.tabTitle || handoff.tabUrl) return handoff;
+        try {
+          const response = await fetch(`http://localhost:8765/handoffs/${handoff.id}`);
+          if (!response.ok) return handoff;
+          return await response.json();
+        } catch {
+          return handoff;
+        }
+      }
+
+      function renderHandoffs() {
+        if (!handoffListEl || !handoffEmptyEl) return;
+        handoffListEl.innerHTML = '';
+
+        const handoffs = Array.from(openHandoffs.values())
+          .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+        handoffEmptyEl.style.display = handoffs.length === 0 ? 'block' : 'none';
+
+        for (const handoff of handoffs) {
+          const card = document.createElement('div');
+          card.className = `handoff-card status-${handoff.status}`;
+          const meta = [];
+          if (handoff.reason) meta.push(`<span class="handoff-pill">Reason: ${escapeHtml(handoff.reason)}</span>`);
+          if (handoff.workspaceName || handoff.workspaceId) meta.push(`<span class="handoff-pill">Workspace: ${escapeHtml(handoff.workspaceName || handoff.workspaceId)}</span>`);
+          if (handoff.tabTitle || handoff.tabId) meta.push(`<span class="handoff-pill">Tab: ${escapeHtml(handoff.tabTitle || handoff.tabId)}</span>`);
+          if (handoff.source || handoff.agentId) meta.push(`<span class="handoff-pill">Source: ${escapeHtml(handoff.source || handoff.agentId)}</span>`);
+          if (handoff.actionLabel) meta.push(`<span class="handoff-pill">${escapeHtml(handoff.actionLabel)}</span>`);
+
+          card.innerHTML = `
+            <div class="handoff-topline">
+              <span class="handoff-status">${escapeHtml(formatHandoffStatus(handoff.status))}</span>
+              <span class="handoff-time">${escapeHtml(formatHandoffTime(handoff.updatedAt))}</span>
+            </div>
+            <div class="handoff-title">${escapeHtml(handoff.title || 'Untitled handoff')}</div>
+            <div class="handoff-body">${escapeHtml(handoff.body || '')}</div>
+            <div class="handoff-meta">${meta.join('')}</div>
+            <div class="handoff-actions">
+              <button class="primary" data-action="open">Open Context</button>
+              <button data-action="ready">Mark Ready</button>
+              <button data-action="resolve">${handoff.status === 'completed_review' ? 'Mark Reviewed' : 'Resolve'}</button>
+            </div>
+          `;
+
+          card.querySelector('[data-action="open"]').addEventListener('click', async () => {
+            try {
+              await activateHandoff(handoff.id);
+            } catch (e) {
+              console.error('activateHandoff failed:', e);
+            }
+          });
+
+          card.querySelector('[data-action="ready"]').addEventListener('click', async () => {
+            try {
+              await updateHandoffStatus(handoff.id, { status: 'ready_to_resume', open: true });
+            } catch (e) {
+              console.error('updateHandoffStatus failed:', e);
+            }
+          });
+
+          card.querySelector('[data-action="resolve"]').addEventListener('click', async () => {
+            try {
+              await resolveHandoff(handoff.id);
+            } catch (e) {
+              console.error('resolveHandoff failed:', e);
+            }
+          });
+
+          handoffListEl.appendChild(card);
+        }
+
+        updateActivityTabBadge();
+      }
+
+      async function applyHandoffUpdate(handoff) {
+        if (!handoff || !handoff.id) return;
+        const hydrated = await hydrateHandoff(handoff);
+        if (hydrated.open) {
+          openHandoffs.set(hydrated.id, hydrated);
+        } else {
+          openHandoffs.delete(hydrated.id);
+        }
+        renderHandoffs();
+      }
+
+      async function loadOpenHandoffs() {
+        try {
+          const response = await fetch('http://localhost:8765/handoffs?openOnly=true');
+          const data = await response.json();
+          openHandoffs.clear();
+          for (const handoff of data.handoffs || []) {
+            if (handoff.open) {
+              openHandoffs.set(handoff.id, handoff);
+            }
+          }
+          renderHandoffs();
+        } catch (e) {
+          console.error('loadOpenHandoffs failed:', e);
+        }
+      }
+
+      void loadOpenHandoffs();
+
       window.tandem.onActivityEvent((event) => {
-        const activityEl = document.getElementById('panel-activity');
-        const icons = { navigate: '🧭', click: '👆', scroll: '📜', input: '⌨️', 'tab-switch': '🔀', 'tab-open': '➕', 'tab-close': '✖️' };
+        if (!activityEl) return;
+        const icons = { navigate: '🧭', click: '👆', scroll: '📜', input: '⌨️', 'tab-switch': '🔀', 'tab-open': '➕', 'tab-close': '✖️', handoff: '🤝' };
         const icon = icons[event.type] || '•';
         const time = new Date(event.timestamp).toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         let text = event.type;
-        if (event.data.url) text = `${event.type}: ${event.data.url}`;
+        if (event.type === 'handoff' && event.data.title) text = `handoff: ${event.data.title}${event.data.status ? ` (${event.data.status})` : ''}`;
+        else if (event.data.url) text = `${event.type}: ${event.data.url}`;
         else if (event.data.selector) text = `${event.type}: ${event.data.selector}`;
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
@@ -201,6 +368,12 @@
         // Keep max 200 items
         while (activityEl.children.length > 200) activityEl.removeChild(activityEl.firstChild);
       });
+
+      if (window.tandem.onHandoffUpdated) {
+        window.tandem.onHandoffUpdated((data) => {
+          void applyHandoffUpdate(data.handoff);
+        });
+      }
 
       // Tab source changes (🧀/👤 indicator) + AI tab visual border
       window.tandem.onTabSourceChanged((data) => {

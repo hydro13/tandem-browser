@@ -77,7 +77,7 @@ export function registerChatTools(server: McpServer): void {
 
   server.tool(
     'tandem_wingman_alert',
-    'Show a native OS notification alert to the user via the Wingman system',
+    'Legacy compatibility alert: show a native Wingman alert and create an open needs_human handoff for the user',
     {
       message: z.string().describe('Alert message to display'),
       level: z.enum(['info', 'warning', 'error']).optional().describe('Alert level (default: info)'),

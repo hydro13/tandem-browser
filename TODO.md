@@ -60,6 +60,7 @@ Last updated: April 13, 2026
 - [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`
 - [ ] Investigate the remaining 1Password MV3 service-worker startup noise (`DidStartWorkerFail ...: 5` and policy calculation errors) and determine whether it affects any real user-facing behavior; the old `__tandemExtensionHeaders` background error is fixed, and current manual checks indicate the extension still works for normal use
 - [ ] Make `ContextBridge` summaries natively actor/workspace-aware so `/context/summary` and other non-MCP consumers stop relying on MCP-side enrichment for ownership context
+- [ ] Expand the new handoff system with richer task linkage, agent-side resume signals, and a dedicated handoff history/detail view beyond the first Activity-tab inbox
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later
@@ -89,6 +90,7 @@ Last updated: April 13, 2026
 
 ## Recently Completed
 
+- [x] Explicit human↔agent handoffs: durable handoff records with statuses (`needs_human`, `blocked`, `waiting_approval`, `ready_to_resume`, `completed_review`, `resolved`) now exist across HTTP API, MCP tools, live event surfaces, and the Wingman Activity inbox, with workspace/tab targeting and resolve/resume actions
 - [x] Interaction reliability follow-up: snapshot fill now replaces populated field values deterministically, keyboard completion confirmation recognizes active-element focus shifts, and label locators have a runtime fallback for simple `label[for]` associations
 - [x] Interaction completion semantics: selector, snapshot-ref, locator, and keyboard actions now return explicit tab scope, target resolution, completion mode, and lightweight post-action state across HTTP API and MCP
 - [x] DevTools and network inspection tab scoping: `/devtools/*` and `/network/*` retrieval routes now default to active-tab scope, honor explicit tab targeting, and keep MCP descriptions aligned with the real behavior

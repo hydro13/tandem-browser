@@ -65,6 +65,11 @@ export function createPanelApi() {
       ipcRenderer.on(IpcChannels.APPROVAL_REQUEST, handler);
       return () => ipcRenderer.removeListener(IpcChannels.APPROVAL_REQUEST, handler);
     },
+    onHandoffUpdated: (callback: (data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => callback(data);
+      ipcRenderer.on(IpcChannels.HANDOFF_UPDATED, handler);
+      return () => ipcRenderer.removeListener(IpcChannels.HANDOFF_UPDATED, handler);
+    },
     onLiveModeChanged: (callback: (data: { enabled: boolean }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { enabled: boolean }) => callback(data);
       ipcRenderer.on(IpcChannels.LIVE_MODE_CHANGED, handler);

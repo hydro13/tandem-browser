@@ -220,6 +220,164 @@
       font-size: 10px;
     }
 
+    .handoff-inbox {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 10px;
+    }
+
+    .handoff-inbox-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 2px 0;
+    }
+
+    .handoff-count {
+      min-width: 18px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      background: rgba(233, 69, 96, 0.18);
+      color: var(--accent);
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .handoff-empty {
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 2px 2px 0;
+    }
+
+    .handoff-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 310px;
+      overflow-y: auto;
+      padding-right: 2px;
+    }
+
+    .handoff-card {
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .handoff-card.status-needs_human,
+    .handoff-card.status-blocked {
+      border-color: rgba(233, 69, 96, 0.28);
+      background: rgba(233, 69, 96, 0.1);
+    }
+
+    .handoff-card.status-waiting_approval {
+      border-color: rgba(251, 191, 36, 0.28);
+      background: rgba(251, 191, 36, 0.1);
+    }
+
+    .handoff-card.status-ready_to_resume,
+    .handoff-card.status-completed_review {
+      border-color: rgba(16, 185, 129, 0.28);
+      background: rgba(16, 185, 129, 0.08);
+    }
+
+    .handoff-topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .handoff-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .handoff-time {
+      font-size: 10px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .handoff-title {
+      color: var(--text);
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .handoff-body {
+      color: var(--text-dim);
+      font-size: 11px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .handoff-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .handoff-pill {
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-dim);
+    }
+
+    .handoff-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .handoff-actions button {
+      flex: 1;
+      padding: 6px 10px;
+      border-radius: 7px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .handoff-actions button:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .handoff-actions .primary {
+      border-color: rgba(233, 69, 96, 0.28);
+      color: var(--accent);
+    }
+
+    .activity-feed {
+      flex: 1;
+      overflow-y: auto;
+      min-height: 0;
+    }
+
     /* Tab source indicator */
     .tab .tab-source {
       font-size: 10px;
@@ -1151,4 +1309,3 @@
     }
 
     /* END LGL STYLES */
-

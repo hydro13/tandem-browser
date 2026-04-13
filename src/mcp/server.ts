@@ -24,6 +24,7 @@ import { registerBookmarkTools } from './tools/bookmarks.js';
 import { registerHistoryTools } from './tools/history.js';
 import { registerChatTools } from './tools/chat.js';
 import { registerTaskTools } from './tools/tasks.js';
+import { registerHandoffTools } from './tools/handoffs.js';
 import { registerWorkflowTools } from './tools/workflows.js';
 import { registerExtensionTools } from './tools/extensions.js';
 import { registerDeviceTools } from './tools/devices.js';
@@ -68,6 +69,7 @@ registerBookmarkTools(server);
 registerHistoryTools(server);
 registerChatTools(server);
 registerTaskTools(server);
+registerHandoffTools(server);
 registerWorkflowTools(server);
 registerExtensionTools(server);
 registerDeviceTools(server);
@@ -150,6 +152,35 @@ server.resource(
       text += `[${time}] ${msg.from}: ${msg.text}\n`;
     }
     return { contents: [{ uri: 'tandem://chat/history', mimeType: 'text/plain', text }] };
+  }
+);
+
+server.resource(
+  'handoffs-open',
+  'tandem://handoffs/open',
+  { description: 'Open human↔agent handoffs that still need attention or review' },
+  async () => {
+    const data = await apiCall('GET', '/handoffs?openOnly=true');
+    const handoffs: Array<{
+      id: string;
+      status: string;
+      title: string;
+      reason?: string | null;
+      workspaceName?: string | null;
+      tabTitle?: string | null;
+    }> = data.handoffs || [];
+
+    let text = `Open handoffs (${handoffs.length}):\n\n`;
+    for (const handoff of handoffs) {
+      const details = [
+        `status=${handoff.status}`,
+        handoff.reason ? `reason=${handoff.reason}` : null,
+        handoff.workspaceName ? `workspace=${handoff.workspaceName}` : null,
+        handoff.tabTitle ? `tab=${handoff.tabTitle}` : null,
+      ].filter(Boolean).join(' | ');
+      text += `- [${handoff.id}] ${handoff.title}${details ? ` (${details})` : ''}\n`;
+    }
+    return { contents: [{ uri: 'tandem://handoffs/open', mimeType: 'text/plain', text }] };
   }
 );
 
@@ -255,12 +286,15 @@ function startEventListener(): void {
             try {
               const event = JSON.parse(line.slice(6));
               // Send MCP notifications for meaningful events
-              if (['navigation', 'page-loaded', 'tab-focused'].includes(event.type)) {
+              if (['navigation', 'page-loaded', 'tab-focused', 'handoff-created', 'handoff-updated'].includes(event.type)) {
                 server.server.sendResourceUpdated({ uri: 'tandem://page/current' }).catch(e => log.warn('sendResourceUpdated page/current failed:', e instanceof Error ? e.message : e));
                 server.server.sendResourceUpdated({ uri: 'tandem://context' }).catch(e => log.warn('sendResourceUpdated context failed:', e instanceof Error ? e.message : e));
               }
               if (['tab-opened', 'tab-closed', 'tab-focused'].includes(event.type)) {
                 server.server.sendResourceUpdated({ uri: 'tandem://tabs/list' }).catch(e => log.warn('sendResourceUpdated tabs/list failed:', e instanceof Error ? e.message : e));
+              }
+              if (['handoff-created', 'handoff-updated'].includes(event.type)) {
+                server.server.sendResourceUpdated({ uri: 'tandem://handoffs/open' }).catch(e => log.warn('sendResourceUpdated handoffs/open failed:', e instanceof Error ? e.message : e));
               }
             } catch {
               // Ignore parse errors (comments, heartbeats)

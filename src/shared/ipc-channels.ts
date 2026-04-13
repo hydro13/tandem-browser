@@ -115,6 +115,7 @@ export const IpcChannels = {
   EMERGENCY_STOP: 'emergency-stop',
   APPROVAL_REQUEST: 'approval-request',
   TASK_UPDATED: 'task-updated',
+  HANDOFF_UPDATED: 'handoff-updated',
 
   // Shortcuts
   SHORTCUT: 'shortcut',

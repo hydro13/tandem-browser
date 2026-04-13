@@ -1220,6 +1220,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Attention',
+        body: 'Something happened',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Attention', 'Something happened');
     });
 
@@ -1228,6 +1233,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Need help',
+        body: '',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Need help', '');
     });
 
@@ -1238,6 +1248,9 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(ctx.workspaceManager.switch).toHaveBeenCalledWith('ws-ai');
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceId: 'ws-ai',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
     });
 
