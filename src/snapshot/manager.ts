@@ -3,6 +3,7 @@ import { behaviorReplay } from '../behavior/replay';
 import { InteractionTargetNotFoundError } from '../interaction/errors';
 import {
   captureNavigationState,
+  hasObservableInteractionEffect,
   readPageState,
   type InteractionElementState,
   type NavigationState,
@@ -310,16 +311,18 @@ export class SnapshotManager {
     // Small delay to ensure focus
     await this.delay(100);
 
-    // Select all (Cmd+A) then delete to clear existing content
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers: ['meta'] });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers: ['meta'] });
-    await this.delay(50);
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
-    await this.delay(50);
-
     // Type each character with BehaviorReplay timing (Robin's real typing rhythm)
     const chars = Array.from(value).slice(0, MAX_TYPED_CHARS);
+    const preparation = await this.prepareRefForTextEntry(target);
+
+    if (preparation.existingTextLength > 0 && !preparation.selectionPrepared) {
+      await this.sendSelectAllShortcut(wc);
+    }
+
+    if (chars.length === 0) {
+      await this.clearSelectedText(wc);
+    }
+
     for (let i = 0; i < chars.length; i++) {
       const char = chars[i];
       const nextChar = i + 1 < chars.length ? chars[i + 1] : '';
@@ -535,17 +538,13 @@ export class SnapshotManager {
     const element = options?.confirm === false ? null : await this.readRefElementState(target);
     const effectConfirmed = options?.confirm === false
       ? false
-      : Boolean(
-          navigation.changed
-          || navigation.loading
-          || (element?.focused && !beforeElement?.focused)
-          || (
-            element?.checked !== null
-            && beforeElement?.checked !== null
-            && element?.checked !== beforeElement?.checked
-          )
-          || (element?.value !== null && element?.value !== beforeElement?.value)
-        );
+      : hasObservableInteractionEffect({
+          beforePage,
+          afterPage: page,
+          navigation,
+          beforeElement,
+          afterElement: element,
+        });
 
     return {
       ok: true,
@@ -607,6 +606,101 @@ export class SnapshotManager {
     }).catch(() => null);
 
     return (stateResult?.result?.value as (InteractionElementState & { role: string | null }) | undefined) ?? null;
+  }
+
+  private async prepareRefForTextEntry(
+    refTarget: RefTarget,
+  ): Promise<{
+    focused: boolean;
+    selectionPrepared: boolean;
+    existingTextLength: number;
+  }> {
+    const resolved = await this.sendCommandForRef<DOMResolveNodeResponse>(refTarget, 'DOM.resolveNode', {
+      backendNodeId: refTarget.backendNodeId,
+    }).catch(() => null);
+    const objectId = resolved?.object?.objectId;
+    if (!objectId) {
+      return { focused: false, selectionPrepared: false, existingTextLength: 0 };
+    }
+
+    const preparationResult = await this.sendCommandForRef<RuntimeCallFunctionResponse>(refTarget, 'Runtime.callFunctionOn', {
+      objectId,
+      functionDeclaration: `
+        function() {
+          if (typeof this.focus === 'function') {
+            try {
+              this.focus({ preventScroll: true });
+            } catch {
+              this.focus();
+            }
+          }
+
+          let selectionPrepared = false;
+          const existingTextLength = typeof this.value === 'string'
+            ? this.value.length
+            : typeof this.textContent === 'string'
+              ? this.textContent.length
+              : 0;
+
+          if (typeof this.select === 'function') {
+            try {
+              this.select();
+              selectionPrepared = true;
+            } catch {
+              // fall through
+            }
+          }
+
+          if (!selectionPrepared && typeof this.setSelectionRange === 'function' && typeof this.value === 'string') {
+            try {
+              this.setSelectionRange(0, this.value.length);
+              selectionPrepared = true;
+            } catch {
+              // fall through
+            }
+          }
+
+          if (!selectionPrepared && this.isContentEditable) {
+            try {
+              const range = document.createRange();
+              range.selectNodeContents(this);
+              const selection = window.getSelection();
+              selection?.removeAllRanges();
+              selection?.addRange(range);
+              selectionPrepared = true;
+            } catch {
+              // fall through
+            }
+          }
+
+          return {
+            focused: document.activeElement === this,
+            selectionPrepared,
+            existingTextLength,
+          };
+        }
+      `,
+      returnByValue: true,
+    }).catch(() => null);
+
+    return (preparationResult?.result?.value as {
+      focused: boolean;
+      selectionPrepared: boolean;
+      existingTextLength: number;
+    } | undefined) ?? { focused: false, selectionPrepared: false, existingTextLength: 0 };
+  }
+
+  private async sendSelectAllShortcut(wc: Electron.WebContents): Promise<void> {
+    const modifiers: Electron.InputEvent['modifiers'] = process.platform === 'darwin' ? ['meta'] : ['control'];
+    wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers });
+    wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers });
+    await this.delay(50);
+  }
+
+  private async clearSelectedText(wc: Electron.WebContents): Promise<void> {
+    wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
+    wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
+    await this.delay(50);
   }
 
   private async confirmRefValue(

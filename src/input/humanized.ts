@@ -3,6 +3,7 @@ import { behaviorReplay } from '../behavior/replay';
 import {
   captureNavigationState,
   confirmSelectorValue,
+  hasObservableInteractionEffect,
   readPageState,
   readSelectorState,
   type InteractionElementState,
@@ -89,6 +90,10 @@ function typingDelay(currentChar: string = '', nextChar: string = ''): Promise<v
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+function selectAllModifiers(): Electron.InputEvent['modifiers'] {
+  return process.platform === 'darwin' ? ['meta'] : ['control'];
+}
+
 /**
  * Get element position by selector via executeJavaScript.
  * Returns center coordinates of the element.
@@ -111,6 +116,105 @@ async function getElementPosition(wc: WebContents, selector: string): Promise<{ 
     })()
   `);
   return result;
+}
+
+async function prepareSelectorForTextEntry(
+  wc: WebContents,
+  selector: string,
+  replaceExisting: boolean,
+): Promise<{
+  found: boolean;
+  focused: boolean;
+  selectionPrepared: boolean;
+  existingTextLength: number;
+}> {
+  const result = await wc.executeJavaScript(`
+    (() => {
+      const el = document.querySelector(${JSON.stringify(selector)});
+      if (!el) {
+        return { found: false, focused: false, selectionPrepared: false, existingTextLength: 0 };
+      }
+
+      if (typeof el.scrollIntoView === 'function') {
+        el.scrollIntoView({ behavior: 'auto', block: 'center', inline: 'nearest' });
+      }
+
+      if (typeof el.focus === 'function') {
+        try {
+          el.focus({ preventScroll: true });
+        } catch {
+          el.focus();
+        }
+      }
+
+      let selectionPrepared = false;
+      const valueLength = typeof el.value === 'string'
+        ? el.value.length
+        : typeof el.textContent === 'string'
+          ? el.textContent.length
+          : 0;
+
+      if (${replaceExisting ? 'true' : 'false'}) {
+        if (typeof el.select === 'function') {
+          try {
+            el.select();
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+
+        if (!selectionPrepared && typeof el.setSelectionRange === 'function' && typeof el.value === 'string') {
+          try {
+            el.setSelectionRange(0, el.value.length);
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+
+        if (!selectionPrepared && el.isContentEditable) {
+          try {
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            const selection = window.getSelection();
+            selection?.removeAllRanges();
+            selection?.addRange(range);
+            selectionPrepared = true;
+          } catch {
+            // fall through
+          }
+        }
+      }
+
+      return {
+        found: true,
+        focused: document.activeElement === el,
+        selectionPrepared,
+        existingTextLength: valueLength,
+      };
+    })()
+  `) as {
+    found: boolean;
+    focused: boolean;
+    selectionPrepared: boolean;
+    existingTextLength: number;
+  };
+
+  return result;
+}
+
+async function sendSelectAllShortcut(wc: WebContents): Promise<void> {
+  const modifiers = selectAllModifiers();
+  wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers });
+  wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers });
+  await typingDelay();
+}
+
+async function clearSelectedText(wc: WebContents): Promise<void> {
+  wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
+  wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
+  await humanDelay(40, 80);
 }
 
 /**
@@ -199,17 +303,13 @@ export async function humanizedClick(
   const afterElement = options?.confirm === false ? null : await readSelectorState(wc, selector);
   const effectConfirmed = options?.confirm === false
     ? false
-    : Boolean(
-        navigation.changed
-        || navigation.loading
-        || (afterElement?.focused && !beforeElement?.focused)
-        || (
-          afterElement?.checked !== null
-          && beforeElement?.checked !== null
-          && afterElement?.checked !== beforeElement?.checked
-        )
-        || (afterElement?.value !== null && afterElement?.value !== beforeElement?.value)
-      );
+    : hasObservableInteractionEffect({
+        beforePage,
+        afterPage,
+        navigation,
+        beforeElement,
+        afterElement,
+      });
 
   return {
     ok: true,
@@ -276,17 +376,16 @@ export async function humanizedType(
   wc.sendInputEvent({ type: 'mouseUp', x: pos.x, y: pos.y, button: 'left', clickCount: 1 });
   await humanDelay(80, 200);
 
-  // Clear existing content if requested (Cmd+A then Backspace)
-  if (clear) {
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'a', modifiers: ['meta'] });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'a', modifiers: ['meta'] });
-    await typingDelay();
-    wc.sendInputEvent({ type: 'keyDown', keyCode: 'Backspace' });
-    wc.sendInputEvent({ type: 'keyUp', keyCode: 'Backspace' });
-    await humanDelay(80, 150);
+  const chars = Array.from(text).slice(0, MAX_TYPED_CHARS);
+  const preparation = await prepareSelectorForTextEntry(wc, selector, clear);
+
+  if (clear && preparation.found && preparation.existingTextLength > 0 && !preparation.selectionPrepared) {
+    await sendSelectAllShortcut(wc);
   }
 
-  const chars = Array.from(text).slice(0, MAX_TYPED_CHARS);
+  if (clear && chars.length === 0) {
+    await clearSelectedText(wc);
+  }
 
   // Type each character with humanized delays
   for (let i = 0; i < chars.length; i++) {

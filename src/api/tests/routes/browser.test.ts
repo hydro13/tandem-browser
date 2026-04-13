@@ -1067,6 +1067,29 @@ describe('Browser Routes', () => {
       expect(res.body.completion.caveat).toContain('no immediate');
     });
 
+    it('confirms focus movement when the active element changes within the same tag type', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'previous', name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'next', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'Tab' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completion.effectConfirmed).toBe(true);
+      expect(res.body.completion.mode).toBe('confirmed');
+      expect(res.body.completion.caveat).toBeUndefined();
+      expect(res.body.postAction.page.activeElement.id).toBe('next');
+    });
+
     it('includes modifiers in target and calls sendInputEvent', async () => {
       const mockWC = await ctx.tabManager.getActiveWebContents();
       const state = {
@@ -1160,6 +1183,28 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('No active tab');
+    });
+
+    it('confirms same-tag active-element changes for key sequences', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'cancel', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .send({ keys: ['Tab', 'Tab'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body.completion.effectConfirmed).toBe(true);
+      expect(res.body.completion.mode).toBe('confirmed');
+      expect(res.body.postAction.page.activeElement.id).toBe('cancel');
     });
   });
 

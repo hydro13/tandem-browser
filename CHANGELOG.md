@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.71.4] - 2026-04-13
+
+- fix: make fill replacement and keyboard completion confirmation match observed browser state
+
+### Fixed
+
+- `POST /snapshot/fill` now prepares a real replacement selection on the target field before trusted key events are sent, so filling a populated input replaces the old value instead of corrupting it through caret-dependent append behavior
+- Selector-based `POST /type` with `clear: true` now uses the same replacement-first strategy, preserving trusted input events while making pre-populated field replacement deterministic
+- Keyboard actions (`POST /press-key`, `POST /press-key-combo`) now confirm observable active-element focus shifts even when the focused element keeps the same tag name, keeping `completion.effectConfirmed` aligned with the returned `postAction.page.activeElement`
+- Label locators now fall back to a runtime DOM association pass when the CDP label search misses, improving `POST /find` by `label` on simple `label[for]` fixtures
+- Added focused tests for selector replacement typing, snapshot ref fill replacement, focus-shift confirmation, and runtime label lookup fallback
+
 ## [v0.71.3] - 2026-04-13
 
 - fix: strengthen interaction completion semantics across HTTP API and MCP

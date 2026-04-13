@@ -8,7 +8,7 @@ import { buildInteractionScope, resolveEffectiveTabTarget, sendRequestedTabNotFo
 import { tandemDir } from '../../utils/paths';
 import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
-import { captureNavigationState, readPageState } from '../../interaction/page-state';
+import { captureNavigationState, hasObservablePageChange, readPageState } from '../../interaction/page-state';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 import { resolvePathInAllowedRoots } from '../../utils/security';
@@ -531,10 +531,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         timeoutMs: navigationTimeoutMs,
       });
       const page = await readPageState(wc);
-      const effectConfirmed = navigation.changed
-        || navigation.loading
-        || page.activeElement.tagName !== beforePage.activeElement.tagName
-        || page.activeElement.value !== beforePage.activeElement.value;
+      const effectConfirmed = hasObservablePageChange(beforePage, page, navigation);
 
       ctx.panelManager.logActivity('press-key', { key: normalizedKey, modifiers });
       res.json({
@@ -551,7 +548,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
           dispatchCompleted: true,
           effectConfirmed,
           mode: effectConfirmed ? 'confirmed' : 'dispatched',
-          caveat: effectConfirmed ? undefined : 'Key dispatch finished, but no immediate focus, value, or navigation change was observable.',
+          caveat: effectConfirmed ? undefined : 'Key dispatch finished, but no immediate active-element, value, or navigation change was observable.',
         },
         postAction: {
           page,
@@ -601,10 +598,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         timeoutMs: navigationTimeoutMs,
       });
       const page = await readPageState(wc);
-      const effectConfirmed = navigation.changed
-        || navigation.loading
-        || page.activeElement.tagName !== beforePage.activeElement.tagName
-        || page.activeElement.value !== beforePage.activeElement.value;
+      const effectConfirmed = hasObservablePageChange(beforePage, page, navigation);
 
       ctx.panelManager.logActivity('press-key-combo', { keys: pressedKeys });
       res.json({
@@ -620,7 +614,7 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
           dispatchCompleted: true,
           effectConfirmed,
           mode: effectConfirmed ? 'confirmed' : 'dispatched',
-          caveat: effectConfirmed ? undefined : 'Key sequence dispatch finished, but no immediate focus, value, or navigation change was observable.',
+          caveat: effectConfirmed ? undefined : 'Key sequence dispatch finished, but no immediate active-element, value, or navigation change was observable.',
         },
         postAction: {
           page,

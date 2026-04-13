@@ -54,6 +54,14 @@ export interface ElementConfirmation<T> {
   observedAfterMs: number;
 }
 
+export interface InteractionObservation {
+  beforePage: PageState;
+  afterPage: PageState;
+  navigation?: NavigationState;
+  beforeElement?: InteractionElementState | null;
+  afterElement?: InteractionElementState | null;
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -76,6 +84,56 @@ function safeUrl(wc: WebContents): string {
   } catch {
     return '';
   }
+}
+
+export function didActiveElementChange(before: ActiveElementState, after: ActiveElementState): boolean {
+  return before.tagName !== after.tagName
+    || before.id !== after.id
+    || before.name !== after.name
+    || before.type !== after.type
+    || before.value !== after.value;
+}
+
+export function didInteractionElementChange(
+  before: InteractionElementState | null | undefined,
+  after: InteractionElementState | null | undefined,
+): boolean {
+  if (!before && !after) {
+    return false;
+  }
+
+  if (!before || !after) {
+    return true;
+  }
+
+  return before.focused !== after.focused
+    || before.value !== after.value
+    || before.checked !== after.checked
+    || before.connected !== after.connected
+    || before.disabled !== after.disabled;
+}
+
+export function hasObservablePageChange(
+  beforePage: PageState,
+  afterPage: PageState,
+  navigation?: NavigationState,
+): boolean {
+  return Boolean(
+    navigation?.changed
+    || navigation?.loading
+    || didActiveElementChange(beforePage.activeElement, afterPage.activeElement),
+  );
+}
+
+export function hasObservableInteractionEffect({
+  beforePage,
+  afterPage,
+  navigation,
+  beforeElement,
+  afterElement,
+}: InteractionObservation): boolean {
+  return hasObservablePageChange(beforePage, afterPage, navigation)
+    || didInteractionElementChange(beforeElement, afterElement);
 }
 
 export async function readPageState(wc: WebContents): Promise<PageState> {

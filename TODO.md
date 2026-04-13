@@ -89,6 +89,7 @@ Last updated: April 13, 2026
 
 ## Recently Completed
 
+- [x] Interaction reliability follow-up: snapshot fill now replaces populated field values deterministically, keyboard completion confirmation recognizes active-element focus shifts, and label locators have a runtime fallback for simple `label[for]` associations
 - [x] Interaction completion semantics: selector, snapshot-ref, locator, and keyboard actions now return explicit tab scope, target resolution, completion mode, and lightweight post-action state across HTTP API and MCP
 - [x] DevTools and network inspection tab scoping: `/devtools/*` and `/network/*` retrieval routes now default to active-tab scope, honor explicit tab targeting, and keep MCP descriptions aligned with the real behavior
 - [x] Awareness tools: activity digest and real-time focus detection for shared human-AI context

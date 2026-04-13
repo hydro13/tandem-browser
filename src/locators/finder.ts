@@ -35,9 +35,6 @@ interface DOMSearchResultsResponse {
   nodeIds?: number[];
 }
 
-interface DOMAttributesResponse {
-  attributes?: string[];
-}
 
 interface DOMQuerySelectorResponse {
   nodeId?: number;
@@ -65,6 +62,17 @@ interface AccessibilityPartialTreeResponse {
     role?: { value?: string };
     name?: { value?: string };
   }>;
+}
+
+interface RuntimeEvaluateResponse {
+  result?: {
+    objectId?: string;
+    value?: unknown;
+  };
+}
+
+interface DOMRequestNodeResponse {
+  nodeId?: number;
 }
 
 // ─── Manager ────────────────────────────────────────────────────────
@@ -213,55 +221,9 @@ export class LocatorFinder {
 
   private async findByLabel(query: LocatorQuery, options?: LocatorFindOptions): Promise<LocatorResult> {
     try {
-      const exact = query.exact !== false;
-      const labelXpath = exact
-        ? `//label[normalize-space(text())="${query.value}"]`
-        : `//label[contains(normalize-space(text()),"${query.value}")]`;
-
-      const result = await this.sendCommand<DOMSearchResponse>(options?.wcId, 'DOM.performSearch', {
-        query: labelXpath,
-        includeUserAgentShadowDOM: false,
-      });
-
-      if (!result?.resultCount) return { found: false };
-
-      const nodes = await this.sendCommand<DOMSearchResultsResponse>(options?.wcId, 'DOM.getSearchResults', {
-        searchId: result.searchId,
-        fromIndex: 0,
-        toIndex: 1,
-      });
-      await this.sendCommand(options?.wcId, 'DOM.discardSearchResults', {
-        searchId: result.searchId,
-      });
-
-      if (!nodes?.nodeIds?.[0]) return { found: false };
-
-      // Get the for attribute of the label
-      const attrs = await this.sendCommand<DOMAttributesResponse>(options?.wcId, 'DOM.getAttributes', {
-        nodeId: nodes.nodeIds[0],
-      });
-      const attrList: string[] = attrs?.attributes ?? [];
-      const forIdx = attrList.indexOf('for');
-      const forValue = forIdx >= 0 ? attrList[forIdx + 1] : null;
-
-      if (forValue) {
-        // Escape CSS identifier (no CSS.escape in Node)
-        const escaped = forValue.replace(/([^\w-])/g, '\\$1');
-        return this.findByCssSelector(`#${escaped}`, options);
-      }
-
-      // No for attribute — find enclosed input
-      const childResult = await this.sendCommand<DOMQuerySelectorResponse>(options?.wcId, 'DOM.querySelector', {
-        nodeId: nodes.nodeIds[0],
-        selector: 'input, select, textarea',
-      });
-      if (childResult?.nodeId) {
-        return this.nodeIdToLocatorResult(childResult.nodeId, options);
-      }
-
-      return { found: false };
+      return this.findByLabelViaRuntime(query, options);
     } catch {
-      return { found: false };
+      return this.findByLabelViaRuntime(query, options);
     }
   }
 
@@ -370,6 +332,91 @@ export class LocatorFinder {
       return this.devTools.sendCommandToTab(wcId, method, params) as Promise<T>;
     }
     return this.devTools.sendCommand(method, params) as Promise<T>;
+  }
+
+  private async findByLabelViaRuntime(query: LocatorQuery, options?: LocatorFindOptions): Promise<LocatorResult> {
+    try {
+      const exact = query.exact !== false;
+      const selectorExpression = `
+        (() => {
+          const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+          const expected = normalize(${JSON.stringify(query.value)});
+          const labels = Array.from(document.querySelectorAll('label'));
+          const label = labels.find((candidate) => {
+            const text = normalize(candidate.textContent || '');
+            return ${exact ? 'text === expected' : 'text.includes(expected)'};
+          });
+
+          if (!label) {
+            return null;
+          }
+
+          const control = label.control
+            || (label.htmlFor ? document.getElementById(label.htmlFor) : null)
+            || label.querySelector('input, select, textarea');
+
+          if (!control) {
+            return null;
+          }
+
+          if (control.id) {
+            return '#' + CSS.escape(control.id);
+          }
+
+          return null;
+        })()
+      `;
+
+      const selector = options?.wcId
+        ? await this.devTools.evaluateInTab(options.wcId, selectorExpression, { returnByValue: true, awaitPromise: false })
+        : await this.devTools.evaluate(selectorExpression, { returnByValue: true, awaitPromise: false });
+
+      if (selector) {
+        return this.findByCssSelector(String(selector), options);
+      }
+
+      const objectExpression = `
+        (() => {
+          const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+          const expected = normalize(${JSON.stringify(query.value)});
+          const labels = Array.from(document.querySelectorAll('label'));
+          const label = labels.find((candidate) => {
+            const text = normalize(candidate.textContent || '');
+            return ${exact ? 'text === expected' : 'text.includes(expected)'};
+          });
+
+          if (!label) {
+            return null;
+          }
+
+          return label.control
+            || (label.htmlFor ? document.getElementById(label.htmlFor) : null)
+            || label.querySelector('input, select, textarea');
+        })()
+      `;
+
+      const runtimeResult = await this.sendCommand<RuntimeEvaluateResponse>(options?.wcId, 'Runtime.evaluate', {
+        expression: objectExpression,
+        returnByValue: false,
+        includeCommandLineAPI: false,
+        silent: true,
+      });
+
+      const objectId = runtimeResult?.result?.objectId;
+      if (!objectId) {
+        return { found: false };
+      }
+
+      await this.sendCommand(options?.wcId, 'DOM.enable', {});
+      const nodeResult = await this.sendCommand<DOMRequestNodeResponse>(options?.wcId, 'DOM.requestNode', { objectId });
+      if (!nodeResult?.nodeId) {
+        return { found: false };
+      }
+
+      return this.nodeIdToLocatorResult(nodeResult.nodeId, options);
+    } catch {
+      return { found: false };
+    }
   }
 
   // --- Tree walker ---

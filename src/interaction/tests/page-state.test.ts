@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   captureNavigationState,
   confirmSelectorValue,
+  didActiveElementChange,
+  didInteractionElementChange,
+  hasObservableInteractionEffect,
+  hasObservablePageChange,
   readPageState,
   readSelectorState,
 } from '../page-state';
@@ -147,6 +151,49 @@ describe('readSelectorState', () => {
 });
 
 describe('interaction page-state helpers', () => {
+  it('treats same-tag focus moves as an active-element change', () => {
+    expect(didActiveElementChange(
+      { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+      { tagName: 'BUTTON', id: 'cancel', name: null, type: null, value: null },
+    )).toBe(true);
+  });
+
+  it('detects observable page and element effects from focus movement', () => {
+    const beforePage = {
+      url: 'https://example.com',
+      title: 'Example',
+      loading: false,
+      activeElement: { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+    };
+    const afterPage = {
+      ...beforePage,
+      activeElement: { tagName: 'BUTTON', id: 'cancel', name: null, type: null, value: null },
+    };
+    const beforeElement = {
+      found: true,
+      tagName: 'BUTTON',
+      text: 'Save',
+      value: null,
+      focused: false,
+      connected: true,
+      checked: null,
+      disabled: false,
+    };
+    const afterElement = {
+      ...beforeElement,
+      focused: true,
+    };
+
+    expect(hasObservablePageChange(beforePage as any, afterPage as any)).toBe(true);
+    expect(didInteractionElementChange(beforeElement, afterElement)).toBe(true);
+    expect(hasObservableInteractionEffect({
+      beforePage: beforePage as any,
+      afterPage: afterPage as any,
+      beforeElement,
+      afterElement,
+    })).toBe(true);
+  });
+
   it('confirmSelectorValue waits for the requested value to appear', async () => {
     const wc = createMockWebContents();
     vi.mocked(wc.executeJavaScript)
