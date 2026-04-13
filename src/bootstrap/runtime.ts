@@ -17,6 +17,7 @@ import { DevToolsManager } from '../devtools/manager';
 import { DeviceEmulator } from '../device/emulator';
 import { DownloadManager } from '../downloads/manager';
 import { EventStreamManager } from '../events/stream';
+import { HandoffManager, type Handoff } from '../handoffs/manager';
 import { ChromeImporter } from '../import/chrome-importer';
 import type { Logger } from '../utils/logger';
 import type { ManagerRegistry } from '../registry';
@@ -98,6 +99,35 @@ function wireTaskManagerEvents(win: BrowserWindow, taskManager: TaskManager, can
   });
 }
 
+function wireHandoffManagerEvents(
+  win: BrowserWindow,
+  handoffManager: HandoffManager,
+  eventStream: EventStreamManager,
+  panelManager: PanelManager,
+  canUseWindow: (win: BrowserWindow | null) => win is BrowserWindow,
+): void {
+  const emitRendererUpdate = (kind: 'created' | 'updated', handoff: Handoff) => {
+    eventStream.handleHandoffEvent(kind, handoff);
+    panelManager.logActivity('handoff', {
+      title: handoff.title,
+      status: handoff.status,
+      source: handoff.source ?? handoff.agentId ?? 'agent',
+    });
+
+    if (canUseWindow(win)) {
+      win.webContents.send(IpcChannels.HANDOFF_UPDATED, { kind, handoff });
+    }
+  };
+
+  handoffManager.on('handoff-created', (handoff: Handoff) => {
+    emitRendererUpdate('created', handoff);
+  });
+
+  handoffManager.on('handoff-updated', (handoff: Handoff) => {
+    emitRendererUpdate('updated', handoff);
+  });
+}
+
 async function configureNativeMessagingHostDirectories(log: Logger): Promise<void> {
   try {
     const os = await import('os');
@@ -162,6 +192,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.extensionToolbar = new ExtensionToolbar(runtime.extensionManager);
   runtime.claroNoteManager = new ClaroNoteManager();
   runtime.eventStream = new EventStreamManager();
+  runtime.handoffManager = new HandoffManager();
   runtime.taskManager = new TaskManager();
   runtime.tabLockManager = new TabLockManager();
   runtime.devToolsManager = new DevToolsManager(runtime.tabManager);
@@ -231,6 +262,68 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
 
   runtime.contextBridge.connectEventStream(runtime.eventStream);
   wireTaskManagerEvents(win, runtime.taskManager, canUseWindow);
+  wireHandoffManagerEvents(
+    win,
+    runtime.handoffManager,
+    runtime.eventStream,
+    runtime.panelManager,
+    canUseWindow,
+  );
+
+  runtime.taskManager.on('approval-request', (data: Record<string, unknown>) => {
+    const taskId = typeof data.taskId === 'string' ? data.taskId : null;
+    const stepId = typeof data.stepId === 'string' ? data.stepId : null;
+    const task = taskId ? runtime.taskManager.getTask(taskId) : null;
+    const action = data.action && typeof data.action === 'object'
+      ? data.action as { params?: Record<string, unknown> }
+      : null;
+    const params = action?.params ?? {};
+
+    const existing = taskId && stepId
+      ? runtime.handoffManager.findOpenByTaskStep(taskId, stepId)
+      : null;
+
+    const payload = {
+      status: 'waiting_approval',
+      title: 'Approval needed',
+      body: typeof data.description === 'string' ? data.description : 'Agent action requires review.',
+      reason: 'approval_required',
+      actionLabel: 'Approve or reject this action',
+      source: task?.createdBy ?? 'wingman',
+      agentId: task?.assignedTo ?? null,
+      taskId,
+      stepId,
+      workspaceId: typeof params.workspaceId === 'string' ? params.workspaceId : null,
+      tabId: typeof params.tabId === 'string' ? params.tabId : null,
+    } as const;
+
+    if (existing) {
+      runtime.handoffManager.update(existing.id, payload);
+    } else {
+      runtime.handoffManager.create(payload);
+    }
+  });
+
+  runtime.taskManager.on('approval-response', (data: { requestId: string; approved: boolean }) => {
+    const [taskId, stepId] = data.requestId.split(':');
+    if (!taskId || !stepId) {
+      return;
+    }
+
+    const handoff = runtime.handoffManager.findOpenByTaskStep(taskId, stepId);
+    if (!handoff) {
+      return;
+    }
+
+    runtime.handoffManager.update(handoff.id, {
+      status: 'resolved',
+      open: false,
+      actionLabel: data.approved ? 'Approval granted' : 'Approval rejected',
+      body: data.approved
+        ? `${handoff.body}\n\nApproval granted.`
+        : `${handoff.body}\n\nApproval rejected.`,
+    });
+  });
 
   const ses = session.fromPartition(DEFAULT_PARTITION);
   runtime.downloadManager.hookSession(ses, win);
@@ -323,6 +416,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     workflowEngine: runtime.workflowEngine,
     loginManager: runtime.loginManager,
     eventStream: runtime.eventStream,
+    handoffManager: runtime.handoffManager,
     taskManager: runtime.taskManager,
     tabLockManager: runtime.tabLockManager,
     devToolsManager: runtime.devToolsManager,

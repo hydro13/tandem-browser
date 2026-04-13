@@ -1220,6 +1220,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Attention',
+        body: 'Something happened',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Attention', 'Something happened');
     });
 
@@ -1228,6 +1233,11 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, sent: true });
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        status: 'needs_human',
+        title: 'Need help',
+        body: '',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Need help', '');
     });
 
@@ -1238,6 +1248,9 @@ describe('Browser Routes', () => {
 
       expect(res.status).toBe(200);
       expect(ctx.workspaceManager.switch).toHaveBeenCalledWith('ws-ai');
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        workspaceId: 'ws-ai',
+      }));
       expect(wingmanAlert).toHaveBeenCalledWith('Captcha', 'Please take over');
     });
 
@@ -1250,6 +1263,34 @@ describe('Browser Routes', () => {
       expect(res.body.error).toBe('workspaceId must be a workspace ID string');
       expect(ctx.workspaceManager.switch).not.toHaveBeenCalled();
       expect(wingmanAlert).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when tabId is not a string', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ tabId: 42 });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('tabId must be a tab ID string');
+      expect(ctx.handoffManager.create).not.toHaveBeenCalled();
+      expect(wingmanAlert).not.toHaveBeenCalled();
+    });
+
+    it('stores legacy defaults for handoff metadata when optional fields are omitted', async () => {
+      const res = await request(app)
+        .post('/wingman-alert')
+        .send({ title: 'Captcha detected' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.handoffManager.create).toHaveBeenCalledWith(expect.objectContaining({
+        title: 'Captcha detected',
+        reason: 'legacy_alert',
+        workspaceId: null,
+        tabId: null,
+        agentId: null,
+        source: 'wingman-alert',
+        actionLabel: null,
+      }));
     });
   });
 

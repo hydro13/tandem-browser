@@ -631,15 +631,30 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/wingman-alert', (req: Request, res: Response) => {
-    const { title = 'Need help', body = '', workspaceId } = req.body;
+    const { title = 'Need help', body = '', workspaceId, tabId, agentId, source, actionLabel, reason } = req.body;
     if (workspaceId !== undefined && typeof workspaceId !== 'string') {
       res.status(400).json({ error: 'workspaceId must be a workspace ID string' });
+      return;
+    }
+    if (tabId !== undefined && typeof tabId !== 'string') {
+      res.status(400).json({ error: 'tabId must be a tab ID string' });
       return;
     }
     try {
       if (workspaceId) {
         ctx.workspaceManager.switch(workspaceId);
       }
+      ctx.handoffManager.create({
+        status: 'needs_human',
+        title,
+        body,
+        reason: typeof reason === 'string' && reason.trim().length > 0 ? reason : 'legacy_alert',
+        workspaceId: typeof workspaceId === 'string' ? workspaceId : null,
+        tabId: typeof tabId === 'string' ? tabId : null,
+        agentId: typeof agentId === 'string' ? agentId : null,
+        source: typeof source === 'string' ? source : 'wingman-alert',
+        actionLabel: typeof actionLabel === 'string' ? actionLabel : null,
+      });
       wingmanAlert(title, body);
       res.json({ ok: true, sent: true });
     } catch (e) {

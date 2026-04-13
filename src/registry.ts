@@ -30,6 +30,7 @@ import type { ContentExtractor } from './content/extractor';
 import type { WorkflowEngine } from './workflow/engine';
 import type { LoginManager } from './auth/login-manager';
 import type { EventStreamManager } from './events/stream';
+import type { HandoffManager } from './handoffs/manager';
 import type { TaskManager } from './agents/task-manager';
 import type { TabLockManager } from './agents/tab-lock-manager';
 import type { DevToolsManager } from './devtools/manager';
@@ -102,6 +103,8 @@ export interface ManagerRegistry {
   loginManager: LoginManager;
   /** In-memory stream of browser events (navigation, clicks, etc). See src/events/stream.ts */
   eventStream: EventStreamManager;
+  /** Explicit human↔agent handoffs with durable status and targeting context. See src/handoffs/manager.ts */
+  handoffManager: HandoffManager;
   /** AI agent task management with approval workflow and emergency stop. See src/agents/task-manager.ts */
   taskManager: TaskManager;
   /** Prevents multiple agents from controlling the same tab with timeout locks. See src/agents/tab-lock-manager.ts */

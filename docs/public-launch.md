@@ -5,7 +5,7 @@ repository to the public.
 
 ## GitHub Repository Description
 
-Agent-first browser for human-AI collaboration — 239 MCP tools, 300+ HTTP endpoints, built-in security.
+Agent-first browser for human-AI collaboration — 244 MCP tools, 300+ HTTP endpoints, built-in security.
 
 ## Short Tagline
 
@@ -13,14 +13,14 @@ An agent-first browser for human-AI collaboration.
 
 ## Social / Announcement One-Liner
 
-Tandem Browser is now public: an agent-first browser for human-AI collaboration with 239 MCP tools and 300+ HTTP endpoints, released as a developer preview.
+Tandem Browser is now public: an agent-first browser for human-AI collaboration with 244 MCP tools and 300+ HTTP endpoints, released as a developer preview.
 
 ## Launch Post
 
 Tandem Browser is now public.
 
 Tandem is an agent-first browser built for human-AI collaboration on the local
-machine. The human browses normally. Any AI agent that speaks MCP (239 tools) or
+machine. The human browses normally. Any AI agent that speaks MCP (244 tools) or
 HTTP (300+ endpoints) gets full browser control for navigation, extraction,
 automation, screenshots, session work, and observability, while websites
 continue to see a normal Chromium browser instead of an "AI browser" fingerprint.

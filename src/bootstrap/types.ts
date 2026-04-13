@@ -22,6 +22,7 @@ import type { ExtensionManager } from '../extensions/manager';
 import type { ExtensionToolbar } from '../extensions/toolbar';
 import type { ClaroNoteManager } from '../claronote/manager';
 import type { EventStreamManager } from '../events/stream';
+import type { HandoffManager } from '../handoffs/manager';
 import type { TaskManager } from '../agents/task-manager';
 import type { TabLockManager } from '../agents/tab-lock-manager';
 import type { ContextMenuManager } from '../context-menu/manager';
@@ -73,6 +74,7 @@ export interface RuntimeManagers {
   extensionToolbar: ExtensionToolbar;
   claroNoteManager: ClaroNoteManager;
   eventStream: EventStreamManager;
+  handoffManager: HandoffManager;
   taskManager: TaskManager;
   tabLockManager: TabLockManager;
   contextMenuManager: ContextMenuManager;

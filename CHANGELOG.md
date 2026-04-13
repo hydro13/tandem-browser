@@ -2,6 +2,25 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.72.0] - 2026-04-13
+
+- feat: add explicit human↔agent handoffs across API, MCP, events, and Wingman UI
+
+### Added
+
+- Durable `HandoffManager` persistence in `~/.tandem/handoffs.json` with explicit statuses for `needs_human`, `blocked`, `waiting_approval`, `ready_to_resume`, `completed_review`, and `resolved`
+- New HTTP API routes for handoff lifecycle and targeting: `GET /handoffs`, `GET /handoffs/:id`, `POST /handoffs`, `PATCH /handoffs/:id`, `POST /handoffs/:id/resolve`, and `POST /handoffs/:id/activate`
+- New MCP tools for the same handoff system: `tandem_handoff_create`, `tandem_handoff_list`, `tandem_handoff_get`, `tandem_handoff_update`, and `tandem_handoff_resolve`
+- New MCP resource `tandem://handoffs/open` plus SSE handoff events so open handoffs can be observed live
+- A real Wingman Activity inbox for open handoffs, including workspace/tab context, action hints, open-context targeting, and resolve/mark-ready actions
+
+### Changed
+
+- `POST /wingman-alert` now acts as a compatibility wrapper over the handoff system, preserving the old alert behavior while also creating a durable `needs_human` handoff
+- Task approval requests now also appear as structured handoffs instead of only transient approval cards, keeping human attention requests visible in one place
+- Wingman Activity logging now records handoff lifecycle updates so the user can see when a handoff was created, updated, or resolved
+- Handoff metadata normalization now treats blank titles/reasons as defaults, and focused route/MCP/manager tests cover the new handoff lifecycle more thoroughly so coverage matches the added product surface
+
 ## [v0.71.4] - 2026-04-13
 
 - fix: make fill replacement and keyboard completion confirmation match observed browser state

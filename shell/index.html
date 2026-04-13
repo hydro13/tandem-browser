@@ -273,6 +273,15 @@
       <div class="panel-body" id="panel-body">
         <!-- Activity tab -->
         <div class="panel-content" id="panel-activity" style="display:none;flex-direction:column;flex:1;">
+          <div class="handoff-inbox" id="handoff-inbox">
+            <div class="handoff-inbox-header">
+              <span>Open handoffs</span>
+              <span class="handoff-count" id="handoff-count">0</span>
+            </div>
+            <div class="handoff-empty" id="handoff-empty">No open handoffs.</div>
+            <div class="handoff-list" id="handoff-list"></div>
+          </div>
+          <div class="activity-feed" id="activity-feed"></div>
         </div>
         <!-- Chat tab — Multi-backend via ChatRouter (Phase 3) -->
         <div class="panel-content" id="panel-chat"

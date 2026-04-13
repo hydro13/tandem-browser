@@ -13,7 +13,7 @@ const log = createLogger('PanelManager');
 
 export interface ActivityEvent {
   id: number;
-  type: 'navigate' | 'click' | 'scroll' | 'input' | 'tab-switch' | 'tab-open' | 'tab-close' | 'press-key' | 'press-key-combo';
+  type: 'navigate' | 'click' | 'scroll' | 'input' | 'tab-switch' | 'tab-open' | 'tab-close' | 'press-key' | 'press-key-combo' | 'handoff';
   timestamp: number;
   data: Record<string, unknown>;
 }
