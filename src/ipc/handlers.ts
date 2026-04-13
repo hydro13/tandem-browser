@@ -24,9 +24,11 @@ import type { DeviceEmulator } from '../device/emulator';
 import type { WingmanStream } from '../activity/wingman-stream';
 import type { SnapshotManager } from '../snapshot/manager';
 import type { VideoRecorderManager } from '../video/recorder';
+import type { WorkspaceManager } from '../workspaces/manager';
 import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 import { IpcChannels } from '../shared/ipc-channels';
+import { buildOwnershipContextForTab, buildOwnershipContextForTabId } from '../tabs/runtime-context';
 
 const log = createLogger('IpcHandlers');
 
@@ -54,6 +56,7 @@ export interface IpcDeps {
   wingmanStream: WingmanStream;
   snapshotManager: SnapshotManager;
   videoRecorderManager: VideoRecorderManager;
+  workspaceManager: WorkspaceManager;
 }
 
 /** Sync tab list into ContextBridge for live context summary */
@@ -69,7 +72,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     taskManager, contextMenuManager, devToolsManager, activityTracker,
     securityManager, scriptInjector, deviceEmulator, wingmanStream: _wingmanStream,
     snapshotManager: _snapshotManager,
-    videoRecorderManager,
+    videoRecorderManager, workspaceManager,
   } = deps;
 
   // ═══ IPC Handler Cleanup — prevent duplicates on macOS reactivation ═══
@@ -371,8 +374,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   // ═══ Activity tracking: webview events from renderer ═══
   ipcMain.on(IpcChannels.ACTIVITY_WEBVIEW_EVENT, (_event, data: { type: string; url?: string; tabId?: string }) => {
     // Feed into EventStreamManager for SSE
-    const activeTab = tabManager.getActiveTab();
-    eventStream.handleWebviewEvent({ ...data, title: activeTab?.title });
+    const eventTab = data.tabId ? tabManager.getTab(data.tabId) : tabManager.getActiveTab();
+    eventStream.handleWebviewEvent({
+      ...data,
+      title: eventTab?.title,
+      context: buildOwnershipContextForTab(workspaceManager, eventTab),
+    });
 
     activityTracker.onWebviewEvent(data);
 
@@ -508,10 +515,16 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   ipcMain.handle(IpcChannels.TAB_CLOSE, async (_event, tabId: string) => {
     // Capture tab info before closing
     const closingTab = tabManager.getTab(tabId);
+    const closingContext = buildOwnershipContextForTab(workspaceManager, closingTab);
     const result = await tabManager.closeTab(tabId);
     if (result) {
       // Normal close — emit events only for tabs that were actually tracked.
-      eventStream.handleTabEvent('tab-closed', { tabId });
+      eventStream.handleTabEvent('tab-closed', {
+        tabId,
+        url: closingTab?.url,
+        title: closingTab?.title,
+        context: closingContext,
+      });
       activityTracker.onWebviewEvent({ type: 'tab-close', tabId, url: closingTab?.url, title: closingTab?.title });
     } else {
       // Tab not in main-process Map → possible renderer orphan.
@@ -526,9 +539,16 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     behaviorObserver.recordTabSwitch(tabId);
     const tabs = tabManager.listTabs();
     const tab = tabs.find(t => t.id === tabId);
-    eventStream.handleTabEvent('tab-focused', { tabId, url: tab?.url, title: tab?.title });
-    activityTracker.onWebviewEvent({ type: 'tab-switch', tabId, url: tab?.url, title: tab?.title });
     const result = await tabManager.focusTab(tabId);
+    if (result) {
+      eventStream.handleTabEvent('tab-focused', {
+        tabId,
+        url: tab?.url,
+        title: tab?.title,
+        context: buildOwnershipContextForTabId(tabManager, workspaceManager, tabId),
+      });
+      activityTracker.onWebviewEvent({ type: 'tab-switch', tabId, url: tab?.url, title: tab?.title });
+    }
     syncTabsToContext(tabManager, contextBridge);
     // Attach CDP to the focused tab directly (avoids race with TabManager active tab state)
     if (tab?.webContentsId) {

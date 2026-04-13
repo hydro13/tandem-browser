@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import { tandemDir } from '../utils/paths';
 import { API_PORT } from '../utils/constants';
+import { normalizeTabSource } from '../tabs/context';
 
 const API_BASE = `http://localhost:${API_PORT}`;
 
@@ -51,6 +52,23 @@ export function tabHeaders(tabId?: string): Record<string, string> | undefined {
   return tabId ? { 'X-Tab-Id': tabId } : undefined;
 }
 
+export function getMcpSource(): string {
+  const candidates = [
+    process.env.TANDEM_SOURCE,
+    process.env.TANDEM_MCP_SOURCE,
+    process.env.TANDEM_ACTOR_SOURCE,
+  ];
+
+  for (const candidate of candidates) {
+    const source = normalizeTabSource(candidate);
+    if (source) {
+      return source;
+    }
+  }
+
+  return 'wingman';
+}
+
 /** Truncate text to a maximum number of words */
 export function truncateToWords(text: string, maxWords: number): string {
   const words = text.split(/\s+/);
@@ -62,7 +80,7 @@ export function truncateToWords(text: string, maxWords: number): string {
 export async function logActivity(toolName: string, details?: string): Promise<void> {
   const text = details ? `🤖 ${toolName}: ${details}` : `🤖 ${toolName}`;
   try {
-    await apiCall('POST', '/chat', { text, from: 'claude' });
+    await apiCall('POST', '/chat', { text, from: getMcpSource() });
   } catch {
     // Don't fail the tool call if activity logging fails
   }

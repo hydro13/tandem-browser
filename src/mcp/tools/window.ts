@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiCall, truncateToWords, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, truncateToWords, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 import { hostnameMatches, tryParseUrl, urlHasProtocol } from '../../utils/security';
 
@@ -61,8 +61,8 @@ export function registerWindowTools(server: McpServer): void {
       const findings: Array<{ title: string; url: string; snippet: string }> = [];
 
       try {
-        // Step 1: Open a new tab for research (source: wingman)
-        const tabResult = await apiCall('POST', '/tabs/open', { url: 'about:blank', source: 'wingman' });
+        // Step 1: Open a new tab for research with the MCP connector source.
+        const tabResult = await apiCall('POST', '/tabs/open', { url: 'about:blank', source: getMcpSource() });
         const researchTabId = tabResult?.tab?.id;
 
         await humanDelay(TIMING.beforeAction);

@@ -67,6 +67,7 @@ export function createMockContext(): RouteContext {
       setGroup: vi.fn().mockReturnValue({ groupId: 'g1', name: 'Test', color: '#4285f4', tabIds: [] }),
       setTabSource: vi.fn().mockReturnValue(true),
       getActiveWebContents: vi.fn().mockResolvedValue(mockWC),
+      getActiveWebContentsId: vi.fn().mockReturnValue(100),
       getWebContents: vi.fn().mockReturnValue(mockWC),
       getActiveTab: vi.fn().mockReturnValue({
         id: 'tab-1',
@@ -77,6 +78,21 @@ export function createMockContext(): RouteContext {
         source: 'user',
         partition: 'persist:tandem',
       }),
+      getTab: vi.fn().mockImplementation((tabId: string) => {
+        if (tabId === 'tab-1') {
+          return {
+            id: 'tab-1',
+            webContentsId: 100,
+            url: 'https://example.com',
+            title: 'Example',
+            active: true,
+            source: 'user',
+            partition: 'persist:tandem',
+          };
+        }
+        return null;
+      }),
+      listWebContentsIds: vi.fn().mockReturnValue([100]),
       setEmoji: vi.fn().mockReturnValue(true),
       clearEmoji: vi.fn().mockReturnValue(true),
       flashEmoji: vi.fn().mockReturnValue(true),
@@ -495,11 +511,14 @@ export function createMockContext(): RouteContext {
       switch: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', icon: 'briefcase', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
       getActive: vi.fn().mockReturnValue({ id: 'ws-default', name: 'Default', icon: 'home', color: '#4285f4', order: 0, isDefault: true, tabIds: [] }),
       getActiveId: vi.fn().mockReturnValue('ws-default'),
+      getActiveSource: vi.fn().mockReturnValue('focused-tab'),
       get: vi.fn().mockReturnValue(null),
+      getWorkspaceIdForTab: vi.fn().mockReturnValue('ws-default'),
       update: vi.fn().mockReturnValue({ id: 'ws-1', name: 'Test', icon: 'briefcase', color: '#4285f4', order: 0, isDefault: false, tabIds: [] }),
       assignTab: vi.fn(),
       removeTab: vi.fn(),
       moveTab: vi.fn(),
+      reconcileTabState: vi.fn().mockReturnValue({ changed: false, activeId: 'ws-default' }),
       destroy: vi.fn(),
     } as any,
 

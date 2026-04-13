@@ -29,9 +29,25 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
 
   router.get('/workspaces', (_req: Request, res: Response) => {
     try {
+      const tabs = ctx.tabManager.listTabs();
+      const activeTab = ctx.tabManager.getActiveTab();
+      ctx.workspaceManager.reconcileTabState(
+        tabs.map(tab => tab.webContentsId),
+        activeTab?.webContentsId ?? null,
+      );
       const workspaces = ctx.workspaceManager.list();
       const activeId = ctx.workspaceManager.getActiveId();
-      res.json({ ok: true, workspaces, activeId });
+      res.json({
+        ok: true,
+        scope: 'global',
+        workspaces,
+        activeId,
+        activeTabId: activeTab?.id ?? null,
+        activeTabWorkspaceId: activeTab
+          ? ctx.workspaceManager.getWorkspaceIdForTab(activeTab.webContentsId)
+          : null,
+        activeWorkspaceSource: ctx.workspaceManager.getActiveSource(),
+      });
     } catch (e: unknown) {
       handleRouteError(res, e);
     }
@@ -57,10 +73,50 @@ export function registerWorkspaceRoutes(router: Router, ctx: RouteContext): void
     }
   });
 
-  const activateWorkspace = (req: Request<IdParams>, res: Response) => {
+  const activateWorkspace = async (req: Request<IdParams>, res: Response) => {
     try {
-      const workspace = ctx.workspaceManager.switch(req.params.id);
-      res.json({ ok: true, workspace });
+      const tabs = ctx.tabManager.listTabs();
+      const tabByWebContentsId = new Map(tabs.map(tab => [tab.webContentsId, tab]));
+      const activeTabBeforeSwitch = ctx.tabManager.getActiveTab();
+      ctx.workspaceManager.reconcileTabState(
+        tabs.map(tab => tab.webContentsId),
+        activeTabBeforeSwitch?.webContentsId ?? null,
+      );
+
+      const workspace = ctx.workspaceManager.get(req.params.id);
+      if (!workspace) {
+        throw new Error(`Workspace ${req.params.id} not found`);
+      }
+
+      let focusedTabId: string | null = null;
+
+      if (workspace.tabIds.length > 0) {
+        const targetTab = workspace.tabIds
+          .map(tabId => tabByWebContentsId.get(tabId))
+          .find((tab): tab is NonNullable<typeof tab> => Boolean(tab));
+        if (targetTab) {
+          await ctx.tabManager.focusTab(targetTab.id);
+          focusedTabId = targetTab.id;
+        } else {
+          ctx.workspaceManager.switch(req.params.id);
+        }
+      } else {
+        ctx.workspaceManager.switch(req.params.id);
+      }
+
+      const activeTab = ctx.tabManager.getActiveTab();
+      ctx.workspaceManager.reconcileTabState(
+        tabs.map(tab => tab.webContentsId),
+        activeTab?.webContentsId ?? null,
+      );
+
+      res.json({
+        ok: true,
+        scope: 'global',
+        workspace: ctx.workspaceManager.get(workspace.id) ?? workspace,
+        focusedTabId,
+        activeId: ctx.workspaceManager.getActiveId(),
+      });
     } catch (e: unknown) {
       handleRouteError(res, e);
     }

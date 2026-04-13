@@ -4,12 +4,11 @@ import type { SyncManager } from '../sync/manager';
 import type { SessionRestoreManager } from '../session/restore';
 import { createLogger } from '../utils/logger';
 import { IpcChannels } from '../shared/ipc-channels';
+import type { TabSource } from './context';
 
 const log = createLogger('TabManager');
 
 // ─── Types ──────────────────────────────────────────────────────────
-
-export type TabSource = 'user' | 'wingman';
 
 export interface Tab {
   id: string;
@@ -66,6 +65,7 @@ export class TabManager {
   private sessionRestore: SessionRestoreManager | null = null;
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private workspaceIdResolver: ((webContentsId: number) => string | null) | null = null;
+  private activeTabChangedHandler: ((tab: Tab | null) => void | Promise<void>) | null = null;
 
   // === 2. Constructor (BrowserWindow variant) ===
 
@@ -93,6 +93,11 @@ export class TabManager {
     this.workspaceIdResolver = resolver;
   }
 
+  /** Wire a callback that runs after the active tab changes. */
+  setActiveTabChangedHandler(handler: ((tab: Tab | null) => void | Promise<void>) | null): void {
+    this.activeTabChangedHandler = handler;
+  }
+
   // === 4. Public methods ===
 
   /** Get the active tab */
@@ -113,6 +118,16 @@ export class TabManager {
     const tab = this.tabs.get(tabId);
     if (!tab) return null;
     return webContents.fromId(tab.webContentsId) || null;
+  }
+
+  /** Get the active tab's webContents ID, or null when no tab is focused. */
+  getActiveWebContentsId(): number | null {
+    return this.getActiveTab()?.webContentsId ?? null;
+  }
+
+  /** List tracked webContents IDs for all tabs. */
+  listWebContentsIds(): number[] {
+    return this.listTabs().map(tab => tab.webContentsId);
   }
 
   /** Get a tab by ID */
@@ -267,6 +282,8 @@ export class TabManager {
       const remaining = Array.from(this.tabs.keys());
       if (remaining.length > 0) {
         await this.focusTab(remaining[remaining.length - 1]);
+      } else {
+        await this.notifyActiveTabChanged(null);
       }
     }
 
@@ -293,6 +310,8 @@ export class TabManager {
     await this.win.webContents.executeJavaScript(`
       window.__tandemTabs.focusTab(${JSON.stringify(tabId)})
     `);
+
+    await this.notifyActiveTabChanged(tab);
 
     return true;
   }
@@ -455,6 +474,7 @@ export class TabManager {
     };
     this.tabs.set(id, tab);
     this.activeTabId = id;
+    void this.notifyActiveTabChanged(tab);
     return tab;
   }
 
@@ -691,6 +711,21 @@ export class TabManager {
         error instanceof Error ? error.message : String(error),
       );
       return false;
+    }
+  }
+
+  private async notifyActiveTabChanged(tab: Tab | null): Promise<void> {
+    if (!this.activeTabChangedHandler) {
+      return;
+    }
+
+    try {
+      await this.activeTabChangedHandler(tab);
+    } catch (error) {
+      log.warn(
+        'Active tab changed handler failed:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   }
 }

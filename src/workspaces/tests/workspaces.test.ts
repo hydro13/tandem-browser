@@ -168,6 +168,7 @@ describe('WorkspaceManager', () => {
       const result = wm.switch(ws.id);
       expect(result.id).toBe(ws.id);
       expect(wm.getActiveId()).toBe(ws.id);
+      expect(wm.getActiveSource()).toBe('selection');
     });
 
     it('throws for nonexistent workspace', () => {
@@ -267,6 +268,67 @@ describe('WorkspaceManager', () => {
       for (const w of wm.list()) {
         expect(w.tabIds).toEqual([]);
       }
+    });
+  });
+
+  describe('reconcileTabState', () => {
+    it('removes stale and duplicate tab IDs, assigns unowned tabs to default, and syncs active workspace to the focused tab', () => {
+      const wm = createManager();
+      const wsA = wm.create({ name: 'Agent A' });
+      const wsB = wm.create({ name: 'Agent B' });
+      const workspaces = (wm as any).workspaces as Map<string, { tabIds: number[] }>;
+      const defaultWs = wm.list().find(w => w.isDefault)!;
+
+      workspaces.get(defaultWs.id)!.tabIds = [1, 1, 999];
+      workspaces.get(wsA.id)!.tabIds = [1, 2];
+      workspaces.get(wsB.id)!.tabIds = [];
+
+      const result = wm.reconcileTabState([1, 2, 3], 2);
+
+      expect(result).toEqual({ changed: true, activeId: wsA.id });
+      expect(workspaces.get(defaultWs.id)!.tabIds).toEqual([1, 3]);
+      expect(workspaces.get(wsA.id)!.tabIds).toEqual([2]);
+      expect(workspaces.get(wsB.id)!.tabIds).toEqual([]);
+      expect(wm.getActiveId()).toBe(wsA.id);
+    });
+
+    it('does not emit workspace-switched notifications for read-path reconciliation unless explicitly requested', () => {
+      const wm = createManager();
+      const ws = wm.create({ name: 'Agent A' });
+      const mockSend = vi.fn();
+      const mockWin = {
+        isDestroyed: vi.fn().mockReturnValue(false),
+        webContents: { send: mockSend, isDestroyed: vi.fn().mockReturnValue(false) },
+      } as any;
+      wm.setMainWindow(mockWin);
+
+      const workspaces = (wm as any).workspaces as Map<string, { tabIds: number[] }>;
+      const defaultWs = wm.list().find(w => w.isDefault)!;
+      workspaces.get(defaultWs.id)!.tabIds = [1];
+      workspaces.get(ws.id)!.tabIds = [2];
+
+      wm.reconcileTabState([1, 2], 2);
+      expect(mockSend).not.toHaveBeenCalled();
+
+      wm.reconcileTabState([1, 2], 1, { notify: true });
+      expect(mockSend).toHaveBeenCalledWith('workspace-switched', expect.objectContaining({ id: defaultWs.id }));
+    });
+
+    it('preserves an explicitly selected empty workspace until focus actually changes', () => {
+      const wm = createManager();
+      const ws = wm.create({ name: 'Empty' });
+
+      wm.switch(ws.id);
+      expect(wm.getActiveId()).toBe(ws.id);
+      expect(wm.getActiveSource()).toBe('selection');
+
+      wm.reconcileTabState([1], 1);
+      expect(wm.getActiveId()).toBe(ws.id);
+      expect(wm.getActiveSource()).toBe('selection');
+
+      wm.reconcileTabState([1], 1, { followFocusedTab: true });
+      expect(wm.getActiveId()).toBe(wm.list().find(workspace => workspace.isDefault)!.id);
+      expect(wm.getActiveSource()).toBe('focused-tab');
     });
   });
 

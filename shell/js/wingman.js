@@ -189,9 +189,10 @@
         else if (event.data.selector) text = `${event.type}: ${event.data.selector}`;
         else if (event.data.title) text = `${event.type}: ${event.data.title}`;
 
-        const rawSource = event.data.source || 'user';
-        const source = ['wingman', 'user'].includes(rawSource) ? rawSource : 'user';
-        const sourceEmoji = source === 'wingman' ? '🤖' : '👤';
+        const source = typeof event.data.source === 'string' && event.data.source.trim()
+          ? event.data.source.trim()
+          : 'user';
+        const sourceEmoji = source === 'user' ? '👤' : '🤖';
         const item = document.createElement('div');
         item.className = 'activity-item';
         item.innerHTML = `<span class="a-icon">${icon}</span><span class="a-source ${source}">${sourceEmoji}</span><span class="a-text">${escapeHtml(text)}</span><span class="a-time">${time}</span>`;
@@ -207,9 +208,9 @@
           if (id === data.tabId) {
             const sourceEl = entry.tabEl.querySelector('.tab-source');
             if (sourceEl) {
-              if (data.source === 'wingman') {
+              if (data.source && data.source !== 'user') {
                 sourceEl.textContent = '🤖';
-                sourceEl.title = 'AI controlled — click to take over';
+                sourceEl.title = `${data.source} controls this tab — click to take over`;
                 sourceEl.style.display = '';
               } else {
                 sourceEl.textContent = '';
@@ -218,7 +219,7 @@
               }
             }
             // Visual indicator: purple bottom border for AI tabs
-            if (data.source === 'wingman') {
+            if (data.source && data.source !== 'user') {
               entry.tabEl.style.borderBottom = '2px solid #7c3aed';
             } else {
               entry.tabEl.style.borderBottom = '';
@@ -247,7 +248,12 @@
       // Hook into existing tab click by patching focusTab handler
       const _origFocusTab = window.__tandemTabs.focusTab;
       window.__tandemTabs.focusTab = function (tabId) {
-        origTabClickHandler(tabId);
+        const shouldClaim = typeof window.__tandemTabs.consumeUserOwnershipClaim === 'function'
+          ? window.__tandemTabs.consumeUserOwnershipClaim()
+          : false;
+        if (shouldClaim) {
+          origTabClickHandler(tabId);
+        }
         return _origFocusTab.call(window.__tandemTabs, tabId);
       };
 

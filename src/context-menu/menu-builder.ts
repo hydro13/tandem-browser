@@ -620,10 +620,14 @@ export class ContextMenuBuilder {
       },
     }));
     const currentSource = this.deps.tabManager.getTabSource(tabId);
+    const isAgentControlled = currentSource !== null && currentSource !== 'user';
     menu.append(new MenuItem({
-      label: currentSource === 'wingman' ? 'Take back from Wingman' : 'Let Wingman handle this tab',
+      label: isAgentControlled
+        ? `Take back from ${currentSource === 'wingman' ? 'Wingman' : currentSource}`
+        : 'Let Wingman handle this tab',
       click: () => {
-        const newSource = this.deps.tabManager.getTabSource(tabId) === 'wingman' ? 'user' : 'wingman';
+        const nextSource = this.deps.tabManager.getTabSource(tabId);
+        const newSource = nextSource !== null && nextSource !== 'user' ? 'user' : 'wingman';
         this.deps.tabManager.setTabSource(tabId, newSource);
       },
     }));

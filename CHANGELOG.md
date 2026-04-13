@@ -2,6 +2,20 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.71.1] - 2026-04-13
+
+- fix: stabilize multi-actor workspace, tab, SSE, and MCP ownership context
+
+### Fixed
+
+- Active workspace selection and active tab ownership now reconcile deterministically instead of drifting apart during focus changes, workspace switches, or agent-opened tabs
+- `GET /workspaces` now reports whether the active workspace comes from a focused tab or an explicit workspace selection
+- `GET /active-tab/context` now includes trustworthy workspace/source/actor ownership data for the active tab and the global tab list
+- `/events/stream` now attaches workspace and actor/source context to tab-driven events when known
+- Workspace activation no longer forces a focus churn when the target workspace already has a live tab; empty-workspace activation remains explicit as a `selection`
+- MCP tab/chat actions now use a single configurable actor source (`TANDEM_SOURCE` / `TANDEM_MCP_SOURCE` / `TANDEM_ACTOR_SOURCE`) instead of a hardcoded `wingman`/`claude` split
+- MCP resources (`tandem://tabs/list`, `tandem://context`) now surface workspace/source ownership details instead of hiding them behind older global summaries
+
 ## [v0.71.0] - 2026-04-11
 
 - feat: tab emoji badges — assign emoji to tabs for quick visual identification

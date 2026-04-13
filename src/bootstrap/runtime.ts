@@ -8,6 +8,7 @@ import { TabLockManager } from '../agents/tab-lock-manager';
 import { LoginManager } from '../auth/login-manager';
 import { GooglePhotosManager } from '../integrations/google-photos';
 import { ContextBridge } from '../bridge/context-bridge';
+import { buildOwnershipContextForTabId } from '../tabs/runtime-context';
 import { ClaroNoteManager } from '../claronote/manager';
 import { ConfigManager } from '../config/manager';
 import { ContentExtractor } from '../content/extractor';
@@ -188,8 +189,27 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.tabManager.setSyncManager(runtime.syncManager);
   runtime.tabManager.setSessionRestore(runtime.sessionRestoreManager);
   runtime.tabManager.setWorkspaceIdResolver((webContentsId) => runtime.workspaceManager.getWorkspaceIdForTab(webContentsId) ?? null);
+  runtime.tabManager.setActiveTabChangedHandler((tab) => {
+    runtime.workspaceManager.reconcileTabState(
+      runtime.tabManager.listWebContentsIds(),
+      tab?.webContentsId ?? null,
+      { notify: true, followFocusedTab: true },
+    );
+  });
   runtime.historyManager.setSyncManager(runtime.syncManager);
   runtime.workspaceManager.setSyncManager(runtime.syncManager);
+  runtime.workspaceManager.setTabStateResolvers({
+    listTrackedTabIds: () => runtime.tabManager.listWebContentsIds(),
+    getActiveTabId: () => runtime.tabManager.getActiveWebContentsId(),
+  });
+  runtime.eventStream.setContextResolver(({ tabId }) =>
+    buildOwnershipContextForTabId(
+      runtime.tabManager,
+      runtime.workspaceManager,
+      tabId,
+      tabId ? 'tab' : 'global',
+    )
+  );
   runtime.devToolsManager.setWingmanStream(runtime.wingmanStream);
   runtime.devToolsManager.setActivityTracker(runtime.activityTracker);
 
@@ -346,6 +366,7 @@ export function registerRuntimeIpcHandlers(win: BrowserWindow, runtime: RuntimeM
     wingmanStream: runtime.wingmanStream,
     snapshotManager: runtime.snapshotManager,
     videoRecorderManager: runtime.videoRecorderManager,
+    workspaceManager: runtime.workspaceManager,
   });
 }
 

@@ -2,6 +2,7 @@ import type { Router, Request, Response } from 'express';
 import { webContents } from 'electron';
 import type { RouteContext } from '../context';
 import { handleRouteError } from '../../utils/errors';
+import { normalizeTabSource } from '../../tabs/context';
 
 /**
  * Register all tab-related API routes (open, close, list, focus, group, source, reconcile, cleanup).
@@ -31,17 +32,21 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       return;
     }
     try {
-      const tabSource = source === 'wingman' ? 'wingman' as const : 'user' as const;
+      const tabSource = normalizeTabSource(source) ?? 'user';
+      const shouldFocusAfterWorkspaceMove = Boolean(workspaceId) && focus !== false;
       const tab = await ctx.tabManager.openTab(
         url,
         groupId,
         tabSource,
         'persist:tandem',
-        focus,
+        shouldFocusAfterWorkspaceMove ? false : focus,
         inheritSessionFrom ? { inheritSessionFrom } : undefined,
       );
       if (workspaceId) {
         ctx.workspaceManager.moveTab(tab.webContentsId, workspaceId);
+        if (shouldFocusAfterWorkspaceMove) {
+          await ctx.tabManager.focusTab(tab.id);
+        }
       }
       ctx.panelManager.logActivity('tab-open', {
         url,
@@ -108,7 +113,11 @@ export function registerTabRoutes(router: Router, ctx: RouteContext): void {
       if (!tabId || !source) {
         return res.status(400).json({ error: 'tabId and source required' });
       }
-      const ok = ctx.tabManager.setTabSource(tabId, source);
+      const tabSource = normalizeTabSource(source);
+      if (!tabSource) {
+        return res.status(400).json({ error: 'source must be a non-empty string' });
+      }
+      const ok = ctx.tabManager.setTabSource(tabId, tabSource);
       res.json({ ok });
     } catch (e) {
       handleRouteError(res, e);

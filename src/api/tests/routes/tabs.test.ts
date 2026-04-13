@@ -85,15 +85,15 @@ describe('Tab Routes', () => {
       );
     });
 
-    it('maps unknown source to robin', async () => {
+    it('passes through non-empty custom actor sources', async () => {
       await request(app)
         .post('/tabs/open')
-        .send({ source: 'unknown' });
+        .send({ source: 'codex' });
 
       expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
         'about:blank',
         undefined,
-        'user',
+        'codex',
         'persist:tandem',
         true,
         undefined,
@@ -151,7 +151,16 @@ describe('Tab Routes', () => {
         .send({ url: 'https://example.com', workspaceId: 'ws-ai' });
 
       expect(res.status).toBe(200);
+      expect(ctx.tabManager.openTab).toHaveBeenCalledWith(
+        'https://example.com',
+        undefined,
+        'user',
+        'persist:tandem',
+        false,
+        undefined,
+      );
       expect(ctx.workspaceManager.moveTab).toHaveBeenCalledWith(100, 'ws-ai');
+      expect(ctx.tabManager.focusTab).toHaveBeenCalledWith('tab-1');
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith(
         'tab-open',
         {
@@ -317,11 +326,11 @@ describe('Tab Routes', () => {
     it('sets the tab source', async () => {
       const res = await request(app)
         .post('/tabs/source')
-        .send({ tabId: 'tab-1', source: 'wingman' });
+        .send({ tabId: 'tab-1', source: 'codex' });
 
       expect(res.status).toBe(200);
       expect(res.body.ok).toBe(true);
-      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'wingman');
+      expect(ctx.tabManager.setTabSource).toHaveBeenCalledWith('tab-1', 'codex');
     });
 
     it('returns 400 when tabId is missing', async () => {
@@ -340,6 +349,15 @@ describe('Tab Routes', () => {
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('tabId and source required');
+    });
+
+    it('returns 400 when source is empty', async () => {
+      const res = await request(app)
+        .post('/tabs/source')
+        .send({ tabId: 'tab-1', source: '   ' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('source must be a non-empty string');
     });
   });
 

@@ -163,6 +163,91 @@ describe('misc routes', () => {
   });
 
   // ═══════════════════════════════════════════════
+  // ACTIVE TAB CONTEXT
+  // ═══════════════════════════════════════════════
+
+  describe('GET /active-tab/context', () => {
+    it('includes workspace and actor context for the focused tab and the global tab list', async () => {
+      const activeTab = {
+        id: 'tab-1',
+        webContentsId: 100,
+        url: 'https://example.com',
+        title: 'Example',
+        active: true,
+        source: 'claude',
+        partition: 'persist:tandem',
+      };
+      const otherTab = {
+        id: 'tab-2',
+        webContentsId: 101,
+        url: 'https://openai.com',
+        title: 'OpenAI',
+        active: false,
+        source: 'user',
+        partition: 'persist:tandem',
+      };
+      const workspaces = {
+        'ws-agent': { id: 'ws-agent', name: 'Codex', icon: 'cpu-chip', color: '#2563eb', order: 1, isDefault: false, tabIds: [100] },
+        'ws-default': { id: 'ws-default', name: 'Default', icon: 'home', color: '#4285f4', order: 0, isDefault: true, tabIds: [101] },
+      };
+
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(activeTab as any);
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([activeTab, otherTab] as any);
+      vi.mocked(ctx.workspaceManager.getActive).mockReturnValue(workspaces['ws-agent'] as any);
+      vi.mocked(ctx.workspaceManager.get).mockImplementation((id: string) => (workspaces as Record<string, unknown>)[id] as any ?? null);
+      vi.mocked(ctx.workspaceManager.getWorkspaceIdForTab).mockImplementation((webContentsId: number) => {
+        if (webContentsId === 100) return 'ws-agent';
+        if (webContentsId === 101) return 'ws-default';
+        return null;
+      });
+
+      const mockWC = createMockWebContents(100);
+      mockWC.executeJavaScript
+        .mockResolvedValueOnce(JSON.stringify({
+          innerWidth: 1280,
+          innerHeight: 720,
+          scrollTop: 10,
+          scrollHeight: 2000,
+          clientHeight: 720,
+        }))
+        .mockResolvedValueOnce('Example page text');
+      mockGetActiveWC.mockResolvedValue(mockWC as any);
+
+      const res = await request(app).get('/active-tab/context');
+
+      expect(res.status).toBe(200);
+      expect(ctx.workspaceManager.reconcileTabState).toHaveBeenCalledWith([100, 101], 100);
+      expect(res.body.scope).toEqual({ activeTab: 'tab', tabs: 'global' });
+      expect(res.body.activeWorkspace).toEqual({
+        id: 'ws-agent',
+        name: 'Codex',
+        derivedFrom: 'focused-tab',
+        matchesFocusedTab: true,
+      });
+      expect(res.body.activeTab.source).toBe('claude');
+      expect(res.body.activeTab.actor).toEqual({ id: 'claude', kind: 'agent' });
+      expect(res.body.activeTab.workspaceId).toBe('ws-agent');
+      expect(res.body.activeTab.workspaceName).toBe('Codex');
+      expect(res.body.tabs).toEqual([
+        expect.objectContaining({
+          id: 'tab-1',
+          workspaceId: 'ws-agent',
+          workspaceName: 'Codex',
+          source: 'claude',
+          actor: { id: 'claude', kind: 'agent' },
+        }),
+        expect.objectContaining({
+          id: 'tab-2',
+          workspaceId: 'ws-default',
+          workspaceName: 'Default',
+          source: 'user',
+          actor: { id: 'user', kind: 'human' },
+        }),
+      ]);
+    });
+  });
+
+  // ═══════════════════════════════════════════════
   // PASSWORD MANAGER
   // ═══════════════════════════════════════════════
 

@@ -238,6 +238,18 @@ describe('TabManager', () => {
       const result = await tm.focusTab('nonexistent');
       expect(result).toBe(false);
     });
+
+    it('notifies the active-tab handler after focus changes', async () => {
+      const handler = vi.fn();
+      tm.setActiveTabChangedHandler(handler);
+      await tm.openTab('https://one.com');
+      const t2 = await tm.openTab('https://two.com', undefined, 'user', 'persist:tandem', false);
+
+      handler.mockClear();
+      await tm.focusTab(t2.id);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ id: t2.id, webContentsId: t2.webContentsId }));
+    });
   });
 
   describe('updateTab()', () => {

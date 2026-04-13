@@ -6,6 +6,7 @@ import type { PanelManager } from '../panel/manager';
 import type { DownloadManager } from '../downloads/manager';
 import type { PinboardManager } from '../pinboards/manager';
 import type { ConfigManager } from '../config/manager';
+import type { TabSource } from '../tabs/context';
 
 /**
  * Context info passed from Electron's context-menu event on webContents.
@@ -34,7 +35,7 @@ export interface ContextMenuParams {
   };
   // Tandem-specific
   tabId?: string;
-  tabSource?: 'user' | 'wingman';
+  tabSource?: TabSource;
 }
 
 /**

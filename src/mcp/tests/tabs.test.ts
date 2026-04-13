@@ -2,15 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../api-client.js', () => ({
   apiCall: vi.fn(),
+  getMcpSource: vi.fn(() => 'wingman'),
   tabHeaders: vi.fn((tabId?: string) => (tabId ? { 'X-Tab-Id': tabId } : undefined)),
   logActivity: vi.fn(),
 }));
 
-import { apiCall, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, logActivity } from '../api-client.js';
 import { registerTabTools } from '../tools/tabs.js';
 import { createMockServer, getHandler, expectTextContent } from './mcp-test-helper.js';
 
 const mockApiCall = vi.mocked(apiCall);
+const mockGetMcpSource = vi.mocked(getMcpSource);
 const mockLogActivity = vi.mocked(logActivity);
 
 describe('MCP tab tools', () => {
@@ -19,6 +21,7 @@ describe('MCP tab tools', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetMcpSource.mockReturnValue('wingman');
   });
 
   // ── tandem_list_tabs ──────────────────────────────────────────────
@@ -28,16 +31,16 @@ describe('MCP tab tools', () => {
     it('lists open tabs with formatted text', async () => {
       mockApiCall.mockResolvedValueOnce({
         tabs: [
-          { id: 't1', title: 'Google', url: 'https://google.com', active: true },
-          { id: 't2', title: 'GitHub', url: 'https://github.com', active: false },
+          { id: 't1', title: 'Google', url: 'https://google.com', active: true, workspaceName: 'Default', source: 'user' },
+          { id: 't2', title: 'GitHub', url: 'https://github.com', active: false, workspaceName: 'Claude', source: 'claude' },
         ],
       });
 
       const result = await handler({});
       const text = expectTextContent(result, 'Open tabs (2)');
-      expect(text).toContain('→ [t1] Google');
-      expect(text).toContain('  [t2] GitHub');
-      expect(mockApiCall).toHaveBeenCalledWith('GET', '/tabs/list');
+      expect(text).toContain('-> [t1] Google');
+      expect(text).toContain('[workspace: Claude, source: claude]');
+      expect(mockApiCall).toHaveBeenCalledWith('GET', '/active-tab/context');
     });
 
     it('handles empty tab list', async () => {
@@ -62,7 +65,7 @@ describe('MCP tab tools', () => {
     it('includes emoji in tab listing', async () => {
       mockApiCall.mockResolvedValueOnce({
         tabs: [
-          { id: 't1', title: 'Project', url: 'https://github.com', active: true, emoji: '🔥' },
+          { id: 't1', title: 'Project', url: 'https://github.com', active: true, emoji: '🔥', source: 'codex' },
           { id: 't2', title: 'Docs', url: 'https://docs.com', active: false, emoji: null },
         ],
       });
@@ -108,6 +111,29 @@ describe('MCP tab tools', () => {
         url: 'https://a.com',
         source: 'wingman',
         workspaceId: 'w1',
+      });
+    });
+
+    it('uses the MCP connector source override when provided by the environment helper', async () => {
+      mockGetMcpSource.mockReturnValue('claude');
+      mockApiCall.mockResolvedValueOnce({ tab: { id: 't6' } });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      await handler({ url: 'https://example.com' });
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/open', {
+        url: 'https://example.com',
+        source: 'claude',
+      });
+    });
+
+    it('allows per-call source overrides', async () => {
+      mockApiCall.mockResolvedValueOnce({ tab: { id: 't7' } });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+
+      await handler({ url: 'https://example.com', source: 'openclaw' });
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/tabs/open', {
+        url: 'https://example.com',
+        source: 'openclaw',
       });
     });
   });

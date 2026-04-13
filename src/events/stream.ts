@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { buildTabOwnershipContext, type TabOwnershipContext } from '../tabs/context';
 
 // ─── Types ──────────────────────────────────────────────────────────
 
@@ -16,6 +17,7 @@ export interface BrowserEvent {
   url?: string;
   title?: string;
   data?: Record<string, unknown>;
+  context: TabOwnershipContext;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────
@@ -36,13 +38,29 @@ export class EventStreamManager {
   private recentEvents: BrowserEvent[] = [];
   private eventCounter = 0;
   private lastScrollTime = 0;
+  private contextResolver: ((opts: {
+    type: BrowserEventType;
+    tabId?: string;
+    url?: string;
+    title?: string;
+  }) => TabOwnershipContext) | null = null;
 
   // === 4. Public methods ===
+
+  /** Wire a resolver that enriches emitted events with workspace/source ownership context. */
+  setContextResolver(resolver: ((opts: {
+    type: BrowserEventType;
+    tabId?: string;
+    url?: string;
+    title?: string;
+  }) => TabOwnershipContext) | null): void {
+    this.contextResolver = resolver;
+  }
 
   // --- IPC Handlers ---
 
   /** Handle webview events from IPC (activity-webview-event) */
-  handleWebviewEvent(data: { type: string; url?: string; tabId?: string; title?: string }): void {
+  handleWebviewEvent(data: { type: string; url?: string; tabId?: string; title?: string; context?: TabOwnershipContext }): void {
     switch (data.type) {
       case 'did-navigate':
       case 'did-navigate-in-page':
@@ -50,6 +68,7 @@ export class EventStreamManager {
           tabId: data.tabId,
           url: data.url,
           title: data.title,
+          context: data.context,
         }));
         break;
 
@@ -58,6 +77,7 @@ export class EventStreamManager {
           tabId: data.tabId,
           url: data.url,
           title: data.title,
+          context: data.context,
         }));
         break;
 
@@ -68,7 +88,7 @@ export class EventStreamManager {
   }
 
   /** Handle tab lifecycle events from IPC (tab-update, tab-register) */
-  handleTabEvent(eventType: 'tab-opened' | 'tab-closed' | 'tab-focused' | 'tab-updated', data: { tabId?: string; url?: string; title?: string }): void {
+  handleTabEvent(eventType: 'tab-opened' | 'tab-closed' | 'tab-focused' | 'tab-updated', data: { tabId?: string; url?: string; title?: string; context?: TabOwnershipContext }): void {
     switch (eventType) {
       case 'tab-opened':
         this.emit(this.createEvent('tab-opened', data));
@@ -90,11 +110,12 @@ export class EventStreamManager {
   }
 
   /** Handle form submission events */
-  handleFormSubmit(data: { url?: string; tabId?: string; fields?: unknown }): void {
+  handleFormSubmit(data: { url?: string; tabId?: string; fields?: unknown; context?: TabOwnershipContext }): void {
     this.emit(this.createEvent('form-submit', {
       url: data.url,
       tabId: data.tabId,
       data: { fieldCount: Array.isArray(data.fields) ? data.fields.length : 0 },
+      context: data.context,
     }));
   }
 
@@ -114,7 +135,7 @@ export class EventStreamManager {
   }
 
   /** Handle scroll events — debounced to max 1 per 5 seconds */
-  handleScroll(data: { tabId?: string; url?: string }): void {
+  handleScroll(data: { tabId?: string; url?: string; context?: TabOwnershipContext }): void {
     const now = Date.now();
     if (now - this.lastScrollTime < SCROLL_DEBOUNCE_MS) return;
     this.lastScrollTime = now;
@@ -122,13 +143,15 @@ export class EventStreamManager {
     this.emit(this.createEvent('scroll', {
       tabId: data.tabId,
       url: data.url,
+      context: data.context,
     }));
   }
 
   /** Emit an error event */
-  handleError(message: string, data?: Record<string, unknown>): void {
+  handleError(message: string, data?: Record<string, unknown>, context?: TabOwnershipContext): void {
     this.emit(this.createEvent('error', {
       data: { message, ...data },
+      context,
     }));
   }
 
@@ -215,7 +238,22 @@ export class EventStreamManager {
     }
   }
 
-  private createEvent(type: BrowserEventType, opts: { tabId?: string; url?: string; title?: string; data?: Record<string, unknown> } = {}): BrowserEvent {
+  private createEvent(type: BrowserEventType, opts: {
+    tabId?: string;
+    url?: string;
+    title?: string;
+    data?: Record<string, unknown>;
+    context?: TabOwnershipContext;
+  } = {}): BrowserEvent {
+    const context = opts.context
+      ?? this.contextResolver?.({
+        type,
+        tabId: opts.tabId,
+        url: opts.url,
+        title: opts.title,
+      })
+      ?? buildTabOwnershipContext({ scope: opts.tabId ? 'tab' : 'global' });
+
     return {
       id: ++this.eventCounter,
       type,
@@ -224,6 +262,7 @@ export class EventStreamManager {
       url: opts.url,
       title: opts.title,
       data: opts.data,
+      context,
     };
   }
 }

@@ -8,6 +8,8 @@ import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { createRateLimitMiddleware } from '../rate-limit';
+import { getActorContext, normalizeTabSource } from '../../tabs/context';
+import { buildOwnershipContextForTab } from '../../tabs/runtime-context';
 
 // Module-level live mode state (was a closure variable in server.ts)
 let liveMode = false;
@@ -186,8 +188,22 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   router.get('/active-tab/context', async (_req: Request, res: Response) => {
     try {
       const tab = ctx.tabManager.getActiveTab();
+      const trackedTabIds = ctx.tabManager.listTabs().map(currentTab => currentTab.webContentsId);
+      ctx.workspaceManager.reconcileTabState(trackedTabIds, tab?.webContentsId ?? null);
+      const selectedWorkspace = ctx.workspaceManager.getActive();
+
       if (!tab) {
-        res.json({ ready: false, activeTab: null, tabs: [] });
+      res.json({
+        ready: false,
+        scope: { activeTab: 'tab', tabs: 'global' },
+        activeWorkspace: {
+          id: selectedWorkspace?.id ?? null,
+          name: selectedWorkspace?.name ?? null,
+          derivedFrom: ctx.workspaceManager.getActiveSource(),
+        },
+        activeTab: null,
+        tabs: [],
+      });
         return;
       }
 
@@ -215,15 +231,32 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         } catch { /* best-effort */ }
       }
 
+      const activeContext = buildOwnershipContextForTab(ctx.workspaceManager, tab);
       const allTabs = ctx.tabManager.listTabs().map(t => ({
         id: t.id,
         url: t.url,
         title: t.title,
         active: t.id === tab.id,
+        workspaceId: ctx.workspaceManager.getWorkspaceIdForTab(t.webContentsId),
+        workspaceName: (() => {
+          const workspaceId = ctx.workspaceManager.getWorkspaceIdForTab(t.webContentsId);
+          return workspaceId ? ctx.workspaceManager.get(workspaceId)?.name ?? null : null;
+        })(),
+        source: normalizeTabSource(t.source),
+        actor: getActorContext(t.source),
       }));
 
       res.json({
         ready: !!wc,
+        scope: { activeTab: 'tab', tabs: 'global' },
+        activeWorkspace: {
+          id: selectedWorkspace?.id ?? null,
+          name: selectedWorkspace?.name ?? null,
+          derivedFrom: ctx.workspaceManager.getActiveSource(),
+          matchesFocusedTab: selectedWorkspace?.id
+            ? selectedWorkspace.id === activeContext.workspace.id
+            : activeContext.workspace.matchesSelection,
+        },
         activeTab: {
           id: tab.id,
           url: tab.url,
@@ -231,6 +264,11 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
           loading: wc ? wc.isLoading() : false,
           viewport,
           pageTextExcerpt,
+          workspaceId: activeContext.workspace.id,
+          workspaceName: activeContext.workspace.name,
+          source: activeContext.source,
+          actor: activeContext.actor,
+          context: activeContext,
         },
         tabs: allTabs,
       });

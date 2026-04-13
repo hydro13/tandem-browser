@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiCall, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 
 export function registerChatTools(server: McpServer): void {
@@ -11,7 +11,7 @@ export function registerChatTools(server: McpServer): void {
       text: z.string().describe('Message text to display'),
     },
     async ({ text }) => {
-      await apiCall('POST', '/chat', { text, from: 'claude' });
+      await apiCall('POST', '/chat', { text, from: getMcpSource() });
       return { content: [{ type: 'text', text: `Message sent: "${text.substring(0, 100)}"` }] };
     }
   );

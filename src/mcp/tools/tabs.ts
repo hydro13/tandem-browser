@@ -1,20 +1,38 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { apiCall, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, logActivity } from '../api-client.js';
+
+interface ContextTab {
+  id: string;
+  title: string;
+  url: string;
+  active?: boolean;
+  emoji?: string | null;
+  workspaceName?: string | null;
+  source?: string | null;
+}
+
+function formatTabLine(tab: ContextTab): string {
+  const marker = tab.active ? '-> ' : '   ';
+  const emojiPrefix = tab.emoji ? `${tab.emoji} ` : '';
+  const details: string[] = [];
+  if (tab.workspaceName) details.push(`workspace: ${tab.workspaceName}`);
+  if (tab.source) details.push(`source: ${tab.source}`);
+  const suffix = details.length > 0 ? ` [${details.join(', ')}]` : '';
+  return `${marker}[${tab.id}] ${emojiPrefix}${tab.title || '(untitled)'}\n   ${tab.url}${suffix}\n`;
+}
 
 export function registerTabTools(server: McpServer): void {
   server.tool(
     'tandem_list_tabs',
-    'List all open browser tabs with their titles, URLs, and IDs',
+    'List all open browser tabs with their titles, URLs, IDs, and workspace/source context when known.',
     async () => {
-      const data = await apiCall('GET', '/tabs/list');
-      const tabs: Array<{ id: string; title: string; url: string; active: boolean; emoji?: string | null }> = data.tabs || [];
+      const data = await apiCall('GET', '/active-tab/context');
+      const tabs: ContextTab[] = data.tabs || [];
 
       let text = `Open tabs (${tabs.length}):\n\n`;
       for (const tab of tabs) {
-        const marker = tab.active ? '→ ' : '  ';
-        const emojiPrefix = tab.emoji ? `${tab.emoji} ` : '';
-        text += `${marker}[${tab.id}] ${emojiPrefix}${tab.title || '(untitled)'}\n   ${tab.url}\n`;
+        text += formatTabLine(tab);
       }
 
       return { content: [{ type: 'text', text }] };
@@ -27,9 +45,13 @@ export function registerTabTools(server: McpServer): void {
     {
       url: z.string().optional().describe('URL to open (default: new tab page)'),
       workspaceId: z.string().optional().describe('Optional workspace ID to assign the new tab to'),
+      source: z.string().optional().describe('Optional actor/source override. Defaults to the MCP connector source.'),
     },
-    async ({ url, workspaceId }) => {
-      const body: Record<string, unknown> = { url: url || undefined, source: 'wingman' };
+    async ({ url, workspaceId, source }) => {
+      const body: Record<string, unknown> = {
+        url: url || undefined,
+        source: source || getMcpSource(),
+      };
       if (workspaceId) body.workspaceId = workspaceId;
       const result = await apiCall('POST', '/tabs/open', body);
       await logActivity('open_tab', url || 'new tab');

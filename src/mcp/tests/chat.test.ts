@@ -2,24 +2,29 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../api-client.js', () => ({
   apiCall: vi.fn(),
+  getMcpSource: vi.fn(() => 'wingman'),
   tabHeaders: vi.fn(),
   logActivity: vi.fn(),
 }));
 
 vi.mock('../coerce.js', async (importOriginal) => importOriginal());
 
-import { apiCall, logActivity } from '../api-client.js';
+import { apiCall, getMcpSource, logActivity } from '../api-client.js';
 import { registerChatTools } from '../tools/chat.js';
 import { createMockServer, getHandler, expectTextContent } from './mcp-test-helper.js';
 
 const mockApiCall = vi.mocked(apiCall);
+const mockGetMcpSource = vi.mocked(getMcpSource);
 const mockLogActivity = vi.mocked(logActivity);
 
 describe('MCP chat tools', () => {
   const { server, tools } = createMockServer();
   registerChatTools(server);
 
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetMcpSource.mockReturnValue('wingman');
+  });
 
   describe('tandem_send_message', () => {
     const handler = getHandler(tools, 'tandem_send_message');
@@ -28,6 +33,14 @@ describe('MCP chat tools', () => {
       mockApiCall.mockResolvedValueOnce({});
       const result = await handler({ text: 'Hello Robin' });
       expectTextContent(result, 'Message sent: "Hello Robin"');
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/chat', { text: 'Hello Robin', from: 'wingman' });
+    });
+
+    it('uses the MCP connector source in chat messages', async () => {
+      mockGetMcpSource.mockReturnValue('claude');
+      mockApiCall.mockResolvedValueOnce({});
+
+      await handler({ text: 'Hello Robin' });
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/chat', { text: 'Hello Robin', from: 'claude' });
     });
   });

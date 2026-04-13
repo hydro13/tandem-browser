@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: April 9, 2026
+Last updated: April 13, 2026
 
 ## Purpose
 
@@ -59,6 +59,7 @@ Last updated: April 9, 2026
 - [x] Replace the last mixed shell entrypoint with dedicated `shell/js/window-chrome.js` and `shell/js/shortcut-router.js` modules so `main.js` is no longer needed as a catch-all shell loader
 - [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`
 - [ ] Investigate the remaining 1Password MV3 service-worker startup noise (`DidStartWorkerFail ...: 5` and policy calculation errors) and determine whether it affects any real user-facing behavior; the old `__tandemExtensionHeaders` background error is fixed, and current manual checks indicate the extension still works for normal use
+- [ ] Make `ContextBridge` summaries natively actor/workspace-aware so `/context/summary` and other non-MCP consumers stop relying on MCP-side enrichment for ownership context
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later
@@ -102,6 +103,7 @@ Last updated: April 9, 2026
 - [x] Preload sandbox fix: added esbuild bundling step so the split preload modules work with Electron's `sandbox: true`
 - [x] Security dependency updates: resolved all 28 Dependabot alerts (electron, hono, lodash, brace-expansion, path-to-regexp)
 - [x] Workspace API handoff for OpenClaw: `/tabs/open` now honors `workspaceId`, `/workspaces/:id/activate` and `/workspaces/:id/tabs` exist, and `/wingman-alert` can bring the requested workspace into view before notifying the user
+- [x] Multi-actor workspace consistency: focused tab ownership, workspace selection, and SSE context now stay explicit across HTTP and MCP surfaces
 - [x] API `X-Tab-Id` targeting for `/snapshot`, `/page-content`, `/page-html`, and `/execute-js`, with background-tab-safe CDP evaluation and tab-scoped snapshot refs
 - [x] Password manager: local SQLite + AES-256-GCM vault, master password, autofill, password generator, and `GET /passwords/suggest`
 - [x] Behavioral learning models: profile compiler, typing timing model, mouse trajectory replay, and fallback humanization behavior

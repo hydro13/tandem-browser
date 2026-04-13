@@ -111,15 +111,26 @@ server.resource(
 server.resource(
   'tabs-list',
   'tandem://tabs/list',
-  { description: 'All open browser tabs' },
+  { description: 'All open browser tabs with workspace/source context when known' },
   async () => {
-    const data = await apiCall('GET', '/tabs/list');
-    const tabs: Array<{ id: string; title: string; url: string; active: boolean }> = data.tabs || [];
+    const data = await apiCall('GET', '/active-tab/context');
+    const tabs: Array<{
+      id: string;
+      title: string;
+      url: string;
+      active?: boolean;
+      workspaceName?: string | null;
+      source?: string | null;
+    }> = data.tabs || [];
 
     let text = `Open tabs (${tabs.length}):\n\n`;
     for (const tab of tabs) {
-      const marker = tab.active ? '→ ' : '  ';
-      text += `${marker}[${tab.id}] ${tab.title || '(untitled)'} — ${tab.url}\n`;
+      const marker = tab.active ? '-> ' : '   ';
+      const details: string[] = [];
+      if (tab.workspaceName) details.push(`workspace: ${tab.workspaceName}`);
+      if (tab.source) details.push(`source: ${tab.source}`);
+      const suffix = details.length > 0 ? ` [${details.join(', ')}]` : '';
+      text += `${marker}[${tab.id}] ${tab.title || '(untitled)'} — ${tab.url}${suffix}\n`;
     }
     return { contents: [{ uri: 'tandem://tabs/list', mimeType: 'text/plain', text }] };
   }
@@ -145,10 +156,58 @@ server.resource(
 server.resource(
   'context',
   'tandem://context',
-  { description: 'Live browser context: active tab, open tabs, recent events, voice status' },
+  { description: 'Live browser context including active workspace/tab ownership and recent events' },
   async () => {
-    const summary = await apiCall('GET', '/context/summary');
-    return { contents: [{ uri: 'tandem://context', mimeType: 'text/plain', text: summary.text || '' }] };
+    const [summary, activeTabContext, recentEventsData] = await Promise.all([
+      apiCall('GET', '/context/summary'),
+      apiCall('GET', '/active-tab/context'),
+      apiCall('GET', '/events/recent?limit=5'),
+    ]);
+
+    const lines: string[] = [];
+    const activeWorkspace = activeTabContext.activeWorkspace;
+    const activeTab = activeTabContext.activeTab;
+    if (activeWorkspace) {
+      lines.push(`Active workspace: ${activeWorkspace.name} (${activeWorkspace.id})`);
+    }
+
+    if (activeTab) {
+      const parts = [
+        `Active tab: ${activeTab.title || 'Untitled'} — ${activeTab.url || ''} (${activeTab.id})`,
+        `workspace=${activeTab.workspaceName || activeTab.workspaceId || 'unknown'}`,
+        `source=${activeTab.source ?? 'unknown'}`,
+      ];
+      if (activeTab.actor?.id) {
+        parts.push(`actor=${activeTab.actor.id}`);
+      }
+      lines.push(parts.join(' | '));
+    } else {
+      lines.push('Active tab: none');
+    }
+
+    if (Array.isArray(recentEventsData.events) && recentEventsData.events.length > 0) {
+      const eventLines = recentEventsData.events.slice(0, 5).map((event: {
+        type?: string;
+        tabId?: string | null;
+        context?: {
+          source?: string | null;
+          workspace?: { id?: string | null; name?: string | null } | null;
+        } | null;
+      }) => {
+        const workspace = event.context?.workspace?.name || event.context?.workspace?.id || 'unknown';
+        const source = event.context?.source ?? 'unknown';
+        return `- ${event.type} | tab=${event.tabId || 'none'} | workspace=${workspace} | source=${source}`;
+      });
+      lines.push('Recent events:');
+      lines.push(...eventLines);
+    }
+
+    if (summary.text) {
+      lines.push('');
+      lines.push(summary.text);
+    }
+
+    return { contents: [{ uri: 'tandem://context', mimeType: 'text/plain', text: lines.join('\n') }] };
   }
 );
 

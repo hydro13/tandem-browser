@@ -13,6 +13,7 @@
     /** Map of tabId -> { webview, tabEl } */
     const tabs = new Map();
     let activeTabId = null;
+    let nextFocusClaimsOwnership = false;
     let updateTabMeta = baseUpdateTabMeta;
     const activeTabListeners = new Set();
     const tabZoomLevels = new Map();
@@ -99,6 +100,7 @@
         if (event.target.classList.contains('tab-close')) return;
         const currentTabId = tabEl.dataset.tabId;
         if (currentTabId && window.tandem) {
+          nextFocusClaimsOwnership = true;
           window.tandem.focusTab(currentTabId);
         }
       });
@@ -345,6 +347,12 @@
 
       focusTab(tabId) {
         focusRendererTab(tabId);
+      },
+
+      consumeUserOwnershipClaim() {
+        const shouldClaim = nextFocusClaimsOwnership;
+        nextFocusClaimsOwnership = false;
+        return shouldClaim;
       },
 
       setEmoji(tabId, emoji, flash) {

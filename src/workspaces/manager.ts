@@ -30,6 +30,11 @@ type LegacyWorkspace = Workspace & {
   emoji?: string;
 };
 
+interface ReconcileOptions {
+  notify?: boolean;
+  followFocusedTab?: boolean;
+}
+
 // ─── Storage path ───────────────────────────────────────────────────
 
 const STORAGE_PATH = tandemDir('workspaces.json');
@@ -54,6 +59,10 @@ export class WorkspaceManager {
   private lastModified: string | undefined;
   private mainWindow: BrowserWindow | null = null;
   private syncManager: SyncManager | null = null;
+  private trackedTabIdsResolver: (() => number[]) | null = null;
+  private activeTabIdResolver: (() => number | null) | null = null;
+  private isReconciling = false;
+  private selectionPinned = false;
 
   // === 2. Constructor ===
 
@@ -74,20 +83,33 @@ export class WorkspaceManager {
     this.mergeFromSync();
   }
 
+  /** Wire runtime tab resolvers so workspace state can be reconciled against real tabs. */
+  setTabStateResolvers(opts: {
+    listTrackedTabIds: (() => number[]) | null;
+    getActiveTabId: (() => number | null) | null;
+  }): void {
+    this.trackedTabIdsResolver = opts.listTrackedTabIds;
+    this.activeTabIdResolver = opts.getActiveTabId;
+    this.reconcileWithRuntimeState();
+  }
+
   // === 4. Public methods ===
 
   /** List all workspaces sorted by display order. */
   list(): Workspace[] {
-    return Array.from(this.workspaces.values()).sort((a, b) => a.order - b.order);
+    this.reconcileWithRuntimeState();
+    return this.getSortedWorkspaces();
   }
 
   /** Get a workspace by ID, or undefined if not found. */
   get(id: string): Workspace | undefined {
+    this.reconcileWithRuntimeState();
     return this.workspaces.get(id);
   }
 
   /** Get the currently active workspace (falls back to default). */
   getActive(): Workspace {
+    this.reconcileWithRuntimeState();
     const ws = this.workspaces.get(this.activeId);
     if (!ws) return this.getDefaultWorkspace()!;
     return ws;
@@ -95,7 +117,14 @@ export class WorkspaceManager {
 
   /** Get the ID of the active workspace. */
   getActiveId(): string {
+    this.reconcileWithRuntimeState();
     return this.activeId;
+  }
+
+  /** Get whether the active workspace currently comes from an explicit selection or the focused tab. */
+  getActiveSource(): 'selection' | 'focused-tab' {
+    this.reconcileWithRuntimeState();
+    return this.selectionPinned ? 'selection' : 'focused-tab';
   }
 
   /**
@@ -104,12 +133,95 @@ export class WorkspaceManager {
    * @returns workspace ID, or null if unassigned
    */
   getWorkspaceIdForTab(tabId: number): string | null {
-    for (const workspace of this.workspaces.values()) {
-      if (workspace.tabIds.includes(tabId)) {
-        return workspace.id;
+    this.reconcileWithRuntimeState();
+    return this.getWorkspaceIdForTabInternal(tabId);
+  }
+
+  /**
+   * Reconcile workspace membership against the tracked tabs and sync the active workspace
+   * to the focused tab when possible.
+   */
+  reconcileTabState(
+    tabIds: Iterable<number> | null | undefined,
+    activeTabId?: number | null,
+    options: ReconcileOptions = {},
+  ): { changed: boolean; activeId: string } {
+    const validTabIds = tabIds
+      ? new Set(Array.from(tabIds).filter((tabId) => Number.isFinite(tabId)))
+      : null;
+    const defaultWorkspace = this.getDefaultWorkspace();
+    let changed = false;
+
+    if (validTabIds) {
+      const assignedTabIds = new Set<number>();
+      for (const workspace of this.getSortedWorkspaces()) {
+        const nextTabIds: number[] = [];
+        for (const tabId of workspace.tabIds) {
+          if (!Number.isFinite(tabId) || !validTabIds.has(tabId) || assignedTabIds.has(tabId)) {
+            changed = true;
+            continue;
+          }
+          assignedTabIds.add(tabId);
+          nextTabIds.push(tabId);
+        }
+
+        if (!this.haveSameTabIds(workspace.tabIds, nextTabIds)) {
+          workspace.tabIds = nextTabIds;
+          changed = true;
+        }
+      }
+
+      if (defaultWorkspace) {
+        const unassignedTabIds = Array.from(validTabIds)
+          .filter((tabId) => !assignedTabIds.has(tabId))
+          .sort((left, right) => left - right);
+        if (unassignedTabIds.length > 0) {
+          defaultWorkspace.tabIds = [...defaultWorkspace.tabIds, ...unassignedTabIds];
+          changed = true;
+        }
       }
     }
-    return null;
+
+    const nextActiveId = this.resolveActiveWorkspaceId(activeTabId ?? null, options.followFocusedTab === true);
+    if (nextActiveId !== this.activeId) {
+      this.activeId = nextActiveId;
+      changed = true;
+    }
+
+    if (options.followFocusedTab) {
+      const focusedWorkspaceId = activeTabId != null ? this.getWorkspaceIdForTabInternal(activeTabId) : null;
+      if (focusedWorkspaceId) {
+        this.selectionPinned = false;
+      }
+    }
+
+    if (changed) {
+      this.saveToDisk();
+      const activeWorkspace = this.workspaces.get(this.activeId) || this.getDefaultWorkspace();
+      if (options.notify && activeWorkspace) {
+        this.notifySwitch(activeWorkspace);
+      }
+    }
+
+    return { changed, activeId: this.activeId };
+  }
+
+  /** Reconcile using runtime-provided tab state when available. */
+  reconcileWithRuntimeState(options: ReconcileOptions = {}): { changed: boolean; activeId: string } {
+    if (this.isReconciling) {
+      return { changed: false, activeId: this.activeId };
+    }
+
+    this.isReconciling = true;
+    try {
+      return this.reconcileTabState(
+        this.trackedTabIdsResolver ? this.trackedTabIdsResolver() : null,
+        this.activeTabIdResolver ? this.activeTabIdResolver() : null,
+        options,
+      );
+    } finally {
+      this.isReconciling = false;
+    }
   }
 
   /**
@@ -188,6 +300,7 @@ export class WorkspaceManager {
     const ws = this.workspaces.get(id);
     if (!ws) throw new Error(`Workspace ${id} not found`);
     this.activeId = id;
+    this.selectionPinned = true;
     this.saveToDisk();
     this.notifySwitch(ws);
     log.info(`Switched to workspace "${ws.name}"`);
@@ -203,7 +316,9 @@ export class WorkspaceManager {
         workspace.tabIds.splice(idx, 1);
       }
     }
-    active.tabIds.push(tabId);
+    if (!active.tabIds.includes(tabId)) {
+      active.tabIds.push(tabId);
+    }
     this.saveToDisk();
   }
 
@@ -233,7 +348,9 @@ export class WorkspaceManager {
     }
 
     // Add to target
-    target.tabIds.push(tabId);
+    if (!target.tabIds.includes(tabId)) {
+      target.tabIds.push(tabId);
+    }
     this.saveToDisk();
 
     // Notify shell to re-filter tab bar
@@ -267,6 +384,7 @@ export class WorkspaceManager {
         if (!this.workspaces.has(this.activeId)) {
           this.activeId = this.getDefaultWorkspace()?.id || '';
         }
+        this.reconcileWithRuntimeState();
         this.saveToDisk();
         log.info('Workspaces loaded from sync (newer version found)');
       }
@@ -303,6 +421,7 @@ export class WorkspaceManager {
         if (!this.workspaces.has(this.activeId)) {
           this.activeId = this.getDefaultWorkspace()?.id || '';
         }
+        this.reconcileTabState(null, null);
       }
     } catch (e) {
       log.warn('Failed to load workspaces from disk:', e instanceof Error ? e.message : String(e));
@@ -336,7 +455,7 @@ export class WorkspaceManager {
       this.lastModified = new Date().toISOString();
       const data: WorkspacesFile = {
         activeId: this.activeId,
-        workspaces: this.list(),
+        workspaces: this.getSortedWorkspaces(),
         lastModified: this.lastModified,
       };
       fs.writeFileSync(STORAGE_PATH, JSON.stringify(data, null, 2));
@@ -348,8 +467,53 @@ export class WorkspaceManager {
     }
   }
 
+  private getSortedWorkspaces(): Workspace[] {
+    return Array.from(this.workspaces.values()).sort((a, b) => a.order - b.order);
+  }
+
   private generateId(): string {
     return crypto.randomBytes(8).toString('hex');
+  }
+
+  private getWorkspaceIdForTabInternal(tabId: number): string | null {
+    for (const workspace of this.workspaces.values()) {
+      if (workspace.tabIds.includes(tabId)) {
+        return workspace.id;
+      }
+    }
+    return null;
+  }
+
+  private resolveActiveWorkspaceId(activeTabId: number | null, followFocusedTab: boolean): string {
+    if (activeTabId !== null) {
+      const workspaceId = this.getWorkspaceIdForTabInternal(activeTabId);
+      if (workspaceId && (followFocusedTab || !this.selectionPinned)) {
+        return workspaceId;
+      }
+    }
+
+    if (this.workspaces.has(this.activeId)) {
+      return this.activeId;
+    }
+
+    this.selectionPinned = false;
+
+    if (activeTabId !== null) {
+      const workspaceId = this.getWorkspaceIdForTabInternal(activeTabId);
+      if (workspaceId) {
+        return workspaceId;
+      }
+    }
+
+    return this.getDefaultWorkspace()?.id || '';
+  }
+
+  private haveSameTabIds(left: number[], right: number[]): boolean {
+    if (left.length !== right.length) {
+      return false;
+    }
+
+    return left.every((tabId, index) => tabId === right[index]);
   }
 
   private getDefaultWorkspace(): Workspace | undefined {
