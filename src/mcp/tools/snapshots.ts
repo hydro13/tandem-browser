@@ -3,6 +3,15 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiCall, tabHeaders, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 
+function summarizeActionResult(prefix: string, result: Record<string, unknown>): string {
+  const scope = result.scope as Record<string, unknown> | undefined;
+  const completion = result.completion as Record<string, unknown> | undefined;
+  const scopeLabel = typeof scope?.tabId === 'string' ? `tab ${scope.tabId}` : 'active scope';
+  const mode = completion?.mode === 'confirmed' ? 'confirmed' : 'dispatched';
+  const caveat = typeof completion?.caveat === 'string' ? ` Caveat: ${completion.caveat}` : '';
+  return `${prefix} (${scopeLabel}; ${mode}).${caveat}\n\n${JSON.stringify(result, null, 2)}`;
+}
+
 export function registerSnapshotTools(server: McpServer): void {
   server.tool(
     'tandem_snapshot',
@@ -28,30 +37,30 @@ export function registerSnapshotTools(server: McpServer): void {
 
   server.tool(
     'tandem_snapshot_click',
-    'Click an element by its @ref ID from a previous snapshot. Supports targeting a background tab by ID.',
+    'Click an element by its @ref ID from a previous snapshot. Returns explicit scope, completion semantics, and post-action state. Supports targeting a background tab by ID.',
     {
       ref: z.string().describe('The @ref ID of the element to click (e.g. "@e1")'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     },
     async ({ ref, tabId }) => {
-      await apiCall('POST', '/snapshot/click', { ref }, tabHeaders(tabId));
+      const result = await apiCall('POST', '/snapshot/click', { ref }, tabHeaders(tabId));
       await logActivity('snapshot_click', ref);
-      return { content: [{ type: 'text', text: `Clicked element ${ref}` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Clicked element ${ref}`, result) }] };
     }
   );
 
   server.tool(
     'tandem_snapshot_fill',
-    'Fill an input element by its @ref ID from a previous snapshot. Supports targeting a background tab by ID.',
+    'Fill an input element by its @ref ID from a previous snapshot. Returns explicit scope, completion semantics, and confirmed post-fill state when available. Supports targeting a background tab by ID.',
     {
       ref: z.string().describe('The @ref ID of the input element (e.g. "@e3")'),
       value: z.string().describe('The value to fill into the input'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     },
     async ({ ref, value, tabId }) => {
-      await apiCall('POST', '/snapshot/fill', { ref, value }, tabHeaders(tabId));
+      const result = await apiCall('POST', '/snapshot/fill', { ref, value }, tabHeaders(tabId));
       await logActivity('snapshot_fill', `${ref}: "${value.substring(0, 50)}"`);
-      return { content: [{ type: 'text', text: `Filled element ${ref} with "${value}"` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Filled element ${ref} with "${value}"`, result) }] };
     }
   );
 
@@ -72,7 +81,7 @@ export function registerSnapshotTools(server: McpServer): void {
 
   server.tool(
     'tandem_find',
-    'Find elements on the page by semantic locator (role, text, label, or placeholder). Supports targeting a background tab by ID.',
+    'Find elements on the page by semantic locator (role, text, label, or placeholder). Returns the locator query result plus the resolved tab scope. Supports targeting a background tab by ID.',
     {
       by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
       value: z.string().describe('Value to search for'),
@@ -87,7 +96,7 @@ export function registerSnapshotTools(server: McpServer): void {
 
   server.tool(
     'tandem_find_click',
-    'Find an element by semantic locator and click it. Supports targeting a background tab by ID.',
+    'Find an element by semantic locator and click it. Returns the resolved tab scope, locator resolution details, completion semantics, and post-action state. Supports targeting a background tab by ID.',
     {
       by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
       value: z.string().describe('Value to search for'),
@@ -96,13 +105,13 @@ export function registerSnapshotTools(server: McpServer): void {
     async ({ by, value, tabId }) => {
       const result = await apiCall('POST', '/find/click', { by, value }, tabHeaders(tabId));
       await logActivity('find_click', `${by}="${value}"`);
-      return { content: [{ type: 'text', text: `Clicked element found by ${by}="${value}" (ref: ${result.ref})` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Clicked element found by ${by}="${value}"`, result) }] };
     }
   );
 
   server.tool(
     'tandem_find_fill',
-    'Find an input element by semantic locator and fill it with text. Supports targeting a background tab by ID.',
+    'Find an input element by semantic locator and fill it with text. Returns the resolved tab scope, locator resolution details, completion semantics, and confirmed post-fill state when available. Supports targeting a background tab by ID.',
     {
       by: z.enum(['role', 'text', 'label', 'placeholder']).describe('Locator strategy'),
       value: z.string().describe('Value to search for the element'),
@@ -112,7 +121,7 @@ export function registerSnapshotTools(server: McpServer): void {
     async ({ by, value, text, tabId }) => {
       const result = await apiCall('POST', '/find/fill', { by, value, fillValue: text }, tabHeaders(tabId));
       await logActivity('find_fill', `${by}="${value}": "${text.substring(0, 50)}"`);
-      return { content: [{ type: 'text', text: `Filled element found by ${by}="${value}" with "${text}" (ref: ${result.ref})` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Filled element found by ${by}="${value}" with "${text}"`, result) }] };
     }
   );
 

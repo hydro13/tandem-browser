@@ -1,7 +1,67 @@
 import type { WebContents } from 'electron';
 import { behaviorReplay } from '../behavior/replay';
+import {
+  captureNavigationState,
+  confirmSelectorValue,
+  readPageState,
+  readSelectorState,
+  type InteractionElementState,
+  type NavigationState,
+  type PageState,
+  type WaitForNavigationOptions,
+} from '../interaction/page-state';
 
 const MAX_TYPED_CHARS = 10_000;
+const DEFAULT_CONFIRM_TIMEOUT_MS = 700;
+
+export interface HumanizedClickResult {
+  ok: boolean;
+  error?: string;
+  target: {
+    selector: string;
+    found: boolean;
+    tagName: string | null;
+    text: string | null;
+  };
+  completion: {
+    dispatchCompleted: boolean;
+    effectConfirmed: boolean;
+    mode: 'confirmed' | 'dispatched';
+    caveat?: string;
+  };
+  postAction?: {
+    page: PageState;
+    element: InteractionElementState | null;
+    navigation: NavigationState;
+  };
+}
+
+export interface HumanizedTypeResult {
+  ok: boolean;
+  error?: string;
+  target: {
+    selector: string;
+    found: boolean;
+    tagName: string | null;
+    text: string | null;
+  };
+  completion: {
+    dispatchCompleted: boolean;
+    effectConfirmed: boolean;
+    mode: 'confirmed' | 'dispatched';
+    caveat?: string;
+  };
+  postAction?: {
+    page: PageState;
+    element: InteractionElementState | null;
+    observedAfterMs: number;
+  };
+}
+
+export interface HumanizedInteractionOptions extends WaitForNavigationOptions {
+  confirm?: boolean;
+  confirmTimeoutMs?: number;
+}
 
 /**
  * Gaussian random number (Box-Muller transform).
@@ -57,11 +117,33 @@ async function getElementPosition(wc: WebContents, selector: string): Promise<{ 
  * Click an element using sendInputEvent (OS-level, Event.isTrusted = true).
  * Uses humanized delays and mouse movement.
  */
-export async function humanizedClick(wc: WebContents, selector: string): Promise<{ ok: boolean; error?: string; tag?: string; text?: string }> {
+export async function humanizedClick(
+  wc: WebContents,
+  selector: string,
+  options?: HumanizedInteractionOptions,
+): Promise<HumanizedClickResult> {
   const pos = await getElementPosition(wc, selector);
   if (!pos.found) {
-    return { ok: false, error: 'Element not found' };
+    return {
+      ok: false,
+      error: 'Element not found',
+      target: {
+        selector,
+        found: false,
+        tagName: null,
+        text: null,
+      },
+      completion: {
+        dispatchCompleted: false,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Selector could not be resolved before dispatch.',
+      },
+    };
   }
+
+  const beforePage = await readPageState(wc);
+  const beforeElement = await readSelectorState(wc, selector);
 
   // Small random offset within element (not dead center)
   const offsetX = gaussianRandom(0, 3);
@@ -112,17 +194,78 @@ export async function humanizedClick(wc: WebContents, selector: string): Promise
     clickCount: 1,
   });
 
-  return { ok: true, tag: pos.tag, text: pos.text };
+  const navigation = await captureNavigationState(wc, beforePage.url, options);
+  const afterPage = await readPageState(wc);
+  const afterElement = options?.confirm === false ? null : await readSelectorState(wc, selector);
+  const effectConfirmed = options?.confirm === false
+    ? false
+    : Boolean(
+        navigation.changed
+        || navigation.loading
+        || (afterElement?.focused && !beforeElement?.focused)
+        || (
+          afterElement?.checked !== null
+          && beforeElement?.checked !== null
+          && afterElement?.checked !== beforeElement?.checked
+        )
+        || (afterElement?.value !== null && afterElement?.value !== beforeElement?.value)
+      );
+
+  return {
+    ok: true,
+    target: {
+      selector,
+      found: true,
+      tagName: pos.tag ?? null,
+      text: pos.text ?? null,
+    },
+    completion: {
+      dispatchCompleted: true,
+      effectConfirmed,
+      mode: effectConfirmed ? 'confirmed' : 'dispatched',
+      caveat: effectConfirmed
+        ? undefined
+        : options?.confirm === false
+          ? 'Click dispatch was acknowledged without post-click confirmation.'
+          : 'Click dispatch finished, but no immediate focus, value, checked, or navigation change was observable.',
+    },
+    postAction: {
+      page: afterPage,
+      element: afterElement,
+      navigation,
+    },
+  };
 }
 
 /**
  * Type text using sendInputEvent character by character (Event.isTrusted = true).
  * Humanized typing rhythm with gaussian delays.
  */
-export async function humanizedType(wc: WebContents, selector: string, text: string, clear: boolean = false): Promise<{ ok: boolean; error?: string }> {
+export async function humanizedType(
+  wc: WebContents,
+  selector: string,
+  text: string,
+  clear: boolean = false,
+  options?: HumanizedInteractionOptions,
+): Promise<HumanizedTypeResult> {
   const pos = await getElementPosition(wc, selector);
   if (!pos.found) {
-    return { ok: false, error: 'Element not found' };
+    return {
+      ok: false,
+      error: 'Element not found',
+      target: {
+        selector,
+        found: false,
+        tagName: null,
+        text: null,
+      },
+      completion: {
+        dispatchCompleted: false,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Selector could not be resolved before typing began.',
+      },
+    };
   }
 
   // Click to focus the element first
@@ -153,5 +296,55 @@ export async function humanizedType(wc: WebContents, selector: string, text: str
     await typingDelay(char, nextChar);
   }
 
-  return { ok: true };
+  if (options?.confirm === false) {
+    return {
+      ok: true,
+      target: {
+        selector,
+        found: true,
+        tagName: pos.tag ?? null,
+        text: pos.text ?? null,
+      },
+      completion: {
+        dispatchCompleted: true,
+        effectConfirmed: false,
+        mode: 'dispatched',
+        caveat: 'Typing dispatch finished without post-type value confirmation.',
+      },
+      postAction: {
+        page: await readPageState(wc),
+        element: await readSelectorState(wc, selector),
+        observedAfterMs: 0,
+      },
+    };
+  }
+
+  const confirmation = await confirmSelectorValue(
+    wc,
+    selector,
+    text,
+    options?.confirmTimeoutMs ?? DEFAULT_CONFIRM_TIMEOUT_MS,
+  );
+  const page = await readPageState(wc);
+
+  return {
+    ok: true,
+    target: {
+      selector,
+      found: true,
+      tagName: pos.tag ?? null,
+      text: pos.text ?? null,
+    },
+    completion: {
+      dispatchCompleted: true,
+      effectConfirmed: confirmation.confirmed,
+      mode: confirmation.confirmed ? 'confirmed' : 'dispatched',
+      caveat: confirmation.confirmed ? undefined : 'Typed text was dispatched, but the requested value was not observed before the confirmation window expired.',
+    },
+    postAction: {
+      page,
+      element: confirmation.state,
+      observedAfterMs: confirmation.observedAfterMs,
+    },
+  };
 }

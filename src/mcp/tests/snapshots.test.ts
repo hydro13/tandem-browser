@@ -73,11 +73,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_snapshot_click');
 
     it('clicks an element by ref', async () => {
-      mockApiCall.mockResolvedValueOnce({});
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-1' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ ref: '@e1' });
-      expectTextContent(result, 'Clicked element @e1');
+      expectTextContent(result, 'Clicked element @e1 (tab tab-1; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/snapshot/click', { ref: '@e1' }, undefined);
     });
   });
@@ -87,11 +87,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_snapshot_fill');
 
     it('fills an input by ref', async () => {
-      mockApiCall.mockResolvedValueOnce({});
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-1' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ ref: '@e3', value: 'hello' });
-      expectTextContent(result, 'Filled element @e3 with "hello"');
+      expectTextContent(result, 'Filled element @e3 with "hello" (tab tab-1; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/snapshot/fill', { ref: '@e3', value: 'hello' }, undefined);
     });
   });
@@ -128,11 +128,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_find_click');
 
     it('finds and clicks an element', async () => {
-      mockApiCall.mockResolvedValueOnce({ ref: '@e7' });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-7' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ by: 'text', value: 'Submit' });
-      expectTextContent(result, 'Clicked element found by text="Submit"');
+      expectTextContent(result, 'Clicked element found by text="Submit" (tab tab-7; confirmed)');
     });
   });
 
@@ -141,11 +141,11 @@ describe('MCP snapshot tools', () => {
     const handler = getHandler(tools, 'tandem_find_fill');
 
     it('finds and fills an input', async () => {
-      mockApiCall.mockResolvedValueOnce({ ref: '@e8' });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-8' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ by: 'placeholder', value: 'Email', text: 'a@b.com' });
-      expectTextContent(result, 'Filled element found by placeholder="Email"');
+      expectTextContent(result, 'Filled element found by placeholder="Email" with "a@b.com" (tab tab-8; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith(
         'POST', '/find/fill',
         { by: 'placeholder', value: 'Email', fillValue: 'a@b.com' },

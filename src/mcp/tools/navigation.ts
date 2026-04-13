@@ -3,6 +3,15 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiCall, tabHeaders, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 
+function summarizeActionResult(prefix: string, result: Record<string, unknown>): string {
+  const scope = result.scope as Record<string, unknown> | undefined;
+  const completion = result.completion as Record<string, unknown> | undefined;
+  const scopeLabel = typeof scope?.tabId === 'string' ? `tab ${scope.tabId}` : 'active scope';
+  const mode = completion?.mode === 'confirmed' ? 'confirmed' : 'dispatched';
+  const caveat = typeof completion?.caveat === 'string' ? ` Caveat: ${completion.caveat}` : '';
+  return `${prefix} (${scopeLabel}; ${mode}).${caveat}\n\n${JSON.stringify(result, null, 2)}`;
+}
+
 export function registerNavigationTools(server: McpServer): void {
   server.tool(
     'tandem_navigate',
@@ -50,7 +59,7 @@ export function registerNavigationTools(server: McpServer): void {
 
   server.tool(
     'tandem_wait_for_load',
-    'Wait for a page to finish loading. Supports targeting a background tab by ID.',
+    'Wait for a page to finish loading. Returns the resolved tab scope and whether the wait completed or timed out. Supports targeting a background tab by ID.',
     coerceShape({
       timeout: z.number().optional().default(10000).describe('Timeout in milliseconds (default: 10000)'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
@@ -60,15 +69,15 @@ export function registerNavigationTools(server: McpServer): void {
       await logActivity('wait_for_load');
 
       if (result.timeout) {
-        return { content: [{ type: 'text', text: 'Page load timed out — the page may still be loading.' }] };
+        return { content: [{ type: 'text', text: `Page load timed out.\n\n${JSON.stringify(result, null, 2)}` }] };
       }
-      return { content: [{ type: 'text', text: 'Page loaded successfully.' }] };
+      return { content: [{ type: 'text', text: `Page loaded successfully.\n\n${JSON.stringify(result, null, 2)}` }] };
     }
   );
 
   server.tool(
     'tandem_click',
-    'Click an element on the page by CSS selector. Supports targeting a background tab by ID.',
+    'Click an element on the page by CSS selector. Returns explicit scope, completion semantics, and post-action state. Supports targeting a background tab by ID.',
     {
       selector: z.string().describe('CSS selector of the element to click'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
@@ -76,13 +85,13 @@ export function registerNavigationTools(server: McpServer): void {
     async ({ selector, tabId }) => {
       const result = await apiCall('POST', '/click', { selector }, tabHeaders(tabId));
       await logActivity('click', selector);
-      return { content: [{ type: 'text', text: `Clicked: ${selector} — ${JSON.stringify(result)}` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Clicked ${selector}`, result) }] };
     }
   );
 
   server.tool(
     'tandem_type',
-    'Type text into an input field by CSS selector. Supports targeting a background tab by ID.',
+    'Type text into an input field by CSS selector. Returns explicit scope, completion semantics, and confirmed post-type state when available. Supports targeting a background tab by ID.',
     coerceShape({
       selector: z.string().describe('CSS selector of the input field'),
       text: z.string().describe('Text to type'),
@@ -90,9 +99,9 @@ export function registerNavigationTools(server: McpServer): void {
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
     }),
     async ({ selector, text, clear, tabId }) => {
-      await apiCall('POST', '/type', { selector, text, clear }, tabHeaders(tabId));
+      const result = await apiCall('POST', '/type', { selector, text, clear }, tabHeaders(tabId));
       await logActivity('type', `${selector}: "${text.substring(0, 50)}"`);
-      return { content: [{ type: 'text', text: `Typed "${text}" into ${selector}` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Typed "${text}" into ${selector}`, result) }] };
     }
   );
 
@@ -119,7 +128,7 @@ export function registerNavigationTools(server: McpServer): void {
 
   server.tool(
     'tandem_press_key',
-    'Send a keyboard event (keyDown + keyUp) to the browser tab. Common key names: PageDown, PageUp, Escape, Enter, Tab, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Backspace, Delete, Home, End, Space. For modifier combos use the modifiers param: ["control"], ["shift"], ["meta", "shift"], ["alt"]. Supports targeting a background tab by ID.',
+    'Send a keyboard event (keyDown + keyUp) to the browser tab. Returns explicit scope, completion semantics, and post-action page state; it does not claim a stronger guarantee than the route can confirm. Common key names: PageDown, PageUp, Escape, Enter, Tab, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Backspace, Delete, Home, End, Space. For modifier combos use the modifiers param: ["control"], ["shift"], ["meta", "shift"], ["alt"]. Supports targeting a background tab by ID.',
     coerceShape({
       key: z.string().describe('Key to press (e.g. "PageDown", "Escape", "Enter", "Tab", "a", "ArrowDown")'),
       modifiers: z.array(z.string()).optional().describe('Optional modifier keys: "control", "shift", "alt", "meta" (e.g. ["control", "shift"])'),
@@ -131,13 +140,13 @@ export function registerNavigationTools(server: McpServer): void {
       const result = await apiCall('POST', '/press-key', body, tabHeaders(tabId));
       const detail = modifiers && modifiers.length > 0 ? `${modifiers.join('+')}+${key}` : key;
       await logActivity('press_key', detail);
-      return { content: [{ type: 'text', text: `Pressed key: ${detail} — ${JSON.stringify(result)}` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Pressed key ${detail}`, result) }] };
     }
   );
 
   server.tool(
     'tandem_press_key_combo',
-    'Send multiple key presses in sequence with a small delay between each. Useful for things like pressing Tab 3 times then Enter, or typing a sequence of arrow key navigations. Uses the same key names as tandem_press_key.',
+    'Send multiple key presses in sequence with a small delay between each. Returns explicit scope, completion semantics, and post-action page state; it does not claim a stronger guarantee than the route can confirm. Useful for things like pressing Tab 3 times then Enter, or typing a sequence of arrow key navigations. Uses the same key names as tandem_press_key.',
     coerceShape({
       keys: z.array(z.string()).describe('Array of key names to press in sequence (e.g. ["Tab", "Tab", "Tab", "Enter"])'),
       tabId: z.string().optional().describe('Optional tab ID to target a background tab instead of the active tab'),
@@ -146,7 +155,7 @@ export function registerNavigationTools(server: McpServer): void {
       const result = await apiCall('POST', '/press-key-combo', { keys }, tabHeaders(tabId));
       const detail = keys.join(' → ');
       await logActivity('press_key_combo', detail);
-      return { content: [{ type: 'text', text: `Pressed keys: ${detail} — ${JSON.stringify(result)}` }] };
+      return { content: [{ type: 'text', text: summarizeActionResult(`Pressed keys ${detail}`, result) }] };
     }
   );
 }

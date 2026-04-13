@@ -4,9 +4,11 @@ import path from 'path';
 import os from 'os';
 import type { RouteContext} from '../context';
 import { getActiveWC, getSessionWC, execInSessionTab, getSessionPartition, resolveRequestedTab } from '../context';
+import { buildInteractionScope, resolveEffectiveTabTarget, sendRequestedTabNotFound } from '../interaction';
 import { tandemDir } from '../../utils/paths';
 import { wingmanAlert } from '../../notifications/alert';
 import { humanizedClick, humanizedType } from '../../input/humanized';
+import { captureNavigationState, readPageState } from '../../interaction/page-state';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 import { resolvePathInAllowedRoots } from '../../utils/security';
@@ -15,10 +17,6 @@ import { injectionScannerMiddleware } from '../middleware/injection-scanner';
 
 /** Maximum allowed code length for JS execution endpoints (1 MB) */
 const MAX_CODE_LENGTH = 1_048_576;
-
-function sendRequestedTabNotFound(res: Response, tabId: string): void {
-  res.status(404).json({ error: `Tab ${tabId} not found` });
-}
 
 function buildPageContentScript(settleMs: number, maxWait: number, targetLength: number): string {
   return `
@@ -173,14 +171,58 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/click', async (req: Request, res: Response) => {
-    const { selector } = req.body;
+    const {
+      selector,
+      confirm,
+      waitForNavigation,
+      navigationTimeoutMs,
+      confirmTimeoutMs,
+    } = req.body ?? {};
     if (!selector) { res.status(400).json({ error: 'selector required' }); return; }
     try {
-      const wc = await getSessionWC(ctx, req);
+      const target = resolveEffectiveTabTarget(ctx, req);
+      if (target.requestedTabId && !target.tab) {
+        sendRequestedTabNotFound(res, target.requestedTabId);
+        return;
+      }
+      const wc = target.tab ? ctx.tabManager.getWebContents(target.tab.id) : null;
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-      const result = await humanizedClick(wc, selector);
+      const result = await humanizedClick(wc, selector, {
+        confirm,
+        waitForNavigation,
+        timeoutMs: navigationTimeoutMs,
+        confirmTimeoutMs,
+      });
       ctx.panelManager.logActivity('click', { selector });
-      res.json(result);
+      if (!result.ok) {
+        res.status(404).json({
+          ok: false,
+          action: 'click',
+          scope: buildInteractionScope(target),
+          target: {
+            kind: 'selector',
+            selector,
+            resolved: false,
+          },
+          completion: result.completion,
+          error: result.error,
+        });
+        return;
+      }
+      res.json({
+        ok: true,
+        action: 'click',
+        scope: buildInteractionScope(target),
+        target: {
+          kind: 'selector',
+          selector,
+          resolved: true,
+          tagName: result.target.tagName,
+          text: result.target.text,
+        },
+        completion: result.completion,
+        postAction: result.postAction,
+      });
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -191,17 +233,55 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/type', async (req: Request, res: Response) => {
-    const { selector, text, clear } = req.body;
+    const { selector, text, clear, confirm, confirmTimeoutMs } = req.body ?? {};
     if (!selector || text === undefined) {
       res.status(400).json({ error: 'selector and text required' });
       return;
     }
     try {
-      const wc = await getSessionWC(ctx, req);
+      const target = resolveEffectiveTabTarget(ctx, req);
+      if (target.requestedTabId && !target.tab) {
+        sendRequestedTabNotFound(res, target.requestedTabId);
+        return;
+      }
+      const wc = target.tab ? ctx.tabManager.getWebContents(target.tab.id) : null;
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
-      const result = await humanizedType(wc, selector, text, !!clear);
+      const result = await humanizedType(wc, selector, text, !!clear, {
+        confirm,
+        confirmTimeoutMs,
+      });
       ctx.panelManager.logActivity('input', { selector, textLength: text.length });
-      res.json(result);
+      if (!result.ok) {
+        res.status(404).json({
+          ok: false,
+          action: 'type',
+          scope: buildInteractionScope(target),
+          target: {
+            kind: 'selector',
+            selector,
+            resolved: false,
+          },
+          completion: result.completion,
+          error: result.error,
+        });
+        return;
+      }
+      res.json({
+        ok: true,
+        action: 'type',
+        scope: buildInteractionScope(target),
+        target: {
+          kind: 'selector',
+          selector,
+          resolved: true,
+          tagName: result.target.tagName,
+          text: result.target.text,
+          clearRequested: !!clear,
+        },
+        requestedValue: text,
+        completion: result.completion,
+        postAction: result.postAction,
+      });
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -420,14 +500,20 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   }
 
   router.post('/press-key', async (req: Request, res: Response) => {
-    const { key, modifiers = [] } = req.body;
+    const { key, modifiers = [], waitForNavigation, navigationTimeoutMs } = req.body ?? {};
     if (!key) { res.status(400).json({ error: 'key required' }); return; }
     try {
-      const wc = await getSessionWC(ctx, req);
+      const target = resolveEffectiveTabTarget(ctx, req);
+      if (target.requestedTabId && !target.tab) {
+        sendRequestedTabNotFound(res, target.requestedTabId);
+        return;
+      }
+      const wc = target.tab ? ctx.tabManager.getWebContents(target.tab.id) : null;
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
 
       const normalizedKey = normalizeKeyName(key);
       const mods = (modifiers as string[]).map((m: string) => m.toLowerCase()) as Electron.InputEvent['modifiers'];
+      const beforePage = await readPageState(wc);
 
       // keyDown
       wc.sendInputEvent({ type: 'keyDown', keyCode: normalizedKey, modifiers: mods });
@@ -440,8 +526,38 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
       // keyUp
       wc.sendInputEvent({ type: 'keyUp', keyCode: normalizedKey, modifiers: mods });
 
+      const navigation = await captureNavigationState(wc, beforePage.url, {
+        waitForNavigation,
+        timeoutMs: navigationTimeoutMs,
+      });
+      const page = await readPageState(wc);
+      const effectConfirmed = navigation.changed
+        || navigation.loading
+        || page.activeElement.tagName !== beforePage.activeElement.tagName
+        || page.activeElement.value !== beforePage.activeElement.value;
+
       ctx.panelManager.logActivity('press-key', { key: normalizedKey, modifiers });
-      res.json({ ok: true, key: normalizedKey, modifiers });
+      res.json({
+        ok: true,
+        action: 'press-key',
+        scope: buildInteractionScope(target),
+        target: {
+          kind: 'keyboard',
+          key: normalizedKey,
+          modifiers,
+          resolved: true,
+        },
+        completion: {
+          dispatchCompleted: true,
+          effectConfirmed,
+          mode: effectConfirmed ? 'confirmed' : 'dispatched',
+          caveat: effectConfirmed ? undefined : 'Key dispatch finished, but no immediate focus, value, or navigation change was observable.',
+        },
+        postAction: {
+          page,
+          navigation,
+        },
+      });
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -452,14 +568,20 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   // ═══════════════════════════════════════════════
 
   router.post('/press-key-combo', async (req: Request, res: Response) => {
-    const { keys } = req.body;
+    const { keys, waitForNavigation, navigationTimeoutMs } = req.body ?? {};
     if (!Array.isArray(keys) || keys.length === 0) {
       res.status(400).json({ error: 'keys array required' });
       return;
     }
     try {
-      const wc = await getSessionWC(ctx, req);
+      const target = resolveEffectiveTabTarget(ctx, req);
+      if (target.requestedTabId && !target.tab) {
+        sendRequestedTabNotFound(res, target.requestedTabId);
+        return;
+      }
+      const wc = target.tab ? ctx.tabManager.getWebContents(target.tab.id) : null;
       if (!wc) { res.status(500).json({ error: 'No active tab' }); return; }
+      const beforePage = await readPageState(wc);
 
       const pressedKeys: string[] = [];
       for (const key of keys) {
@@ -474,8 +596,37 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
         await new Promise(resolve => setTimeout(resolve, 50));
       }
 
+      const navigation = await captureNavigationState(wc, beforePage.url, {
+        waitForNavigation,
+        timeoutMs: navigationTimeoutMs,
+      });
+      const page = await readPageState(wc);
+      const effectConfirmed = navigation.changed
+        || navigation.loading
+        || page.activeElement.tagName !== beforePage.activeElement.tagName
+        || page.activeElement.value !== beforePage.activeElement.value;
+
       ctx.panelManager.logActivity('press-key-combo', { keys: pressedKeys });
-      res.json({ ok: true, keys: pressedKeys });
+      res.json({
+        ok: true,
+        action: 'press-key-combo',
+        scope: buildInteractionScope(target),
+        target: {
+          kind: 'keyboard-sequence',
+          keys: pressedKeys,
+          resolved: true,
+        },
+        completion: {
+          dispatchCompleted: true,
+          effectConfirmed,
+          mode: effectConfirmed ? 'confirmed' : 'dispatched',
+          caveat: effectConfirmed ? undefined : 'Key sequence dispatch finished, but no immediate focus, value, or navigation change was observable.',
+        },
+        postAction: {
+          page,
+          navigation,
+        },
+      });
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -509,9 +660,9 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   router.post('/wait', async (req: Request, res: Response) => {
     const { selector, timeout = 10000 } = req.body;
     try {
-      const requestedTab = resolveRequestedTab(ctx, req);
-      if (requestedTab.requestedTabId && !requestedTab.tab) {
-        sendRequestedTabNotFound(res, requestedTab.requestedTabId);
+      const target = resolveEffectiveTabTarget(ctx, req);
+      if (target.requestedTabId && !target.tab) {
+        sendRequestedTabNotFound(res, target.requestedTabId);
         return;
       }
 
@@ -532,14 +683,14 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
           setTimeout(() => res({ ok: true, ready: false, timeout: true }), ${timeout});
         })
       `;
-      const result = requestedTab.tab
-        ? await ctx.devToolsManager.evaluateInTab(requestedTab.tab.webContentsId, code)
+      const result = target.tab
+        ? await ctx.devToolsManager.evaluateInTab(target.tab.webContentsId, code)
         : await (async () => {
             const wc = await getActiveWC(ctx);
             if (!wc) throw new Error('No active tab');
             return wc.executeJavaScript(code);
           })();
-      res.json(result);
+      res.json({ scope: buildInteractionScope(target), ...result });
     } catch (e) {
       handleRouteError(res, e);
     }

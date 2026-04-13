@@ -2,6 +2,19 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.71.3] - 2026-04-13
+
+- fix: strengthen interaction completion semantics across HTTP API and MCP
+
+### Fixed
+
+- Selector-based `POST /click` and `POST /type` now return explicit tab scope, target resolution, completion mode, and lightweight post-action state instead of leaving agents to infer whether the action actually landed
+- Snapshot ref actions (`POST /snapshot/click`, `POST /snapshot/fill`) now distinguish dispatch completion from confirmed effect, include the resolved tab scope for the ref target, and report post-action element/page state when it can be observed cheaply
+- Semantic locator routes (`POST /find`, `/find/click`, `/find/fill`, `/find/all`) now honor tab targeting, expose the resolved scope in their responses, and preserve locator resolution details when they chain into ref actions
+- Keyboard actions (`POST /press-key`, `POST /press-key-combo`) now return scoped completion metadata and post-action page/navigation state instead of a bare acknowledgement
+- MCP navigation and snapshot tools now describe the underlying guarantees accurately and surface the richer HTTP action contracts instead of flattening them into vague success text
+- Added focused route, MCP, and confirmation-helper tests for delayed fill confirmation, post-click/navigation state, and tab-targeted interaction semantics
+
 ## [v0.71.2] - 2026-04-13
 
 - fix: harden tab-scoped devtools and network inspection across HTTP API and MCP

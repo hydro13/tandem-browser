@@ -91,11 +91,11 @@ describe('MCP navigation tools', () => {
     const handler = getHandler(tools, 'tandem_click');
 
     it('clicks an element by selector', async () => {
-      mockApiCall.mockResolvedValueOnce({ clicked: true });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-1' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ selector: '#btn' });
-      expectTextContent(result, 'Clicked: #btn');
+      expectTextContent(result, 'Clicked #btn (tab tab-1; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/click', { selector: '#btn' }, undefined);
     });
   });
@@ -105,11 +105,11 @@ describe('MCP navigation tools', () => {
     const handler = getHandler(tools, 'tandem_type');
 
     it('types text into an input', async () => {
-      mockApiCall.mockResolvedValueOnce({});
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-2' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ selector: '#email', text: 'test@mail.com', clear: false });
-      expectTextContent(result, 'Typed "test@mail.com" into #email');
+      expectTextContent(result, 'Typed "test@mail.com" into #email (tab tab-2; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith(
         'POST', '/type',
         { selector: '#email', text: 'test@mail.com', clear: false },
@@ -144,19 +144,19 @@ describe('MCP navigation tools', () => {
     const handler = getHandler(tools, 'tandem_press_key');
 
     it('presses a key without modifiers', async () => {
-      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-3' }, completion: { mode: 'dispatched' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ key: 'Enter' });
-      expectTextContent(result, 'Pressed key: Enter');
+      expectTextContent(result, 'Pressed key Enter (tab tab-3; dispatched)');
     });
 
     it('presses a key with modifiers', async () => {
-      mockApiCall.mockResolvedValueOnce({ ok: true });
+      mockApiCall.mockResolvedValueOnce({ scope: { tabId: 'tab-4' }, completion: { mode: 'confirmed' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ key: 'c', modifiers: ['control'] });
-      expectTextContent(result, 'control+c');
+      expectTextContent(result, 'Pressed key control+c (tab tab-4; confirmed)');
       expect(mockApiCall).toHaveBeenCalledWith('POST', '/press-key', { key: 'c', modifiers: ['control'] }, undefined);
     });
   });
@@ -166,7 +166,7 @@ describe('MCP navigation tools', () => {
     const handler = getHandler(tools, 'tandem_wait_for_load');
 
     it('reports success when page loads', async () => {
-      mockApiCall.mockResolvedValueOnce({ timeout: false });
+      mockApiCall.mockResolvedValueOnce({ timeout: false, scope: { tabId: 'tab-5' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ timeout: 10000 });
@@ -174,7 +174,7 @@ describe('MCP navigation tools', () => {
     });
 
     it('reports timeout', async () => {
-      mockApiCall.mockResolvedValueOnce({ timeout: true });
+      mockApiCall.mockResolvedValueOnce({ timeout: true, scope: { tabId: 'tab-6' } });
       mockLogActivity.mockResolvedValueOnce(undefined);
 
       const result = await handler({ timeout: 5000 });

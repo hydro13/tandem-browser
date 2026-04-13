@@ -38,6 +38,15 @@ describe('Snapshot Routes', () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual({
         ok: true,
+        scope: {
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+          url: 'https://example.com',
+          title: 'Example',
+          sessionName: null,
+        },
         snapshot: '<snapshot>',
         count: 5,
         url: 'https://example.com',
@@ -47,7 +56,7 @@ describe('Snapshot Routes', () => {
         compact: false,
         selector: undefined,
         depth: undefined,
-        wcId: undefined,
+        wcId: 100,
       });
     });
 
@@ -69,7 +78,7 @@ describe('Snapshot Routes', () => {
         compact: true,
         selector: '#main',
         depth: 2,
-        wcId: undefined,
+        wcId: 100,
       });
     });
 
@@ -103,6 +112,11 @@ describe('Snapshot Routes', () => {
         depth: undefined,
         wcId: 202,
       });
+      expect(res.body.scope).toEqual(expect.objectContaining({
+        tabId: 'tab-2',
+        wcId: 202,
+        source: 'header',
+      }));
     });
 
     it('returns 404 when X-Tab-Id does not exist', async () => {
@@ -135,8 +149,32 @@ describe('Snapshot Routes', () => {
         .send({ ref: '@e1' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ref: '@e1' });
-      expect(ctx.snapshotManager.clickRef).toHaveBeenCalledWith('@e1');
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'snapshot.click',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'ref',
+        }),
+        target: expect.objectContaining({
+          kind: 'ref',
+          ref: '@e1',
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+      expect(ctx.snapshotManager.clickRef).toHaveBeenCalledWith('@e1', {
+        confirm: undefined,
+        waitForNavigation: undefined,
+        timeoutMs: undefined,
+        confirmTimeoutMs: undefined,
+      });
     });
 
     it('returns 400 when ref is missing', async () => {
@@ -169,8 +207,31 @@ describe('Snapshot Routes', () => {
         .send({ ref: '@e2', value: 'hello world' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ref: '@e2' });
-      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e2', 'hello world');
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'snapshot.fill',
+        requestedValue: 'hello world',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'ref',
+        }),
+        target: expect.objectContaining({
+          kind: 'ref',
+          ref: '@e2',
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e2', 'hello world', {
+        confirm: undefined,
+        confirmTimeoutMs: undefined,
+      });
     });
 
     it('returns 400 when ref is missing', async () => {
@@ -197,8 +258,11 @@ describe('Snapshot Routes', () => {
         .send({ ref: '@e2', value: '' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ref: '@e2' });
-      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e2', '');
+      expect(res.body).toEqual(expect.objectContaining({ ok: true, requestedValue: '' }));
+      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e2', '', {
+        confirm: undefined,
+        confirmTimeoutMs: undefined,
+      });
     });
 
     it('returns 500 when fillRef throws', async () => {
@@ -259,8 +323,45 @@ describe('Snapshot Routes', () => {
         .send({ by: 'role', value: 'button' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual(findResult);
-      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'role', value: 'button' });
+      expect(res.body).toEqual({
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        query: { by: 'role', value: 'button' },
+        result: findResult,
+      });
+      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'role', value: 'button' }, { wcId: 100 });
+    });
+
+    it('uses X-Tab-Id to scope locator resolution to a background tab', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+      vi.mocked(ctx.locatorFinder.find).mockResolvedValue({ found: true, ref: '@e9', role: 'button', text: 'Save' });
+
+      const res = await request(app)
+        .post('/find')
+        .set('X-Tab-Id', 'tab-2')
+        .send({ by: 'text', value: 'Save' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual(expect.objectContaining({
+        tabId: 'tab-2',
+        wcId: 202,
+        source: 'header',
+      }));
+      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'text', value: 'Save' }, { wcId: 202 });
     });
 
     it('returns 400 when by is missing', async () => {
@@ -304,9 +405,25 @@ describe('Snapshot Routes', () => {
         .send({ by: 'text', value: 'Submit' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ref: '@e6', clicked: true });
-      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'text', value: 'Submit' });
-      expect(ctx.snapshotManager.clickRef).toHaveBeenCalledWith('@e6');
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'find.click',
+        target: expect.objectContaining({
+          kind: 'locator',
+          resolved: true,
+          ref: '@e6',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+        }),
+      }));
+      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'text', value: 'Submit' }, { wcId: 100 });
+      expect(ctx.snapshotManager.clickRef).toHaveBeenCalledWith('@e6', {
+        confirm: undefined,
+        waitForNavigation: undefined,
+        timeoutMs: undefined,
+      });
     });
 
     it('returns 404 when element not found', async () => {
@@ -317,7 +434,15 @@ describe('Snapshot Routes', () => {
         .send({ by: 'text', value: 'Nonexistent' });
 
       expect(res.status).toBe(404);
-      expect(res.body).toEqual({ found: false, error: 'Element not found' });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: false,
+        action: 'find.click',
+        error: 'Element not found',
+        target: expect.objectContaining({
+          kind: 'locator',
+          resolved: false,
+        }),
+      }));
     });
 
     it('returns 400 when by is missing', async () => {
@@ -346,7 +471,7 @@ describe('Snapshot Routes', () => {
         .send({ by: 'role', value: 'button', fillValue: 'should-be-stripped' });
 
       expect(res.status).toBe(200);
-      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'role', value: 'button' });
+      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'role', value: 'button' }, { wcId: 100 });
     });
 
     it('returns 500 when snapshotManager.clickRef throws', async () => {
@@ -373,9 +498,25 @@ describe('Snapshot Routes', () => {
         .send({ by: 'label', value: 'Email', fillValue: 'test@example.com' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ref: '@e8', filled: true });
-      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'label', value: 'Email' });
-      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e8', 'test@example.com');
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'find.fill',
+        requestedValue: 'test@example.com',
+        target: expect.objectContaining({
+          kind: 'locator',
+          resolved: true,
+          ref: '@e8',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+        }),
+      }));
+      expect(ctx.locatorFinder.find).toHaveBeenCalledWith({ by: 'label', value: 'Email' }, { wcId: 100 });
+      expect(ctx.snapshotManager.fillRef).toHaveBeenCalledWith('@e8', 'test@example.com', {
+        confirm: undefined,
+        confirmTimeoutMs: undefined,
+      });
     });
 
     it('returns 404 when element not found', async () => {
@@ -386,7 +527,15 @@ describe('Snapshot Routes', () => {
         .send({ by: 'label', value: 'Missing', fillValue: 'data' });
 
       expect(res.status).toBe(404);
-      expect(res.body).toEqual({ found: false, error: 'Element not found' });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: false,
+        action: 'find.fill',
+        error: 'Element not found',
+        target: expect.objectContaining({
+          kind: 'locator',
+          resolved: false,
+        }),
+      }));
     });
 
     it('returns 400 when by is missing', async () => {
@@ -444,8 +593,18 @@ describe('Snapshot Routes', () => {
         .send({ by: 'role', value: 'button' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ found: true, count: 2, results });
-      expect(ctx.locatorFinder.findAll).toHaveBeenCalledWith({ by: 'role', value: 'button' });
+      expect(res.body).toEqual({
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        found: true,
+        count: 2,
+        results,
+      });
+      expect(ctx.locatorFinder.findAll).toHaveBeenCalledWith({ by: 'role', value: 'button' }, { wcId: 100 });
     });
 
     it('returns found:false and count:0 when no elements match', async () => {
@@ -456,7 +615,7 @@ describe('Snapshot Routes', () => {
         .send({ by: 'role', value: 'dialog' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ found: false, count: 0, results: [] });
+      expect(res.body).toEqual(expect.objectContaining({ found: false, count: 0, results: [] }));
     });
 
     it('returns 400 when by is missing', async () => {

@@ -1,5 +1,14 @@
 import type { DevToolsManager } from '../devtools/manager';
 import { behaviorReplay } from '../behavior/replay';
+import { InteractionTargetNotFoundError } from '../interaction/errors';
+import {
+  captureNavigationState,
+  readPageState,
+  type InteractionElementState,
+  type NavigationState,
+  type PageState,
+  type WaitForNavigationOptions,
+} from '../interaction/page-state';
 import type { AccessibilityNode, RefMap, SnapshotOptions, SnapshotResult } from './types';
 
 /** Roles considered interactive (buttons, inputs, links, etc.) */
@@ -31,6 +40,7 @@ interface CDPAXNode {
 }
 
 const MAX_TYPED_CHARS = 10_000;
+const DEFAULT_CONFIRM_TIMEOUT_MS = 700;
 
 interface RefTarget {
   backendNodeId: number;
@@ -51,7 +61,37 @@ interface DOMResolveNodeResponse {
 
 interface RuntimeCallFunctionResponse {
   result?: {
-    value?: string;
+    value?: unknown;
+  };
+}
+
+export interface SnapshotActionOptions extends WaitForNavigationOptions {
+  confirm?: boolean;
+  confirmTimeoutMs?: number;
+}
+
+export interface SnapshotActionResult {
+  ok: true;
+  ref: string;
+  wcId: number | null;
+  target: {
+    kind: 'ref';
+    ref: string;
+    resolved: true;
+    tagName: string | null;
+    text: string | null;
+  };
+  completion: {
+    dispatchCompleted: boolean;
+    effectConfirmed: boolean;
+    mode: 'confirmed' | 'dispatched';
+    caveat?: string;
+  };
+  postAction: {
+    page: PageState;
+    element: (InteractionElementState & { role: string | null }) | null;
+    navigation?: NavigationState;
+    observedAfterMs?: number;
   };
 }
 
@@ -177,9 +217,12 @@ export class SnapshotManager {
    * Click an element by @ref.
    * Resolves ref → backendDOMNodeId → DOM.getBoxModel → center coordinates → sendInputEvent.
    */
-  async clickRef(ref: string): Promise<void> {
+  async clickRef(ref: string, options?: SnapshotActionOptions): Promise<SnapshotActionResult> {
     const target = this.requireRefTarget(ref);
     const { backendNodeId } = target;
+    const wc = await this.getWebContentsForRef(target);
+    const beforePage = await readPageState(wc);
+    const beforeElement = options?.confirm === false ? null : await this.readRefElementState(target);
 
     // Get the box model to find element coordinates
     await this.sendCommandForRef(target, 'DOM.enable', {});
@@ -192,9 +235,6 @@ export class SnapshotManager {
     const c = box.model.content;
     const x = Math.round((c[0] + c[2] + c[4] + c[6]) / 4);
     const y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
-
-    // Get WebContents via ensureAttached for sendInputEvent
-    const wc = await this.getWebContentsForRef(target);
 
     // Scroll element into view first
     try {
@@ -213,7 +253,7 @@ export class SnapshotManager {
           const y2 = Math.round((c2[1] + c2[3] + c2[5] + c2[7]) / 4);
           // Use updated coordinates
           await this.performClick(wc, x2, y2);
-          return;
+          return this.buildClickResult(ref, target, wc, beforePage, beforeElement, options);
         }
       }
     } catch {
@@ -221,15 +261,17 @@ export class SnapshotManager {
     }
 
     await this.performClick(wc, x, y);
+    return this.buildClickResult(ref, target, wc, beforePage, beforeElement, options);
   }
 
   /**
    * Fill an element by @ref with text.
    * Clicks to focus, then types char-by-char via sendInputEvent.
    */
-  async fillRef(ref: string, value: string): Promise<void> {
+  async fillRef(ref: string, value: string, options?: SnapshotActionOptions): Promise<SnapshotActionResult> {
     const target = this.requireRefTarget(ref);
     const { backendNodeId } = target;
+    const wc = await this.getWebContentsForRef(target);
 
     // Get box model for clicking to focus
     await this.sendCommandForRef(target, 'DOM.enable', {});
@@ -241,8 +283,6 @@ export class SnapshotManager {
     const c = box.model.content;
     let x = Math.round((c[0] + c[2] + c[4] + c[6]) / 4);
     let y = Math.round((c[1] + c[3] + c[5] + c[7]) / 4);
-
-    const wc = await this.getWebContentsForRef(target);
 
     // Scroll into view and re-get coordinates
     try {
@@ -286,6 +326,41 @@ export class SnapshotManager {
       wc.sendInputEvent({ type: 'char', keyCode: char });
       await this.delay(behaviorReplay.getTypingDelay(char, nextChar));
     }
+
+    const confirmation = options?.confirm === false
+      ? { confirmed: false, state: await this.readRefElementState(target), observedAfterMs: 0 }
+      : await this.confirmRefValue(
+          target,
+          value,
+          options?.confirmTimeoutMs ?? DEFAULT_CONFIRM_TIMEOUT_MS,
+        );
+    const page = await readPageState(wc);
+
+    return {
+      ok: true,
+      ref,
+      wcId: target.wcId,
+      target: {
+        kind: 'ref',
+        ref,
+        resolved: true,
+        tagName: confirmation.state?.tagName ?? null,
+        text: confirmation.state?.text ?? null,
+      },
+      completion: {
+        dispatchCompleted: true,
+        effectConfirmed: confirmation.confirmed,
+        mode: confirmation.confirmed ? 'confirmed' : 'dispatched',
+        caveat: confirmation.confirmed ? undefined : options?.confirm === false
+          ? 'Typing dispatch finished without post-fill value confirmation.'
+          : 'Fill dispatch finished, but the requested value was not observed before the confirmation window expired.',
+      },
+      postAction: {
+        page,
+        element: confirmation.state,
+        observedAfterMs: confirmation.observedAfterMs,
+      },
+    };
   }
 
   /**
@@ -307,7 +382,7 @@ export class SnapshotManager {
       returnByValue: true,
     });
 
-    return textResult.result?.value || '';
+    return typeof textResult.result?.value === 'string' ? textResult.result.value : '';
   }
 
   /**
@@ -351,11 +426,11 @@ export class SnapshotManager {
    * Register a backendNodeId found via CDP DOM queries as a new @ref.
    * Used by LocatorFinder when elements are found via CSS/XPath but not in the tree.
    */
-  registerBackendNodeId(backendNodeId: number): string {
+  registerBackendNodeId(backendNodeId: number, wcId?: number | null): string {
     this.refCounter++;
     const ref = `@e${this.refCounter}`;
-    const wcId = this.devtools.getAttachedWebContents()?.id ?? null;
-    this.refTargets.set(ref, { backendNodeId, wcId });
+    const resolvedWcId = wcId ?? this.devtools.getAttachedWebContents()?.id ?? null;
+    this.refTargets.set(ref, { backendNodeId, wcId: resolvedWcId });
     return ref;
   }
 
@@ -421,7 +496,7 @@ export class SnapshotManager {
   private requireRefTarget(ref: string): RefTarget {
     const target = this.refTargets.get(ref);
     if (!target) {
-      throw new Error(`Ref not found: ${ref} — call GET /snapshot first`);
+      throw new InteractionTargetNotFoundError(`Ref not found: ${ref} — call GET /snapshot first`);
     }
     return target;
   }
@@ -445,6 +520,125 @@ export class SnapshotManager {
       throw new Error(refTarget.wcId ? `Tab ${refTarget.wcId} is no longer available` : 'No active tab');
     }
     return wc;
+  }
+
+  private async buildClickResult(
+    ref: string,
+    target: RefTarget,
+    wc: Electron.WebContents,
+    beforePage: PageState,
+    beforeElement: (InteractionElementState & { role: string | null }) | null,
+    options?: SnapshotActionOptions,
+  ): Promise<SnapshotActionResult> {
+    const navigation = await captureNavigationState(wc, beforePage.url, options);
+    const page = await readPageState(wc);
+    const element = options?.confirm === false ? null : await this.readRefElementState(target);
+    const effectConfirmed = options?.confirm === false
+      ? false
+      : Boolean(
+          navigation.changed
+          || navigation.loading
+          || (element?.focused && !beforeElement?.focused)
+          || (
+            element?.checked !== null
+            && beforeElement?.checked !== null
+            && element?.checked !== beforeElement?.checked
+          )
+          || (element?.value !== null && element?.value !== beforeElement?.value)
+        );
+
+    return {
+      ok: true,
+      ref,
+      wcId: target.wcId,
+      target: {
+        kind: 'ref',
+        ref,
+        resolved: true,
+        tagName: element?.tagName ?? beforeElement?.tagName ?? null,
+        text: element?.text ?? beforeElement?.text ?? null,
+      },
+      completion: {
+        dispatchCompleted: true,
+        effectConfirmed,
+        mode: effectConfirmed ? 'confirmed' : 'dispatched',
+        caveat: effectConfirmed ? undefined : options?.confirm === false
+          ? 'Click dispatch was acknowledged without post-click confirmation.'
+          : 'Click dispatch finished, but no immediate focus, value, checked, or navigation change was observable.',
+      },
+      postAction: {
+        page,
+        element,
+        navigation,
+      },
+    };
+  }
+
+  private async readRefElementState(
+    refTarget: RefTarget,
+  ): Promise<(InteractionElementState & { role: string | null }) | null> {
+    const resolved = await this.sendCommandForRef<DOMResolveNodeResponse>(refTarget, 'DOM.resolveNode', {
+      backendNodeId: refTarget.backendNodeId,
+    }).catch(() => null);
+    const objectId = resolved?.object?.objectId;
+    if (!objectId) {
+      return null;
+    }
+
+    const stateResult = await this.sendCommandForRef<RuntimeCallFunctionResponse>(refTarget, 'Runtime.callFunctionOn', {
+      objectId,
+      functionDeclaration: `
+        function() {
+          const active = document.activeElement;
+          return {
+            found: true,
+            tagName: this.tagName || null,
+            text: (this.textContent || '').trim().slice(0, 200),
+            value: typeof this.value === 'string' ? this.value.slice(0, 200) : null,
+            focused: active === this,
+            connected: this.isConnected !== false,
+            checked: typeof this.checked === 'boolean' ? this.checked : null,
+            disabled: typeof this.disabled === 'boolean' ? this.disabled : null,
+            role: this.getAttribute ? this.getAttribute('role') : null
+          };
+        }
+      `,
+      returnByValue: true,
+    }).catch(() => null);
+
+    return (stateResult?.result?.value as (InteractionElementState & { role: string | null }) | undefined) ?? null;
+  }
+
+  private async confirmRefValue(
+    refTarget: RefTarget,
+    expectedValue: string,
+    timeoutMs: number,
+  ): Promise<{
+    confirmed: boolean;
+    state: (InteractionElementState & { role: string | null }) | null;
+    observedAfterMs: number;
+  }> {
+    const startedAt = Date.now();
+    let lastState = await this.readRefElementState(refTarget);
+
+    while (Date.now() - startedAt <= timeoutMs) {
+      if (lastState?.value === expectedValue) {
+        return {
+          confirmed: true,
+          state: lastState,
+          observedAfterMs: Date.now() - startedAt,
+        };
+      }
+
+      await this.delay(50);
+      lastState = await this.readRefElementState(refTarget);
+    }
+
+    return {
+      confirmed: lastState?.value === expectedValue,
+      state: lastState,
+      observedAfterMs: Date.now() - startedAt,
+    };
   }
 
   // ── Tree building ──

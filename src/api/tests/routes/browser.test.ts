@@ -15,8 +15,62 @@ vi.mock('electron', () => ({
 }));
 
 vi.mock('../../../input/humanized', () => ({
-  humanizedClick: vi.fn().mockResolvedValue({ ok: true, clicked: true }),
-  humanizedType: vi.fn().mockResolvedValue({ ok: true, typed: true }),
+  humanizedClick: vi.fn().mockResolvedValue({
+    ok: true,
+    target: { selector: '#btn', found: true, tagName: 'BUTTON', text: 'Submit' },
+    completion: { dispatchCompleted: true, effectConfirmed: true, mode: 'confirmed' },
+    postAction: {
+      page: {
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        activeElement: { tagName: 'BUTTON', id: 'submit', name: null, type: null, value: null },
+      },
+      element: {
+        found: true,
+        tagName: 'BUTTON',
+        text: 'Submit',
+        value: null,
+        focused: true,
+        connected: true,
+        checked: null,
+        disabled: false,
+      },
+      navigation: {
+        urlBefore: 'https://example.com',
+        urlAfter: 'https://example.com',
+        changed: false,
+        loading: false,
+        waitApplied: false,
+        completed: true,
+        timeout: false,
+      },
+    },
+  }),
+  humanizedType: vi.fn().mockResolvedValue({
+    ok: true,
+    target: { selector: '#input', found: true, tagName: 'INPUT', text: null },
+    completion: { dispatchCompleted: true, effectConfirmed: true, mode: 'confirmed' },
+    postAction: {
+      page: {
+        url: 'https://example.com',
+        title: 'Example',
+        loading: false,
+        activeElement: { tagName: 'INPUT', id: 'search', name: 'search', type: 'text', value: 'hello world' },
+      },
+      element: {
+        found: true,
+        tagName: 'INPUT',
+        text: null,
+        value: 'hello world',
+        focused: true,
+        connected: true,
+        checked: null,
+        disabled: false,
+      },
+      observedAfterMs: 25,
+    },
+  }),
 }));
 
 vi.mock('../../../notifications/alert', () => ({
@@ -301,15 +355,61 @@ describe('Browser Routes', () => {
         .send({ selector: '#submit-btn' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, clicked: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'click',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#submit-btn',
+          resolved: true,
+          tagName: 'BUTTON',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
       expect(humanizedClick).toHaveBeenCalled();
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith('click', {
         selector: '#submit-btn',
       });
     });
 
+    it('uses X-Tab-Id to target a background tab and reports scoped metadata', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        {
+          id: 'tab-2',
+          webContentsId: 202,
+          url: 'https://example.com/background',
+          title: 'Background',
+          active: false,
+          source: 'wingman',
+          partition: 'persist:tandem',
+        } as any,
+      ]);
+
+      const res = await request(app)
+        .post('/click')
+        .set('X-Tab-Id', 'tab-2')
+        .send({ selector: '#submit-btn' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.scope).toEqual(expect.objectContaining({
+        tabId: 'tab-2',
+        wcId: 202,
+        source: 'header',
+      }));
+    });
+
     it('returns 500 when no active tab', async () => {
-      vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
 
       const res = await request(app)
         .post('/click')
@@ -347,12 +447,45 @@ describe('Browser Routes', () => {
         .send({ selector: '#search', text: 'hello world' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, typed: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'type',
+        requestedValue: 'hello world',
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+          source: 'active',
+        }),
+        target: expect.objectContaining({
+          kind: 'selector',
+          selector: '#search',
+          resolved: true,
+          tagName: 'INPUT',
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
       expect(humanizedType).toHaveBeenCalled();
       expect(ctx.panelManager.logActivity).toHaveBeenCalledWith('input', {
         selector: '#search',
         textLength: 11,
       });
+    });
+
+    it('returns 404 when the selector action targets a missing tab via X-Tab-Id', async () => {
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([]);
+
+      const res = await request(app)
+        .post('/type')
+        .set('X-Tab-Id', 'tab-missing')
+        .send({ selector: '#input', text: 'hello' });
+
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe('Tab tab-missing not found');
     });
 
     it('passes clear flag when provided', async () => {
@@ -365,11 +498,12 @@ describe('Browser Routes', () => {
         '#input',
         'test',
         true,
+        { confirm: undefined, confirmTimeoutMs: undefined },
       );
     });
 
     it('returns 500 when no active tab', async () => {
-      vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
 
       const res = await request(app)
         .post('/type')
@@ -768,6 +902,88 @@ describe('Browser Routes', () => {
   });
 
   // ═══════════════════════════════════════════════
+  // POST /press-key + /press-key-combo
+  // ═══════════════════════════════════════════════
+
+  describe('POST /press-key', () => {
+    it('returns scoped completion metadata for a key press', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'INPUT', id: 'email', name: 'email', type: 'text', value: 'a' },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'INPUT', id: 'email', name: 'email', type: 'text', value: 'ab' },
+        });
+
+      const res = await request(app)
+        .post('/press-key')
+        .send({ key: 'b' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'press-key',
+        scope: expect.objectContaining({
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+        target: expect.objectContaining({
+          kind: 'keyboard',
+          key: 'b',
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+    });
+  });
+
+  describe('POST /press-key-combo', () => {
+    it('returns scoped completion metadata for a key sequence', async () => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+      vi.mocked(mockWC!.executeJavaScript)
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BODY', id: null, name: null, type: null, value: null },
+        })
+        .mockResolvedValueOnce({
+          title: 'Example',
+          activeElement: { tagName: 'BUTTON', id: 'save', name: null, type: null, value: null },
+        });
+
+      const res = await request(app)
+        .post('/press-key-combo')
+        .send({ keys: ['Tab', 'Enter'] });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        action: 'press-key-combo',
+        scope: expect.objectContaining({
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+        target: expect.objectContaining({
+          kind: 'keyboard-sequence',
+          keys: ['Tab', 'Return'],
+          resolved: true,
+        }),
+        completion: expect.objectContaining({
+          dispatchCompleted: true,
+          effectConfirmed: true,
+          mode: 'confirmed',
+        }),
+      }));
+    });
+  });
+
+  // ═══════════════════════════════════════════════
   // POST /wingman-alert
   // ═══════════════════════════════════════════════
 
@@ -818,8 +1034,7 @@ describe('Browser Routes', () => {
 
   describe('POST /wait', () => {
     it('waits for a selector and returns result', async () => {
-      const mockWC = await ctx.tabManager.getActiveWebContents();
-      vi.mocked(mockWC!.executeJavaScript).mockResolvedValueOnce({
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce({
         ok: true,
         found: true,
       });
@@ -829,12 +1044,19 @@ describe('Browser Routes', () => {
         .send({ selector: '#loaded' });
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, found: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        found: true,
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+      }));
     });
 
     it('waits for load event when no selector', async () => {
-      const mockWC = await ctx.tabManager.getActiveWebContents();
-      vi.mocked(mockWC!.executeJavaScript).mockResolvedValueOnce({
+      vi.mocked(ctx.devToolsManager.evaluateInTab).mockResolvedValueOnce({
         ok: true,
         ready: true,
       });
@@ -842,10 +1064,19 @@ describe('Browser Routes', () => {
       const res = await request(app).post('/wait').send({});
 
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, ready: true });
+      expect(res.body).toEqual(expect.objectContaining({
+        ok: true,
+        ready: true,
+        scope: expect.objectContaining({
+          kind: 'tab',
+          tabId: 'tab-1',
+          wcId: 100,
+        }),
+      }));
     });
 
     it('returns 500 when no active tab', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValueOnce(null as any);
       vi.mocked(ctx.tabManager.getActiveWebContents).mockResolvedValueOnce(null as any);
 
       const res = await request(app)
