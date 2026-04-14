@@ -2,9 +2,11 @@ import fs from 'fs';
 import path from 'path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { clipboardWriteImage, nativeImageCreateFromBuffer } = vi.hoisted(() => ({
+const { clipboardWriteImage, nativeImageCreateFromBuffer, execFileMock, execFileSyncMock } = vi.hoisted(() => ({
   clipboardWriteImage: vi.fn(),
   nativeImageCreateFromBuffer: vi.fn().mockReturnValue({ isEmpty: () => false }),
+  execFileMock: vi.fn(),
+  execFileSyncMock: vi.fn(),
 }));
 
 vi.mock('electron', () => ({
@@ -20,6 +22,11 @@ vi.mock('electron', () => ({
   webContents: {
     fromId: vi.fn(),
   },
+}));
+
+vi.mock('child_process', () => ({
+  execFile: execFileMock,
+  execFileSync: execFileSyncMock,
 }));
 
 vi.mock('fs', async () => {
@@ -73,6 +80,11 @@ describe('DrawOverlayManager screenshot modes', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(fs.existsSync).mockReturnValue(false);
+    execFileMock.mockImplementation((_cmd, _args, callback) => {
+      callback?.(null);
+      return {} as any;
+    });
+    execFileSyncMock.mockImplementation(() => Buffer.from(''));
   });
 
   it('captures the full application window and emits a screenshot event', async () => {
@@ -109,5 +121,30 @@ describe('DrawOverlayManager screenshot modes', () => {
       width: 1200,
       height: 780,
     });
+  });
+
+  it('imports Apple Photos using an alias file reference when enabled', async () => {
+    vi.useFakeTimers();
+    configManager.getConfig.mockReturnValue({
+      screenshots: {
+        applePhotos: true,
+        googlePhotos: false,
+      },
+    });
+
+    const manager = new DrawOverlayManager(win, configManager, googlePhotosManager);
+    await manager.captureApplicationScreenshot('https://example.com/demo');
+    vi.runAllTimers();
+
+    expect(execFileMock).toHaveBeenCalledWith(
+      'osascript',
+      expect.arrayContaining([
+        '-e',
+        '  set theFile to ((POSIX file importPath) as alias)',
+      ]),
+      expect.any(Function),
+    );
+
+    vi.useRealTimers();
   });
 });

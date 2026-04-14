@@ -127,6 +127,8 @@ export function createMockContext(): RouteContext {
     drawManager: {
       getLastScreenshot: vi.fn().mockReturnValue(null),
       captureAnnotated: vi.fn().mockResolvedValue({ ok: true }),
+      captureApplicationScreenshot: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/application.png' }),
+      captureRegionScreenshot: vi.fn().mockResolvedValue({ ok: true, path: '/tmp/region.png' }),
       toggleDrawMode: vi.fn().mockReturnValue(true),
       listScreenshots: vi.fn().mockReturnValue([]),
     } as any,

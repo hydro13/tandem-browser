@@ -5,6 +5,13 @@ import { handleRouteError } from '../../utils/errors';
 import { getErrorMessage } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
 
+interface ScreenshotRegion {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
 function renderGooglePhotosAuthPage(opts: { ok: boolean; title: string; message: string; detail?: string }): string {
   return `<!doctype html>
 <html>
@@ -33,6 +40,33 @@ function renderGooglePhotosAuthPage(opts: { ok: boolean; title: string; message:
     </script>
   </body>
 </html>`;
+}
+
+function getScreenshotCurrentUrl(ctx: RouteContext): string {
+  return ctx.tabManager.getActiveTab()?.url || 'tandem://window';
+}
+
+function parseScreenshotRegion(body: unknown): ScreenshotRegion | null {
+  if (!body || typeof body !== 'object') {
+    return null;
+  }
+
+  const candidate = body as Record<string, unknown>;
+  const x = candidate.x;
+  const y = candidate.y;
+  const width = candidate.width;
+  const height = candidate.height;
+
+  if (![x, y, width, height].every(value => typeof value === 'number' && Number.isFinite(value))) {
+    return null;
+  }
+
+  return {
+    x: x as number,
+    y: y as number,
+    width: width as number,
+    height: height as number,
+  };
 }
 
 /**
@@ -247,6 +281,40 @@ export function registerMediaRoutes(router: Router, ctx: RouteContext): void {
       } else {
         res.status(500).json(result);
       }
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/screenshot/application', async (_req: Request, res: Response) => {
+    try {
+      const result = await ctx.drawManager.captureApplicationScreenshot(getScreenshotCurrentUrl(ctx));
+      if (result.ok) {
+        res.json(result);
+      } else {
+        res.status(500).json(result);
+      }
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/screenshot/region', async (req: Request, res: Response) => {
+    const region = parseScreenshotRegion(req.body);
+    if (!region) {
+      res.status(400).json({ error: 'x, y, width, and height are required numbers' });
+      return;
+    }
+
+    try {
+      const result = await ctx.drawManager.captureRegionScreenshot(region, getScreenshotCurrentUrl(ctx));
+      if (result.ok) {
+        res.json(result);
+        return;
+      }
+
+      const status = result.error === 'Selected region is too small' ? 400 : 500;
+      res.status(status).json(result);
     } catch (e) {
       handleRouteError(res, e);
     }

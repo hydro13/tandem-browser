@@ -16,7 +16,7 @@ how it works, and why it exists.
 
 - **Repo:** `hydro13/tandem-browser` (GitHub: hydro13)
 - **Stack:** Electron 40 + TypeScript + Express.js API (`localhost:8765`) +
-  MCP server (248 tools)
+  MCP server (250 tools)
 - **Goal:** An agent-first browser where any AI (via MCP, HTTP API, or
   WebSocket) and a human browse together
 - **Philosophy:** Local-first, privacy-first, no cloud dependencies in the
@@ -39,7 +39,7 @@ tandem-browser/
 │   ├── snapshot/                 # Accessibility tree with @refs
 │   ├── network/                  # Inspector + mocking
 │   ├── sessions/                 # Multi-session isolation
-│   ├── mcp/                      # MCP server (248 tools, full API parity)
+│   ├── mcp/                      # MCP server (250 tools, full API parity)
 │   │   ├── server.ts             # MCP server entry point
 │   │   └── tools/                # Tool definitions (one file per domain)
 │   ├── agents/                   # TaskManager, X-Scout, TabLockManager
@@ -120,6 +120,12 @@ tandem-browser/
 - While Tandem is still effectively solo-maintained, prefer keeping required CI
   checks (`verify`, `CodeQL`) and using PRs as the review step; do not assume a
   second human reviewer will exist
+- Any merged `feat:` change must bump the app version before the PR is merged
+  (`minor`, e.g. `0.72.2` → `0.73.0`), and any merged `fix:` change must bump a
+  `patch` version (e.g. `0.72.2` → `0.72.3`)
+- Keep `CHANGELOG.md`, `package.json`, the in-app version, and the repo/docs
+  version references on the same release number; do not leave new product
+  surface under an old version header
 - Before merging a PR, quickly review the diff for version bumps, changelog
   noise, release impact, and whether README / CONTRIBUTING / TODO need updates
 - Commit message examples:

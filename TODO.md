@@ -15,7 +15,7 @@ Last updated: April 14, 2026
 ## Current Snapshot
 
 - Current app version: `0.72.2`
-- MCP server: 248 tools (full API parity + awareness)
+- MCP server: 250 tools (full API parity + awareness)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -28,7 +28,7 @@ Last updated: April 14, 2026
 - [x] Update `skill/SKILL.md` so MCP-first clients, direct-HTTP clients, and the new durable handoff model are all documented with the current Tandem behavior
 - [ ] Remove the remaining legacy OpenClaw compatibility IPC and unused webhook chat code after the signed gateway-chat path has shipped for a release or two
 - [x] `WebSocket /watch/live` for live watch updates
-- [ ] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
+- [x] Expose `captureApplicationScreenshot` and `captureRegionScreenshot` as HTTP API endpoints (e.g. `POST /screenshot/application`, `POST /screenshot/region`) so OpenClaw agents can trigger full-window and region captures programmatically without requiring IPC or human interaction
 - [x] Show a notification when the Wingman panel is closed and Wingman replies
 - [x] Google Photos upload support for screenshots; local OAuth client ID setup, connect/disconnect flow, and automatic upload path now exist
 - [x] Screenshot capture modes for `Web Page`, `Application`, and in-app `Region` selection from the main toolbar screenshot button

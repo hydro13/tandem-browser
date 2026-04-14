@@ -10,7 +10,7 @@ bicycle: two riders, one machine, each contributing what the other can't do
 alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while AI agents operate through a built-in **MCP server** (248 tools) or a full
+while AI agents operate through a built-in **MCP server** (250 tools) or a full
 local **HTTP API** on `127.0.0.1:8765` with 300+ endpoints for navigation,
 interaction, data extraction, automation, sessions, sync, extensions, and
 developer tooling. Websites see a normal Chrome browser on macOS. They don't see
@@ -30,7 +30,7 @@ The security layer exists because when an AI has access to your browser, your th
 Data stays local. Sessions are isolated. Nothing leaves the machine through Tandem Browser without going through a filter first.
 
 **GitHub:** `hydro13/tandem-browser`  
-**Current version:** `0.72.2`  
+**Current version:** `0.73.0`  
 **Repository status:** Public developer preview  
 **Started:** February 11, 2026
 

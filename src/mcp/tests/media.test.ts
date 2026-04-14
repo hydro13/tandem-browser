@@ -91,6 +91,34 @@ describe('MCP media tools', () => {
     });
   });
 
+  describe('tandem_screenshot_capture_application', () => {
+    it('captures a full application screenshot', async () => {
+      mockApiCall.mockResolvedValueOnce({ path: '/tmp/application.png' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      await getHandler(tools, 'tandem_screenshot_capture_application')({});
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/screenshot/application');
+    });
+  });
+
+  describe('tandem_screenshot_capture_region', () => {
+    it('captures a region screenshot', async () => {
+      mockApiCall.mockResolvedValueOnce({ path: '/tmp/region.png' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      await getHandler(tools, 'tandem_screenshot_capture_region')({
+        x: 12,
+        y: 34,
+        width: 320,
+        height: 180,
+      });
+      expect(mockApiCall).toHaveBeenCalledWith('POST', '/screenshot/region', {
+        x: 12,
+        y: 34,
+        width: 320,
+        height: 180,
+      });
+    });
+  });
+
   describe('tandem_screenshots_list', () => {
     it('lists screenshots', async () => {
       mockApiCall.mockResolvedValueOnce({ screenshots: [] });

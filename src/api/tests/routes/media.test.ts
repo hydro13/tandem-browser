@@ -619,6 +619,124 @@ describe('Media Routes', () => {
     });
   });
 
+  describe('POST /screenshot/application', () => {
+    it('captures an application screenshot using the active tab url', async () => {
+      vi.mocked(ctx.drawManager.captureApplicationScreenshot).mockResolvedValue({
+        ok: true,
+        path: '/tmp/application.png',
+      } as any);
+
+      const res = await request(app).post('/screenshot/application').send({});
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, path: '/tmp/application.png' });
+      expect(ctx.drawManager.captureApplicationScreenshot).toHaveBeenCalledWith('https://example.com');
+    });
+
+    it('falls back to tandem window url when no active tab exists', async () => {
+      vi.mocked(ctx.tabManager.getActiveTab).mockReturnValue(null as any);
+      vi.mocked(ctx.drawManager.captureApplicationScreenshot).mockResolvedValue({
+        ok: true,
+        path: '/tmp/application.png',
+      } as any);
+
+      const res = await request(app).post('/screenshot/application').send({});
+
+      expect(res.status).toBe(200);
+      expect(ctx.drawManager.captureApplicationScreenshot).toHaveBeenCalledWith('tandem://window');
+    });
+
+    it('returns 500 when captureApplicationScreenshot reports failure', async () => {
+      vi.mocked(ctx.drawManager.captureApplicationScreenshot).mockResolvedValue({
+        ok: false,
+        error: 'capture failed',
+      } as any);
+
+      const res = await request(app).post('/screenshot/application').send({});
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ ok: false, error: 'capture failed' });
+    });
+
+    it('returns 500 when captureApplicationScreenshot throws', async () => {
+      vi.mocked(ctx.drawManager.captureApplicationScreenshot).mockRejectedValue(new Error('application error'));
+
+      const res = await request(app).post('/screenshot/application').send({});
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('application error');
+    });
+  });
+
+  describe('POST /screenshot/region', () => {
+    it('captures a region screenshot with the active tab url', async () => {
+      vi.mocked(ctx.drawManager.captureRegionScreenshot).mockResolvedValue({
+        ok: true,
+        path: '/tmp/region.png',
+      } as any);
+
+      const res = await request(app)
+        .post('/screenshot/region')
+        .send({ x: 12, y: 34, width: 320, height: 180 });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, path: '/tmp/region.png' });
+      expect(ctx.drawManager.captureRegionScreenshot).toHaveBeenCalledWith(
+        { x: 12, y: 34, width: 320, height: 180 },
+        'https://example.com',
+      );
+    });
+
+    it('returns 400 when region coordinates are missing or invalid', async () => {
+      const res = await request(app)
+        .post('/screenshot/region')
+        .send({ x: 12, y: 34, width: '320' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toBe('x, y, width, and height are required numbers');
+      expect(ctx.drawManager.captureRegionScreenshot).not.toHaveBeenCalled();
+    });
+
+    it('returns 400 when the selected region is too small', async () => {
+      vi.mocked(ctx.drawManager.captureRegionScreenshot).mockResolvedValue({
+        ok: false,
+        error: 'Selected region is too small',
+      } as any);
+
+      const res = await request(app)
+        .post('/screenshot/region')
+        .send({ x: 1, y: 2, width: 1, height: 3 });
+
+      expect(res.status).toBe(400);
+      expect(res.body).toEqual({ ok: false, error: 'Selected region is too small' });
+    });
+
+    it('returns 500 when captureRegionScreenshot reports a runtime failure', async () => {
+      vi.mocked(ctx.drawManager.captureRegionScreenshot).mockResolvedValue({
+        ok: false,
+        error: 'capture failed',
+      } as any);
+
+      const res = await request(app)
+        .post('/screenshot/region')
+        .send({ x: 12, y: 34, width: 320, height: 180 });
+
+      expect(res.status).toBe(500);
+      expect(res.body).toEqual({ ok: false, error: 'capture failed' });
+    });
+
+    it('returns 500 when captureRegionScreenshot throws', async () => {
+      vi.mocked(ctx.drawManager.captureRegionScreenshot).mockRejectedValue(new Error('region error'));
+
+      const res = await request(app)
+        .post('/screenshot/region')
+        .send({ x: 12, y: 34, width: 320, height: 180 });
+
+      expect(res.status).toBe(500);
+      expect(res.body.error).toBe('region error');
+    });
+  });
+
   describe('POST /draw/toggle', () => {
     it('toggles draw mode on', async () => {
       vi.mocked(ctx.drawManager.toggleDrawMode).mockReturnValue(true);

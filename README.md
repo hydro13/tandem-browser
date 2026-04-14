@@ -55,7 +55,7 @@ Want the fastest path in?
 | **System** | 6 | Browser status, headless mode, Google Photos, security overrides |
 | **Awareness** | 2 | Activity digest, real-time focus detection — the AI knows what you're doing |
 
-**248 tools total** — full parity with the HTTP API.
+**250 tools total** — full parity with the HTTP API.
 
 ## Why Not Just Use Playwright?
 
@@ -148,7 +148,7 @@ Add to your MCP configuration:
 }
 ```
 
-Start Tandem, and 248 tools are available immediately.
+Start Tandem, and 250 tools are available immediately.
 
 ### Cursor / Windsurf / Other MCP Clients
 
@@ -228,7 +228,7 @@ contributors, not yet a polished mass-user release.
 - Secondary platform: Linux
 - Windows: not actively validated
 - Binaries: not published yet (source-only)
-- Current version: `0.72.2`
+- Current version: `0.73.0`
 - Package metadata: [package.json](package.json)
 
 ## Community

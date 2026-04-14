@@ -350,7 +350,7 @@ export class DrawOverlayManager {
     const scriptLines = [
       'on run argv',
       '  set importPath to item 1 of argv',
-      '  set theFile to POSIX file importPath',
+      '  set theFile to ((POSIX file importPath) as alias)',
       '  tell application "Photos"',
       '    activate',
       '    with timeout of 30 seconds',

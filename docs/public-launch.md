@@ -20,7 +20,7 @@ Tandem Browser is now public: the local-first browser for shared human-AI browse
 Tandem Browser is now public.
 
 Tandem Browser is a local-first browser built for human-AI collaboration on the local
-machine. The human browses normally. Any AI agent that speaks MCP (248 tools) or
+machine. The human browses normally. Any AI agent that speaks MCP (250 tools) or
 HTTP (300+ endpoints) can operate inside the same real browser context for
 navigation, extraction, automation, screenshots, session work, and observability,
 while websites continue to see a normal Chromium browser instead of an "AI

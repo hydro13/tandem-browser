@@ -48,7 +48,7 @@ Practical notes:
 
 ### Option 1: MCP Server (recommended for agents)
 
-The MCP server exposes 248 tools with full API parity. Add to your MCP client
+The MCP server exposes 250 tools with full API parity. Add to your MCP client
 configuration (e.g. `~/.claude/settings.json` for Claude Code):
 
 ```json

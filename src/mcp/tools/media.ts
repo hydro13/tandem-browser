@@ -104,6 +104,32 @@ export function registerMediaTools(server: McpServer): void {
   );
 
   server.tool(
+    'tandem_screenshot_capture_application',
+    'Capture a fresh screenshot of the full Tandem application window and return the saved file path.',
+    async () => {
+      const data = await apiCall('POST', '/screenshot/application');
+      await logActivity('screenshot_capture_application');
+      return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+    }
+  );
+
+  server.tool(
+    'tandem_screenshot_capture_region',
+    'Capture a fresh screenshot of a specific application region and return the saved file path.',
+    coerceShape({
+      x: z.number().describe('Region left coordinate in application-window pixels.'),
+      y: z.number().describe('Region top coordinate in application-window pixels.'),
+      width: z.number().describe('Region width in pixels.'),
+      height: z.number().describe('Region height in pixels.'),
+    }),
+    async ({ x, y, width, height }) => {
+      const data = await apiCall('POST', '/screenshot/region', { x, y, width, height });
+      await logActivity('screenshot_capture_region');
+      return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
+    }
+  );
+
+  server.tool(
     'tandem_screenshots_list',
     'List saved screenshots.',
     coerceShape({
