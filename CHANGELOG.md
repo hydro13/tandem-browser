@@ -17,6 +17,7 @@ All notable changes to Tandem Browser will be documented in this file.
 ### Added
 
 - `ws://127.0.0.1:8765/watch/live` now streams an immediate watch snapshot plus incremental watch add/remove/check events to authenticated local clients, giving agents a real-time watch surface instead of polling `/watch/list`
+- Watches now support configurable diff modes for change detection: `content`, `title`, `title-or-content`, and `text-length`, exposed through both the HTTP API and MCP watch-add flow
 
 ## [v0.72.1] - 2026-04-14
 

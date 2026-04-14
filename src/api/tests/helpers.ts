@@ -193,7 +193,7 @@ export function createMockContext(): RouteContext {
 
     // ── watchManager ────────────────────────────
     watchManager: {
-      addWatch: vi.fn().mockReturnValue({ id: 'w1', url: '', intervalMinutes: 30 }),
+      addWatch: vi.fn().mockReturnValue({ id: 'w1', url: '', intervalMinutes: 30, diffMode: 'content' }),
       listWatches: vi.fn().mockReturnValue([]),
       removeWatch: vi.fn().mockReturnValue(true),
       forceCheck: vi.fn().mockResolvedValue({ changed: false }),

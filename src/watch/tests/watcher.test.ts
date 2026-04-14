@@ -12,7 +12,12 @@ vi.mock('electron', () => ({
         }
       }),
       loadURL: vi.fn().mockResolvedValue(undefined),
-      executeJavaScript: vi.fn().mockResolvedValue('page text content'),
+      executeJavaScript: vi.fn().mockImplementation((code: string) => {
+        if (code === 'document.title') {
+          return Promise.resolve('Example Title');
+        }
+        return Promise.resolve('page text content');
+      }),
     },
     isDestroyed: vi.fn().mockReturnValue(false),
     close: vi.fn(),
@@ -107,6 +112,30 @@ describe('WatchManager', () => {
 
       const wm2 = new WatchManager();
       expect(wm2.listWatches()).toHaveLength(1);
+      expect(wm2.listWatches()[0].diffMode).toBe('content');
+      wm2.destroy();
+    });
+
+    it('migrates legacy watches to a default diff mode', () => {
+      const savedState = {
+        watches: [{
+          id: 'watch-legacy', url: 'https://legacy.com', intervalMs: 300000,
+          lastCheck: 123, lastHash: 'abc123', lastTitle: 'Legacy', lastError: null,
+          changeCount: 2, createdAt: 1000,
+        }],
+      };
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(savedState));
+
+      const wm2 = new WatchManager();
+      expect(wm2.listWatches()).toEqual([
+        expect.objectContaining({
+          id: 'watch-legacy',
+          diffMode: 'content',
+          lastHash: 'abc123',
+          lastFingerprint: 'abc123',
+        }),
+      ]);
       wm2.destroy();
     });
   });
@@ -115,9 +144,11 @@ describe('WatchManager', () => {
     it('adds a new watch and returns entry', () => {
       const result = wm.addWatch('https://example.com', 5);
       expect('id' in result).toBe(true);
-      const entry = result as { id: string; url: string; intervalMs: number };
+      const entry = result as { id: string; url: string; intervalMs: number; diffMode: string; lastFingerprint: string | null };
       expect(entry.url).toBe('https://example.com');
       expect(entry.intervalMs).toBe(5 * 60 * 1000);
+      expect(entry.diffMode).toBe('content');
+      expect(entry.lastFingerprint).toBeNull();
       expect(fs.writeFileSync).toHaveBeenCalled();
     });
 
@@ -141,6 +172,17 @@ describe('WatchManager', () => {
       const result = wm.addWatch('https://fast.com', 0);
       const entry = result as { id: string; intervalMs: number };
       expect(entry.intervalMs).toBe(60000); // 1 minute minimum
+    });
+
+    it('stores explicit diff mode', () => {
+      const result = wm.addWatch('https://title-only.com', 5, 'title');
+      expect((result as { diffMode: string }).diffMode).toBe('title');
+    });
+
+    it('rejects unsupported diff modes', () => {
+      const result = wm.addWatch('https://bad-mode.com', 5, 'bogus' as never);
+      expect('error' in result).toBe(true);
+      expect((result as { error: string }).error).toContain('Unsupported diff mode');
     });
 
     it('emits a watch-added event', () => {
@@ -234,6 +276,64 @@ describe('WatchManager', () => {
       const { results } = await wm.forceCheck(entry.id);
       expect(results).toHaveLength(1);
       expect(results[0].id).toBe(entry.id);
+    });
+  });
+
+  describe('diff modes', () => {
+    async function runCheckWithPage(id: string, text: string, title: string) {
+      vi.spyOn(wm as never, 'getHiddenWindow').mockResolvedValue({
+        webContents: {
+          once: vi.fn().mockImplementation((event: string, cb: () => void) => {
+            if (event === 'did-finish-load') {
+              setTimeout(cb, 0);
+            }
+          }),
+          loadURL: vi.fn().mockResolvedValue(undefined),
+          executeJavaScript: vi.fn().mockImplementation((code: string) => {
+            if (code === 'document.title') {
+              return Promise.resolve(title);
+            }
+            return Promise.resolve(text);
+          }),
+        },
+      } as never);
+
+      const pending = wm.checkUrl(id);
+      await vi.advanceTimersByTimeAsync(2000);
+      return pending;
+    }
+
+    it('title mode ignores body-only changes', async () => {
+      const initialSpy = vi.spyOn(wm, 'checkUrl').mockResolvedValue({ changed: false });
+      const watch = wm.addWatch('https://title-mode.com', 5, 'title') as { id: string };
+      initialSpy.mockRestore();
+
+      await runCheckWithPage(watch.id, 'first body', 'Same Title');
+      const result = await runCheckWithPage(watch.id, 'second body', 'Same Title');
+
+      expect(result).toEqual({ changed: false });
+    });
+
+    it('title-or-content mode detects title changes', async () => {
+      const initialSpy = vi.spyOn(wm, 'checkUrl').mockResolvedValue({ changed: false });
+      const watch = wm.addWatch('https://title-or-content.com', 5, 'title-or-content') as { id: string };
+      initialSpy.mockRestore();
+
+      await runCheckWithPage(watch.id, 'same body', 'Title A');
+      const result = await runCheckWithPage(watch.id, 'same body', 'Title B');
+
+      expect(result).toEqual({ changed: true });
+    });
+
+    it('text-length mode ignores equal-length content churn', async () => {
+      const initialSpy = vi.spyOn(wm, 'checkUrl').mockResolvedValue({ changed: false });
+      const watch = wm.addWatch('https://length-mode.com', 5, 'text-length') as { id: string };
+      initialSpy.mockRestore();
+
+      await runCheckWithPage(watch.id, 'abc', 'Length Title');
+      const result = await runCheckWithPage(watch.id, 'xyz', 'Length Title');
+
+      expect(result).toEqual({ changed: false });
     });
   });
 

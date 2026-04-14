@@ -32,7 +32,14 @@ describe('MCP watch tools', () => {
     mockApiCall.mockResolvedValueOnce({ id: 'w1' });
     mockLogActivity.mockResolvedValueOnce(undefined);
     await getHandler(tools, 'tandem_watch_add')({ url: 'https://news.com', intervalMinutes: 60 });
-    expect(mockApiCall).toHaveBeenCalledWith('POST', '/watch/add', { url: 'https://news.com', intervalMinutes: 60 });
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/watch/add', { url: 'https://news.com', intervalMinutes: 60, diffMode: undefined });
+  });
+
+  it('tandem_watch_add forwards diff mode', async () => {
+    mockApiCall.mockResolvedValueOnce({ id: 'w2' });
+    mockLogActivity.mockResolvedValueOnce(undefined);
+    await getHandler(tools, 'tandem_watch_add')({ url: 'https://news.com', intervalMinutes: 60, diffMode: 'title' });
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/watch/add', { url: 'https://news.com', intervalMinutes: 60, diffMode: 'title' });
   });
 
   it('tandem_watch_remove removes a watch', async () => {

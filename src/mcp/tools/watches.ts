@@ -3,6 +3,8 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiCall, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
 
+const watchDiffModeSchema = z.enum(['content', 'title', 'title-or-content', 'text-length']);
+
 export function registerWatchTools(server: McpServer): void {
   server.tool(
     'tandem_watch_list',
@@ -20,9 +22,10 @@ export function registerWatchTools(server: McpServer): void {
     coerceShape({
       url: z.string().describe('URL to monitor'),
       intervalMinutes: z.number().optional().describe('Check interval in minutes (default: 30)'),
+      diffMode: watchDiffModeSchema.optional().describe('Change detection mode: content, title, title-or-content, or text-length'),
     }),
-    async ({ url, intervalMinutes }) => {
-      const data = await apiCall('POST', '/watch/add', { url, intervalMinutes });
+    async ({ url, intervalMinutes, diffMode }) => {
+      const data = await apiCall('POST', '/watch/add', { url, intervalMinutes, diffMode });
       await logActivity('watch_add', url);
       return { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }] };
     }

@@ -22,8 +22,10 @@ class MockWatchManager {
       watches: [{
         id: 'watch-1',
         url: 'https://example.com',
+        diffMode: 'content',
         intervalMs: 60_000,
         lastCheck: null,
+        lastFingerprint: null,
         lastHash: null,
         lastTitle: null,
         lastError: null,
@@ -105,8 +107,10 @@ describe('WatchLiveWebSocket', () => {
       watch: {
         id: 'watch-1',
         url: 'https://example.com',
+        diffMode: 'content',
         intervalMs: 60_000,
         lastCheck: 999,
+        lastFingerprint: 'abc',
         lastHash: 'abc',
         lastTitle: 'Example',
         lastError: null,
@@ -123,8 +127,10 @@ describe('WatchLiveWebSocket', () => {
       watch: {
         id: 'watch-1',
         url: 'https://example.com',
+        diffMode: 'content',
         intervalMs: 60_000,
         lastCheck: 999,
+        lastFingerprint: 'abc',
         lastHash: 'abc',
         lastTitle: 'Example',
         lastError: null,

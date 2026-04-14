@@ -446,9 +446,9 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
 
   router.post('/watch/add', (req: Request, res: Response) => {
     try {
-      const { url, intervalMinutes = 30 } = req.body;
+      const { url, intervalMinutes = 30, diffMode } = req.body;
       if (!url) { res.status(400).json({ error: 'url required' }); return; }
-      const result = ctx.watchManager.addWatch(url, intervalMinutes);
+      const result = ctx.watchManager.addWatch(url, intervalMinutes, diffMode);
       if ('error' in result) { res.status(400).json(result); return; }
       res.json({ ok: true, watch: result });
     } catch (e) {

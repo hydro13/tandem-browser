@@ -33,7 +33,7 @@ Last updated: April 14, 2026
 - [x] Google Photos upload support for screenshots; local OAuth client ID setup, connect/disconnect flow, and automatic upload path now exist
 - [x] Screenshot capture modes for `Web Page`, `Application`, and in-app `Region` selection from the main toolbar screenshot button
 - [x] Configurable quick links on the new tab page; links are no longer hardcoded
-- [ ] Configurable diff modes for watches beyond SHA-256 hash comparison
+- [x] Configurable diff modes for watches beyond SHA-256 hash comparison
 - [x] HAR export for the network inspector
 - [ ] Design and build the `Personal News` experience; the sidebar currently has a placeholder slot, but the actual panel and feed model are not implemented yet
 - [x] Built-in video recorder with Application and Region capture modes, tab audio + mic toggle, MP4 output via ffmpeg; replaces AudioCaptureManager

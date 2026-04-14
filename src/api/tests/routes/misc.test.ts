@@ -806,7 +806,7 @@ describe('misc routes', () => {
 
   describe('POST /watch/add', () => {
     it('adds a watch with default interval', async () => {
-      const mockWatch = { id: 'w1', url: 'https://example.com', intervalMinutes: 30 };
+      const mockWatch = { id: 'w1', url: 'https://example.com', intervalMinutes: 30, diffMode: 'content' };
       vi.mocked(ctx.watchManager.addWatch).mockReturnValue(mockWatch as any);
 
       const res = await request(app)
@@ -815,11 +815,11 @@ describe('misc routes', () => {
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, watch: mockWatch });
-      expect(ctx.watchManager.addWatch).toHaveBeenCalledWith('https://example.com', 30);
+      expect(ctx.watchManager.addWatch).toHaveBeenCalledWith('https://example.com', 30, undefined);
     });
 
     it('adds a watch with custom interval', async () => {
-      const mockWatch = { id: 'w2', url: 'https://test.com', intervalMinutes: 60 };
+      const mockWatch = { id: 'w2', url: 'https://test.com', intervalMinutes: 60, diffMode: 'content' };
       vi.mocked(ctx.watchManager.addWatch).mockReturnValue(mockWatch as any);
 
       const res = await request(app)
@@ -827,7 +827,19 @@ describe('misc routes', () => {
         .send({ url: 'https://test.com', intervalMinutes: 60 });
 
       expect(res.status).toBe(200);
-      expect(ctx.watchManager.addWatch).toHaveBeenCalledWith('https://test.com', 60);
+      expect(ctx.watchManager.addWatch).toHaveBeenCalledWith('https://test.com', 60, undefined);
+    });
+
+    it('adds a watch with explicit diff mode', async () => {
+      const mockWatch = { id: 'w3', url: 'https://title-only.com', intervalMinutes: 30, diffMode: 'title' };
+      vi.mocked(ctx.watchManager.addWatch).mockReturnValue(mockWatch as any);
+
+      const res = await request(app)
+        .post('/watch/add')
+        .send({ url: 'https://title-only.com', diffMode: 'title' });
+
+      expect(res.status).toBe(200);
+      expect(ctx.watchManager.addWatch).toHaveBeenCalledWith('https://title-only.com', 30, 'title');
     });
 
     it('returns 400 when url is missing', async () => {

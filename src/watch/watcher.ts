@@ -16,8 +16,10 @@ const log = createLogger('Watcher');
 export interface WatchEntry {
   id: string;
   url: string;
+  diffMode: WatchDiffMode;
   intervalMs: number;
   lastCheck: number | null;
+  lastFingerprint: string | null;
   lastHash: string | null;
   lastTitle: string | null;
   lastError: string | null;
@@ -29,6 +31,14 @@ interface WatchState {
   watches: WatchEntry[];
 }
 
+export const WATCH_DIFF_MODES = [
+  'content',
+  'title',
+  'title-or-content',
+  'text-length',
+] as const;
+
+export type WatchDiffMode = (typeof WATCH_DIFF_MODES)[number];
 export type WatchCheckReason = 'initial' | 'manual' | 'timer';
 
 export interface WatchSnapshotEvent {
@@ -78,7 +88,7 @@ export type WatchLiveEvent =
  * WatchManager — Scheduled background page watching.
  *
  * Uses a hidden BrowserWindow to periodically check pages for changes.
- * Hashes page text content and compares with previous check.
+ * Supports multiple diff strategies per watch instead of only one hash mode.
  * Alerts the human/wingman when something changes.
  */
 export class WatchManager extends EventEmitter {
@@ -108,7 +118,7 @@ export class WatchManager extends EventEmitter {
   // === 4. Public methods ===
 
   /** Add a new watch */
-  addWatch(url: string, intervalMinutes: number): WatchEntry | { error: string } {
+  addWatch(url: string, intervalMinutes: number, diffMode: WatchDiffMode = 'content'): WatchEntry | { error: string } {
     if (this.state.watches.length >= this.MAX_WATCHES) {
       return { error: `Maximum ${this.MAX_WATCHES} watches bereikt` };
     }
@@ -118,11 +128,17 @@ export class WatchManager extends EventEmitter {
       return { error: 'URL is already being watched' };
     }
 
+    if (!this.isWatchDiffMode(diffMode)) {
+      return { error: `Unsupported diff mode: ${diffMode}` };
+    }
+
     const watch: WatchEntry = {
       id: this.nextId(),
       url,
+      diffMode,
       intervalMs: Math.max(1, intervalMinutes) * 60 * 1000,
       lastCheck: null,
+      lastFingerprint: null,
       lastHash: null,
       lastTitle: null,
       lastError: null,
@@ -225,7 +241,8 @@ export class WatchManager extends EventEmitter {
 
       const title: string = await win.webContents.executeJavaScript('document.title');
       const newHash = this.hashContent(textContent);
-      const changed = watch.lastHash !== null && watch.lastHash !== newHash;
+      const newFingerprint = this.buildDiffFingerprint(watch.diffMode, textContent, title, newHash);
+      const changed = watch.lastFingerprint !== null && watch.lastFingerprint !== newFingerprint;
 
       watch.lastCheck = Date.now();
       watch.lastTitle = title;
@@ -239,6 +256,7 @@ export class WatchManager extends EventEmitter {
         );
       }
 
+      watch.lastFingerprint = newFingerprint;
       watch.lastHash = newHash;
       this.save();
       this.emitWatchEvent({
@@ -303,7 +321,13 @@ export class WatchManager extends EventEmitter {
   private load(): WatchState {
     try {
       if (fs.existsSync(this.watchFile)) {
-        return JSON.parse(fs.readFileSync(this.watchFile, 'utf-8'));
+        const parsed = JSON.parse(fs.readFileSync(this.watchFile, 'utf-8')) as Partial<WatchState> | null;
+        const rawWatches = Array.isArray(parsed?.watches) ? parsed.watches : [];
+        return {
+          watches: rawWatches
+            .map((watch) => this.sanitizeWatchEntry(watch))
+            .filter((watch): watch is WatchEntry => watch !== null),
+        };
       }
     } catch (e) { log.warn('Watch state load failed, starting fresh:', e instanceof Error ? e.message : String(e)); }
     return { watches: [] };
@@ -348,6 +372,66 @@ export class WatchManager extends EventEmitter {
   /** Hash text content of a page */
   private hashContent(text: string): string {
     return crypto.createHash('sha256').update(text).digest('hex').substring(0, 16);
+  }
+
+  private isWatchDiffMode(value: unknown): value is WatchDiffMode {
+    return typeof value === 'string' && WATCH_DIFF_MODES.includes(value as WatchDiffMode);
+  }
+
+  private sanitizeWatchEntry(raw: unknown): WatchEntry | null {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      return null;
+    }
+
+    const value = raw as Partial<Record<keyof WatchEntry, unknown>>;
+    const id = typeof value.id === 'string' ? value.id.trim() : '';
+    const url = typeof value.url === 'string' ? value.url.trim() : '';
+    if (!id || !url) {
+      return null;
+    }
+
+    const intervalMs = typeof value.intervalMs === 'number' && Number.isFinite(value.intervalMs)
+      ? Math.max(60_000, value.intervalMs)
+      : 30 * 60 * 1000;
+    const diffMode = this.isWatchDiffMode(value.diffMode) ? value.diffMode : 'content';
+    const lastHash = typeof value.lastHash === 'string' ? value.lastHash : null;
+    const lastFingerprint = typeof value.lastFingerprint === 'string'
+      ? value.lastFingerprint
+      : lastHash;
+
+    return {
+      id,
+      url,
+      diffMode,
+      intervalMs,
+      lastCheck: typeof value.lastCheck === 'number' ? value.lastCheck : null,
+      lastFingerprint,
+      lastHash,
+      lastTitle: typeof value.lastTitle === 'string' ? value.lastTitle : null,
+      lastError: typeof value.lastError === 'string' ? value.lastError : null,
+      changeCount: typeof value.changeCount === 'number' && Number.isFinite(value.changeCount) ? value.changeCount : 0,
+      createdAt: typeof value.createdAt === 'number' && Number.isFinite(value.createdAt) ? value.createdAt : Date.now(),
+    };
+  }
+
+  private buildDiffFingerprint(
+    diffMode: WatchDiffMode,
+    textContent: string,
+    title: string,
+    contentHash: string,
+  ): string {
+    const normalizedTitle = title.trim();
+    switch (diffMode) {
+      case 'title':
+        return normalizedTitle;
+      case 'title-or-content':
+        return this.hashContent(`${normalizedTitle}\n${textContent}`);
+      case 'text-length':
+        return String(textContent.length);
+      case 'content':
+      default:
+        return contentHash;
+    }
   }
 
   private cloneWatch(watch: WatchEntry): WatchEntry {
