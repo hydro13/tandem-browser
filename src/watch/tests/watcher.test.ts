@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { BrowserWindow } from 'electron';
 
 // Mock electron
 vi.mock('electron', () => ({
@@ -138,6 +139,28 @@ describe('WatchManager', () => {
       ]);
       wm2.destroy();
     });
+
+    it('filters invalid persisted watch entries', () => {
+      const savedState = {
+        watches: [
+          null,
+          { id: '', url: 'https://missing-id.com' },
+          { id: 'missing-url', url: '   ' },
+          { id: 'watch-valid', url: 'https://valid.com', intervalMs: 300000, createdAt: 1000 },
+        ],
+      };
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(savedState));
+
+      const wm2 = new WatchManager();
+      expect(wm2.listWatches()).toEqual([
+        expect.objectContaining({
+          id: 'watch-valid',
+          url: 'https://valid.com',
+        }),
+      ]);
+      wm2.destroy();
+    });
   });
 
   describe('addWatch()', () => {
@@ -251,6 +274,18 @@ describe('WatchManager', () => {
       wm.addWatch('https://cleanup.com', 5);
       expect(() => wm.destroy()).not.toThrow();
     });
+
+    it('closes the hidden window when present', () => {
+      const close = vi.fn();
+      (wm as never).hiddenWindow = {
+        isDestroyed: vi.fn().mockReturnValue(false),
+        close,
+      };
+
+      wm.destroy();
+
+      expect(close).toHaveBeenCalled();
+    });
   });
 
   describe('hashContent (via checkUrl)', () => {
@@ -259,6 +294,52 @@ describe('WatchManager', () => {
       const result = await wm.checkUrl('nonexistent');
       expect(result.changed).toBe(false);
       expect(result.error).toBe('Watch not found');
+    });
+
+    it('checkUrl returns load failure errors', async () => {
+      vi.spyOn(wm as never, 'getHiddenWindow').mockResolvedValue({
+        webContents: {
+          once: vi.fn().mockImplementation((event: string, cb: (...args: unknown[]) => void) => {
+            if (event === 'did-fail-load') {
+              setTimeout(() => cb(undefined, -105, 'Name not resolved'), 0);
+            }
+          }),
+          loadURL: vi.fn().mockResolvedValue(undefined),
+          executeJavaScript: vi.fn(),
+        },
+      } as never);
+
+      const initialSpy = vi.spyOn(wm, 'checkUrl').mockResolvedValue({ changed: false });
+      const watch = wm.addWatch('https://load-fail.com', 5) as { id: string };
+      initialSpy.mockRestore();
+
+      const pending = wm.checkUrl(watch.id);
+      await vi.advanceTimersByTimeAsync(0);
+      const result = await pending;
+
+      expect(result.changed).toBe(false);
+      expect(result.error).toContain('Load failed: Name not resolved (-105)');
+    });
+
+    it('checkUrl returns timeout errors', async () => {
+      vi.spyOn(wm as never, 'getHiddenWindow').mockResolvedValue({
+        webContents: {
+          once: vi.fn(),
+          loadURL: vi.fn().mockResolvedValue(undefined),
+          executeJavaScript: vi.fn(),
+        },
+      } as never);
+
+      const initialSpy = vi.spyOn(wm, 'checkUrl').mockResolvedValue({ changed: false });
+      const watch = wm.addWatch('https://timeout.com', 5) as { id: string };
+      initialSpy.mockRestore();
+
+      const pending = wm.checkUrl(watch.id);
+      await vi.advanceTimersByTimeAsync(30_000);
+      const result = await pending;
+
+      expect(result.changed).toBe(false);
+      expect(result.error).toBe('Page load timeout');
     });
   });
 
@@ -334,6 +415,67 @@ describe('WatchManager', () => {
       const result = await runCheckWithPage(watch.id, 'xyz', 'Length Title');
 
       expect(result).toEqual({ changed: false });
+    });
+
+    it('falls back to content hash for unknown fingerprint mode input', () => {
+      const fingerprint = (wm as never).buildDiffFingerprint('bogus', 'body', 'Title', 'hash123');
+      expect(fingerprint).toBe('hash123');
+    });
+  });
+
+  describe('timers', () => {
+    it('swallows timer check errors', async () => {
+      const spy = vi.spyOn(wm, 'checkUrl')
+        .mockResolvedValueOnce({ changed: false })
+        .mockRejectedValueOnce(new Error('timer failed'));
+
+      wm.addWatch('https://timer-error.com', 1);
+      await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(60_000);
+
+      expect(spy).toHaveBeenNthCalledWith(1, expect.any(String), 'initial');
+      expect(spy).toHaveBeenNthCalledWith(2, expect.any(String), 'timer');
+    });
+  });
+
+  describe('getHiddenWindow()', () => {
+    it('reuses an existing hidden window', async () => {
+      const existingWindow = {
+        isDestroyed: vi.fn().mockReturnValue(false),
+        close: vi.fn(),
+      };
+      (wm as never).hiddenWindow = existingWindow;
+
+      const result = await (wm as never).getHiddenWindow();
+
+      expect(result).toBe(existingWindow);
+    });
+
+    it('logs stealth injection failures without throwing', async () => {
+      let finishLoadHandler: (() => void) | null = null;
+      vi.mocked(BrowserWindow).mockImplementationOnce(function () {
+        return {
+          webContents: {
+            on: vi.fn().mockImplementation((event: string, cb: () => void) => {
+              if (event === 'did-finish-load') {
+                finishLoadHandler = cb;
+              }
+            }),
+            once: vi.fn(),
+            loadURL: vi.fn().mockResolvedValue(undefined),
+            executeJavaScript: vi.fn().mockRejectedValue(new Error('stealth failed')),
+          },
+          isDestroyed: vi.fn().mockReturnValue(false),
+          close: vi.fn(),
+        } as never;
+      });
+
+      await (wm as never).getHiddenWindow();
+      expect(finishLoadHandler).not.toBeNull();
+
+      finishLoadHandler?.();
+      await Promise.resolve();
+      await Promise.resolve();
     });
   });
 
