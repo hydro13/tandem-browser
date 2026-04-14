@@ -13,6 +13,7 @@ All notable changes to Tandem Browser will be documented in this file.
 - New MCP tools for the same handoff system: `tandem_handoff_create`, `tandem_handoff_list`, `tandem_handoff_get`, `tandem_handoff_update`, and `tandem_handoff_resolve`
 - New MCP resource `tandem://handoffs/open` plus SSE handoff events so open handoffs can be observed live
 - A real Wingman Activity inbox for open handoffs, including workspace/tab context, action hints, open-context targeting, and resolve/mark-ready actions
+- A shared `TaskHandoffCoordinator` plus explicit handoff actions for `ready`, `resume`, `approve`, and `reject`, so task-linked handoffs can now pause tasks, move into `ready-to-resume`, and hand execution back to the agent cleanly
 
 ### Changed
 
@@ -20,6 +21,7 @@ All notable changes to Tandem Browser will be documented in this file.
 - Task approval requests now also appear as structured handoffs instead of only transient approval cards, keeping human attention requests visible in one place
 - Wingman Activity logging now records handoff lifecycle updates so the user can see when a handoff was created, updated, or resolved
 - Handoff metadata normalization now treats blank titles/reasons as defaults, and focused route/MCP/manager tests cover the new handoff lifecycle more thoroughly so coverage matches the added product surface
+- The Wingman Activity inbox now surfaces status-aware actions: approval handoffs show `Approve` / `Reject`, human-blocked handoffs show `Mark Ready`, and `ready_to_resume` handoffs show `Resume Agent`
 
 ## [v0.71.4] - 2026-04-13
 

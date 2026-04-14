@@ -111,6 +111,50 @@ describe('MCP handoff tools', () => {
     expect(mockApiCall).toHaveBeenCalledWith('POST', '/handoffs/handoff-1/resolve');
   });
 
+  it('marks a handoff ready to resume', async () => {
+    const handler = getHandler(tools, 'tandem_handoff_ready');
+    mockApiCall.mockResolvedValueOnce({ id: 'handoff-1', status: 'ready_to_resume' });
+    mockLogActivity.mockResolvedValueOnce(undefined);
+
+    const result = await handler({ id: 'handoff-1' });
+
+    expectTextContent(result, 'Handoff ready: handoff-1');
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/handoffs/handoff-1/ready');
+  });
+
+  it('resumes a handoff-linked task', async () => {
+    const handler = getHandler(tools, 'tandem_handoff_resume');
+    mockApiCall.mockResolvedValueOnce({ id: 'handoff-1', status: 'resolved' });
+    mockLogActivity.mockResolvedValueOnce(undefined);
+
+    const result = await handler({ id: 'handoff-1' });
+
+    expectTextContent(result, 'Handoff resumed: handoff-1');
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/handoffs/handoff-1/resume');
+  });
+
+  it('approves a waiting handoff', async () => {
+    const handler = getHandler(tools, 'tandem_handoff_approve');
+    mockApiCall.mockResolvedValueOnce({ id: 'handoff-1', status: 'resolved' });
+    mockLogActivity.mockResolvedValueOnce(undefined);
+
+    const result = await handler({ id: 'handoff-1' });
+
+    expectTextContent(result, 'Handoff approved: handoff-1');
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/handoffs/handoff-1/approve');
+  });
+
+  it('rejects a waiting handoff', async () => {
+    const handler = getHandler(tools, 'tandem_handoff_reject');
+    mockApiCall.mockResolvedValueOnce({ id: 'handoff-1', status: 'resolved' });
+    mockLogActivity.mockResolvedValueOnce(undefined);
+
+    const result = await handler({ id: 'handoff-1' });
+
+    expectTextContent(result, 'Handoff rejected: handoff-1');
+    expect(mockApiCall).toHaveBeenCalledWith('POST', '/handoffs/handoff-1/reject');
+  });
+
   it('passes notify and action hints through on create', async () => {
     const handler = getHandler(tools, 'tandem_handoff_create');
     mockApiCall.mockResolvedValueOnce({ id: 'handoff-9', status: 'waiting_approval', title: 'Need approval' });

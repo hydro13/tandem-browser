@@ -120,4 +120,76 @@ export function registerHandoffTools(server: McpServer): void {
       };
     },
   );
+
+  server.tool(
+    'tandem_handoff_ready',
+    'Mark a human-blocked handoff as ready to resume so the linked task moves into a resumable state.',
+    {
+      id: z.string().describe('The handoff ID'),
+    },
+    async ({ id }) => {
+      const handoff = await apiCall('POST', `/handoffs/${encodeURIComponent(id)}/ready`);
+      await logActivity('handoff_ready', id);
+      return {
+        content: [{
+          type: 'text',
+          text: `Handoff ready: ${handoff.id}\nStatus: ${handoff.status}`,
+        }],
+      };
+    },
+  );
+
+  server.tool(
+    'tandem_handoff_resume',
+    'Resume the linked agent task from a ready handoff and resolve the handoff in the inbox.',
+    {
+      id: z.string().describe('The handoff ID'),
+    },
+    async ({ id }) => {
+      const handoff = await apiCall('POST', `/handoffs/${encodeURIComponent(id)}/resume`);
+      await logActivity('handoff_resume', id);
+      return {
+        content: [{
+          type: 'text',
+          text: `Handoff resumed: ${handoff.id}\nStatus: ${handoff.status}`,
+        }],
+      };
+    },
+  );
+
+  server.tool(
+    'tandem_handoff_approve',
+    'Approve a waiting-approval handoff and let the linked task step continue.',
+    {
+      id: z.string().describe('The handoff ID'),
+    },
+    async ({ id }) => {
+      const handoff = await apiCall('POST', `/handoffs/${encodeURIComponent(id)}/approve`);
+      await logActivity('handoff_approve', id);
+      return {
+        content: [{
+          type: 'text',
+          text: `Handoff approved: ${handoff.id}\nStatus: ${handoff.status}`,
+        }],
+      };
+    },
+  );
+
+  server.tool(
+    'tandem_handoff_reject',
+    'Reject a waiting-approval handoff and keep the linked task paused.',
+    {
+      id: z.string().describe('The handoff ID'),
+    },
+    async ({ id }) => {
+      const handoff = await apiCall('POST', `/handoffs/${encodeURIComponent(id)}/reject`);
+      await logActivity('handoff_reject', id);
+      return {
+        content: [{
+          type: 'text',
+          text: `Handoff rejected: ${handoff.id}\nStatus: ${handoff.status}`,
+        }],
+      };
+    },
+  );
 }

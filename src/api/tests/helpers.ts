@@ -411,11 +411,17 @@ export function createMockContext(): RouteContext {
     taskManager: {
       listTasks: vi.fn().mockReturnValue([]),
       getTask: vi.fn().mockReturnValue(null),
+      getStep: vi.fn().mockReturnValue(null),
       createTask: vi.fn().mockReturnValue({ id: 'task-1', description: '', steps: [] }),
       respondToApproval: vi.fn(),
       markTaskRunning: vi.fn(),
       markTaskDone: vi.fn(),
       markTaskFailed: vi.fn(),
+      pauseTaskForHandoff: vi.fn().mockReturnValue(null),
+      linkStepHandoff: vi.fn().mockReturnValue(null),
+      markTaskReadyToResume: vi.fn().mockReturnValue(null),
+      resumeTask: vi.fn().mockReturnValue(null),
+      clearStepHandoff: vi.fn().mockReturnValue(null),
       updateStepStatus: vi.fn(),
       emergencyStop: vi.fn().mockReturnValue({ stopped: 0 }),
       requestApproval: vi.fn().mockResolvedValue(true),
@@ -590,6 +596,16 @@ export function createMockContext(): RouteContext {
       setState: vi.fn(),
       setActiveItem: vi.fn(),
       destroy: vi.fn(),
+    } as any,
+
+    taskHandoffCoordinator: {
+      handleApprovalRequest: vi.fn().mockReturnValue(null),
+      handleApprovalResponse: vi.fn().mockReturnValue(null),
+      syncHandoffState: vi.fn().mockReturnValue(null),
+      markReady: vi.fn().mockReturnValue(null),
+      resume: vi.fn().mockReturnValue(null),
+      approve: vi.fn().mockReturnValue(null),
+      reject: vi.fn().mockReturnValue(null),
     } as any,
 
     // ── workspaceManager ────────────────────────

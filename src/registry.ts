@@ -32,6 +32,7 @@ import type { LoginManager } from './auth/login-manager';
 import type { EventStreamManager } from './events/stream';
 import type { HandoffManager } from './handoffs/manager';
 import type { TaskManager } from './agents/task-manager';
+import type { TaskHandoffCoordinator } from './agents/task-handoff-coordinator';
 import type { TabLockManager } from './agents/tab-lock-manager';
 import type { DevToolsManager } from './devtools/manager';
 import type { WingmanStream } from './activity/wingman-stream';
@@ -107,6 +108,8 @@ export interface ManagerRegistry {
   handoffManager: HandoffManager;
   /** AI agent task management with approval workflow and emergency stop. See src/agents/task-manager.ts */
   taskManager: TaskManager;
+  /** Synchronizes task execution state with explicit human↔agent handoffs. See src/agents/task-handoff-coordinator.ts */
+  taskHandoffCoordinator: TaskHandoffCoordinator;
   /** Prevents multiple agents from controlling the same tab with timeout locks. See src/agents/tab-lock-manager.ts */
   tabLockManager: TabLockManager;
   /** Chrome DevTools Protocol (CDP) access to webview tabs. See src/devtools/manager.ts */

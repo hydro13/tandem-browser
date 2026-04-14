@@ -19,8 +19,9 @@ import { assertSinglePathSegment, hostnameMatches, resolvePathWithinRoot, tryPar
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 export type RiskLevel = 'none' | 'low' | 'medium' | 'high';
-export type TaskStatus = 'pending' | 'running' | 'paused' | 'waiting-approval' | 'done' | 'failed' | 'cancelled';
+export type TaskStatus = 'pending' | 'running' | 'paused' | 'waiting-approval' | 'ready-to-resume' | 'done' | 'failed' | 'cancelled';
 export type StepStatus = 'pending' | 'running' | 'done' | 'skipped' | 'rejected';
+export type StepWaitState = 'approval' | 'human' | 'review';
 
 export interface TaskStep {
   id: string;
@@ -32,6 +33,9 @@ export interface TaskStep {
   result?: unknown;
   startedAt?: number;
   completedAt?: number;
+  handoffId?: string;
+  waitingOn?: StepWaitState;
+  readyToResumeAt?: number;
 }
 
 export interface AITask {
@@ -332,6 +336,119 @@ export class TaskManager extends EventEmitter {
       approved,
       approvedBy: 'user',
     });
+  }
+
+  getStep(taskId: string, stepId: string): { task: AITask; step: TaskStep; stepIndex: number } | null {
+    const task = this.getTask(taskId);
+    if (!task) return null;
+
+    const stepIndex = task.steps.findIndex(step => step.id === stepId);
+    if (stepIndex < 0) return null;
+
+    const step = task.steps[stepIndex];
+    if (!step) return null;
+
+    return { task, step, stepIndex };
+  }
+
+  pauseTaskForHandoff(taskId: string, stepId: string, handoffId: string, waitingOn: Extract<StepWaitState, 'approval' | 'human'>): AITask | null {
+    const context = this.getStep(taskId, stepId);
+    if (!context) return null;
+
+    const { task, step } = context;
+    step.handoffId = handoffId;
+    step.waitingOn = waitingOn;
+    delete step.readyToResumeAt;
+
+    if (step.status === 'running') {
+      step.status = 'pending';
+    }
+
+    task.status = waitingOn === 'approval' ? 'waiting-approval' : 'paused';
+    this.saveTask(task);
+    this.emit('task-updated', task);
+    return task;
+  }
+
+  linkStepHandoff(taskId: string, stepId: string, handoffId: string, waitingOn: StepWaitState): AITask | null {
+    const context = this.getStep(taskId, stepId);
+    if (!context) return null;
+
+    const { task, step } = context;
+    step.handoffId = handoffId;
+    step.waitingOn = waitingOn;
+    if (waitingOn !== 'human') {
+      delete step.readyToResumeAt;
+    }
+
+    this.saveTask(task);
+    this.emit('task-updated', task);
+    return task;
+  }
+
+  markTaskReadyToResume(taskId: string, stepId: string, handoffId: string): AITask | null {
+    const context = this.getStep(taskId, stepId);
+    if (!context) return null;
+
+    const { task, step } = context;
+    if (step.status === 'done' || step.status === 'skipped' || step.status === 'rejected') {
+      return task;
+    }
+
+    step.handoffId = handoffId;
+    delete step.waitingOn;
+    step.readyToResumeAt = Date.now();
+    if (step.status === 'running') {
+      step.status = 'pending';
+    }
+
+    task.status = 'ready-to-resume';
+    this.saveTask(task);
+    this.emit('task-updated', task);
+    return task;
+  }
+
+  resumeTask(taskId: string, stepId: string, handoffId?: string): AITask | null {
+    const context = this.getStep(taskId, stepId);
+    if (!context) return null;
+
+    const { task, step } = context;
+    if (step.status === 'done' || step.status === 'skipped' || step.status === 'rejected') {
+      return null;
+    }
+
+    if (handoffId && step.handoffId && step.handoffId !== handoffId) {
+      return null;
+    }
+
+    step.status = 'running';
+    step.startedAt = Date.now();
+    delete step.waitingOn;
+    delete step.readyToResumeAt;
+    delete step.handoffId;
+
+    task.status = 'running';
+    this.saveTask(task);
+    this.emit('task-updated', task);
+    return task;
+  }
+
+  clearStepHandoff(taskId: string, stepId: string, handoffId?: string): AITask | null {
+    const context = this.getStep(taskId, stepId);
+    if (!context) return null;
+
+    const { task, step } = context;
+    if (handoffId && step.handoffId && step.handoffId !== handoffId) {
+      return null;
+    }
+
+    delete step.handoffId;
+    delete step.waitingOn;
+    delete step.readyToResumeAt;
+
+    this.saveTask(task);
+    this.emit('task-updated', task);
+    return task;
   }
 
   // ── Task Execution Updates ──

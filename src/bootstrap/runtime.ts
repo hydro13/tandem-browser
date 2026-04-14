@@ -4,6 +4,7 @@ import type { TandemAPI } from '../api/server';
 import { ActivityTracker } from '../activity/tracker';
 import { WingmanStream } from '../activity/wingman-stream';
 import { TaskManager } from '../agents/task-manager';
+import { TaskHandoffCoordinator } from '../agents/task-handoff-coordinator';
 import { TabLockManager } from '../agents/tab-lock-manager';
 import { LoginManager } from '../auth/login-manager';
 import { GooglePhotosManager } from '../integrations/google-photos';
@@ -194,6 +195,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.eventStream = new EventStreamManager();
   runtime.handoffManager = new HandoffManager();
   runtime.taskManager = new TaskManager();
+  runtime.taskHandoffCoordinator = new TaskHandoffCoordinator(runtime.taskManager, runtime.handoffManager);
   runtime.tabLockManager = new TabLockManager();
   runtime.devToolsManager = new DevToolsManager(runtime.tabManager);
   runtime.snapshotManager = new SnapshotManager(runtime.devToolsManager);
@@ -271,58 +273,11 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   );
 
   runtime.taskManager.on('approval-request', (data: Record<string, unknown>) => {
-    const taskId = typeof data.taskId === 'string' ? data.taskId : null;
-    const stepId = typeof data.stepId === 'string' ? data.stepId : null;
-    const task = taskId ? runtime.taskManager.getTask(taskId) : null;
-    const action = data.action && typeof data.action === 'object'
-      ? data.action as { params?: Record<string, unknown> }
-      : null;
-    const params = action?.params ?? {};
-
-    const existing = taskId && stepId
-      ? runtime.handoffManager.findOpenByTaskStep(taskId, stepId)
-      : null;
-
-    const payload = {
-      status: 'waiting_approval',
-      title: 'Approval needed',
-      body: typeof data.description === 'string' ? data.description : 'Agent action requires review.',
-      reason: 'approval_required',
-      actionLabel: 'Approve or reject this action',
-      source: task?.createdBy ?? 'wingman',
-      agentId: task?.assignedTo ?? null,
-      taskId,
-      stepId,
-      workspaceId: typeof params.workspaceId === 'string' ? params.workspaceId : null,
-      tabId: typeof params.tabId === 'string' ? params.tabId : null,
-    } as const;
-
-    if (existing) {
-      runtime.handoffManager.update(existing.id, payload);
-    } else {
-      runtime.handoffManager.create(payload);
-    }
+    runtime.taskHandoffCoordinator.handleApprovalRequest(data);
   });
 
   runtime.taskManager.on('approval-response', (data: { requestId: string; approved: boolean }) => {
-    const [taskId, stepId] = data.requestId.split(':');
-    if (!taskId || !stepId) {
-      return;
-    }
-
-    const handoff = runtime.handoffManager.findOpenByTaskStep(taskId, stepId);
-    if (!handoff) {
-      return;
-    }
-
-    runtime.handoffManager.update(handoff.id, {
-      status: 'resolved',
-      open: false,
-      actionLabel: data.approved ? 'Approval granted' : 'Approval rejected',
-      body: data.approved
-        ? `${handoff.body}\n\nApproval granted.`
-        : `${handoff.body}\n\nApproval rejected.`,
-    });
+    runtime.taskHandoffCoordinator.handleApprovalResponse(data);
   });
 
   const ses = session.fromPartition(DEFAULT_PARTITION);
@@ -418,6 +373,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     eventStream: runtime.eventStream,
     handoffManager: runtime.handoffManager,
     taskManager: runtime.taskManager,
+    taskHandoffCoordinator: runtime.taskHandoffCoordinator,
     tabLockManager: runtime.tabLockManager,
     devToolsManager: runtime.devToolsManager,
     wingmanStream: runtime.wingmanStream,

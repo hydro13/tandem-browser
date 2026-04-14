@@ -234,6 +234,49 @@ describe('TaskManager', () => {
         expect.objectContaining({ approved: true })
       );
     });
+
+    it('requestApproval returns false for an invalid step index', async () => {
+      await expect(tm.requestApproval({
+        id: 'task-1',
+        description: 'Task',
+        createdBy: 'user',
+        assignedTo: 'claude',
+        status: 'pending',
+        steps: [],
+        currentStep: 0,
+        results: [],
+        createdAt: 1,
+        updatedAt: 1,
+      }, 3)).resolves.toBe(false);
+    });
+
+    it('requestApproval resolves once the matching approval-response arrives', async () => {
+      const task = tm.createTask('Task', 'user', 'claude', [
+        { description: 'Step', action: { type: 'click', params: {} }, riskLevel: 'medium', requiresApproval: true },
+      ]);
+
+      const promise = tm.requestApproval(task, 0);
+      tm.emit('approval-response', { requestId: `${task.id}:${task.steps[0].id}`, approved: true });
+
+      await expect(promise).resolves.toBe(true);
+    });
+
+    it('respondToApproval no-ops when the task or step is missing', () => {
+      const writesBeforeMissingTask = vi.mocked(fs.writeFileSync).mock.calls.length;
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      tm.respondToApproval('missing-task', 'step-1', true);
+      expect(vi.mocked(fs.writeFileSync).mock.calls.length).toBe(writesBeforeMissingTask);
+
+      const task = tm.createTask('Task', 'user', 'claude', [
+        { description: 'Step', action: { type: 'click', params: {} }, riskLevel: 'medium', requiresApproval: true },
+      ]);
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(task));
+
+      const writesBeforeMissingStep = vi.mocked(fs.writeFileSync).mock.calls.length;
+      tm.respondToApproval(task.id, 'missing-step', true);
+      expect(vi.mocked(fs.writeFileSync).mock.calls.length).toBe(writesBeforeMissingStep);
+    });
   });
 
   describe('task lifecycle', () => {
@@ -279,6 +322,154 @@ describe('TaskManager', () => {
       const written = JSON.parse(lastCall![1] as string);
       expect(written.status).toBe('failed');
       expect(written.results).toContainEqual({ error: 'Something went wrong' });
+    });
+
+    it('pauses a task for a human handoff and records step metadata', () => {
+      const updated = tm.pauseTaskForHandoff(task.id, task.steps[1].id, 'handoff-1', 'human');
+
+      expect(updated?.status).toBe('paused');
+      expect(updated?.steps[1]).toEqual(expect.objectContaining({
+        handoffId: 'handoff-1',
+        waitingOn: 'human',
+      }));
+    });
+
+    it('pauses running steps for approval handoffs and exposes step lookup helpers', () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'running',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], status: 'running' },
+        ],
+      }));
+
+      const updated = tm.pauseTaskForHandoff(task.id, task.steps[1].id, 'handoff-approval', 'approval');
+      expect(updated?.status).toBe('waiting-approval');
+      expect(updated?.steps[1].status).toBe('pending');
+
+      const stepContext = tm.getStep(task.id, task.steps[1].id);
+      expect(stepContext?.stepIndex).toBe(1);
+      expect(tm.getStep(task.id, 'missing-step')).toBeNull();
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      expect(tm.getStep('missing-task', task.steps[1].id)).toBeNull();
+    });
+
+    it('links step handoffs and clears readiness only for non-human waits', () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], handoffId: 'handoff-1', readyToResumeAt: 123, waitingOn: 'human' },
+        ],
+      }));
+
+      const humanLinked = tm.linkStepHandoff(task.id, task.steps[1].id, 'handoff-human', 'human');
+      expect(humanLinked?.steps[1].readyToResumeAt).toBe(123);
+      expect(humanLinked?.steps[1].waitingOn).toBe('human');
+
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], handoffId: 'handoff-1', readyToResumeAt: 123, waitingOn: 'human' },
+        ],
+      }));
+
+      const reviewLinked = tm.linkStepHandoff(task.id, task.steps[1].id, 'handoff-review', 'review');
+      expect(reviewLinked?.steps[1].readyToResumeAt).toBeUndefined();
+      expect(reviewLinked?.steps[1].waitingOn).toBe('review');
+    });
+
+    it('marks a paused task ready to resume and can resume it', () => {
+      tm.pauseTaskForHandoff(task.id, task.steps[1].id, 'handoff-1', 'human');
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'paused',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], handoffId: 'handoff-1', waitingOn: 'human' },
+        ],
+      }));
+
+      const ready = tm.markTaskReadyToResume(task.id, task.steps[1].id, 'handoff-1');
+      expect(ready?.status).toBe('ready-to-resume');
+      expect(ready?.steps[1].readyToResumeAt).toBeDefined();
+
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'ready-to-resume',
+        steps: [
+          task.steps[0],
+          {
+            ...task.steps[1],
+            status: 'pending',
+            handoffId: 'handoff-1',
+            readyToResumeAt: Date.now(),
+          },
+        ],
+      }));
+
+      const resumed = tm.resumeTask(task.id, task.steps[1].id, 'handoff-1');
+      expect(resumed?.status).toBe('running');
+      expect(resumed?.steps[1]).toEqual(expect.objectContaining({
+        status: 'running',
+      }));
+      expect(resumed?.steps[1].handoffId).toBeUndefined();
+    });
+
+    it('does not move terminal steps into ready-to-resume or running again', () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'paused',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], status: 'done', handoffId: 'handoff-1' },
+        ],
+      }));
+
+      const ready = tm.markTaskReadyToResume(task.id, task.steps[1].id, 'handoff-1');
+      expect(ready?.status).toBe('paused');
+      expect(ready?.steps[1].status).toBe('done');
+
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'ready-to-resume',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], status: 'rejected', handoffId: 'handoff-1' },
+        ],
+      }));
+
+      expect(tm.resumeTask(task.id, task.steps[1].id, 'handoff-1')).toBeNull();
+    });
+
+    it('guards resume and clear operations when handoff ids do not match', () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'ready-to-resume',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], status: 'pending', handoffId: 'handoff-expected', readyToResumeAt: 123 },
+        ],
+      }));
+
+      expect(tm.resumeTask(task.id, task.steps[1].id, 'handoff-other')).toBeNull();
+
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify({
+        ...task,
+        status: 'paused',
+        steps: [
+          task.steps[0],
+          { ...task.steps[1], handoffId: 'handoff-expected', waitingOn: 'human', readyToResumeAt: 123 },
+        ],
+      }));
+
+      expect(tm.clearStepHandoff(task.id, task.steps[1].id, 'handoff-other')).toBeNull();
+      const cleared = tm.clearStepHandoff(task.id, task.steps[1].id, 'handoff-expected');
+      expect(cleared?.steps[1].handoffId).toBeUndefined();
+      expect(cleared?.steps[1].waitingOn).toBeUndefined();
+      expect(cleared?.steps[1].readyToResumeAt).toBeUndefined();
     });
   });
 });

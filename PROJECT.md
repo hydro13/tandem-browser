@@ -10,7 +10,7 @@ bicycle: two riders, one machine, each contributing what the other can't do
 alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while AI agents operate through a built-in **MCP server** (244 tools) or a full
+while AI agents operate through a built-in **MCP server** (248 tools) or a full
 local **HTTP API** on `127.0.0.1:8765` with 300+ endpoints for navigation,
 interaction, data extraction, automation, sessions, sync, extensions, and
 developer tooling. Websites see a normal Chrome browser on macOS. They don't see

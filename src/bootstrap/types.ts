@@ -24,6 +24,7 @@ import type { ClaroNoteManager } from '../claronote/manager';
 import type { EventStreamManager } from '../events/stream';
 import type { HandoffManager } from '../handoffs/manager';
 import type { TaskManager } from '../agents/task-manager';
+import type { TaskHandoffCoordinator } from '../agents/task-handoff-coordinator';
 import type { TabLockManager } from '../agents/tab-lock-manager';
 import type { ContextMenuManager } from '../context-menu/manager';
 import type { DevToolsManager } from '../devtools/manager';
@@ -76,6 +77,7 @@ export interface RuntimeManagers {
   eventStream: EventStreamManager;
   handoffManager: HandoffManager;
   taskManager: TaskManager;
+  taskHandoffCoordinator: TaskHandoffCoordinator;
   tabLockManager: TabLockManager;
   contextMenuManager: ContextMenuManager;
   devToolsManager: DevToolsManager;

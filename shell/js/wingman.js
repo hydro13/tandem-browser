@@ -240,6 +240,22 @@
         await fetch(`http://localhost:8765/handoffs/${handoffId}/resolve`, { method: 'POST' });
       }
 
+      async function markHandoffReady(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/ready`, { method: 'POST' });
+      }
+
+      async function resumeHandoff(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/resume`, { method: 'POST' });
+      }
+
+      async function approveHandoff(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/approve`, { method: 'POST' });
+      }
+
+      async function rejectHandoff(handoffId) {
+        await fetch(`http://localhost:8765/handoffs/${handoffId}/reject`, { method: 'POST' });
+      }
+
       async function hydrateHandoff(handoff) {
         if (!handoff || !handoff.id) return handoff;
         if (handoff.workspaceName || handoff.tabTitle || handoff.tabUrl) return handoff;
@@ -271,6 +287,17 @@
           if (handoff.source || handoff.agentId) meta.push(`<span class="handoff-pill">Source: ${escapeHtml(handoff.source || handoff.agentId)}</span>`);
           if (handoff.actionLabel) meta.push(`<span class="handoff-pill">${escapeHtml(handoff.actionLabel)}</span>`);
 
+          const actionButtons = ['<button class="primary" data-action="open">Open Context</button>'];
+          if (handoff.status === 'waiting_approval') {
+            actionButtons.push('<button data-action="approve">Approve</button>');
+            actionButtons.push('<button data-action="reject">Reject</button>');
+          } else if (handoff.status === 'ready_to_resume') {
+            actionButtons.push('<button data-action="resume">Resume Agent</button>');
+          } else if (handoff.status === 'needs_human' || handoff.status === 'blocked') {
+            actionButtons.push('<button data-action="ready">Mark Ready</button>');
+          }
+          actionButtons.push(`<button data-action="resolve">${handoff.status === 'completed_review' ? 'Mark Reviewed' : 'Resolve'}</button>`);
+
           card.innerHTML = `
             <div class="handoff-topline">
               <span class="handoff-status">${escapeHtml(formatHandoffStatus(handoff.status))}</span>
@@ -280,9 +307,7 @@
             <div class="handoff-body">${escapeHtml(handoff.body || '')}</div>
             <div class="handoff-meta">${meta.join('')}</div>
             <div class="handoff-actions">
-              <button class="primary" data-action="open">Open Context</button>
-              <button data-action="ready">Mark Ready</button>
-              <button data-action="resolve">${handoff.status === 'completed_review' ? 'Mark Reviewed' : 'Resolve'}</button>
+              ${actionButtons.join('')}
             </div>
           `;
 
@@ -294,13 +319,49 @@
             }
           });
 
-          card.querySelector('[data-action="ready"]').addEventListener('click', async () => {
-            try {
-              await updateHandoffStatus(handoff.id, { status: 'ready_to_resume', open: true });
-            } catch (e) {
-              console.error('updateHandoffStatus failed:', e);
-            }
-          });
+          const readyButton = card.querySelector('[data-action="ready"]');
+          if (readyButton) {
+            readyButton.addEventListener('click', async () => {
+              try {
+                await markHandoffReady(handoff.id);
+              } catch (e) {
+                console.error('markHandoffReady failed:', e);
+              }
+            });
+          }
+
+          const resumeButton = card.querySelector('[data-action="resume"]');
+          if (resumeButton) {
+            resumeButton.addEventListener('click', async () => {
+              try {
+                await resumeHandoff(handoff.id);
+              } catch (e) {
+                console.error('resumeHandoff failed:', e);
+              }
+            });
+          }
+
+          const approveButton = card.querySelector('[data-action="approve"]');
+          if (approveButton) {
+            approveButton.addEventListener('click', async () => {
+              try {
+                await approveHandoff(handoff.id);
+              } catch (e) {
+                console.error('approveHandoff failed:', e);
+              }
+            });
+          }
+
+          const rejectButton = card.querySelector('[data-action="reject"]');
+          if (rejectButton) {
+            rejectButton.addEventListener('click', async () => {
+              try {
+                await rejectHandoff(handoff.id);
+              } catch (e) {
+                console.error('rejectHandoff failed:', e);
+              }
+            });
+          }
 
           card.querySelector('[data-action="resolve"]').addEventListener('click', async () => {
             try {

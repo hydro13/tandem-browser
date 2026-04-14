@@ -15,7 +15,7 @@ Last updated: April 13, 2026
 ## Current Snapshot
 
 - Current app version: `0.70.0`
-- MCP server: 244 tools (full API parity + awareness)
+- MCP server: 248 tools (full API parity + awareness)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
@@ -60,7 +60,7 @@ Last updated: April 13, 2026
 - [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`
 - [ ] Investigate the remaining 1Password MV3 service-worker startup noise (`DidStartWorkerFail ...: 5` and policy calculation errors) and determine whether it affects any real user-facing behavior; the old `__tandemExtensionHeaders` background error is fixed, and current manual checks indicate the extension still works for normal use
 - [ ] Make `ContextBridge` summaries natively actor/workspace-aware so `/context/summary` and other non-MCP consumers stop relying on MCP-side enrichment for ownership context
-- [ ] Expand the new handoff system with richer task linkage, agent-side resume signals, and a dedicated handoff history/detail view beyond the first Activity-tab inbox
+- [ ] Expand the new handoff system beyond the first Activity-tab inbox with a dedicated handoff history/detail view; task-linked ready/resume/approve/reject actions now flow through a shared task↔handoff coordinator
 - [x] Add GitHub Actions verification for `npm run verify` on pushes and pull requests
 
 ## Later

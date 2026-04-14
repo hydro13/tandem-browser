@@ -189,6 +189,8 @@ export function registerHandoffRoutes(router: Router, ctx: RouteContext): void {
         wingmanAlert(handoff.title, handoff.body || handoff.reason);
       }
 
+      ctx.taskHandoffCoordinator.syncHandoffState(handoff);
+
       res.json(serializeHandoff(ctx, handoff));
     } catch (e) {
       handleRouteError(res, e);
@@ -281,6 +283,7 @@ export function registerHandoffRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
 
+      ctx.taskHandoffCoordinator.syncHandoffState(handoff);
       res.json(serializeHandoff(ctx, handoff));
     } catch (e) {
       handleRouteError(res, e);
@@ -291,6 +294,63 @@ export function registerHandoffRoutes(router: Router, ctx: RouteContext): void {
     try {
       const handoffId = req.params.id as string;
       const handoff = ctx.handoffManager.resolve(handoffId);
+      if (!handoff) {
+        res.status(404).json({ error: 'Handoff not found' });
+        return;
+      }
+      ctx.taskHandoffCoordinator.syncHandoffState(handoff);
+      res.json(serializeHandoff(ctx, handoff));
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/handoffs/:id/ready', (req: Request, res: Response) => {
+    try {
+      const handoffId = req.params.id as string;
+      const handoff = ctx.taskHandoffCoordinator.markReady(handoffId);
+      if (!handoff) {
+        res.status(404).json({ error: 'Handoff not found' });
+        return;
+      }
+      res.json(serializeHandoff(ctx, handoff));
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/handoffs/:id/resume', (req: Request, res: Response) => {
+    try {
+      const handoffId = req.params.id as string;
+      const handoff = ctx.taskHandoffCoordinator.resume(handoffId);
+      if (!handoff) {
+        res.status(404).json({ error: 'Handoff not found' });
+        return;
+      }
+      res.json(serializeHandoff(ctx, handoff));
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/handoffs/:id/approve', (req: Request, res: Response) => {
+    try {
+      const handoffId = req.params.id as string;
+      const handoff = ctx.taskHandoffCoordinator.approve(handoffId);
+      if (!handoff) {
+        res.status(404).json({ error: 'Handoff not found' });
+        return;
+      }
+      res.json(serializeHandoff(ctx, handoff));
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  router.post('/handoffs/:id/reject', (req: Request, res: Response) => {
+    try {
+      const handoffId = req.params.id as string;
+      const handoff = ctx.taskHandoffCoordinator.reject(handoffId);
       if (!handoff) {
         res.status(404).json({ error: 'Handoff not found' });
         return;
