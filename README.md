@@ -105,7 +105,7 @@ npm install
 npm start
 ```
 
-macOS is the primary platform. Linux works. Windows is not validated yet.
+macOS is the primary platform. Linux works. Windows is validated as a remote agent host.
 
 ## Start Here
 
@@ -160,25 +160,29 @@ on the same tailnet. Tandem is never exposed to the public internet.
 
 1. Open Tandem Settings > Connected Agents
 2. Select "On another machine" and generate a setup code
-3. On the remote machine, exchange the code for a durable token:
+3. Tandem generates a ready-to-use instruction block — copy it to your AI agent
+4. The AI exchanges the setup code for a permanent token and connects
 
-   ```bash
-   curl -X POST http://<tandem-tailscale-ip>:8765/pairing/exchange \
-     -H "Content-Type: application/json" \
-     -d '{"code":"TDM-XXXX-XXXX","machineId":"...","machineName":"...","agentLabel":"...","agentType":"..."}'
-   ```
-
-4. Use the returned token for all subsequent requests:
-
-   ```bash
-   curl -sS http://<tandem-tailscale-ip>:8765/status \
-     -H "Authorization: Bearer <token>"
-   ```
-
-The token is permanent until the user pauses, revokes, or removes it from
-Tandem's Connected Agents UI.
+The token is permanent until you pause, revoke, or remove it from the
+Connected Agents UI.
 
 Remote agents use the HTTP API. Remote MCP is not yet available.
+
+<details>
+<summary>Manual pairing (for scripts or custom tooling)</summary>
+
+```bash
+# Exchange setup code for token
+curl -X POST http://<tandem-tailscale-ip>:8765/pairing/exchange \
+  -H "Content-Type: application/json" \
+  -d '{"code":"TDM-XXXX-XXXX","machineId":"...","machineName":"...","agentLabel":"...","agentType":"..."}'
+
+# Use the returned token
+curl -sS http://<tandem-tailscale-ip>:8765/status \
+  -H "Authorization: Bearer <token>"
+```
+
+</details>
 
 ### Discovery
 
