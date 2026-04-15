@@ -392,16 +392,15 @@ Tested:
 | `refactor:` | none | code restructuring |
 | `test:` | none | tests |
 
-### Important: No Emoji Before the Type Prefix
+### Emoji in Commit Messages
+
+The auto-versioning hook strips leading emoji, so both forms work:
 
 ```text
 ✅ feat: sidebar manager + config API
-✅ fix: version bump hook matches emoji commits
-❌ 🗂️ feat: sidebar manager  ← emoji breaks the auto-versioning hook
+✅ 🗂️ feat: sidebar manager          ← hook strips the emoji prefix
+✅ feat: sidebar manager 🗂️           ← also fine
 ```
-
-Emoji are allowed after the description:
-`feat: sidebar manager 🗂️`
 
 ### CHANGELOG.md Format
 
