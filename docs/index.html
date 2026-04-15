@@ -158,7 +158,7 @@ footer a:hover{color:var(--text2)}
 <div class="proof-strip">
 <div class="proof-card"><strong>Human-AI symbiosis</strong><span>Built around humans and agents working together in the same browser, not taking turns through prompts.</span></div>
 <div class="proof-card"><strong>Open source, MIT</strong><span>Real public repo, source available now, developer preview, not vaporware.</span></div>
-<div class="proof-card"><strong>Works with your AI stack</strong><span>MCP for local agents, HTTP for local and remote. Connect from the same machine or over Tailscale.</span></div>
+<div class="proof-card"><strong>Works with your AI stack</strong><span>MCP for same-machine agents, HTTP for same-machine and remote agents. Connect locally or over Tailscale.</span></div>
 <div class="proof-card"><strong>Worth watching for teams</strong><span>Shared human-AI browser workflows, not detached automation or brittle wrappers.</span></div>
 </div>
 </div>
@@ -332,9 +332,10 @@ The browser opens. The API starts automatically.</p>
 <div class="step-num">3</div>
 <div class="step-content">
 <h3>Connect your AI</h3>
-<p>Open Settings &rarr; Connected Agents. Choose whether your AI is on this machine or on another machine. Tandem generates the instructions &mdash; just copy them to your AI.</p>
+<p>Open Settings &rarr; Connected Agents. Choose whether your AI is on this machine or on another machine. Tandem generates the instructions, you paste them into your AI, and the agent discovers the rest through Tandem's own bootstrap surface.</p>
 <p style="margin-top:.4rem"><strong>Same machine:</strong> MCP (250 tools) or HTTP API (300+ endpoints).<br>
-<strong>Remote machine:</strong> HTTP API over a private Tailscale network. Both machines must be on the same tailnet. Tandem is never exposed to the public internet.</p>
+<strong>Another machine:</strong> HTTP API over a private Tailscale network. Both machines must be on the same tailnet. Tandem is never exposed to the public internet.</p>
+<p style="margin-top:.4rem;color:var(--text2)">Remote MCP is not available yet. Remote agents use Tandem's HTTP API after pairing.</p>
 </div>
 </div>
 </div>
