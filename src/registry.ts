@@ -50,6 +50,7 @@ import type { SyncManager } from './sync/manager';
 import type { PinboardManager } from './pinboards/manager';
 import type { ClipboardManager } from './clipboard/manager';
 import type { GooglePhotosManager } from './integrations/google-photos';
+import type { PairingManager } from './pairing/manager';
 
 export interface ManagerRegistry {
   /** Tab lifecycle, grouping, metadata, and focus tracking. See src/tabs/manager.ts */
@@ -144,4 +145,6 @@ export interface ManagerRegistry {
   googlePhotosManager: GooglePhotosManager;
   /** Reads and saves clipboard content (text, HTML, images) to disk. See src/clipboard/manager.ts */
   clipboardManager: ClipboardManager;
+  /** Remote agent pairing with setup codes, binding tokens, and lifecycle management. See src/pairing/manager.ts */
+  pairingManager: PairingManager;
 }

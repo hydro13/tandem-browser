@@ -226,4 +226,45 @@ describe('Preview Routes', () => {
       expect(res.status).toBe(404);
     });
   });
+
+  // ─── Remote-aware URL generation ────────────────
+
+  describe('Remote-aware URLs', () => {
+    it('POST /preview uses Host header for URL in response', async () => {
+      vi.mocked(fs.existsSync)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
+
+      const res = await request(app)
+        .post('/preview')
+        .set('Host', '100.64.0.1:8765')
+        .send({ html: '<h1>Remote</h1>', title: 'Remote Preview' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.url).toContain('http://100.64.0.1:8765/preview/');
+      expect(res.body.url).not.toContain('127.0.0.1');
+    });
+
+    it('PUT /preview/:id uses Host header for URL in response', async () => {
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(samplePreview));
+
+      const res = await request(app)
+        .put('/preview/my-preview')
+        .set('Host', '100.64.0.1:8765')
+        .send({ html: '<h1>Updated</h1>' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.url).toContain('http://100.64.0.1:8765/preview/');
+      expect(res.body.url).not.toContain('127.0.0.1');
+    });
+
+    it('GET /preview/:id 404 page does not contain hardcoded localhost', async () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+
+      const res = await request(app).get('/preview/missing');
+
+      expect(res.status).toBe(404);
+      expect(res.text).not.toContain('127.0.0.1');
+    });
+  });
 });

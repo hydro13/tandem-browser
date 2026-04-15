@@ -667,6 +667,25 @@ export function createMockContext(): RouteContext {
       writeImage: vi.fn(),
       saveAs: vi.fn().mockReturnValue({ path: '/tmp/test.png', size: 1024 }),
     } as any,
+
+    // ── pairingManager ─────────────────────────
+    pairingManager: {
+      generateSetupCode: vi.fn().mockReturnValue({ code: 'TDM-TEST-CODE', createdAt: Date.now(), expiresAt: Date.now() + 300_000, consumed: false }),
+      getActiveSetupCode: vi.fn().mockReturnValue(null),
+      exchangeSetupCode: vi.fn().mockReturnValue({ token: 'tdm_ast_test', binding: { id: 'b1', state: 'paired' } }),
+      validateToken: vi.fn().mockReturnValue(null),
+      listBindings: vi.fn().mockReturnValue([]),
+      getBinding: vi.fn().mockReturnValue(null),
+      pauseBinding: vi.fn().mockReturnValue(null),
+      resumeBinding: vi.fn().mockReturnValue(null),
+      revokeBinding: vi.fn().mockReturnValue(null),
+      removeBinding: vi.fn().mockReturnValue(false),
+      whoami: vi.fn().mockReturnValue(null),
+      getBindingEvents: vi.fn().mockReturnValue([]),
+      destroy: vi.fn(),
+      on: vi.fn(),
+      emit: vi.fn(),
+    } as any,
   };
 
   return ctx;

@@ -92,6 +92,13 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const { dialog, BrowserWindow } = require('electron');
       const win = BrowserWindow.getFocusedWindow() || BrowserWindow.getAllWindows()[0];
+      if (!win) {
+        res.status(422).json({
+          error: 'Folder picker requires a local Tandem window. This endpoint is not available for remote agents.',
+          localOnly: true,
+        });
+        return;
+      }
       const result = await dialog.showOpenDialog(win, {
         properties: ['openDirectory', 'createDirectory'],
         title: 'Choose screenshot folder',

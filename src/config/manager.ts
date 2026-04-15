@@ -33,6 +33,7 @@ export interface TandemConfig {
     agentName: string;
     agentDisplayName: string;
     quickLinks: QuickLinkConfig[];
+    apiListenHost: string;
   };
 
   // Screenshots
@@ -135,6 +136,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     agentName: 'Wingman',
     agentDisplayName: 'AI Wingman',
     quickLinks: DEFAULT_QUICK_LINKS,
+    apiListenHost: '0.0.0.0',
   },
   screenshots: {
     clipboard: true,
@@ -329,6 +331,11 @@ export class ConfigManager {
           }
           if (raw.general.startPage === 'kees') {
             raw.general.startPage = 'wingman';
+          }
+          // Migrate apiListenHost: old default was 127.0.0.1 which blocks remote agent pairing.
+          // New default is 0.0.0.0 (local + remote simultaneously).
+          if (raw.general.apiListenHost === '127.0.0.1') {
+            raw.general.apiListenHost = '0.0.0.0';
           }
           delete raw.general.keesPanelPosition;
           delete raw.general.keesPanelDefaultOpen;

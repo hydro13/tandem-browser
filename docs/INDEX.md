@@ -64,6 +64,7 @@ Each module is a self-contained subsystem with its own manager.
 | `network/` | `inspector.ts`, `mocker.ts` | Network logging, HAR export, request mocking |
 | `notifications/` | (multiple) | System notifications |
 | `openclaw/` | (multiple) | OpenClaw gateway integration, Wingman chat |
+| `pairing/` | `manager.ts` | Remote agent pairing (setup codes, token exchange, bindings) |
 | `panel/` | `manager.ts` | Wingman side panel management |
 | `passwords/` | (multiple) | Local password vault (AES-256-GCM) |
 | `pinboards/` | `manager.ts` | Sidebar pinboards for saved items |
@@ -88,12 +89,13 @@ Each module is a self-contained subsystem with its own manager.
 
 ### API Routes (src/api/routes/)
 
-19 route files, all following the `registerXRoutes(router, ctx)` pattern:
+21 route files, all following the `registerXRoutes(router, ctx)` pattern:
 
 | File | Endpoints | Domain |
 |------|-----------|--------|
 | `awareness.ts` | Activity digest, focus detection | AI awareness |
 | `agents.ts` | Tasks, tab locks, autonomy, emergency stop | Agent coordination |
+| `bootstrap.ts` | `/agent`, `/skill`, `/agent/manifest`, `/agent/version` | Agent discovery (public) |
 | `browser.ts` | Navigate, click, type, scroll, screenshot | Core browser actions |
 | `clipboard.ts` | Read/write clipboard | Clipboard access |
 | `content.ts` | Page content, extraction, markdown | Content extraction |
@@ -103,6 +105,7 @@ Each module is a self-contained subsystem with its own manager.
 | `media.ts` | Voice, audio, video, screenshots, draw | Media and capture |
 | `misc.ts` | Settings, passwords, watches, notifications | Utility endpoints |
 | `network.ts` | Network log, mocking, HAR export, APIs | Network inspection |
+| `pairing.ts` | Setup codes, token exchange, bindings, whoami | Remote agent pairing |
 | `pinboards.ts` | Pinboard CRUD, items, settings | Sidebar pinboards |
 | `previews.ts` | Create/update live HTML previews | Agent previews |
 | `sessions.ts` | Session CRUD, state save/load, fetch relay | Session isolation |

@@ -131,6 +131,12 @@ function injectLiveReload(html: string, id: string, version: number): string {
  * @param router - Express router to attach routes to
  * @param ctx - shared manager registry and main BrowserWindow
  */
+/** Derive base URL from the incoming request's Host header. */
+function getBaseUrl(req: Request): string {
+  const host = req.headers.host ?? 'localhost:8765';
+  return `http://${host}`;
+}
+
 export function registerPreviewRoutes(router: Router, ctx: RouteContext): void {
 
   // List all previews
@@ -174,7 +180,7 @@ export function registerPreviewRoutes(router: Router, ctx: RouteContext): void {
       writePreview(preview);
       log.info(`Preview created: ${id}`);
 
-      const url = `http://127.0.0.1:8765/preview/${id}`;
+      const url = `${getBaseUrl(req)}/preview/${id}`;
 
       // Open in a new tab by default (openTab defaults to true)
       if (openTab !== false) {
@@ -220,7 +226,7 @@ export function registerPreviewRoutes(router: Router, ctx: RouteContext): void {
       writePreview(updated);
       log.info(`Preview updated: ${id} (v${updated.version})`);
 
-      res.json({ ok: true, id, version: updated.version, url: `http://127.0.0.1:8765/preview/${id}` });
+      res.json({ ok: true, id, version: updated.version, url: `${getBaseUrl(req)}/preview/${id}` });
     } catch (e) {
       handleRouteError(res, e);
     }
@@ -253,7 +259,7 @@ export function registerPreviewRoutes(router: Router, ctx: RouteContext): void {
         res.status(404).send(`<!DOCTYPE html><html><body>
           <h1>Preview not found</h1>
           <p>No preview with id <code>${escapeHtml(id)}</code> exists.</p>
-          <p><a href="http://127.0.0.1:8765/previews">View all previews</a></p>
+          <p><a href="/previews">View all previews</a></p>
         </body></html>`);
         return;
       }

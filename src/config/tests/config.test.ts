@@ -276,6 +276,36 @@ describe('ConfigManager', () => {
       expect(config.general.startPage).toBe('wingman');
     });
 
+    it('migrates apiListenHost from 127.0.0.1 to 0.0.0.0', () => {
+      const savedConfig = JSON.stringify({
+        general: { apiListenHost: '127.0.0.1' },
+      });
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(savedConfig);
+
+      const cm = new ConfigManager();
+      const config = cm.getConfig();
+      expect(config.general.apiListenHost).toBe('0.0.0.0');
+    });
+
+    it('preserves apiListenHost when already 0.0.0.0', () => {
+      const savedConfig = JSON.stringify({
+        general: { apiListenHost: '0.0.0.0' },
+      });
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(savedConfig);
+
+      const cm = new ConfigManager();
+      const config = cm.getConfig();
+      expect(config.general.apiListenHost).toBe('0.0.0.0');
+    });
+
+    it('defaults apiListenHost to 0.0.0.0 for new installs', () => {
+      const cm = new ConfigManager();
+      const config = cm.getConfig();
+      expect(config.general.apiListenHost).toBe('0.0.0.0');
+    });
+
     it('normalizes saved quick links from disk', () => {
       const savedConfig = JSON.stringify({
         general: {

@@ -55,6 +55,7 @@ import { BehaviorObserver } from '../behavior/observer';
 import { WorkflowEngine } from '../workflow/engine';
 import { WorkspaceManager } from '../workspaces/manager';
 import { ClipboardManager } from '../clipboard/manager';
+import { PairingManager } from '../pairing/manager';
 import { DEFAULT_PARTITION } from '../utils/constants';
 import type { RuntimeManagers } from './types';
 
@@ -220,6 +221,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.workflowEngine = new WorkflowEngine();
   runtime.loginManager = new LoginManager();
   runtime.clipboardManager = new ClipboardManager();
+  runtime.pairingManager = new PairingManager();
   runtime.sessionRestoreManager = new SessionRestoreManager(runtime.syncManager);
 
   runtime.workspaceManager.setMainWindow(win);
@@ -398,6 +400,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     pinboardManager: runtime.pinboardManager,
     googlePhotosManager: runtime.googlePhotosManager,
     clipboardManager: runtime.clipboardManager,
+    pairingManager: runtime.pairingManager,
   };
 }
 
@@ -470,4 +473,5 @@ export function destroyRuntime(opts: DestroyRuntimeOptions): void {
   runtime.workspaceManager.destroy();
   runtime.pinboardManager.destroy();
   runtime.syncManager.destroy();
+  runtime.pairingManager.destroy();
 }

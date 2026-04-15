@@ -120,23 +120,14 @@ Depending on what you want to do:
 
 ## Connect Your AI Agent
 
-### Claude Code / Claude Desktop (MCP)
+Tandem supports AI agents running on the same machine or on a remote machine
+over a private Tailscale network. Both can be active at the same time.
 
-Add to your MCP configuration:
+### On the same machine (MCP or HTTP)
 
-**Claude Code** (`.mcp.json` in project root or `~/.claude/settings.json`):
-```json
-{
-  "mcpServers": {
-    "tandem": {
-      "command": "node",
-      "args": ["/path/to/tandem-browser/dist/mcp/server.js"]
-    }
-  }
-}
-```
+**MCP** — Add to your MCP client configuration (Claude Code, Claude Desktop,
+Cursor, Windsurf, or any MCP client):
 
-**Claude Desktop** (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 ```json
 {
   "mcpServers": {
@@ -150,12 +141,7 @@ Add to your MCP configuration:
 
 Start Tandem, and 250 tools are available immediately.
 
-### Cursor / Windsurf / Other MCP Clients
-
-Same config — point your MCP client at `dist/mcp/server.js`. Any client
-that implements the MCP protocol works.
-
-### HTTP API (for custom integrations)
+**HTTP API** — Use the local API token directly:
 
 ```bash
 TOKEN="$(cat ~/.tandem/api-token)"
@@ -166,6 +152,44 @@ curl -sS http://127.0.0.1:8765/tabs/list \
 ```
 
 300+ endpoints for everything the MCP tools can do, plus lower-level access.
+
+### On another machine (Tailscale + HTTP)
+
+Remote agents connect over a private Tailscale network. Both machines must be
+on the same tailnet. Tandem is never exposed to the public internet.
+
+1. Open Tandem Settings > Connected Agents
+2. Select "On another machine" and generate a setup code
+3. On the remote machine, exchange the code for a durable token:
+
+   ```bash
+   curl -X POST http://<tandem-tailscale-ip>:8765/pairing/exchange \
+     -H "Content-Type: application/json" \
+     -d '{"code":"TDM-XXXX-XXXX","machineId":"...","machineName":"...","agentLabel":"...","agentType":"..."}'
+   ```
+
+4. Use the returned token for all subsequent requests:
+
+   ```bash
+   curl -sS http://<tandem-tailscale-ip>:8765/status \
+     -H "Authorization: Bearer <token>"
+   ```
+
+The token is permanent until the user pauses, revokes, or removes it from
+Tandem's Connected Agents UI.
+
+Remote agents use the HTTP API. Remote MCP is not yet available.
+
+### Discovery
+
+A running Tandem instance publishes its own version-matched discovery surface:
+
+- `GET /agent` — human-readable bootstrap page
+- `GET /agent/manifest` — machine-readable endpoint manifest
+- `GET /skill` — version-matched usage guide
+
+These are public (no auth required) and use the request `Host` header, so they
+return correct URLs whether accessed locally or over Tailscale.
 
 ## Security Model
 
@@ -226,7 +250,7 @@ contributors, not yet a polished mass-user release.
 
 - Primary platform: macOS
 - Secondary platform: Linux
-- Windows: not actively validated
+- Windows: validated as a remote agent host (VS Code + Claude Code over Tailscale)
 - Binaries: not published yet (source-only)
 - Current version: `0.73.0`
 - Package metadata: [package.json](package.json)

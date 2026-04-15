@@ -17,6 +17,13 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ### Added
 
+- Remote agent pairing over Tailscale: agents on another machine can pair with Tandem via a one-time setup code (TDM-XXXX-XXXX), receive a durable binding token, and use the full HTTP API remotely — proven with Windows 11 + VS Code + Claude Code connecting to macOS over Tailscale
+- PairingManager with setup code generation (5-minute TTL), token exchange, binding lifecycle (paired/paused/revoked/removed), SHA-256 token hashing, and persistent storage at `~/.tandem/pairing/bindings.json`
+- Public bootstrap/discovery routes: `GET /agent` (human-readable), `GET /agent/manifest` (machine-readable with all endpoint families), `GET /agent/version` (capability summary), `GET /skill` (version-matched usage guide) — all request-aware so URLs are correct over Tailscale
+- Pairing HTTP routes: `POST /pairing/setup-code`, `POST /pairing/exchange` (public, rate-limited), `GET /pairing/whoami`, `GET /pairing/bindings`, pause/resume/revoke/remove per binding, and `GET /pairing/addresses` for Tailscale address auto-detection
+- Binding token auth (`tdm_ast_` prefix) accepted alongside existing local `api-token` for all HTTP routes and the `/watch/live` WebSocket
+- Onboarding-first "Connect your AI to Tandem" Settings UI with mode selector (same machine / another machine), address detection, instruction generation with `bindingKind`, and binding management cards
+- API listen host defaults to `0.0.0.0` (local + remote simultaneously) with auto-migration from `127.0.0.1` for existing installs
 - `ws://127.0.0.1:8765/watch/live` now streams an immediate watch snapshot plus incremental watch add/remove/check events to authenticated local clients, giving agents a real-time watch surface instead of polling `/watch/list`
 - Watches now support configurable diff modes for change detection: `content`, `title`, `title-or-content`, and `text-length`, exposed through both the HTTP API and MCP watch-add flow
 - New HTTP screenshot capture routes: `POST /screenshot/application` saves a fresh full-window capture, and `POST /screenshot/region` saves a fresh application-region capture without requiring renderer IPC or clipboard round-trips

@@ -490,6 +490,7 @@
     <a href="#autonomy" data-section="autonomy">🤖 AI Autonomy</a>
     <a href="#data" data-section="data">💾 Data</a>
     <a href="#extensions" data-section="extensions">🧩 Extensions</a>
+    <a href="#agents" data-section="agents">🔗 Connected Agents</a>
   </nav>
 
   <div class="settings-body">
@@ -1026,6 +1027,55 @@
       <div class="ext-tab-content" id="ext-gallery">
         <div class="ext-category-filters" id="ext-gallery-filters"></div>
         <div id="ext-gallery-list"></div>
+      </div>
+    </div>
+
+    <!-- ═══ Connected Agents ═══ -->
+    <div class="section" id="agents">
+      <h2>🔗 Connect your AI to Tandem</h2>
+      <p class="section-desc">Let your AI agent work with you in Tandem Browser</p>
+
+      <!-- Onboarding: mode selector -->
+      <div class="field-group" id="agent-onboard">
+        <label class="field-label">Where is your AI running?</label>
+        <div style="display: flex; gap: 10px; margin-top: 8px;" id="agent-mode-btns">
+          <button class="btn btn-primary" id="agent-mode-local-btn" onclick="selectAgentMode('local')">On this machine</button>
+          <button class="btn btn-secondary" id="agent-mode-remote-btn" onclick="selectAgentMode('remote')">On another machine</button>
+        </div>
+      </div>
+
+      <!-- Mode detail + code generation area -->
+      <div class="field-group" id="agent-mode-detail" style="display:none; margin-top: 16px;">
+        <div id="agent-mode-info"></div>
+        <div style="margin-top: 12px;">
+          <button class="btn btn-primary" id="agent-connect-btn" onclick="generateAndShowInstructions()">Generate connection instructions</button>
+        </div>
+      </div>
+
+      <!-- Active code + instruction block -->
+      <div id="agent-instruction-area" style="display:none; margin-top: 16px;">
+        <div style="background: var(--input-bg); border-radius: 8px; padding: 16px; text-align: center;">
+          <div style="font-size: 24px; font-family: 'SF Mono', 'Menlo', 'Consolas', monospace; letter-spacing: 2px; margin-bottom: 8px;" id="agent-code-display"></div>
+          <div style="font-size: 12px; color: var(--text-dim);" id="agent-code-timer"></div>
+        </div>
+        <div style="margin-top: 12px;">
+          <label class="field-label">Give this to your AI</label>
+          <p class="field-desc">Copy the text below and paste it into your AI agent. It contains everything your AI needs to connect.</p>
+          <textarea id="agent-instruction-text" readonly rows="10"
+            style="width:100%;font-family:'SF Mono','Menlo','Consolas',monospace;font-size:12px;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:12px;resize:vertical;margin-top:8px;"></textarea>
+        </div>
+        <div style="display: flex; gap: 8px; margin-top: 10px;">
+          <button class="btn btn-sm btn-primary" onclick="copyInstructions()">Copy instructions</button>
+          <button class="btn btn-sm btn-secondary" onclick="cancelSetupCode()">Cancel</button>
+        </div>
+      </div>
+
+      <!-- Bindings list -->
+      <div class="field-group" style="margin-top: 28px;">
+        <label class="field-label">Connected agents</label>
+        <div id="agent-bindings-list">
+          <p class="field-desc" id="agent-no-bindings">No agents connected yet.</p>
+        </div>
       </div>
     </div>
 
@@ -2205,6 +2255,247 @@
       return d.innerHTML;
     }
 
+    // ═══ Connected Agents ═══
+    let activeSetupCode = null;
+    let codeTimerInterval = null;
+    let codePollInterval = null;
+    let selectedMode = null; // 'local' | 'remote'
+    let detectedAddresses = null;
+
+    async function loadAddresses() {
+      try {
+        const res = await fetch(`${API}/pairing/addresses`);
+        if (res.ok) detectedAddresses = await res.json();
+      } catch { /* API not ready */ }
+    }
+
+    function selectAgentMode(mode) {
+      selectedMode = mode;
+      // Update button styles
+      const localBtn = document.getElementById('agent-mode-local-btn');
+      const remoteBtn = document.getElementById('agent-mode-remote-btn');
+      localBtn.className = mode === 'local' ? 'btn btn-primary' : 'btn btn-secondary';
+      remoteBtn.className = mode === 'remote' ? 'btn btn-primary' : 'btn btn-secondary';
+
+      const detail = document.getElementById('agent-mode-detail');
+      const info = document.getElementById('agent-mode-info');
+      const connectBtn = document.getElementById('agent-connect-btn');
+      detail.style.display = '';
+
+      if (mode === 'local') {
+        const addr = detectedAddresses ? detectedAddresses.local.address : 'http://127.0.0.1:8765';
+        info.innerHTML = `
+          <p class="field-desc">Your AI and Tandem are on the same machine.</p>
+          <div style="font-size:13px;color:var(--text-dim);margin-top:6px;">
+            Tandem address: <strong style="color:var(--text)">${esc(addr)}</strong>
+          </div>`;
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Generate connection instructions';
+      } else {
+        if (detectedAddresses && detectedAddresses.tailscale.available) {
+          const addr = detectedAddresses.tailscale.address;
+          info.innerHTML = `
+            <p class="field-desc">Your AI runs on another machine in your Tailscale network.</p>
+            <div style="font-size:13px;color:var(--text-dim);margin-top:6px;">
+              Tandem address: <strong style="color:var(--text)">${esc(addr)}</strong>
+            </div>
+            <p class="field-desc" style="margin-top:6px;font-size:11px;">Both machines must be on the same Tailscale network. Tandem is never exposed to the public internet.</p>`;
+          connectBtn.disabled = false;
+          connectBtn.textContent = 'Generate connection instructions';
+        } else {
+          info.innerHTML = `
+            <p class="field-desc" style="color:var(--warning)">No Tailscale connection detected.</p>
+            <p class="field-desc" style="margin-top:4px;">Remote connections require Tailscale. Make sure Tailscale is running and this machine is connected to your tailnet.</p>
+            <p class="field-desc" style="margin-top:4px;font-size:11px;">Tandem only supports remote connections over private Tailscale networks, never over the public internet.</p>`;
+          connectBtn.disabled = true;
+          connectBtn.textContent = 'Tailscale not available';
+        }
+      }
+    }
+
+    function buildInstructionText(code, mode) {
+      const addr = mode === 'local'
+        ? (detectedAddresses ? detectedAddresses.local.address : 'http://127.0.0.1:8765')
+        : detectedAddresses.tailscale.address;
+
+      if (mode === 'local') {
+        return [
+          `Connect to Tandem Browser running on this machine.`,
+          ``,
+          `Tandem address: ${addr}`,
+          `Setup code: ${code}`,
+          ``,
+          `Steps:`,
+          `1. Read ${addr}/agent to learn how this Tandem instance works.`,
+          `2. Exchange the setup code for a connection token:`,
+          `   POST ${addr}/pairing/exchange`,
+          `   Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "local" }`,
+          `3. Use the returned token as: Authorization: Bearer <token>`,
+          `4. The token is permanent. Store it securely.`,
+        ].join('\n');
+      } else {
+        return [
+          `Connect to Tandem Browser on a remote machine via Tailscale.`,
+          `Both machines must be on the same Tailscale network.`,
+          ``,
+          `Tandem address: ${addr}`,
+          `Setup code: ${code}`,
+          ``,
+          `Steps:`,
+          `1. Read ${addr}/agent to learn how this Tandem instance works.`,
+          `2. Exchange the setup code for a connection token:`,
+          `   POST ${addr}/pairing/exchange`,
+          `   Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "remote" }`,
+          `3. Use the returned token as: Authorization: Bearer <token>`,
+          `4. The token is permanent. Store it securely.`,
+          ``,
+          `Note: This connection only works over Tailscale. Tandem is not exposed to the public internet.`,
+        ].join('\n');
+      }
+    }
+
+    async function generateAndShowInstructions() {
+      try {
+        const res = await fetch(`${API}/pairing/setup-code`, { method: 'POST' });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          showToast(err.error || 'Failed to generate code');
+          return;
+        }
+        const data = await res.json();
+        activeSetupCode = data;
+
+        // Hide onboarding controls, show instruction area
+        document.getElementById('agent-onboard').style.display = 'none';
+        document.getElementById('agent-mode-detail').style.display = 'none';
+        const area = document.getElementById('agent-instruction-area');
+        area.style.display = '';
+
+        document.getElementById('agent-code-display').textContent = data.code;
+        document.getElementById('agent-instruction-text').value = buildInstructionText(data.code, selectedMode);
+
+        // Countdown timer
+        if (codeTimerInterval) clearInterval(codeTimerInterval);
+        codeTimerInterval = setInterval(() => {
+          const remaining = Math.max(0, Math.floor((new Date(data.expiresAt).getTime() - Date.now()) / 1000));
+          const m = Math.floor(remaining / 60);
+          const s = remaining % 60;
+          document.getElementById('agent-code-timer').textContent = remaining > 0
+            ? `Expires in ${m}:${s.toString().padStart(2, '0')}`
+            : 'Expired';
+          if (remaining <= 0) {
+            clearInterval(codeTimerInterval);
+            cancelSetupCode();
+          }
+        }, 1000);
+
+        // Poll for new bindings
+        if (codePollInterval) clearInterval(codePollInterval);
+        let lastCount = -1;
+        codePollInterval = setInterval(async () => {
+          try {
+            const bRes = await fetch(`${API}/pairing/bindings`);
+            if (!bRes.ok) return;
+            const bindings = await bRes.json();
+            if (lastCount >= 0 && bindings.length > lastCount) {
+              renderAgentBindings(bindings);
+              cancelSetupCode();
+              showToast('Agent connected');
+            } else {
+              lastCount = bindings.length;
+            }
+          } catch { /* ignore */ }
+        }, 2000);
+      } catch {
+        showToast('Failed to generate setup code');
+      }
+    }
+
+    function cancelSetupCode() {
+      activeSetupCode = null;
+      if (codeTimerInterval) clearInterval(codeTimerInterval);
+      if (codePollInterval) clearInterval(codePollInterval);
+      document.getElementById('agent-instruction-area').style.display = 'none';
+      document.getElementById('agent-onboard').style.display = '';
+      if (selectedMode) {
+        document.getElementById('agent-mode-detail').style.display = '';
+      }
+    }
+
+    function copyInstructions() {
+      const text = document.getElementById('agent-instruction-text').value;
+      navigator.clipboard.writeText(text).then(() => showToast('Instructions copied'));
+    }
+
+    async function loadAgentBindings() {
+      try {
+        const res = await fetch(`${API}/pairing/bindings`);
+        if (!res.ok) return;
+        const bindings = await res.json();
+        renderAgentBindings(bindings);
+      } catch { /* API not ready */ }
+    }
+
+    function renderAgentBindings(bindings) {
+      const container = document.getElementById('agent-bindings-list');
+      const noBindings = document.getElementById('agent-no-bindings');
+
+      if (!bindings || bindings.length === 0) {
+        noBindings.style.display = '';
+        container.querySelectorAll('.agent-card').forEach(c => c.remove());
+        return;
+      }
+
+      noBindings.style.display = 'none';
+      container.querySelectorAll('.agent-card').forEach(c => c.remove());
+
+      for (const b of bindings) {
+        const card = document.createElement('div');
+        card.className = 'agent-card';
+        card.style.cssText = 'background: var(--surface2); border-radius: 8px; padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;';
+
+        const statusColor = b.state === 'paired' ? 'var(--success)' : b.state === 'paused' ? 'var(--warning)' : 'var(--danger)';
+        const statusDot = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${statusColor};margin-right:6px"></span>`;
+        const lastUsed = b.lastUsedAt ? new Date(b.lastUsedAt).toLocaleString() : 'never';
+
+        card.innerHTML = `
+          <div>
+            <div style="font-weight:500;font-size:14px">${statusDot}${esc(b.agentLabel)}</div>
+            <div style="font-size:12px;color:var(--text-dim);margin-top:4px">
+              ${esc(b.machineName)} · ${esc(b.agentType)} · last used: ${lastUsed}
+            </div>
+          </div>
+          <div style="display:flex;gap:6px">
+            ${b.state === 'paired' ? `<button class="btn-sm btn-secondary" onclick="agentAction('${b.id}','pause')">Pause</button>` : ''}
+            ${b.state === 'paused' ? `<button class="btn-sm btn-secondary" onclick="agentAction('${b.id}','resume')">Resume</button>` : ''}
+            ${b.state !== 'revoked' ? `<button class="btn-sm btn-secondary" style="color:var(--warning)" onclick="agentAction('${b.id}','revoke')">Revoke</button>` : ''}
+            <button class="btn-sm btn-secondary" style="color:var(--danger)" onclick="agentAction('${b.id}','remove')">Remove</button>
+          </div>
+        `;
+        container.appendChild(card);
+      }
+    }
+
+    async function agentAction(id, action) {
+      try {
+        if (action === 'remove') {
+          const res = await fetch(`${API}/pairing/bindings/${id}`, { method: 'DELETE' });
+          if (res.ok) { showToast('Agent removed'); loadAgentBindings(); }
+        } else {
+          const res = await fetch(`${API}/pairing/bindings/${id}/${action}`, { method: 'POST' });
+          if (res.ok) {
+            showToast(`Agent ${action}d`);
+            loadAgentBindings();
+          } else {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.error || `Failed to ${action}`);
+          }
+        }
+      } catch {
+        showToast(`Failed to ${action} agent`);
+      }
+    }
+
     // ═══ Init ═══
     loadConfig();
     loadAutonomy();
@@ -2212,6 +2503,8 @@
     loadChromeProfiles();
     updateSyncStatus();
     loadExtInstalled();
+    loadAddresses();
+    loadAgentBindings();
     // Refresh stats every 10s
     setInterval(loadBehaviorStats, 10000);
   </script>

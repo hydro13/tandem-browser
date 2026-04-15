@@ -10,11 +10,12 @@ bicycle: two riders, one machine, each contributing what the other can't do
 alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while AI agents operate through a built-in **MCP server** (250 tools) or a full
-local **HTTP API** on `127.0.0.1:8765` with 300+ endpoints for navigation,
-interaction, data extraction, automation, sessions, sync, extensions, and
-developer tooling. Websites see a normal Chrome browser on macOS. They don't see
-the AI.
+while AI agents operate through a built-in **MCP server** (250 tools) or a
+**300+ endpoint HTTP API** for navigation, interaction, data extraction,
+automation, sessions, sync, extensions, and developer tooling. Local agents can
+use MCP or HTTP. Remote agents on the same Tailscale network connect via HTTP
+and authenticate through Tandem's pairing system. Websites see a normal Chrome
+browser on macOS. They don't see the AI.
 
 That distinction matters. Tandem Browser is not trying to be a generic automation shell,
 and it is not limited to sites that explicitly expose agent tools. It is the

@@ -30,6 +30,8 @@ import { registerPinboardRoutes } from './routes/pinboards';
 import { registerPreviewRoutes } from './routes/previews';
 import { registerAwarenessRoutes } from './routes/awareness';
 import { registerClipboardRoutes } from './routes/clipboard';
+import { registerBootstrapRoutes } from './routes/bootstrap';
+import { registerPairingRoutes } from './routes/pairing';
 import { registerSecurityRoutes } from '../security/routes';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
 import { WatchLiveWebSocket } from '../watch/live-ws';
@@ -38,7 +40,16 @@ import { createLogger } from '../utils/logger';
 import { createRateLimitMiddleware } from './rate-limit';
 
 const log = createLogger('TandemAPI');
-const PUBLIC_ROUTE_PATHS = new Set<string>(['/status', '/google-photos/oauth/callback']);
+const PUBLIC_ROUTE_PATHS = new Set<string>([
+  '/status',
+  '/google-photos/oauth/callback',
+  '/agent',
+  '/agent/version',
+  '/agent/manifest',
+  '/skill',
+  '/pairing/exchange',
+  '/pairing/whoami',
+]);
 // Preview routes are public — they serve HTML pages that must be openable in a browser tab
 // without requiring a Bearer token in the request headers.
 const PUBLIC_ROUTE_PREFIXES = ['/preview/', '/previews'];
@@ -165,6 +176,12 @@ export class TandemAPI {
     }
   }
 
+  /** Check if a token is a valid binding token from a paired agent. */
+  private isBindingTokenValid(token: string): boolean {
+    if (!token.startsWith('tdm_ast_')) return false;
+    return this.registry.pairingManager.validateToken(token) !== null;
+  }
+
   /** Timing-safe comparison of a candidate token against the stored auth token */
   private isTokenValid(token: string): boolean {
     try {
@@ -201,7 +218,8 @@ export class TandemAPI {
 
   private authorizeWatchLiveRequest(req: http.IncomingMessage): boolean {
     const token = this.getWebSocketToken(req);
-    return token ? this.isTokenValid(token) : false;
+    if (!token) return false;
+    return this.isTokenValid(token) || this.isBindingTokenValid(token);
   }
 
   /** Shared validator for extension-authenticated HTTP and WebSocket bridges. */
@@ -341,6 +359,11 @@ export class TandemAPI {
       return { kind: 'local-automation', authMode: 'token', origin, remoteAddress, extensionId: null };
     }
 
+    // Check binding tokens from paired agents
+    if (bearerToken && this.isBindingTokenValid(bearerToken)) {
+      return { kind: 'local-automation', authMode: 'token', origin, remoteAddress, extensionId: null };
+    }
+
     if (
       authMode === 'trusted-extension'
       && extensionId
@@ -463,6 +486,8 @@ export class TandemAPI {
     registerPreviewRoutes(router, ctx);
     registerAwarenessRoutes(router, ctx);
     registerClipboardRoutes(router, ctx);
+    registerBootstrapRoutes(router, ctx);
+    registerPairingRoutes(router, ctx);
 
     // Native messaging proxy: route extension connectNative/sendNativeMessage
     // through Tandem's API since Electron 40 doesn't support them natively.
@@ -470,8 +495,11 @@ export class TandemAPI {
   }
 
   async start(): Promise<void> {
+    // Default: 0.0.0.0 (all interfaces — supports both local and Tailscale remote).
+    // Existing installs with 127.0.0.1 are auto-migrated to 0.0.0.0 on config load.
+    const listenHost = this.registry.configManager.getConfig().general?.apiListenHost ?? '0.0.0.0';
     return new Promise((resolve) => {
-      this.server = this.app.listen(this.port, '127.0.0.1', () => {
+      this.server = this.app.listen(this.port, listenHost, () => {
         if (this.server) {
           this.watchLiveWebSocket?.close();
           this.watchLiveWebSocket = new WatchLiveWebSocket(this.server, this.registry.watchManager, {
