@@ -123,7 +123,24 @@ Depending on what you want to do:
 Tandem supports AI agents running on the same machine or on a remote machine
 over a private Tailscale network. Both can be active at the same time.
 
+The primary onboarding flow is now inside Tandem itself:
+
+1. Open **Settings -> Connected Agents**
+2. Choose **On this machine** or **On another machine**
+3. Let Tandem generate the connection instructions
+4. Paste those instructions into your AI agent
+
+Tandem handles the setup-code flow and publishes its own bootstrap/discovery
+surface for the agent at `/agent`, `/agent/manifest`, `/agent/version`, and
+`/skill`.
+
 ### On the same machine (MCP or HTTP)
+
+If your AI runs on the same machine as Tandem, the simplest path is:
+
+1. Open **Settings -> Connected Agents**
+2. Choose **On this machine**
+3. Copy the generated instructions into your AI
 
 **MCP** — Add to your MCP client configuration (Claude Code, Claude Desktop,
 Cursor, Windsurf, or any MCP client):
@@ -158,15 +175,16 @@ curl -sS http://127.0.0.1:8765/tabs/list \
 Remote agents connect over a private Tailscale network. Both machines must be
 on the same tailnet. Tandem is never exposed to the public internet.
 
-1. Open Tandem Settings > Connected Agents
-2. Select "On another machine" and generate a setup code
-3. Tandem generates a ready-to-use instruction block — copy it to your AI agent
-4. The AI exchanges the setup code for a permanent token and connects
+1. Open **Settings -> Connected Agents**
+2. Choose **On another machine**
+3. Tandem detects the Tailscale address and generates a ready-to-use instruction block
+4. Paste that instruction block into your remote AI agent
+5. The AI reads `/agent`, exchanges the setup code for a permanent token, and connects
 
-The token is permanent until you pause, revoke, or remove it from the
+The token stays valid until you pause, revoke, or remove it from the
 Connected Agents UI.
 
-Remote agents use the HTTP API. Remote MCP is not yet available.
+Remote agents use the HTTP API today. Remote MCP is not yet available.
 
 <details>
 <summary>Manual pairing (for scripts or custom tooling)</summary>

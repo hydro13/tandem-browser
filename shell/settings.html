@@ -2286,6 +2286,7 @@
         const addr = detectedAddresses ? detectedAddresses.local.address : 'http://127.0.0.1:8765';
         info.innerHTML = `
           <p class="field-desc">Your AI and Tandem are on the same machine.</p>
+          <p class="field-desc" style="margin-top:4px;">Tandem will generate a ready-to-paste instruction block for your AI.</p>
           <div style="font-size:13px;color:var(--text-dim);margin-top:6px;">
             Tandem address: <strong style="color:var(--text)">${esc(addr)}</strong>
           </div>`;
@@ -2296,6 +2297,7 @@
           const addr = detectedAddresses.tailscale.address;
           info.innerHTML = `
             <p class="field-desc">Your AI runs on another machine in your Tailscale network.</p>
+            <p class="field-desc" style="margin-top:4px;">Tandem will generate a ready-to-paste instruction block for your remote AI.</p>
             <div style="font-size:13px;color:var(--text-dim);margin-top:6px;">
               Tandem address: <strong style="color:var(--text)">${esc(addr)}</strong>
             </div>
@@ -2320,36 +2322,38 @@
 
       if (mode === 'local') {
         return [
-          `Connect to Tandem Browser running on this machine.`,
+          `Connect to Tandem Browser on this machine.`,
           ``,
           `Tandem address: ${addr}`,
           `Setup code: ${code}`,
           ``,
-          `Steps:`,
-          `1. Read ${addr}/agent to learn how this Tandem instance works.`,
-          `2. Exchange the setup code for a connection token:`,
-          `   POST ${addr}/pairing/exchange`,
-          `   Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "local" }`,
-          `3. Use the returned token as: Authorization: Bearer <token>`,
-          `4. The token is permanent. Store it securely.`,
+          `Read ${addr}/agent first. It explains how this Tandem instance works.`,
+          ``,
+          `Then exchange the setup code for a connection token:`,
+          `POST ${addr}/pairing/exchange`,
+          `Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "local" }`,
+          ``,
+          `Use the returned token as: Authorization: Bearer <token>`,
+          `Store it securely.`,
         ].join('\n');
       } else {
         return [
-          `Connect to Tandem Browser on a remote machine via Tailscale.`,
+          `Connect to Tandem Browser on another machine via Tailscale.`,
           `Both machines must be on the same Tailscale network.`,
           ``,
           `Tandem address: ${addr}`,
           `Setup code: ${code}`,
           ``,
-          `Steps:`,
-          `1. Read ${addr}/agent to learn how this Tandem instance works.`,
-          `2. Exchange the setup code for a connection token:`,
-          `   POST ${addr}/pairing/exchange`,
-          `   Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "remote" }`,
-          `3. Use the returned token as: Authorization: Bearer <token>`,
-          `4. The token is permanent. Store it securely.`,
+          `Read ${addr}/agent first. It explains how this Tandem instance works.`,
           ``,
-          `Note: This connection only works over Tailscale. Tandem is not exposed to the public internet.`,
+          `Then exchange the setup code for a connection token:`,
+          `POST ${addr}/pairing/exchange`,
+          `Body: { "code": "${code}", "machineId": "<your-machine-id>", "machineName": "<your-hostname>", "agentLabel": "<your-name>", "agentType": "<your-type>", "bindingKind": "remote" }`,
+          ``,
+          `Use the returned token as: Authorization: Bearer <token>`,
+          `Store it securely.`,
+          ``,
+          `This connection works only over Tailscale. Tandem is not exposed to the public internet.`,
         ].join('\n');
       }
     }
