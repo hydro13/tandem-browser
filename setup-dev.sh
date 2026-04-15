@@ -1,6 +1,7 @@
 #!/bin/bash
-# Tandem Browser — Development Setup
-# Run this after cloning to configure auto-versioning + git hooks
+# Tandem Browser — Development Setup (optional)
+# Installs the auto-versioning git hook used on the main branch.
+# Feature-branch contributors do not need this — the hook only fires on main.
 
 echo "🔧 Tandem Browser Development Setup"
 echo ""
@@ -10,6 +11,7 @@ echo "📦 Installing git hooks..."
 git config core.hooksPath git-hooks
 chmod +x git-hooks/post-commit
 echo "   ✅ Auto-versioning hook installed (git-hooks/post-commit)"
+echo "   ℹ️  The hook only runs on the main branch."
 
 # 2. Check git config
 echo ""
@@ -37,7 +39,7 @@ else
 fi
 
 if [ ! -d "node_modules" ]; then
-  echo "   ⚠️  node_modules missing — run 'pnpm install' or 'npm install'"
+  echo "   ⚠️  node_modules missing — run 'npm install'"
 else
   echo "   ✅ node_modules installed"
 fi
@@ -45,7 +47,7 @@ fi
 echo ""
 echo "✅ Setup complete!"
 echo ""
-echo "📝 Commit convention:"
+echo "📝 Commit convention (version bumps happen automatically on main):"
 echo "   fix: ...     → patch bump (0.14.3 → 0.14.4)"
 echo "   feat: ...    → minor bump (0.14.3 → 0.15.0)"
 echo "   feat!: ...   → major bump (0.14.3 → 1.0.0)"

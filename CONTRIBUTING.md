@@ -72,6 +72,20 @@ For manual app testing:
 npm start
 ```
 
+### Auto-versioning hook (optional)
+
+The repo includes a `post-commit` hook that auto-bumps the version in
+`package.json` and updates `CHANGELOG.md`. It only fires on the `main` branch,
+so feature-branch contributors can ignore it.
+
+If you merge directly to main and want the hook active:
+
+```bash
+./setup-dev.sh
+```
+
+See [git-hooks/README.md](git-hooks/README.md) for details.
+
 If your change affects the Electron shell, screenshots, permissions, packaging,
 or the local API lifecycle, do a manual app sanity check in addition to
 `npm run verify`.
