@@ -52,7 +52,6 @@ export default defineConfig({
         'src/agents/x-scout.ts',
         // Security modules that need CDP, webContents, or SQLite at runtime
         'src/security/behavior-monitor.ts',
-        'src/security/content-analyzer.ts',
         'src/security/script-guard.ts',
         'src/security/security-manager.ts',
         'src/security/security-db.ts',
