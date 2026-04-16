@@ -4,11 +4,13 @@
  * Loaded from: shell/index.html as <script type="module" src="js/wingman/index.js">
  * window exports (set across the family): chatRouter, dismissAlert,
  *   openWingmanPanel, toggleWingmanPanel, updatePanelLayout.
- *   This file sets: chatRouter, openWingmanPanel, toggleWingmanPanel, updatePanelLayout.
+ *   This file sets: chatRouter.
  *   dismissAlert is set by ./alerts.js.
+ *   openWingmanPanel, toggleWingmanPanel, updatePanelLayout are set by ./panel.js.
  */
     import { initAlerts } from './alerts.js';
     import { initScreenshot, captureScreenshotMode } from './screenshot.js';
+    import { initPanel } from './panel.js';
 
     const renderer = window.__tandemRenderer;
     if (!renderer) {
@@ -43,8 +45,6 @@
     // Wingman Panel
     // ═══════════════════════════════════════════════
 
-    const wingmanPanel = document.getElementById('wingman-panel');
-    const panelBody = document.getElementById('panel-body');
     const panelToggleBtn = document.getElementById('wingman-panel-toggle');
     const activityEl = document.getElementById('activity-feed');
     const handoffListEl = document.getElementById('handoff-list');
@@ -83,10 +83,6 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/\n/g, '<br>');
-    }
-
-    function isWingmanPanelOpen() {
-      return wingmanPanel.classList.contains('open');
     }
 
     function getHandoffAttentionLevel(handoff) {
@@ -229,55 +225,15 @@
       scheduleHandoffAttentionEscalation();
     }
 
-    function setActivePanelTab(tab) {
-      document.querySelectorAll('.panel-tab').forEach(b => b.classList.remove('active'));
-      const targetButton = document.querySelector(`[data-panel-tab="${tab}"]`);
-      if (targetButton) {
-        targetButton.classList.add('active');
-      }
-      document.getElementById('panel-activity').style.display = tab === 'activity' ? 'flex' : 'none';
-      document.getElementById('panel-chat').style.display = tab === 'chat' ? 'flex' : 'none';
-      if (tab === 'chat') {
-        window.chatRouter?.ensureConnected();
-      }
-      document.getElementById('panel-screenshots').style.display = tab === 'screenshots' ? 'flex' : 'none';
-    }
-
-    function getPreferredPanelTabOnOpen() {
-      return openHandoffs.size > 0 ? 'activity' : 'chat';
-    }
-
-    function openWingmanPanel(preferredTab) {
-      if (!wingmanPanel.classList.contains('open')) {
-        wingmanPanel.classList.add('open');
-      }
-      setActivePanelTab(preferredTab || getPreferredPanelTabOnOpen());
-      updatePanelLayout();
-      acknowledgeVisibleHandoffs();
-    }
-
-    // Panel tab switching
-    document.querySelectorAll('.panel-tab').forEach(btn => {
-      btn.addEventListener('click', () => {
-        setActivePanelTab(btn.dataset.panelTab);
-        // ClaroNote disabled — decoupled, coming in a later update
-        // document.getElementById('panel-claronote').style.display = tab === 'claronote' ? 'flex' : 'none';
-        // if (tab === 'claronote') { window.initClaroNote?.(); }
-      });
+    const { isWingmanPanelOpen } = initPanel({
+      hooks: {
+        getPreferredTabOnOpen: () => openHandoffs.size > 0 ? 'activity' : 'chat',
+        onPanelOpened: () => acknowledgeVisibleHandoffs(),
+        onPanelClosed: () => scheduleHandoffAttentionEscalation(),
+      },
     });
 
-    // Panel toggle from main process
     if (window.tandem) {
-      window.tandem.onPanelToggle((data) => {
-        if (data.open) {
-          openWingmanPanel();
-        } else {
-          wingmanPanel.classList.remove('open');
-          updatePanelLayout();
-          scheduleHandoffAttentionEscalation();
-        }
-      });
-
       async function activateHandoff(handoffId) {
         await fetch(`http://localhost:8765/handoffs/${handoffId}/activate`, { method: 'POST' });
       }
@@ -1473,91 +1429,4 @@
       });
     })();
 
-    // Panel resize
-    const resizeHandle = document.getElementById('panel-resize');
-    const webviewContainer = document.getElementById('webview-container');
-    let resizing = false;
-
-    // Restore saved panel width
-    const savedPanelWidth = localStorage.getItem('wingman-panel-width');
-    if (savedPanelWidth) {
-      const w = parseInt(savedPanelWidth);
-      if (w >= 280 && w <= 700) wingmanPanel.style.width = w + 'px';
-    }
-
-    function updatePanelLayout() {
-      const isOpen = wingmanPanel.classList.contains('open');
-      const pw = wingmanPanel.offsetWidth;
-      if (isOpen) {
-        webviewContainer.style.marginRight = pw + 'px';
-        resizeHandle.style.right = pw + 'px';
-        resizeHandle.style.display = 'block';
-        panelToggleBtn.textContent = '▶';
-        panelToggleBtn.style.right = pw + 'px';
-        wingmanBadge.classList.add('panel-open');
-      } else {
-        webviewContainer.style.marginRight = '0';
-        resizeHandle.style.display = 'none';
-        panelToggleBtn.textContent = '◀';
-        panelToggleBtn.style.right = '0';
-        wingmanBadge.classList.remove('panel-open');
-      }
-      // Sync panel open state to backend so notifications are suppressed when panel is visible
-      if (window.tandem?.setPanelOpen) window.tandem.setPanelOpen(isOpen);
-    }
-
-    // Toggle panel function
-    function toggleWingmanPanel() {
-      if (wingmanPanel.classList.contains('open')) {
-        wingmanPanel.classList.remove('open');
-        updatePanelLayout();
-        scheduleHandoffAttentionEscalation();
-      } else {
-        openWingmanPanel();
-      }
-    }
-
-    // Listen for transition end to update layout smoothly
-    wingmanPanel.addEventListener('transitionend', updatePanelLayout);
-
-    // Toggle button click
-    panelToggleBtn.addEventListener('click', toggleWingmanPanel);
-
-    // Wingman badge single click toggles panel
-    wingmanBadge.addEventListener('click', (e) => {
-      if (wingmanBadgePressTimer) clearTimeout(wingmanBadgePressTimer);
-      toggleWingmanPanel();
-    });
-
-    resizeHandle.addEventListener('mousedown', (e) => {
-      resizing = true;
-      resizeHandle.classList.add('dragging');
-      wingmanPanel.style.transition = 'none';
-      e.preventDefault();
-    });
-    document.addEventListener('mousemove', (e) => {
-      if (!resizing) return;
-      const panelWidth = window.innerWidth - e.clientX;
-      if (panelWidth >= 280 && panelWidth <= 700) {
-        wingmanPanel.style.width = panelWidth + 'px';
-        webviewContainer.style.marginRight = panelWidth + 'px';
-        resizeHandle.style.right = panelWidth + 'px';
-        panelToggleBtn.style.right = panelWidth + 'px';
-      }
-    });
-    document.addEventListener('mouseup', () => {
-      if (resizing) {
-        resizing = false;
-        resizeHandle.classList.remove('dragging');
-        wingmanPanel.style.transition = '';
-        localStorage.setItem('wingman-panel-width', wingmanPanel.offsetWidth);
-      }
-    });
-
-    // Initial layout
-    updatePanelLayout();
-
     window.chatRouter = chatRouter;
-    window.openWingmanPanel = openWingmanPanel;
-    window.toggleWingmanPanel = toggleWingmanPanel;
-    window.updatePanelLayout = updatePanelLayout;
