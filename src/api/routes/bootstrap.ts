@@ -116,8 +116,9 @@ All Tandem capabilities are available as HTTP endpoints. Key starting points:
 Add \`X-Tab-Id: <tabId>\` header to target a specific tab instead of the active one.
 
 ## MCP access
-Tandem also provides an MCP server with 250+ tools. MCP is available for agents running
-on the same machine as Tandem (via stdio transport):
+Tandem provides an MCP server with 250+ tools.
+
+### Local agents (same machine) — stdio transport
 \`\`\`json
 {
   "mcpServers": {
@@ -128,7 +129,23 @@ on the same machine as Tandem (via stdio transport):
   }
 }
 \`\`\`
-MCP over network transport is not yet available. Remote agents should use the HTTP API.
+
+### Remote agents (Tailscale) — Streamable HTTP transport
+Pair first using the setup code flow above, then configure your MCP client:
+\`\`\`json
+{
+  "mcpServers": {
+    "tandem": {
+      "type": "streamable-http",
+      "url": "${baseUrl}/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-binding-token>"
+      }
+    }
+  }
+}
+\`\`\`
+Both transports provide the same 250+ tools with full parity.
 
 ## Discovery
 - \`GET ${baseUrl}/agent/manifest\` — full machine-readable manifest with all endpoints (JSON)
@@ -154,7 +171,15 @@ See \`GET ${baseUrl}/agent/manifest\` for the full list of 300+ endpoints.
       capabilityFamilies: CAPABILITY_FAMILIES,
       transports: {
         http: { available: true, local: true, remote: true },
-        mcp: { available: true, local: true, remote: false, note: 'MCP is available via stdio for agents on the same machine. Remote MCP is not yet supported.' },
+        mcp: {
+          available: true,
+          local: true,
+          remote: true,
+          localTransport: 'stdio',
+          remoteTransport: 'streamable-http',
+          remoteEndpoint: '/mcp',
+          note: 'Local: stdio. Remote: Streamable HTTP at /mcp with Bearer auth.',
+        },
       },
       authMethods: ['bearer-token'],
       pairingSupported: true,
@@ -174,7 +199,22 @@ See \`GET ${baseUrl}/agent/manifest\` for the full list of 300+ endpoints.
       baseUrl,
       transports: {
         http: { available: true, local: true, remote: true },
-        mcp: { available: true, local: true, remote: false, note: 'MCP via stdio only. Remote MCP not yet supported.' },
+        mcp: {
+          available: true,
+          local: true,
+          remote: true,
+          localTransport: 'stdio',
+          remoteTransport: 'streamable-http',
+          remoteEndpoint: '/mcp',
+          note: 'Local: stdio. Remote: Streamable HTTP at /mcp with Bearer auth.',
+        },
+      },
+      mcp: {
+        endpoint: '/mcp',
+        transport: 'streamable-http',
+        auth: 'bearer-token',
+        sessionHeader: 'Mcp-Session-Id',
+        capabilities: ['tools', 'resources'],
       },
       authMethods: ['bearer-token'],
       pairingSupported: true,
@@ -434,8 +474,9 @@ All requests require: \`Authorization: Bearer <your-token>\`
 - \`GET ${baseUrl}/screenshot\` — capture the visible page (base64 PNG)
 
 ## MCP
-MCP (250+ tools) is available for agents on the same machine via stdio transport.
-Remote agents should use the HTTP API — it provides the same capabilities.
+MCP (250+ tools) is available via:
+- **Local agents:** stdio transport (\`node dist/mcp/server.js\`)
+- **Remote agents:** Streamable HTTP at \`${baseUrl}/mcp\` with \`Authorization: Bearer <token>\`
 
 ## Full reference
 \`GET ${baseUrl}/agent/manifest\` returns all 300+ endpoints as structured JSON.

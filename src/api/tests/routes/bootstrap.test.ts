@@ -49,6 +49,13 @@ describe('Bootstrap Routes', () => {
       expect(res.text).toContain('Tailscale');
       expect(res.text).toContain('never exposed to the public internet');
     });
+
+    it('documents remote MCP via Streamable HTTP', async () => {
+      const res = await request(app).get('/agent');
+      expect(res.text).toContain('Remote agents (Tailscale)');
+      expect(res.text).toContain('streamable-http');
+      expect(res.text).toContain('/mcp');
+    });
   });
 
   describe('GET /agent/version', () => {
@@ -61,7 +68,9 @@ describe('Bootstrap Routes', () => {
       expect(res.body.transports.http.available).toBe(true);
       expect(res.body.transports.http.remote).toBe(true);
       expect(res.body.transports.mcp.available).toBe(true);
-      expect(res.body.transports.mcp.remote).toBe(false);
+      expect(res.body.transports.mcp.remote).toBe(true);
+      expect(res.body.transports.mcp.remoteTransport).toBe('streamable-http');
+      expect(res.body.transports.mcp.remoteEndpoint).toBe('/mcp');
       expect(res.body.pairingSupported).toBe(true);
     });
   });
@@ -110,6 +119,15 @@ describe('Bootstrap Routes', () => {
       expect(res.body.endpoints.bootstrap.skill.path).toBe('/skill');
     });
 
+    it('includes MCP connection details in manifest', async () => {
+      const res = await request(app).get('/agent/manifest');
+      expect(res.body.mcp).toBeDefined();
+      expect(res.body.mcp.endpoint).toBe('/mcp');
+      expect(res.body.mcp.transport).toBe('streamable-http');
+      expect(res.body.mcp.auth).toBe('bearer-token');
+      expect(res.body.mcp.sessionHeader).toBe('Mcp-Session-Id');
+    });
+
     it('marks local-only endpoints explicitly', async () => {
       const res = await request(app).get('/agent/manifest');
       expect(res.body.endpoints.localOnly._note).toContain('not available to remote agents');
@@ -126,11 +144,12 @@ describe('Bootstrap Routes', () => {
       expect(res.text).toContain('snapshot');
     });
 
-    it('distinguishes local MCP from remote HTTP', async () => {
+    it('describes both local and remote MCP access', async () => {
       const res = await request(app).get('/skill');
-      expect(res.text).toContain('Remote agents should use the HTTP API');
+      expect(res.text).toContain('Local agents');
+      expect(res.text).toContain('Remote agents');
+      expect(res.text).toContain('/mcp');
       expect(res.text).toContain('MCP');
-      expect(res.text).not.toContain('127.0.0.1');
     });
 
     it('uses Host header for URLs', async () => {

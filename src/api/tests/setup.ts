@@ -12,10 +12,8 @@
  * `127.0.0.1`.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Server: TlsServer } = require('tls');
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const Test = require('supertest/lib/test');
 
 Test.prototype.serverAddress = function (app: any, path: string) {

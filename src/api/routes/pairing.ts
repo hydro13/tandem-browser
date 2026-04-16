@@ -148,7 +148,11 @@ export function registerPairingRoutes(router: Router, ctx: RouteContext): void {
         transport: Array.isArray(transport) ? transport.filter((t: string) => t === 'http' || t === 'mcp') : ['http'],
       }, sourceIp);
 
-      res.json({
+      const transportModes: string[] = Array.isArray(transport)
+        ? transport.filter((t: string) => t === 'http' || t === 'mcp')
+        : ['http'];
+
+      const response: Record<string, unknown> = {
         token: result.token,
         binding: {
           id: result.binding.id,
@@ -157,7 +161,17 @@ export function registerPairingRoutes(router: Router, ctx: RouteContext): void {
           bindingKind: result.binding.bindingKind,
           state: result.binding.state,
         },
-      });
+      };
+
+      // Include MCP connection details when MCP transport is requested
+      if (transportModes.includes('mcp')) {
+        response.mcp = {
+          endpoint: '/mcp',
+          transport: 'streamable-http',
+        };
+      }
+
+      res.json(response);
     } catch (e) {
       if (e instanceof Error) {
         if (e.message.includes('Invalid setup code') || e.message.includes('already been used') || e.message.includes('expired')) {

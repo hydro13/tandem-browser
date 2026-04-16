@@ -38,6 +38,7 @@ import { WatchLiveWebSocket } from '../watch/live-ws';
 import type { ExtensionRouteAccessDecision } from '../extensions/manager';
 import { createLogger } from '../utils/logger';
 import { createRateLimitMiddleware } from './rate-limit';
+import { McpHttpTransportManager } from '../mcp/http-transport';
 
 const log = createLogger('TandemAPI');
 const PUBLIC_ROUTE_PATHS = new Set<string>([
@@ -108,6 +109,7 @@ export class TandemAPI {
   private app: express.Application;
   private server: http.Server | null = null;
   private watchLiveWebSocket: WatchLiveWebSocket | null = null;
+  private mcpTransportManager: McpHttpTransportManager;
   private win: BrowserWindow;
   private authToken: string;
   private port: number;
@@ -133,7 +135,8 @@ export class TandemAPI {
         // Block everything else
         callback(new Error('CORS not allowed'));
       },
-      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id', 'Mcp-Session-Id'],
+      exposedHeaders: ['Mcp-Session-Id'],
     }));
     this.app.use(express.json({ limit: '50mb' }));
     this.app.use(createRateLimitMiddleware({
@@ -166,6 +169,18 @@ export class TandemAPI {
         log.warn(`Blocked API request (${decision.caller.kind}) ${req.method} ${req.path}: ${decision.reason}`);
       }
       res.status(decision.status).json({ error: decision.reason });
+    });
+
+    // MCP over Streamable HTTP — remote agents use POST/GET/DELETE /mcp
+    this.mcpTransportManager = new McpHttpTransportManager();
+    this.mountMcpRoute();
+
+    // Close MCP sessions when a binding is paused/revoked
+    this.registry.pairingManager.on('binding-changed', () => {
+      // On any binding state change, we could track per-binding sessions.
+      // For simplicity, we don't map sessions to bindings — the auth middleware
+      // will reject the next request from a paused/revoked binding anyway.
+      // Active SSE streams will fail on the next heartbeat cycle.
     });
 
     this.setupRoutes();
@@ -463,6 +478,20 @@ export class TandemAPI {
     return available.some((extension) => path.basename(extension.path) === extensionId);
   }
 
+  /**
+   * Mount the /mcp route for Streamable HTTP MCP transport.
+   * Auth is handled by the Express middleware above — only authorized
+   * requests (Bearer token: local api-token or binding token) reach here.
+   */
+  private mountMcpRoute(): void {
+    // Use raw body handling for MCP — the SDK expects to parse the body itself
+    // when we don't pass parsedBody, but Express already parsed it via express.json().
+    // So we pass req.body as parsedBody.
+    this.app.all('/mcp', (req: Request, res: Response) => {
+      void this.mcpTransportManager.handleRequest(req, res, req.body);
+    });
+  }
+
   private setupRoutes(): void {
     const ctx: RouteContext = { win: this.win, ...this.registry };
     const router = this.app as unknown as Router;
@@ -506,6 +535,7 @@ export class TandemAPI {
             authorizeRequest: (req) => this.authorizeWatchLiveRequest(req),
           });
         }
+        this.mcpTransportManager.start();
         resolve();
       });
     });
@@ -518,6 +548,7 @@ export class TandemAPI {
   stop(): void {
     this.watchLiveWebSocket?.close();
     this.watchLiveWebSocket = null;
+    void this.mcpTransportManager.stop();
     this.server?.close();
   }
 }
