@@ -17,6 +17,12 @@ import {
 import { initDragDrop } from './drag-drop.js';
 import { initPanelResize, getPanelWidth, setPanelWidth } from './panel-resize.js';
 import { createSetupPanel } from './panels/setup.js';
+import {
+  COMMUNICATION_IDS,
+  loadWebviewInPanel, hideWebviews, safeSetPanelHTML,
+  getWebview, hasWebview,
+} from './webview.js';
+import { loadHistoryPanel } from './panels/history.js';
 
   // ═══════════════════════════════════════
   // SIDEBAR
@@ -103,19 +109,6 @@ import { createSetupPanel } from './panels/setup.js';
       applyPinState(getConfig().panelPinned || false);
       render();
     }
-
-    const COMMUNICATION_IDS = ['calendar','gmail','whatsapp','telegram','discord','slack','instagram','x'];
-
-    const WEBVIEW_URLS = {
-      calendar: 'https://calendar.google.com',
-      gmail: 'https://mail.google.com',
-      whatsapp: 'https://web.whatsapp.com',
-      telegram: 'https://web.telegram.org',
-      discord: 'https://discord.com/app',
-      slack: 'https://app.slack.com',
-      instagram: 'https://www.instagram.com',
-      x: 'https://x.com',
-    };
 
     function renderItemHTML(item) {
       const icon = ICONS[item.id];
@@ -206,96 +199,6 @@ import { createSetupPanel } from './panels/setup.js';
       const toggleLabel = getConfig().state === 'wide' ? 'Collapse' : 'Expand';
       toggleBtn.innerHTML = (getConfig().state === 'wide' ? '\u2039' : '\u203a') + `<span class="sidebar-footer-label">${toggleLabel}</span>`;
       toggleBtn.title = toggleLabel;
-    }
-
-    // === WEBVIEW MODULE ===
-    const webviewCache = new Map();
-
-    // Google services share the same session partition so one login covers all
-    const WEBVIEW_PARTITIONS = {
-      calendar: 'persist:gmail',  // Calendar + Gmail = same Google account
-    };
-
-    // URL patterns that must open as real popup windows (auth flows)
-    // Keep these specific to avoid blocking in-app navigation in messengers
-    const AUTH_URL_PATTERNS = [
-      'accounts.google.com',
-      'google.com/o/oauth2',
-      'google.com/ServiceLogin',
-      'google.com/accounts',
-      'appleid.apple.com',
-      'login.microsoftonline.com',
-      'github.com/login/oauth',
-    ];
-
-    function getOrCreateWebview(id) {
-      if (webviewCache.has(id)) return webviewCache.get(id);
-      const url = WEBVIEW_URLS[id];
-      if (!url) return null;
-      const wv = document.createElement('webview');
-      wv.src = url;
-      wv.partition = WEBVIEW_PARTITIONS[id] || `persist:${id}`;
-      wv.className = 'sidebar-webview';
-      wv.setAttribute('allowpopups', '');
-      // Override user agent for apps that need Chrome
-      const chromeUA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-      wv.useragent = chromeUA;
-      // Route new-window events: auth URLs → real popup (via setWindowOpenHandler in main.ts)
-      //                          everything else → load inside webview
-      wv.addEventListener('new-window', (e) => {
-        const isAuth = e.url && AUTH_URL_PATTERNS.some(p => e.url.includes(p));
-        if (isAuth) return; // don't preventDefault → main.ts setWindowOpenHandler handles it
-        e.preventDefault();
-        if (e.url && e.url.startsWith('http')) wv.loadURL(e.url);
-      });
-      webviewCache.set(id, wv);
-      return wv;
-    }
-
-    function loadWebviewInPanel(id) {
-      const content = document.getElementById('sidebar-panel-content');
-
-      // Hide all webviews but keep them in the DOM (preserves login state)
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
-
-      const wv = getOrCreateWebview(id);
-      if (!wv) return;
-
-      // Mount in panel-content if not already there — never remove after first mount
-      if (!content.contains(wv)) {
-        content.appendChild(wv);
-      }
-
-      wv.style.display = 'flex';
-      content.classList.add('webview-mode');
-    }
-
-    function hideWebviews() {
-      webviewCache.forEach(wv => { wv.style.display = 'none'; });
-      const content = document.getElementById('sidebar-panel-content');
-      if (content) content.classList.remove('webview-mode');
-    }
-
-    // Safe innerHTML setter: moves webviews to a detached fragment first,
-    // sets innerHTML (which would otherwise destroy them), then re-appends.
-    // This prevents Electron from killing webview sessions on DOM wipe.
-    function safeSetPanelHTML(html) {
-      const content = document.getElementById('sidebar-panel-content');
-      if (!content) return;
-      // Detach webviews before innerHTML wipe
-      const detached = [];
-      webviewCache.forEach((wv, id) => {
-        if (content.contains(wv)) {
-          content.removeChild(wv);
-          detached.push({ id, wv });
-        }
-      });
-      content.innerHTML = html;
-      // Re-attach webviews (hidden) so they stay alive
-      detached.forEach(({ wv }) => {
-        wv.style.display = 'none';
-        content.appendChild(wv);
-      });
     }
 
     async function activateItem(id) {
@@ -715,126 +618,6 @@ import { createSetupPanel } from './panels/setup.js';
           if (e.key === 'Escape') form.remove();
         });
       });
-    }
-
-    // === HISTORY PANEL MODULE ===
-    async function loadHistoryPanel() {
-      const content = document.getElementById('sidebar-panel-content');
-      hideWebviews();
-      content.classList.remove('webview-mode');
-
-      safeSetPanelHTML(`
-        <div class="history-panel">
-          <div class="history-search-wrap">
-            <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/></svg>
-            <input class="history-search" id="history-search" type="text" placeholder="Search history…">
-          </div>
-          <div class="history-list" id="history-list">
-            <div class="bm-empty">Loading…</div>
-          </div>
-          <div id="sync-devices-section" style="display:none">
-            <div class="history-section-header">Your Devices</div>
-            <div id="sync-devices-list"></div>
-          </div>
-        </div>`);
-
-      // Fetch history
-      try {
-        const res = await fetch('http://localhost:8765/history', { headers: { Authorization: `Bearer ${getToken()}` } });
-        const data = await res.json();
-        const entries = data.entries || [];
-        const listEl = document.getElementById('history-list');
-        if (listEl) {
-          listEl.innerHTML = renderHistoryItems(entries);
-          attachHistoryClickHandlers(listEl);
-        }
-      } catch (e) {
-        const listEl = document.getElementById('history-list');
-        if (listEl) listEl.innerHTML = '<div class="bm-empty">Failed to load history</div>';
-      }
-
-      // Search handler
-      let historySearchTimer;
-      document.getElementById('history-search')?.addEventListener('input', async (e) => {
-        clearTimeout(historySearchTimer);
-        const q = e.target.value.trim();
-        if (!q) {
-          const res = await fetch('http://localhost:8765/history', { headers: { Authorization: `Bearer ${getToken()}` } });
-          const data = await res.json();
-          const listEl = document.getElementById('history-list');
-          if (listEl) { listEl.innerHTML = renderHistoryItems(data.entries || []); attachHistoryClickHandlers(listEl); }
-          return;
-        }
-        historySearchTimer = setTimeout(async () => {
-          const res = await fetch(`http://localhost:8765/history/search?q=${encodeURIComponent(q)}`, { headers: { Authorization: `Bearer ${getToken()}` } });
-          const data = await res.json();
-          const listEl = document.getElementById('history-list');
-          if (listEl) { listEl.innerHTML = renderHistoryItems(data.results || []); attachHistoryClickHandlers(listEl); }
-        }, 250);
-      });
-
-      // Load sync devices
-      loadSyncDevices();
-    }
-
-    function renderHistoryItems(entries) {
-      if (!entries || entries.length === 0) return '<div class="bm-empty">No history</div>';
-      return entries.slice(0, 200).map(e => {
-        const fav = e.url ? getFaviconUrl(e.url) : null;
-        const img = fav ? `<img src="${fav}" onerror="this.style.display='none'">` : '';
-        const title = e.title || e.url || 'Untitled';
-        return `<div class="bm-item url" data-url="${e.url}">
-          <div class="bm-icon">${img}</div>
-          <span class="bm-name" title="${e.url}">${title}</span>
-        </div>`;
-      }).join('');
-    }
-
-    function attachHistoryClickHandlers(listEl) {
-      listEl.querySelectorAll('.bm-item.url').forEach(el => {
-        el.addEventListener('click', () => {
-          const url = el.dataset.url;
-          if (url && window.tandem) window.tandem.newTab(url);
-        });
-      });
-    }
-
-    async function loadSyncDevices() {
-      const section = document.getElementById('sync-devices-section');
-      const list = document.getElementById('sync-devices-list');
-      if (!section || !list) return;
-
-      try {
-        const res = await fetch('http://localhost:8765/sync/devices', { headers: { Authorization: `Bearer ${getToken()}` } });
-        const data = await res.json();
-        const devices = data.devices || [];
-        if (!devices.length) { section.style.display = 'none'; return; }
-
-        section.style.display = 'block';
-        let html = '';
-        for (const device of devices) {
-          html += `<div class="sync-device-name">${device.name}</div>`;
-          for (const tab of (device.tabs || [])) {
-            const fav = tab.url ? getFaviconUrl(tab.url) : null;
-            const img = fav ? `<img class="sync-tab-favicon" src="${fav}" onerror="this.style.display='none'">` : '<div class="sync-tab-favicon"></div>';
-            const title = tab.title || tab.url || 'Untitled';
-            const truncUrl = (tab.url || '').length > 60 ? tab.url.substring(0, 60) + '…' : (tab.url || '');
-            html += `<div class="sync-tab-item" data-url="${tab.url}" title="${truncUrl}">
-              ${img}
-              <span class="sync-tab-title">${title}</span>
-            </div>`;
-          }
-        }
-        list.innerHTML = html;
-        list.querySelectorAll('.sync-tab-item').forEach(el => {
-          el.addEventListener('click', () => {
-            const url = el.dataset.url;
-            if (url && window.tandem) window.tandem.newTab(url);
-          });
-        });
-      } catch {
-        section.style.display = 'none';
-      }
     }
 
     // === PINBOARD PANEL MODULE ===
@@ -1678,8 +1461,8 @@ import { createSetupPanel } from './panels/setup.js';
       });
 
       document.getElementById('sidebar-panel-reload').addEventListener('click', () => {
-        if (getConfig().activeItemId && webviewCache.has(getConfig().activeItemId)) {
-          webviewCache.get(getConfig().activeItemId).reload();
+        if (getConfig().activeItemId && hasWebview(getConfig().activeItemId)) {
+          getWebview(getConfig().activeItemId).reload();
         }
       });
 
@@ -1731,11 +1514,11 @@ import { createSetupPanel } from './panels/setup.js';
       // Listen for main process signal to reload a sidebar webview (e.g. after Google auth)
       if (window.tandem && window.tandem.onReloadSidebarWebview) {
         window.tandem.onReloadSidebarWebview((id) => {
-          const wv = webviewCache.get(id);
+          const wv = getWebview(id);
           if (wv) wv.reload();
           // If Gmail partition reloads, also reload Calendar (they share persist:gmail session)
           if (id === 'gmail') {
-            const calendarWv = webviewCache.get('calendar');
+            const calendarWv = getWebview('calendar');
             if (calendarWv) calendarWv.reload();
           }
         });
