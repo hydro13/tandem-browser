@@ -14,6 +14,9 @@ import {
   getWorkspaces, setWorkspaces,
   getActiveWorkspaceId, setActiveWorkspaceId,
 } from './config.js';
+import { initDragDrop } from './drag-drop.js';
+import { initPanelResize, getPanelWidth, setPanelWidth } from './panel-resize.js';
+import { createSetupPanel } from './panels/setup.js';
 
   // ═══════════════════════════════════════
   // SIDEBAR
@@ -1381,67 +1384,6 @@ import {
       loadPinboardPanel();
     }
 
-    // === SIDEBAR SETUP PANEL ===
-    const SETUP_SECTIONS = [
-      { title: 'Workspaces',        ids: ['workspaces'] },
-      { title: 'Communication',     ids: ['calendar','gmail','whatsapp','telegram','discord','slack','instagram','x'] },
-      { title: 'Browser Utilities', ids: ['pinboards','bookmarks','history'] },
-    ];
-
-    function renderSetupPanel(items) {
-      const panel = document.getElementById('sidebar-panel');
-      const titleEl = document.getElementById('sidebar-panel-title');
-      const content = document.getElementById('sidebar-panel-content');
-
-      setSetupPanelOpen(true);
-      getConfig().activeItemId = null;
-      titleEl.textContent = 'Sidebar Setup';
-      panel.classList.add('open');
-
-      // Detach cached webviews before innerHTML wipe (preserve login state)
-      hideWebviews();
-      content.classList.remove('webview-mode');
-
-      const rows = SETUP_SECTIONS.map((section, si) => {
-        const itemRows = section.ids.map(id => {
-          const item = items.find(i => i.id === id);
-          if (!item) return '';
-          const icon = ICONS[id];
-          const iconHtml = `<div class="setup-item-icon-sm" style="background:rgba(255,255,255,0.08)">${icon ? icon.svg : ''}</div>`;
-          return `
-            <div class="setup-item">
-              ${iconHtml}
-              <span class="setup-item-label">${item.label}</span>
-              <label class="toggle-switch">
-                <input type="checkbox" data-item-id="${id}" ${item.enabled ? 'checked' : ''}>
-                <span class="toggle-slider"></span>
-              </label>
-            </div>`;
-        }).join('');
-        const sep = si < SETUP_SECTIONS.length - 1 ? '<div class="setup-separator"></div>' : '';
-        return `<p class="setup-section-title">${section.title}</p>${itemRows}${sep}`;
-      }).join('');
-
-      safeSetPanelHTML(rows);
-
-      // Toggle handlers
-      content.querySelectorAll('input[data-item-id]').forEach(input => {
-        input.addEventListener('change', async (e) => {
-          const id = e.target.dataset.itemId;
-          await fetch(`http://localhost:8765/sidebar/items/${id}/toggle`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${getToken()}` }
-          });
-          const r = await fetch('http://localhost:8765/sidebar/config', {
-            headers: { Authorization: `Bearer ${getToken()}` }
-          });
-          const data = await r.json();
-          setConfig(data.config);
-          render();
-        });
-      });
-    }
-
     function applyPinState(pinned) {
       const panel = document.getElementById('sidebar-panel');
       const pinBtn = document.getElementById('sidebar-panel-pin');
@@ -1454,74 +1396,7 @@ import {
       }
     }
 
-    // === PANEL RESIZE ===
-    const DEFAULT_PANEL_WIDTH = 340;
-    const MIN_PANEL_WIDTH = 180;
-    const MAX_PANEL_WIDTH = () => window.innerWidth - 100; // always fits any screen
-
-    function getPanelWidth(id) {
-      return (getConfig().panelWidths && getConfig().panelWidths[id]) || DEFAULT_PANEL_WIDTH;
-    }
-
-    function setPanelWidth(width) {
-      const panel = document.getElementById('sidebar-panel');
-      panel.style.width = width + 'px';
-      panel.style.setProperty('--panel-width', width + 'px');
-    }
-
-    async function savePanelWidth(id, width) {
-      if (!getConfig().panelWidths) getConfig().panelWidths = {};
-      getConfig().panelWidths[id] = width;
-      await fetch('http://localhost:8765/sidebar/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify({ panelWidths: getConfig().panelWidths })
-      });
-    }
-
-    // Resize drag logic
-    let resizeDragging = false;
-    let resizeStartX = 0;
-    let resizeStartWidth = 0;
-    let resizeActiveId = null;
-
-    const resizeHandle = document.getElementById('sidebar-panel-resize');
-
-    // Drag cover: transparent full-screen div that blocks webviews from eating mouse events
-    const dragCover = document.createElement('div');
-    dragCover.style.cssText = 'position:fixed;inset:0;z-index:9999;cursor:ew-resize;display:none;';
-    document.body.appendChild(dragCover);
-
-    resizeHandle.addEventListener('mousedown', (e) => {
-      e.preventDefault();
-      resizeDragging = true;
-      resizeStartX = e.clientX;
-      const panel = document.getElementById('sidebar-panel');
-      resizeStartWidth = panel.offsetWidth;
-      resizeActiveId = getConfig().activeItemId;
-      resizeHandle.classList.add('dragging');
-      document.body.style.userSelect = 'none';
-      dragCover.style.display = 'block'; // block webview mouse capture
-    });
-
-    document.addEventListener('mousemove', (e) => {
-      if (!resizeDragging) return;
-      const delta = e.clientX - resizeStartX;
-      const newWidth = Math.min(MAX_PANEL_WIDTH(), Math.max(MIN_PANEL_WIDTH, resizeStartWidth + delta));
-      setPanelWidth(newWidth);
-    });
-
-    document.addEventListener('mouseup', async (e) => {
-      if (!resizeDragging) return;
-      resizeDragging = false;
-      resizeHandle.classList.remove('dragging');
-      document.body.style.userSelect = '';
-      dragCover.style.display = 'none'; // restore webview interaction
-      if (resizeActiveId) {
-        const panel = document.getElementById('sidebar-panel');
-        await savePanelWidth(resizeActiveId, panel.offsetWidth);
-      }
-    });
+    const setupPanel = createSetupPanel({ hideWebviews, safeSetPanelHTML, render });
 
     // === WORKSPACE FUNCTIONS ===
     async function loadWorkspaces() {
@@ -1776,7 +1651,8 @@ import {
       loadConfig();
       // Load workspaces after a short delay to ensure API is ready
       setTimeout(loadWorkspaces, 500);
-      initDragHandlers();
+      initDragDrop({ moveTabToWorkspace });
+      initPanelResize();
 
       document.getElementById('sidebar-items').addEventListener('click', e => {
         // Handle workspace icon clicks
@@ -1832,7 +1708,7 @@ import {
           setSetupPanelOpen(false);
           hideWebviews();
         } else {
-          renderSetupPanel(getConfig().items);
+          setupPanel.renderSetupPanel(getConfig().items);
         }
       });
 
@@ -2213,37 +2089,6 @@ import {
 
     // Expose globally so main.js can call it
     window.__tandemShowTabContextMenu = showTabContextMenu;
-
-    // === DRAG & DROP: tab onto workspace icon ===
-    function initDragHandlers() {
-      const itemsEl = document.getElementById('sidebar-items');
-
-      itemsEl.addEventListener('dragover', (e) => {
-        const wsBtn = e.target.closest('[data-ws-id]');
-        if (!wsBtn) return;
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-        wsBtn.classList.add('ws-drop-active');
-      });
-
-      itemsEl.addEventListener('dragleave', (e) => {
-        const wsBtn = e.target.closest('[data-ws-id]');
-        if (wsBtn) wsBtn.classList.remove('ws-drop-active');
-      });
-
-      itemsEl.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        // Remove highlight from all workspace icons
-        itemsEl.querySelectorAll('.ws-drop-active').forEach(el => el.classList.remove('ws-drop-active'));
-
-        const wsBtn = e.target.closest('[data-ws-id]');
-        if (!wsBtn) return;
-        const domTabId = e.dataTransfer.getData('text/tab-id');
-        if (!domTabId) return;
-        const targetWsId = wsBtn.dataset.wsId;
-        await moveTabToWorkspace(domTabId, targetWsId);
-      });
-    }
 
     return { init, loadConfig, activateItem, toggleVisibility };
   })();
