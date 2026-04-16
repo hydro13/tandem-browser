@@ -1,3 +1,12 @@
+/**
+ * Sidebar module entry point — panels, workspaces, tab context menu, drag-drop.
+ *
+ * Loaded from: shell/index.html as <script type="module" src="js/sidebar/index.js">
+ * window exports: ocSidebar (consumed by shell/js/shortcut-router.js:35 for the
+ *   Cmd+B bookmarks shortcut), __tandemShowTabContextMenu (consumed by main.js
+ *   via window.__tandemShowTabContextMenu, already set via window. inside the IIFE).
+ */
+
   // ═══════════════════════════════════════
   // SIDEBAR
   // ═══════════════════════════════════════
@@ -2288,4 +2297,7 @@
     return { init, loadConfig, activateItem, toggleVisibility };
   })();
 
+
+// Expose ocSidebar on window so classic scripts (shortcut-router.js) can reach it.
+window.ocSidebar = ocSidebar;
   document.addEventListener('DOMContentLoaded', () => ocSidebar.init());
