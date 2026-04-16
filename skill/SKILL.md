@@ -1,6 +1,6 @@
 ---
 name: tandem-browser
-description: Use Tandem Browser's MCP server (local agents) or HTTP API (local and remote agents) to inspect, browse, and interact with the user's shared browser safely. Prefer targeted tabs and sessions, use snapshot refs before raw DOM or JS, verify action completion explicitly, and leave durable handoffs instead of retrying blindly.
+description: Use Tandem Browser's MCP server (local and remote agents) or HTTP API (local and remote agents) to inspect, browse, and interact with the user's shared browser safely. Prefer targeted tabs and sessions, use snapshot refs before raw DOM or JS, verify action completion explicitly, and leave durable handoffs instead of retrying blindly.
 homepage: https://github.com/hydro13/tandem-browser
 user-invocable: false
 metadata: {"openclaw":{"emoji":"🚲","requires":{"bins":["curl","node"]}}}
@@ -29,7 +29,7 @@ instead of a sandbox browser, especially for:
 ## Connecting to Tandem
 
 Tandem supports agents on the same machine (MCP or HTTP) and on remote machines
-over a private Tailscale network (HTTP only). Both can be active at the same
+over a private Tailscale network (MCP or HTTP). Both can be active at the same
 time.
 
 ### Discovery
@@ -63,10 +63,12 @@ Practical notes:
 - MCP and HTTP are connection layers to Tandem, not substitutes for a running
   Tandem instance
 
-### Option 1: MCP Server (same machine only)
+### Option 1: MCP Server (local or remote)
 
-The MCP server exposes 250 tools with full API parity. Add to your MCP client
-configuration (e.g. `~/.claude/settings.json` for Claude Code):
+The MCP server exposes 250 tools with full API parity.
+
+**Same machine (stdio):** Add to your MCP client configuration
+(e.g. `~/.claude/settings.json` for Claude Code):
 
 ```json
 {
@@ -79,18 +81,32 @@ configuration (e.g. `~/.claude/settings.json` for Claude Code):
 }
 ```
 
+**Remote machine (Streamable HTTP over Tailscale):** Pair first via
+Settings > Connected Agents, then configure:
+
+```json
+{
+  "mcpServers": {
+    "tandem": {
+      "type": "streamable-http",
+      "url": "http://<tandem-tailscale-ip>:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-binding-token>"
+      }
+    }
+  }
+}
+```
+
 Start Tandem (`npm start`), and the agent can connect to the running MCP server.
 All MCP tools mirror the HTTP API below, so the same capabilities are available
 through either connection method when the client supports them.
 
-MCP uses stdio transport and requires the agent to run on the same machine as
-Tandem. Remote MCP is not yet available.
-
 ### Option 2: HTTP API (local or remote)
 
-Use direct HTTP when the client can call the API itself, or when the agent is
-on a remote machine. Local agents use the token from `~/.tandem/api-token`.
-Remote agents use a binding token obtained through Tandem's pairing flow.
+Use direct HTTP when the client can call the API itself. Local agents use the
+token from `~/.tandem/api-token`. Remote agents use a binding token obtained
+through Tandem's pairing flow.
 
 ```bash
 API="http://127.0.0.1:8765"            # or http://<tailscale-ip>:8765 for remote

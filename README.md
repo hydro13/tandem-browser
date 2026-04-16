@@ -170,7 +170,7 @@ curl -sS http://127.0.0.1:8765/tabs/list \
 
 300+ endpoints for everything the MCP tools can do, plus lower-level access.
 
-### On another machine (Tailscale + HTTP)
+### On another machine (Tailscale)
 
 Remote agents connect over a private Tailscale network. Both machines must be
 on the same tailnet. Tandem is never exposed to the public internet.
@@ -184,7 +184,25 @@ on the same tailnet. Tandem is never exposed to the public internet.
 The token stays valid until you pause, revoke, or remove it from the
 Connected Agents UI.
 
-Remote agents use the HTTP API today. Remote MCP is not yet available.
+**MCP** (recommended for Claude Code, Cursor, and other MCP clients):
+
+```json
+{
+  "mcpServers": {
+    "tandem": {
+      "type": "streamable-http",
+      "url": "http://<tandem-tailscale-ip>:8765/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-binding-token>"
+      }
+    }
+  }
+}
+```
+
+**HTTP API** works the same way as local, using the binding token as Bearer auth.
+
+Both transports give remote agents the same 250 tools and 300+ endpoints as local agents.
 
 <details>
 <summary>Manual pairing (for scripts or custom tooling)</summary>
@@ -274,7 +292,7 @@ contributors, not yet a polished mass-user release.
 - Secondary platform: Linux
 - Windows: validated as a remote agent host (VS Code + Claude Code over Tailscale)
 - Binaries: not published yet (source-only)
-- Current version: `0.73.0`
+- Current version: `0.73.1`
 - Package metadata: [package.json](package.json)
 
 ## Community
