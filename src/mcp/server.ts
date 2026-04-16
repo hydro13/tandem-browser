@@ -7,12 +7,14 @@ import { registerAllTools, registerAllResources } from './register-all.js';
 
 // MCP uses stdio for protocol messages — ALL logging must go to stderr.
 // createLogger uses console.info/debug which go to stdout and break the protocol.
+/* eslint-disable no-console -- stdout is reserved for MCP protocol; stderr is the only safe log channel */
 const log = {
   info:  (...args: unknown[]) => console.error('[McpServer]', ...args),
   warn:  (...args: unknown[]) => console.error('[McpServer]', ...args),
   error: (...args: unknown[]) => console.error('[McpServer]', ...args),
   debug: (...args: unknown[]) => console.error('[McpServer]', ...args),
 };
+/* eslint-enable no-console */
 
 function readPackageVersion(): string {
   const packagePath = path.resolve(__dirname, '..', '..', 'package.json');
