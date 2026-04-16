@@ -1,8 +1,13 @@
-(() => {
+/**
+ * Wingman module entry point — all wingman UI + alerts + chat.
+ *
+ * Loaded from: shell/index.html as <script type="module" src="js/wingman/index.js">
+ * window exports: chatRouter, dismissAlert, openWingmanPanel, toggleWingmanPanel, updatePanelLayout
+ */
     const renderer = window.__tandemRenderer;
     if (!renderer) {
       console.error('[wingman] Missing renderer bridge');
-      return;
+      throw new Error('[wingman] Missing renderer bridge');
     }
 
     const overlay = renderer.overlay;
@@ -1665,4 +1670,3 @@
     window.openWingmanPanel = openWingmanPanel;
     window.toggleWingmanPanel = toggleWingmanPanel;
     window.updatePanelLayout = updatePanelLayout;
-})();
