@@ -115,6 +115,48 @@ describe('Pairing Routes', () => {
       expect(res.body.token).toBe('tdm_ast_testtoken');
       expect(res.body.binding.id).toBe('binding-1');
       expect(res.body.binding.state).toBe('paired');
+      // No mcp field when transport doesn't include 'mcp'
+      expect(res.body.mcp).toBeUndefined();
+    });
+
+    it('includes MCP endpoint when transport includes mcp', async () => {
+      vi.mocked(ctx.pairingManager.exchangeSetupCode).mockReturnValue({
+        token: 'tdm_ast_mcptoken',
+        binding: {
+          id: 'binding-2',
+          machineId: 'machine-2',
+          machineName: 'RemoteMachine',
+          agentLabel: 'Remote Claude',
+          agentType: 'claude-code',
+          bindingKind: 'remote',
+          transportModes: ['http', 'mcp'],
+          tokenHash: 'hash2',
+          tokenPrefix: 'tdm_ast_mcp12345',
+          state: 'paired',
+          createdAt: new Date().toISOString(),
+          lastUsedAt: new Date().toISOString(),
+          pausedAt: null,
+          revokedAt: null,
+        },
+      });
+
+      const res = await request(app)
+        .post('/pairing/exchange')
+        .send({
+          code: 'TDM-AAAA-CCCC',
+          machineId: 'machine-2',
+          machineName: 'RemoteMachine',
+          agentLabel: 'Remote Claude',
+          agentType: 'claude-code',
+          bindingKind: 'remote',
+          transport: ['http', 'mcp'],
+        });
+
+      expect(res.status).toBe(200);
+      expect(res.body.token).toBe('tdm_ast_mcptoken');
+      expect(res.body.mcp).toBeDefined();
+      expect(res.body.mcp.endpoint).toBe('/mcp');
+      expect(res.body.mcp.transport).toBe('streamable-http');
     });
 
     it('rejects missing required fields', async () => {
