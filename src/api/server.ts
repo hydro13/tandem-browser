@@ -488,7 +488,7 @@ export class TandemAPI {
     // when we don't pass parsedBody, but Express already parsed it via express.json().
     // So we pass req.body as parsedBody.
     this.app.all('/mcp', (req: Request, res: Response) => {
-      this.mcpTransportManager.handleRequest(req, res, req.body);
+      void this.mcpTransportManager.handleRequest(req, res, req.body);
     });
   }
 
