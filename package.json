@@ -1,6 +1,6 @@
 {
   "name": "tandem-browser",
-  "version": "0.73.0",
+  "version": "0.73.1",
   "description": "Local-first Electron browser with a 250-tool MCP server, MCP/HTTP control surfaces, and built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",

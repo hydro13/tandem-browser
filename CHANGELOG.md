@@ -2,6 +2,18 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.73.1] - 2026-04-16
+
+- fix: register MCP session after transport assigns ID
+
+The SDK's sessionIdGenerator fires during handleRequest (on the
+initialize call), not during server.connect(). Move session
+registration to after handleRequest so the stored session ID
+matches what the client receives in the Mcp-Session-Id header.
+
+Also rewrites http-transport tests to use real HTTP requests
+against a test server for reliable SDK integration coverage.
+
 ## [v0.73.0] - 2026-04-14
 
 - feat: expand live watch and screenshot automation surfaces
