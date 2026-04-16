@@ -20,7 +20,7 @@ import { createSetupPanel } from './panels/setup.js';
 import {
   COMMUNICATION_IDS,
   loadWebviewInPanel, hideWebviews, safeSetPanelHTML,
-  getOrCreateWebview, getWebview, hasWebview,
+  getWebview, hasWebview,
 } from './webview.js';
 import { loadHistoryPanel } from './panels/history.js';
 
