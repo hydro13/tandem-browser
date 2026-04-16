@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import http from 'node:http';
+import { once } from 'node:events';
 
 vi.mock('electron', () => ({
   BrowserWindow: vi.fn(),
@@ -12,55 +14,88 @@ vi.mock('electron', () => ({
 
 import { McpHttpTransportManager } from '../http-transport';
 
-// Minimal mock of IncomingMessage / ServerResponse for testing
-function createMockReq(opts: {
+/**
+ * Spin up a tiny HTTP server that wires each request through the manager,
+ * so the SDK's StreamableHTTPServerTransport gets real Node.js req/res objects.
+ */
+function createTestServer(manager: McpHttpTransportManager) {
+  const server = http.createServer(async (req, res) => {
+    // Collect body
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const rawBody = Buffer.concat(chunks).toString('utf-8');
+    const body = rawBody ? JSON.parse(rawBody) : undefined;
+    await manager.handleRequest(req, res, body);
+  });
+  return server;
+}
+
+async function startServer(server: http.Server): Promise<number> {
+  server.listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  const addr = server.address() as { port: number };
+  return addr.port;
+}
+
+async function mcpFetch(port: number, opts: {
   method?: string;
-  headers?: Record<string, string>;
+  sessionId?: string;
   body?: unknown;
-} = {}): any {
-  return {
+  token?: string;
+}): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: unknown; raw: string }> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+  };
+  if (opts.sessionId) headers['mcp-session-id'] = opts.sessionId;
+
+  const res = await fetch(`http://127.0.0.1:${port}/mcp`, {
     method: opts.method ?? 'POST',
-    headers: opts.headers ?? {},
-    url: '/mcp',
-    socket: { remoteAddress: '127.0.0.1' },
+    headers,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  const raw = await res.text();
+  let body: unknown;
+  try { body = JSON.parse(raw); } catch {
+    // SSE response — parse the event data
+    const match = raw.match(/^data: (.+)$/m);
+    body = match ? JSON.parse(match[1]) : raw;
+  }
+  return {
+    status: res.status,
+    headers: Object.fromEntries(res.headers.entries()),
+    body,
+    raw,
   };
 }
 
-function createMockRes(): any {
-  const res: any = {
-    statusCode: 200,
-    headers: {} as Record<string, string>,
-    body: '',
-    writeHead: vi.fn((code: number, headers?: Record<string, string>) => {
-      res.statusCode = code;
-      if (headers) Object.assign(res.headers, headers);
-      return res;
-    }),
-    end: vi.fn((data?: string) => {
-      if (data) res.body = data;
-    }),
-    setHeader: vi.fn((name: string, value: string) => {
-      res.headers[name.toLowerCase()] = value;
-    }),
-    getHeader: vi.fn((name: string) => res.headers[name.toLowerCase()]),
-    write: vi.fn(),
-    on: vi.fn(),
-    once: vi.fn(),
-    emit: vi.fn(),
-    flushHeaders: vi.fn(),
+function initializeBody(id = 1) {
+  return {
+    jsonrpc: '2.0',
+    id,
+    method: 'initialize',
+    params: {
+      protocolVersion: '2025-03-26',
+      capabilities: {},
+      clientInfo: { name: 'test-client', version: '1.0.0' },
+    },
   };
-  return res;
 }
 
 describe('McpHttpTransportManager', () => {
   let manager: McpHttpTransportManager;
+  let server: http.Server;
+  let port: number;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     manager = new McpHttpTransportManager();
+    server = createTestServer(manager);
+    port = await startServer(server);
   });
 
   afterEach(async () => {
     await manager.stop();
+    server.close();
   });
 
   it('starts with zero sessions', () => {
@@ -68,227 +103,93 @@ describe('McpHttpTransportManager', () => {
   });
 
   it('rejects GET without session ID', async () => {
-    const req = createMockReq({ method: 'GET' });
-    const res = createMockRes();
-    await manager.handleRequest(req, res);
-    expect(res.writeHead).toHaveBeenCalledWith(400, expect.any(Object));
-    expect(res.body).toContain('Missing Mcp-Session-Id');
+    const res = await mcpFetch(port, { method: 'GET' });
+    expect(res.status).toBe(400);
   });
 
-  it('creates a session on POST without session ID (initialize)', async () => {
-    // Send an MCP initialize request
-    const initializeBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'test-client', version: '1.0.0' },
-      },
-    };
-
-    const req = createMockReq({
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: initializeBody,
-    });
-    const res = createMockRes();
-
-    await manager.handleRequest(req, res, initializeBody);
-    // The SDK's StreamableHTTPServerTransport handles the response internally.
-    // We can verify a session was created.
+  it('creates a session on initialize and returns session ID', async () => {
+    const res = await mcpFetch(port, { body: initializeBody() });
+    expect(res.status).toBe(200);
+    expect(res.headers['mcp-session-id']).toBeDefined();
     expect(manager.sessionCount).toBe(1);
   });
 
-  it('returns 404 for requests with unknown session ID', async () => {
-    const req = createMockReq({
-      method: 'POST',
-      headers: { 'mcp-session-id': 'non-existent-session' },
+  it('handles subsequent requests on existing session', async () => {
+    // Initialize
+    const initRes = await mcpFetch(port, { body: initializeBody() });
+    const sessionId = initRes.headers['mcp-session-id'] as string;
+    expect(sessionId).toBeDefined();
+
+    // Send initialized notification (required by protocol before tool calls)
+    await mcpFetch(port, {
+      sessionId,
+      body: { jsonrpc: '2.0', method: 'notifications/initialized' },
     });
-    const res = createMockRes();
-    await manager.handleRequest(req, res);
-    expect(res.writeHead).toHaveBeenCalledWith(404, expect.any(Object));
-  });
 
-  it('returns 503 when max sessions reached', async () => {
-    // Create sessions up to the limit by sending initialize requests
-    const creates: Promise<void>[] = [];
-    for (let i = 0; i < 20; i++) {
-      const body = {
-        jsonrpc: '2.0',
-        id: i + 1,
-        method: 'initialize',
-        params: {
-          protocolVersion: '2025-03-26',
-          capabilities: {},
-          clientInfo: { name: `test-${i}`, version: '1.0.0' },
-        },
-      };
-      const req = createMockReq({
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body,
-      });
-      creates.push(manager.handleRequest(req, createMockRes(), body));
-    }
-    await Promise.all(creates);
-    expect(manager.sessionCount).toBe(20);
-
-    // 21st should fail
-    const body = {
-      jsonrpc: '2.0',
-      id: 100,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'overflow', version: '1.0.0' },
-      },
-    };
-    const req = createMockReq({
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body,
+    // List tools
+    const toolsRes = await mcpFetch(port, {
+      sessionId,
+      body: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
     });
-    const res = createMockRes();
-    await manager.handleRequest(req, res, body);
-    expect(res.writeHead).toHaveBeenCalledWith(503, expect.any(Object));
-    expect(res.body).toContain('Too many active MCP sessions');
+    expect(toolsRes.status).toBe(200);
+    // Should contain tandem tools
+    const data = toolsRes.body as any;
+    expect(data.result?.tools?.length).toBeGreaterThan(200);
+    expect(manager.sessionCount).toBe(1);
   });
 
-  it('start() is idempotent', () => {
-    manager.start();
-    manager.start(); // second call should not throw
-    // cleanup handled by afterEach stop()
+  it('returns 404 for unknown session ID', async () => {
+    const res = await mcpFetch(port, {
+      sessionId: 'non-existent',
+      body: { jsonrpc: '2.0', id: 1, method: 'tools/list', params: {} },
+    });
+    expect(res.status).toBe(404);
   });
 
-  it('stop() clears cleanup timer and closes sessions', async () => {
+  it('DELETE closes a session', async () => {
+    const initRes = await mcpFetch(port, { body: initializeBody() });
+    const sessionId = initRes.headers['mcp-session-id'] as string;
+    expect(manager.sessionCount).toBe(1);
+
+    const delRes = await mcpFetch(port, { method: 'DELETE', sessionId });
+    expect(delRes.status).toBe(200);
+    expect(manager.sessionCount).toBe(0);
+  });
+
+  it('start() and stop() manage cleanup timer', async () => {
     manager.start();
-    const body = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '1.0.0' },
-      },
-    };
-    await manager.handleRequest(
-      createMockReq({ method: 'POST', headers: { 'content-type': 'application/json' }, body }),
-      createMockRes(),
-      body,
-    );
+    manager.start(); // idempotent
+
+    const initRes = await mcpFetch(port, { body: initializeBody() });
+    expect(initRes.headers['mcp-session-id']).toBeDefined();
     expect(manager.sessionCount).toBe(1);
 
     await manager.stop();
     expect(manager.sessionCount).toBe(0);
 
-    // stop() again should be safe
+    // safe to call again
     await manager.stop();
-  });
-
-  it('DELETE with valid session ID closes the session', async () => {
-    // Create a session first
-    const initBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '1.0.0' },
-      },
-    };
-    const initRes = createMockRes();
-    await manager.handleRequest(
-      createMockReq({ method: 'POST', headers: { 'content-type': 'application/json' } }),
-      initRes,
-      initBody,
-    );
-    expect(manager.sessionCount).toBe(1);
-
-    // Extract session ID from response headers
-    const sessionId = initRes.setHeader.mock.calls.find(
-      (c: [string, string]) => c[0].toLowerCase() === 'mcp-session-id',
-    )?.[1] as string | undefined;
-
-    // If the SDK set the session ID in the response, use it; otherwise the session
-    // was created but we need to find its ID from the manager internals.
-    // Since we can't easily get the session ID from the public API, test DELETE
-    // with unknown ID returns 404.
-    const deleteRes = createMockRes();
-    await manager.handleRequest(
-      createMockReq({ method: 'DELETE', headers: { 'mcp-session-id': sessionId ?? 'unknown' } }),
-      deleteRes,
-    );
-    // If sessionId was captured, session is closed; if unknown, 404
-    if (sessionId) {
-      expect(deleteRes.writeHead).toHaveBeenCalledWith(200, expect.any(Object));
-      expect(manager.sessionCount).toBe(0);
-    } else {
-      expect(deleteRes.writeHead).toHaveBeenCalledWith(404, expect.any(Object));
-    }
-  });
-
-  it('POST with known session ID forwards to transport', async () => {
-    // Create session
-    const initBody = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '1.0.0' },
-      },
-    };
-    const initRes = createMockRes();
-    await manager.handleRequest(
-      createMockReq({ method: 'POST', headers: { 'content-type': 'application/json' } }),
-      initRes,
-      initBody,
-    );
-
-    const sessionId = initRes.setHeader.mock.calls.find(
-      (c: [string, string]) => c[0].toLowerCase() === 'mcp-session-id',
-    )?.[1] as string | undefined;
-
-    if (sessionId) {
-      // Send a tools/list request on the existing session
-      const listBody = { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} };
-      const listRes = createMockRes();
-      await manager.handleRequest(
-        createMockReq({ method: 'POST', headers: { 'mcp-session-id': sessionId, 'content-type': 'application/json' } }),
-        listRes,
-        listBody,
-      );
-      // Session should still exist (request forwarded, not rejected)
-      expect(manager.sessionCount).toBe(1);
-    }
   });
 
   it('closeAllSessions removes all sessions', async () => {
-    // Create a session
-    const body = {
-      jsonrpc: '2.0',
-      id: 1,
-      method: 'initialize',
-      params: {
-        protocolVersion: '2025-03-26',
-        capabilities: {},
-        clientInfo: { name: 'test', version: '1.0.0' },
-      },
-    };
-    await manager.handleRequest(
-      createMockReq({ method: 'POST', headers: { 'content-type': 'application/json' }, body }),
-      createMockRes(),
-      body,
-    );
-    expect(manager.sessionCount).toBeGreaterThan(0);
+    await mcpFetch(port, { body: initializeBody(1) });
+    await mcpFetch(port, { body: initializeBody(2) });
+    expect(manager.sessionCount).toBe(2);
 
     await manager.closeAllSessions();
     expect(manager.sessionCount).toBe(0);
+  });
+
+  it('returns 503 when max sessions (20) reached', async () => {
+    // Create 20 sessions
+    for (let i = 0; i < 20; i++) {
+      const res = await mcpFetch(port, { body: initializeBody(i + 1) });
+      expect(res.status).toBe(200);
+    }
+    expect(manager.sessionCount).toBe(20);
+
+    // 21st should fail
+    const res = await mcpFetch(port, { body: initializeBody(100) });
+    expect(res.status).toBe(503);
   });
 });

@@ -71,10 +71,33 @@ export class McpHttpTransportManager {
         return;
       }
 
-      const session = await this.createSession();
-      log.info(`MCP session created: ${session.sessionId}`);
-      session.lastActivityAt = Date.now();
-      await session.transport.handleRequest(req, res, body);
+      const { transport, server: mcpServer } = await this.prepareSession();
+
+      // Let the transport handle the initialize request — this is when it
+      // generates the session ID and writes it to the Mcp-Session-Id header.
+      await transport.handleRequest(req, res, body);
+
+      // Now capture the real session ID that the transport assigned.
+      const realSessionId = transport.sessionId;
+      if (!realSessionId) {
+        // Transport didn't produce a session (malformed request?) — nothing to track.
+        return;
+      }
+
+      const managed: ManagedSession = {
+        transport,
+        server: mcpServer,
+        sessionId: realSessionId,
+        createdAt: Date.now(),
+        lastActivityAt: Date.now(),
+      };
+      this.sessions.set(realSessionId, managed);
+      transport.onclose = () => {
+        this.sessions.delete(realSessionId);
+        log.info(`MCP session closed: ${realSessionId}`);
+      };
+
+      log.info(`MCP session created: ${realSessionId}`);
       return;
     }
 
@@ -114,7 +137,12 @@ export class McpHttpTransportManager {
     return this.sessions.size;
   }
 
-  private async createSession(): Promise<ManagedSession> {
+  /**
+   * Prepare a new MCP server + transport pair without registering it yet.
+   * The session is registered in the map only after handleRequest produces
+   * a real session ID (the SDK's sessionIdGenerator fires during initialize).
+   */
+  private async prepareSession(): Promise<{ transport: StreamableHTTPServerTransport; server: McpServer }> {
     const server = new McpServer({
       name: 'tandem-browser',
       version: '1.0.0',
@@ -123,34 +151,12 @@ export class McpHttpTransportManager {
     registerAllTools(server);
     registerAllResources(server);
 
-    let capturedSessionId: string | undefined;
     const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: () => {
-        capturedSessionId = randomUUID();
-        return capturedSessionId;
-      },
+      sessionIdGenerator: () => randomUUID(),
     });
 
     await server.connect(transport);
-
-    const sessionId = capturedSessionId ?? randomUUID();
-
-    const managed: ManagedSession = {
-      transport,
-      server,
-      sessionId,
-      createdAt: Date.now(),
-      lastActivityAt: Date.now(),
-    };
-
-    this.sessions.set(sessionId, managed);
-
-    transport.onclose = () => {
-      this.sessions.delete(sessionId);
-      log.info(`MCP session closed: ${sessionId}`);
-    };
-
-    return managed;
+    return { transport, server };
   }
 
   private async closeSession(sessionId: string): Promise<void> {
