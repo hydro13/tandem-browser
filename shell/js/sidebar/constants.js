@@ -1,7 +1,7 @@
 /**
  * Shared SVG icon dictionaries for sidebar UI.
  *
- * Loaded from: shell/js/sidebar/*.js
+ * Loaded from: shell/js/sidebar/index.js (later PRs will extract more sidebar modules that also import from here)
  * window exports: none
  */
 
