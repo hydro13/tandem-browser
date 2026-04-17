@@ -55,6 +55,16 @@ function pbEscape(text) {
   return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
+// Surface mutation failures to the user. Previously these fetches swallowed
+// errors and left the UI showing stale state with no feedback. No toast
+// helper exists in shell/js yet, so fall back to alert() for visibility.
+// TODO: replace alert with toast helper when one lands
+function pbReportError(action, err) {
+  console.error(`[pinboard] ${action} failed`, err);
+  const msg = (err && err.message) ? err.message : 'unknown error';
+  alert(`Pinboard: ${action} failed — ${msg}`);
+}
+
 export async function loadPinboardPanel() {
   ensurePinboardAddedHook();
   const content = document.getElementById('sidebar-panel-content');
@@ -110,7 +120,12 @@ function pbRenderBoardList(boards) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const boardId = btn.dataset.boardId;
-      await fetch(`http://localhost:8765/pinboards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+      try {
+        const res = await fetch(`http://localhost:8765/pinboards/${boardId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      } catch (err) {
+        pbReportError('delete board', err);
+      }
       loadPinboardPanel();
     });
   });
@@ -205,11 +220,16 @@ async function pbOpenBoard(boardId, name, emoji) {
         pbApplyGridClasses();
         panel.querySelectorAll('[data-layout]').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ layout })
-        });
+        try {
+          const res = await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+            body: JSON.stringify({ layout })
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch (err) {
+          pbReportError('save layout', err);
+        }
       });
     });
     panel.querySelectorAll('[data-bg]').forEach(opt => {
@@ -219,11 +239,16 @@ async function pbOpenBoard(boardId, name, emoji) {
         pbApplyGridClasses();
         panel.querySelectorAll('[data-bg]').forEach(o => o.classList.remove('active'));
         opt.classList.add('active');
-        await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ background: bg })
-        });
+        try {
+          const res = await fetch(`http://localhost:8765/pinboards/${boardId}/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+            body: JSON.stringify({ background: bg })
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        } catch (err) {
+          pbReportError('save background', err);
+        }
       });
     });
 
@@ -241,11 +266,17 @@ async function pbOpenBoard(boardId, name, emoji) {
     const textarea = document.getElementById('pb-note-textarea');
     const text = textarea.value.trim();
     if (!text) return;
-    await fetch(`http://localhost:8765/pinboards/${boardId}/items`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ type: 'text', content: text })
-    });
+    try {
+      const res = await fetch(`http://localhost:8765/pinboards/${boardId}/items`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ type: 'text', content: text })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      pbReportError('add note', err);
+      return;
+    }
     textarea.value = '';
     document.getElementById('pb-note-editor').style.display = 'none';
     await pbRefreshItems(boardId);
@@ -318,11 +349,17 @@ async function pbOpenEditModal(item, boardId) {
   overlay.querySelector('.pb-edit-save-btn').addEventListener('click', async () => {
     const title = overlay.querySelector('.pb-edit-title-input').value.trim();
     const content = overlay.querySelector('.pb-edit-content-input').value.trim();
-    await fetch(`http://localhost:8765/pinboards/${boardId}/items/${item.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ title, content, note: content })
-    });
+    try {
+      const res = await fetch(`http://localhost:8765/pinboards/${boardId}/items/${item.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ title, content, note: content })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      pbReportError('save item', err);
+      return;
+    }
     close();
     await pbRefreshItems(boardId);
   });
@@ -436,7 +473,18 @@ function pbRenderItems(items) {
       card.style.opacity = '0';
       card.style.transform = 'scale(0.9)';
     }
-    await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+    try {
+      const res = await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${getToken()}` } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      // Restore the card visually since the server rejected the delete.
+      if (card) {
+        card.style.opacity = '';
+        card.style.transform = '';
+      }
+      pbReportError('remove item', err);
+      return;
+    }
     setTimeout(() => {
       if (card) card.remove();
       if (container.querySelectorAll('.pb-card').length === 0) {
@@ -488,11 +536,17 @@ function pbRenderItems(items) {
             body.contentEditable = 'false';
             const newText = body.textContent.trim();
             if (newText && newText !== originalText) {
-              await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-                body: JSON.stringify({ content: newText })
-              });
+              try {
+                const res = await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                  body: JSON.stringify({ content: newText })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              } catch (err) {
+                body.textContent = originalText;
+                pbReportError('save edit', err);
+              }
             }
           });
           body.addEventListener('keydown', (ke) => {
@@ -521,11 +575,17 @@ function pbRenderItems(items) {
             titleEl.style.whiteSpace = '';
             const newText = titleEl.textContent.trim();
             if (newText && newText !== originalText) {
-              await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-                body: JSON.stringify({ title: newText })
-              });
+              try {
+                const res = await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/${itemId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+                  body: JSON.stringify({ title: newText })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              } catch (err) {
+                titleEl.textContent = originalText;
+                pbReportError('save title', err);
+              }
             }
           });
           titleEl.addEventListener('keydown', (ke) => {
@@ -572,11 +632,16 @@ function pbSetupDragAndDrop(container) {
     const targetIdx = cards.indexOf(target);
     if (draggedIdx < targetIdx) { target.after(draggedCard); } else { target.before(draggedCard); }
     const newOrder = [...container.querySelectorAll('.pb-card')].map(c => c.dataset.itemId);
-    await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/reorder`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-      body: JSON.stringify({ itemIds: newOrder })
-    });
+    try {
+      const res = await fetch(`http://localhost:8765/pinboards/${pbState.currentBoardId}/items/reorder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+        body: JSON.stringify({ itemIds: newOrder })
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch (err) {
+      pbReportError('reorder items', err);
+    }
     container.querySelectorAll('.pb-drag-over').forEach(el => el.classList.remove('pb-drag-over'));
   });
 }
@@ -587,7 +652,13 @@ function pbSetupDragAndDrop(container) {
 // fetch has time to complete.
 export function refreshPinboardIfOpen(boardId, delayMs = 800) {
   if (pbState.currentBoardId === boardId) {
-    setTimeout(() => pbRefreshItems(boardId), delayMs);
+    setTimeout(() => {
+      // User may have switched boards during the delay window; skip the
+      // refresh silently if the open board no longer matches the one whose
+      // items we were going to reload.
+      if (pbState.currentBoardId !== boardId) return;
+      pbRefreshItems(boardId);
+    }, delayMs);
   }
 }
 
@@ -597,10 +668,15 @@ async function pbCreateBoard() {
   const name = await window.showPrompt('New board', 'Board name…');
   if (!name) return;
   const emoji = await window.showPrompt('Board emoji (optional)', 'e.g. 📌', '📌') || '📌';
-  await fetch('http://localhost:8765/pinboards', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-    body: JSON.stringify({ name, emoji })
-  });
+  try {
+    const res = await fetch('http://localhost:8765/pinboards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      body: JSON.stringify({ name, emoji })
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  } catch (err) {
+    pbReportError('create board', err);
+  }
   loadPinboardPanel();
 }
