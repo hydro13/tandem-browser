@@ -250,7 +250,7 @@
     setTimeout(checkOnboarding, 2000);
 
     // Theme management lives in shell/js/theme.js and is loaded before this file
-    // via <script src="js/theme.js"></script> in the shell HTML files.
+    // via <script type="module" src="js/theme.js"></script> in the shell HTML files.
 
     // ═══════════════════════════════════════════════
     // Password Vault UI Logic

@@ -1,5 +1,5 @@
 // Shared theme management for all Tandem shell HTML documents.
-// Load via: <script src="js/theme.js"></script>
+// Load via: <script type="module" src="js/theme.js"></script>
 //
 // Responsibilities:
 //   - applyTheme(theme): set document.documentElement[data-theme] correctly
@@ -7,8 +7,13 @@
 //   - loadThemeFromConfig(): fetch /config and apply (uses correct config.appearance.theme path)
 //   - subscribe to the 'tandem-theme' BroadcastChannel for live updates
 //
-// Works both as a classic <script> (exposes window.TandemTheme)
-// and as an ES module (exports for vitest tests).
+// This file uses ES module `export` syntax, so HTML must load it with
+// type="module" (otherwise Chromium reports a SyntaxError and the whole
+// script fails to parse). It also assigns window.TandemTheme for inline
+// script consumers. Module scripts are deferred by default — they run
+// after HTML parsing but before DOMContentLoaded, which is early enough
+// for any consumer that awaits before use. Pre-paint theme is stamped
+// by the preload (src/preload/theme.ts), not by this module.
 
 const VALID_THEMES = new Set(['dark', 'light', 'system']);
 const INITIAL_ATTR = 'data-tandem-initial-theme';
