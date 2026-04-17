@@ -38,7 +38,17 @@ export async function load() {
     const res = await fetch(`${API}/bookmarks`, { headers: { Authorization: `Bearer ${token()}` } });
     if (!res.ok) return;
     const data = await res.json();
-    _tree = data.bookmarks?.[0] || { children: [] };
+    // The backend returns `bookmarks` as an array of ROOT folders (Bookmarks Bar,
+    // Other Bookmarks, etc. — Chrome-import can produce multiple roots). The top
+    // bookmarks bar reads `data.bar`, which is the children of the "Bookmarks Bar"
+    // folder (see BookmarkManager.getBarItems). To stay in sync, the sidebar must
+    // navigate that SAME root — not blindly `bookmarks[0]`, which may be a
+    // different root entirely (e.g. "Other Bookmarks") that happens to contain
+    // folders with the same names. This caused the same visual path to show
+    // different content in the two UIs.
+    const roots = data.bookmarks || [];
+    const barRoot = roots.find(b => b.name === 'Bookmarks Bar' || b.name === 'Bladwijzerbalk');
+    _tree = barRoot || roots[0] || { children: [] };
     _bar = (data.bar || []).slice(0, 30);
     _loaded = true;
     notify();
