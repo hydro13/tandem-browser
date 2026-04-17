@@ -274,14 +274,23 @@ export class TabManager {
       log.warn(`removeTab IPC failed for ${tabId}:`, e instanceof Error ? e.message : String(e));
     }
 
+    // Capture the closed tab's workspace BEFORE deleting it from the map so
+    // the successor-picking below can prefer a tab in the same workspace.
+    // Without this, closing the last new tab in the current workspace would
+    // pick whichever tab happens to sit at the end of insertion order —
+    // often from a different workspace — and the activeTabChanged reconcile
+    // would then drag activeId along with it (see reconcileTabState's
+    // followFocusedTab path in WorkspaceManager).
+    const closedWorkspaceId = this.workspaceIdResolver?.(tab.webContentsId) ?? null;
+
     this.tabs.delete(tabId);
 
     // If we closed the active tab, focus another
     if (this.activeTabId === tabId) {
       this.activeTabId = null;
-      const remaining = Array.from(this.tabs.keys());
-      if (remaining.length > 0) {
-        await this.focusTab(remaining[remaining.length - 1]);
+      const successor = this.pickCloseSuccessor(closedWorkspaceId);
+      if (successor) {
+        await this.focusTab(successor.id);
       } else {
         await this.notifyActiveTabChanged(null);
       }
@@ -568,6 +577,34 @@ export class TabManager {
   /** Generate unique tab ID */
   private nextId(): string {
     return `tab-${++this.counter}`;
+  }
+
+  /**
+   * Pick the next tab to focus after closing the active tab.
+   *
+   * Prefers a tab in the same workspace as the closed tab so closing a new
+   * tab doesn't silently move the user to another workspace (the
+   * activeTabChanged reconcile runs followFocusedTab, which would otherwise
+   * switch activeId to whichever workspace the successor belongs to).
+   *
+   * If the closed tab's workspace is unknown or empty, fall back to the
+   * most-recently-inserted remaining tab from any workspace so the user
+   * isn't left on a blank screen.
+   */
+  private pickCloseSuccessor(closedWorkspaceId: string | null): Tab | null {
+    const remaining = Array.from(this.tabs.values());
+    if (remaining.length === 0) return null;
+
+    if (closedWorkspaceId && this.workspaceIdResolver) {
+      const sameWorkspace = remaining.filter(
+        (t) => this.workspaceIdResolver?.(t.webContentsId) === closedWorkspaceId,
+      );
+      if (sameWorkspace.length > 0) {
+        return sameWorkspace[sameWorkspace.length - 1];
+      }
+    }
+
+    return remaining[remaining.length - 1];
   }
 
   private resolveInheritedTab(options?: OpenTabOptions): Tab | null {

@@ -210,6 +210,44 @@ describe('TabManager', () => {
       expect(tm.getActiveTab()?.id).toBe(t1.id);
     });
 
+    // Repro for "closing a new tab jumps me to another workspace". When the
+    // active tab closes, closeTab picks a successor. Without workspace
+    // awareness it picks the most recently inserted of ALL tabs, which may
+    // belong to a different workspace than the one the user was viewing.
+    // The reconcile that follows then drags activeId along with the focus.
+    it('prefers a tab in the same workspace as the closed tab when choosing the next focus', async () => {
+      const tabA = await tm.openTab('https://default-a.com');     // default ws
+      const tabKees = await tm.openTab('https://kees.com');       // kees ws
+      const tabNew = await tm.openTab('https://default-new.com'); // default ws, now active
+
+      // Workspace membership: default = [A, New], kees = [Kees]
+      tm.setWorkspaceIdResolver((wcId) => {
+        if (wcId === tabKees.webContentsId) return 'kees';
+        return 'default';
+      });
+
+      await tm.closeTab(tabNew.id);
+
+      // Should stay in default by focusing tabA, not jump to kees.
+      expect(tm.getActiveTab()?.id).toBe(tabA.id);
+    });
+
+    it('falls back to any remaining tab when the closed tab was the last in its workspace', async () => {
+      const tabKees = await tm.openTab('https://kees.com');
+      const tabDefault = await tm.openTab('https://default.com'); // active
+
+      tm.setWorkspaceIdResolver((wcId) => {
+        if (wcId === tabKees.webContentsId) return 'kees';
+        return 'default';
+      });
+
+      await tm.closeTab(tabDefault.id);
+
+      // Default is empty after closing tabDefault — falling back to kees is
+      // fine (user has no other choice).
+      expect(tm.getActiveTab()?.id).toBe(tabKees.id);
+    });
+
     it('caps closed tabs history at 10', async () => {
       for (let i = 0; i < 12; i++) {
         const tab = await tm.openTab(`https://site${i}.com`);
