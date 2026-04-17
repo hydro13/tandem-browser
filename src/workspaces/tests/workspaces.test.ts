@@ -208,6 +208,50 @@ describe('WorkspaceManager', () => {
       expect(defaultWs.tabIds).not.toContain(42);
       expect(ws2.tabIds).toContain(42);
     });
+
+    // Repro for the "+ new tab goes to Default instead of active workspace" bug.
+    // Simulates the real-world flow: sidebar click activates a workspace with
+    // tabs by calling focusTab() (without switch(), per activateWorkspace
+    // route), then the user clicks + which creates a new tab. At
+    // web-contents-created time the new webContentsId is NOT yet tracked by
+    // TabManager, so trackedTabIdsResolver() does not include it. The active
+    // tab at that moment is the one that belongs to the just-activated
+    // workspace. The new tab should land in that workspace.
+    it('assigns + new tab to the workspace of the currently-focused tab (regression)', () => {
+      const wm = createManager();
+      const kees = wm.create({ name: 'kees-openclaw' });
+      const defaultWs = wm.list().find(w => w.isDefault)!;
+
+      // Existing tabs: one in default (wcId 100), one in kees (wcId 200).
+      const workspaces = (wm as any).workspaces as Map<string, { tabIds: number[] }>;
+      workspaces.get(defaultWs.id)!.tabIds = [100];
+      workspaces.get(kees.id)!.tabIds = [200];
+
+      // Tracked/active state reflects "user currently viewing tab 200 in kees".
+      const tracked: number[] = [100, 200];
+      const activeWcId: number | null = 200;
+      wm.setTabStateResolvers({
+        listTrackedTabIds: () => tracked,
+        getActiveTabId: () => activeWcId,
+      });
+
+      // Sidebar "switch workspace" click on kees: the activateWorkspace route
+      // focuses a tab in kees and runs the activeTabChangedHandler reconcile
+      // with followFocusedTab:true. It does NOT call switch() because kees
+      // already has tabs to focus.
+      wm.reconcileTabState(tracked, activeWcId, { notify: true, followFocusedTab: true });
+      expect(wm.getActiveId()).toBe(kees.id);
+      expect(wm.getActiveSource()).toBe('focused-tab');
+
+      // User clicks + -> web-contents-created fires in main BEFORE the new
+      // webContentsId is inserted into TabManager.tabs, so the resolvers
+      // still reflect the previous state.
+      wm.assignTab(300);
+
+      // The new tab should be in kees, not default.
+      expect(wm.get(kees.id)!.tabIds).toContain(300);
+      expect(wm.get(defaultWs.id)!.tabIds).not.toContain(300);
+    });
   });
 
   describe('removeTab', () => {

@@ -63,6 +63,15 @@ export class WorkspaceManager {
   private activeTabIdResolver: (() => number | null) | null = null;
   private isReconciling = false;
   private selectionPinned = false;
+  /**
+   * Tabs assigned via assignTab() that have not yet been observed in the
+   * runtime's tracked tab list. Reconcile refuses to strip these so we don't
+   * lose newly-assigned tabs to the race between web-contents-created (when
+   * main.ts calls assignTab) and TabManager.tabs.set() (when openTab
+   * finishes). Cleared lazily when the tab appears in validTabIds, or on
+   * explicit removeTab()/resetTabAssignments().
+   */
+  private pendingAssignments = new Set<number>();
 
   // === 2. Constructor ===
 
@@ -157,10 +166,16 @@ export class WorkspaceManager {
       for (const workspace of this.getSortedWorkspaces()) {
         const nextTabIds: number[] = [];
         for (const tabId of workspace.tabIds) {
-          if (!Number.isFinite(tabId) || !validTabIds.has(tabId) || assignedTabIds.has(tabId)) {
+          if (!Number.isFinite(tabId) || assignedTabIds.has(tabId)) {
             changed = true;
             continue;
           }
+          const isTracked = validTabIds.has(tabId);
+          if (!isTracked && !this.pendingAssignments.has(tabId)) {
+            changed = true;
+            continue;
+          }
+          if (isTracked) this.pendingAssignments.delete(tabId);
           assignedTabIds.add(tabId);
           nextTabIds.push(tabId);
         }
@@ -309,6 +324,7 @@ export class WorkspaceManager {
 
   /** Assign a tab (by webContentsId) to the currently active workspace. */
   assignTab(tabId: number): void {
+    this.pendingAssignments.add(tabId);
     const active = this.getActive();
     for (const workspace of this.workspaces.values()) {
       const idx = workspace.tabIds.indexOf(tabId);
@@ -324,6 +340,7 @@ export class WorkspaceManager {
 
   /** Remove a tab from whichever workspace it belongs to. */
   removeTab(tabId: number): void {
+    this.pendingAssignments.delete(tabId);
     for (const ws of this.workspaces.values()) {
       const idx = ws.tabIds.indexOf(tabId);
       if (idx !== -1) {
@@ -359,6 +376,7 @@ export class WorkspaceManager {
 
   /** Clear all tab assignments from every workspace. */
   resetTabAssignments(): void {
+    this.pendingAssignments.clear();
     for (const workspace of this.workspaces.values()) {
       workspace.tabIds = [];
     }
