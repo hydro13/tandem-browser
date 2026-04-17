@@ -1,9 +1,31 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+  <!-- Pre-paint theme stamp for webview-loaded shell pages.
+       The main BrowserWindow gets the theme via preload+additionalArguments,
+       but webviews don't inherit that path — so we do a tiny sync XHR here to
+       stamp data-theme before the inline <style> blocks are processed by the
+       parser. Sync XHR is deprecated (console warning), but it's the only way
+       to avoid a dark→light flash. Fails silently if the API isn't up. -->
+  <script>
+    (function () {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'http://localhost:8765/config', false);
+        xhr.send();
+        if (xhr.status === 200) {
+          var cfg = JSON.parse(xhr.responseText);
+          var theme = (cfg && cfg.appearance && cfg.appearance.theme) || 'dark';
+          if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          else if (theme === 'system') document.documentElement.setAttribute('data-theme', 'system');
+        }
+      } catch (e) { /* API not ready; theme.js will apply on load */ }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>New Tab</title>
+  <script type="module" src="js/theme.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -516,33 +538,7 @@
     loadQuickLinks();
     loadRecentTabs();
 
-    // Theme sync — load from config + listen for changes
-    function applyTheme(theme) {
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else if (theme === 'system') {
-        document.documentElement.setAttribute('data-theme', 'system');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-      }
-    }
-
-    async function loadTheme() {
-      try {
-        const res = await fetch(`${API}/config`);
-        if (res.ok) {
-          const config = await res.json();
-          applyTheme(config.appearance?.theme || config.theme || 'dark');
-        }
-      } catch {}
-    }
-
-    loadTheme();
-
-    try {
-      const themeBc = new BroadcastChannel('tandem-theme');
-      themeBc.onmessage = (e) => { if (e.data?.theme) applyTheme(e.data.theme); };
-    } catch {}
+    // Theme sync is handled by shell/js/theme.js (loaded in <head>).
   </script>
 </body>
 </html>

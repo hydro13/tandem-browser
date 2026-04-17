@@ -95,26 +95,6 @@
       --hover-bg-subtle: rgba(255, 255, 255, 0.07);
     }
 
-    /* LGL Dark Mode Tokens */
-    [data-theme="dark"],
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --lgl-tint-dark: rgba(30, 30, 30, 0.55);
-        --lgl-tint: var(--lgl-tint-dark);
-        --lgl-solid-bg: rgba(30, 30, 30, 0.95);
-        --lgl-text-primary: rgba(255, 255, 255, 0.9);
-        --lgl-text-secondary: rgba(255, 255, 255, 0.6);
-        --lgl-text-tertiary: rgba(255, 255, 255, 0.4);
-        --lgl-border: rgba(255, 255, 255, 0.1);
-        --lgl-border-subtle: rgba(255, 255, 255, 0.05);
-        --lgl-contrast-border: rgba(255, 255, 255, 0.2);
-        --lgl-edge-color: rgba(255, 255, 255, 0.10);
-        --lgl-focus-ring: rgba(10, 132, 255, 0.6);
-        --lgl-shadow-opacity: 0.18;
-        --lgl-shadow-opacity-text: 0.25;
-      }
-    }
-
     /* Light theme */
     [data-theme="light"] {
       --bg: #f8fafc;

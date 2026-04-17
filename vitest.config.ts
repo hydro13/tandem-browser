@@ -4,6 +4,7 @@ export default defineConfig({
   test: {
     include: [
       'src/**/tests/**/*.test.ts',
+      'shell/tests/**/*.test.js',
     ],
     setupFiles: [
       'src/api/tests/setup.ts',

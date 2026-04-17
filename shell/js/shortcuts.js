@@ -249,43 +249,8 @@
     // Start onboarding check
     setTimeout(checkOnboarding, 2000);
 
-    // ═══════════════════════════════════════════════
-    // Theme management
-    // ═══════════════════════════════════════════════
-
-    async function loadThemeFromConfig() {
-      try {
-        const response = await fetch('http://localhost:8765/config');
-        if (response.ok) {
-          const config = await response.json();
-          const theme = config.theme || 'dark';
-          applyTheme(theme);
-        }
-      } catch (error) {
-        // Default dark theme used (config load failed)
-      }
-    }
-
-    function applyTheme(theme) {
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else if (theme === 'system') {
-        document.documentElement.setAttribute('data-theme', 'system');
-      } else {
-        document.documentElement.removeAttribute('data-theme'); // Default dark
-      }
-    }
-
-    // Load theme on startup
-    setTimeout(loadThemeFromConfig, 100);
-
-    // Listen for theme changes broadcast from settings window (BroadcastChannel works cross-window in Electron)
-    try {
-      const themeBc = new BroadcastChannel('tandem-theme');
-      themeBc.onmessage = (e) => {
-        if (e.data && e.data.theme) applyTheme(e.data.theme);
-      };
-    } catch {}
+    // Theme management lives in shell/js/theme.js and is loaded before this file
+    // via <script type="module" src="js/theme.js"></script> in the shell HTML files.
 
     // ═══════════════════════════════════════════════
     // Password Vault UI Logic

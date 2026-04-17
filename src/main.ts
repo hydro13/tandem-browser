@@ -44,6 +44,8 @@ import { registerInitialTabLifecycle } from './bootstrap/tab-session';
 import { IpcChannels } from './shared/ipc-channels';
 import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 import { isGoogleAuthUrl, shouldSkipStealth, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
+import { readConfigFileSync } from './config/io';
+import { resolveInitialTheme, buildThemeAdditionalArg, type ResolvedTheme } from './theme/resolver';
 
 const log = createLogger('Main');
 
@@ -463,6 +465,18 @@ async function createWindow(): Promise<BrowserWindow> {
       }
     : {};
 
+  // Pre-paint theme resolution — eliminates dark→light flash.
+  // We read the file directly because ConfigManager is not yet initialized.
+  let initialTheme: ResolvedTheme = 'dark';
+  try {
+    const cfg = readConfigFileSync();
+    const setting = cfg?.appearance?.theme ?? 'dark';
+    initialTheme = resolveInitialTheme(setting, nativeTheme);
+    log.info(`[Theme] Pre-paint resolved theme: ${initialTheme} (setting=${setting})`);
+  } catch (err) {
+    log.warn('[Theme] Could not resolve initial theme, defaulting to dark', err);
+  }
+
   mainWindow = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -475,6 +489,7 @@ async function createWindow(): Promise<BrowserWindow> {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
+      additionalArguments: [buildThemeAdditionalArg(initialTheme)],
     },
   });
   setMainWindow(mainWindow);

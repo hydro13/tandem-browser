@@ -1,9 +1,31 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+  <!-- Pre-paint theme stamp for webview-loaded shell pages.
+       The main BrowserWindow gets the theme via preload+additionalArguments,
+       but webviews don't inherit that path — so we do a tiny sync XHR here to
+       stamp data-theme before the inline <style> blocks are processed by the
+       parser. Sync XHR is deprecated (console warning), but it's the only way
+       to avoid a dark→light flash. Fails silently if the API isn't up. -->
+  <script>
+    (function () {
+      try {
+        var xhr = new XMLHttpRequest();
+        xhr.open('GET', 'http://localhost:8765/config', false);
+        xhr.send();
+        if (xhr.status === 200) {
+          var cfg = JSON.parse(xhr.responseText);
+          var theme = (cfg && cfg.appearance && cfg.appearance.theme) || 'dark';
+          if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
+          else if (theme === 'system') document.documentElement.setAttribute('data-theme', 'system');
+        }
+      } catch (e) { /* API not ready; theme.js will apply on load */ }
+    })();
+  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tandem — Settings</title>
+  <script type="module" src="js/theme.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -1138,7 +1160,7 @@
 
       // Appearance/Theme
       setVal('cfg-theme', a.theme || 'dark');
-      applyTheme(a.theme || 'dark');
+      window.TandemTheme.applyTheme(a.theme || 'dark');
       setVal('cfg-language', g.language || 'nl-BE');
       setVal('cfg-wingmanPanelPosition', g.wingmanPanelPosition || 'right');
       setChecked('cfg-wingmanPanelDefaultOpen', !!g.wingmanPanelDefaultOpen);
@@ -1619,26 +1641,19 @@
       window.open('help.html', '_blank');
     }
 
-    // Handle theme changes
+    // Handle theme changes — apply locally via the shared module, then
+    // broadcast to all other renderer windows so they update too.
+    // Settings.html is the single broadcaster; all other windows only subscribe
+    // (the subscription is installed by shell/js/theme.js).
     document.getElementById('cfg-theme').addEventListener('change', (e) => {
-      applyTheme(e.target.value);
-    });
-
-    function applyTheme(theme) {
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else if (theme === 'system') {
-        document.documentElement.setAttribute('data-theme', 'system');
-      } else {
-        document.documentElement.removeAttribute('data-theme'); // Default dark
-      }
-      // Broadcast to all other renderer windows via BroadcastChannel
+      const theme = e.target.value;
+      window.TandemTheme.applyTheme(theme);
       try {
         const bc = new BroadcastChannel('tandem-theme');
         bc.postMessage({ theme });
         bc.close();
       } catch {}
-    }
+    });
 
     // ═══ Chrome sync ═══
     // Show/hide profile selector when sync toggled
