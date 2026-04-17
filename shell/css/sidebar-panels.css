@@ -562,18 +562,22 @@
   min-width: 20px;
   text-align: right;
 }
-.pb-board-delete {
+.pb-board-delete,
+.pb-board-rename {
   opacity: 0;
   transition: opacity 0.15s;
   background: none;
   border: none;
   color: var(--text-dim);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 14px;
   padding: 0 4px;
 }
-.pb-board-item:hover .pb-board-delete { opacity: 1; }
+.pb-board-delete { font-size: 16px; }
+.pb-board-item:hover .pb-board-delete,
+.pb-board-item:hover .pb-board-rename { opacity: 1; }
 .pb-board-delete:hover { color: #f44; }
+.pb-board-rename:hover { color: var(--text); }
 
 /* Items header with back + board switcher */
 .pb-items-header {
