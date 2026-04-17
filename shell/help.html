@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tandem — Help & Features</title>
+  <script src="js/theme.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
@@ -604,25 +605,7 @@
       }
     });
 
-    // Theme sync
-    function applyTheme(theme) {
-      if (theme === 'light') {
-        document.documentElement.setAttribute('data-theme', 'light');
-      } else if (theme === 'system') {
-        document.documentElement.setAttribute('data-theme', 'system');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-      }
-    }
-
-    fetch('http://localhost:8765/config').then(r => r.json()).then(c => {
-      applyTheme(c.appearance?.theme || c.theme || 'dark');
-    }).catch(() => {});
-
-    try {
-      const bc = new BroadcastChannel('tandem-theme');
-      bc.onmessage = (e) => { if (e.data?.theme) applyTheme(e.data.theme); };
-    } catch {}
+    // Theme sync is handled by shell/js/theme.js (loaded in <head>).
   </script>
 </body>
 </html>
