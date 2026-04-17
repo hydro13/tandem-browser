@@ -43,10 +43,16 @@ function ensurePinboardAddedHook() {
   }
 }
 
+// SECURITY: must be safe for both text-node and attribute contexts.
+// textContent/innerHTML escapes <, >, &, but not " or ' — board names flow
+// into data-name="..." attributes, so we must also encode quotes to prevent
+// attribute-context XSS (board names come from user input, including the
+// remote pairing API). Harmless in text-node contexts where &quot; renders
+// as ". Covered by manual review — no unit-test harness exists for shell JS.
 function pbEscape(text) {
   const d = document.createElement('div');
   d.textContent = text;
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 export async function loadPinboardPanel() {
