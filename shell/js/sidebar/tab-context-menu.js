@@ -206,7 +206,13 @@ export async function showTabContextMenu(domTabId, x, y) {
       const si = document.createElement('div');
       si.className = 'tandem-ctx-submenu-item';
       const icon = getIconSvg(ws.icon);
-      si.innerHTML = '<span class="ws-ctx-icon">' + icon + '</span><span>' + ws.name + '</span>';
+      const iconSpan = document.createElement('span');
+      iconSpan.className = 'ws-ctx-icon';
+      iconSpan.innerHTML = icon;
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = ws.name;
+      si.appendChild(iconSpan);
+      si.appendChild(nameSpan);
       si.addEventListener('click', () => {
         closeCtxMenu();
         moveTabToWorkspace(domTabId, ws.id);
@@ -239,7 +245,9 @@ export async function showTabContextMenu(domTabId, x, y) {
       pbBoards.forEach(board => {
         const si = document.createElement('div');
         si.className = 'tandem-ctx-submenu-item';
-        si.innerHTML = '<span>' + board.emoji + ' ' + board.name + '</span>';
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = board.emoji + ' ' + board.name;
+        si.appendChild(labelSpan);
         si.addEventListener('click', async () => {
           closeCtxMenu();
           const tabUrl = wv ? wv.src : '';

@@ -106,7 +106,7 @@ function showWorkspaceForm(content, mode, existingWs) {
       <div class="ws-form-section-label">Icon</div>
       <div class="ws-icon-grid" id="ws-icon-grid">${renderIconGrid(defaultIcon)}</div>
       <div class="ws-form-section-label">Name</div>
-      <input type="text" class="ws-form-input" id="ws-form-name" value="${defaultName}" placeholder="${getNextWorkspaceName()}" />
+      <input type="text" class="ws-form-input" id="ws-form-name" placeholder="${getNextWorkspaceName()}" />
       <div class="ws-form-actions">
         <button class="ws-form-btn-cancel" id="ws-form-cancel">Cancel</button>
         <button class="ws-form-btn-primary" id="ws-form-submit">${btnLabel}</button>
@@ -134,6 +134,7 @@ function showWorkspaceForm(content, mode, existingWs) {
 
   // Auto-focus name input
   const nameInput = content.querySelector('#ws-form-name');
+  nameInput.value = defaultName;
   nameInput.focus();
   nameInput.select();
 
