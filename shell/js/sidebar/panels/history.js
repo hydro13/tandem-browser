@@ -7,11 +7,7 @@
 
 import { getToken } from '../config.js';
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
-
-function getFaviconUrl(url) {
-  try { return `https://www.google.com/s2/favicons?domain=${new URL(url).hostname}&sz=32`; }
-  catch { return null; }
-}
+import { getFaviconUrl } from '../util.js';
 
 // === HISTORY PANEL MODULE ===
 export async function loadHistoryPanel() {
