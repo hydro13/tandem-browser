@@ -35,7 +35,14 @@ function notify() {
  */
 export async function load() {
   try {
-    const res = await fetch(`${API}/bookmarks`, { headers: { Authorization: `Bearer ${token()}` } });
+    // cache: 'no-store' — the Electron renderer HTTP cache would otherwise
+    // serve a stale /bookmarks response, causing the top bar to show the
+    // pre-mutation list even after a rename (the classic "one rename behind"
+    // symptom). Every load() must hit the backend.
+    const res = await fetch(`${API}/bookmarks`, {
+      headers: { Authorization: `Bearer ${token()}` },
+      cache: 'no-store',
+    });
     if (!res.ok) return;
     const data = await res.json();
     // The backend returns `bookmarks` as an array of ROOT folders (Bookmarks Bar,
@@ -64,6 +71,7 @@ export async function check(url) {
   try {
     const res = await fetch(`${API}/bookmarks/check?url=${encodeURIComponent(url)}`, {
       headers: { Authorization: `Bearer ${token()}` },
+      cache: 'no-store',
     });
     if (!res.ok) return { bookmarked: false, bookmark: null };
     return await res.json();
@@ -124,6 +132,7 @@ export async function search(q) {
   try {
     const res = await fetch(`${API}/bookmarks/search?q=${encodeURIComponent(q)}`, {
       headers: { Authorization: `Bearer ${token()}` },
+      cache: 'no-store',
     });
     if (!res.ok) return [];
     const data = await res.json();
