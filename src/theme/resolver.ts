@@ -22,3 +22,17 @@ export function resolveInitialTheme(
 export function buildThemeAdditionalArg(theme: ResolvedTheme): string {
   return `--tandem-theme=${theme}`;
 }
+
+export type NativeThemeSource = 'system' | 'light' | 'dark';
+
+/**
+ * Maps a theme setting to Electron's `nativeTheme.themeSource`.
+ * Used to sync the native chrome (traffic lights, form controls) with the
+ * user's configured theme. `system` means Electron follows the OS preference.
+ */
+export function toNativeThemeSource(setting: ThemeSetting): NativeThemeSource {
+  if (setting === 'light') return 'light';
+  if (setting === 'dark') return 'dark';
+  if (setting === 'system') return 'system';
+  return 'system';
+}

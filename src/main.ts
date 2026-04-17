@@ -29,7 +29,6 @@ app.commandLine.appendSwitch('enable-precise-memory-info');
 //   preventing Google auth cookies during youtube.com → accounts.google.com redirects
 app.commandLine.appendSwitch('disable-features',
   'WebContentsForceDark,ThirdPartyStoragePartitioning,TrackingProtection3pcd');
-nativeTheme.themeSource = 'system';
 import path from 'path';
 import { TandemAPI } from './api/server';
 import { StealthManager } from './stealth/manager';
@@ -45,7 +44,7 @@ import { IpcChannels } from './shared/ipc-channels';
 import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 import { isGoogleAuthUrl, shouldSkipStealth, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
 import { readConfigFileSync } from './config/io';
-import { resolveInitialTheme, buildThemeAdditionalArg, type ResolvedTheme } from './theme/resolver';
+import { resolveInitialTheme, buildThemeAdditionalArg, toNativeThemeSource, type ResolvedTheme } from './theme/resolver';
 
 const log = createLogger('Main');
 
@@ -471,8 +470,9 @@ async function createWindow(): Promise<BrowserWindow> {
   try {
     const cfg = readConfigFileSync();
     const setting = cfg?.appearance?.theme ?? 'dark';
+    nativeTheme.themeSource = toNativeThemeSource(setting);
     initialTheme = resolveInitialTheme(setting, nativeTheme);
-    log.info(`[Theme] Pre-paint resolved theme: ${initialTheme} (setting=${setting})`);
+    log.info(`[Theme] Pre-paint resolved theme: ${initialTheme} (setting=${setting}, nativeSource=${nativeTheme.themeSource})`);
   } catch (err) {
     log.warn('[Theme] Could not resolve initial theme, defaulting to dark', err);
   }
@@ -521,6 +521,18 @@ async function startAPI(win: BrowserWindow): Promise<void> {
     canUseWindow,
     log,
   });
+
+  // Keep nativeTheme.themeSource in sync with user config — so macOS traffic
+  // lights, titlebar, and form controls update live when the user changes
+  // theme in settings without requiring a restart.
+  runtime.configManager.onChange((_config, changed) => {
+    const newTheme = changed?.appearance?.theme;
+    if (newTheme === 'dark' || newTheme === 'light' || newTheme === 'system') {
+      nativeTheme.themeSource = toNativeThemeSource(newTheme);
+      log.info(`[Theme] nativeTheme.themeSource synced to '${nativeTheme.themeSource}' after config change`);
+    }
+  });
+
   const registry = createManagerRegistry(runtime);
   api = new TandemAPI({ win, port: API_PORT, registry });
   await api.start();
