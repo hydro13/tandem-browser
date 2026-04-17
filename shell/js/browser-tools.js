@@ -174,32 +174,36 @@
     const bookmarksBar = document.getElementById('bookmarks-bar');
     let bookmarksBarVisible = true;
 
-    const bmToken = () => window.__TANDEM_TOKEN__ || '';
+    // Bridge to the shared bookmarks store (shell/js/bookmarks-store.js). It's an
+    // ES module and browser-tools is a classic script, so we access it through the
+    // window global. The store module dispatches 'tandem:bookmarks-store-ready'
+    // once available — used to defer subscribe() past the module's load.
+    const getStore = () => window.__TANDEM_BOOKMARKS_STORE__;
+    function whenStoreReady(fn) {
+      const s = getStore();
+      if (s) { fn(s); return; }
+      window.addEventListener('tandem:bookmarks-store-ready', () => fn(getStore()), { once: true });
+    }
 
     async function updateBookmarkStar() {
       const entry = getActiveEntry();
       if (!entry) return;
-      try {
-        const url = entry.webview.getURL();
-        if (!url || url.startsWith('file://') || url === 'about:blank') {
-          bookmarkStar.textContent = '☆';
-          bookmarkStar.classList.remove('bookmarked');
-          return;
-        }
-        const resp = await fetch(`http://localhost:8765/bookmarks/check?url=${encodeURIComponent(url)}`, {
-          headers: { Authorization: `Bearer ${bmToken()}` }
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.bookmarked) {
-            bookmarkStar.textContent = '★';
-            bookmarkStar.classList.add('bookmarked');
-          } else {
-            bookmarkStar.textContent = '☆';
-            bookmarkStar.classList.remove('bookmarked');
-          }
-        }
-      } catch { /* API not ready */ }
+      const url = entry.webview.getURL();
+      if (!url || url.startsWith('file://') || url === 'about:blank') {
+        bookmarkStar.textContent = '☆';
+        bookmarkStar.classList.remove('bookmarked');
+        return;
+      }
+      const store = getStore();
+      if (!store) return;
+      const { bookmarked } = await store.check(url);
+      if (bookmarked) {
+        bookmarkStar.textContent = '★';
+        bookmarkStar.classList.add('bookmarked');
+      } else {
+        bookmarkStar.textContent = '☆';
+        bookmarkStar.classList.remove('bookmarked');
+      }
     }
 
     const bmPopup = document.getElementById('bookmark-popup');
@@ -211,33 +215,30 @@
     let bmPopupState = { open: false, bookmarkId: null, url: null };
 
     async function loadFolderOptions() {
-      try {
-        const res = await fetch('http://localhost:8765/bookmarks', {
-          headers: { Authorization: `Bearer ${bmToken()}` }
-        });
-        const data = await res.json();
-        const root = data.bookmarks?.[0];
-        bmPopupFolder.innerHTML = '';
-        const rootOpt = document.createElement('option');
-        rootOpt.value = root?.id || '';
-        rootOpt.textContent = 'Bookmarks Bar';
-        bmPopupFolder.appendChild(rootOpt);
+      const store = getStore();
+      if (!store) return;
+      if (!store.isLoaded()) await store.load();
+      const root = store.getTree();
+      bmPopupFolder.innerHTML = '';
+      const rootOpt = document.createElement('option');
+      rootOpt.value = root?.id || '';
+      rootOpt.textContent = 'Bookmarks Bar';
+      bmPopupFolder.appendChild(rootOpt);
 
-        function addFolders(children, depth) {
-          if (!children) return;
-          for (const item of children) {
-            if (item.type === 'folder') {
-              const opt = document.createElement('option');
-              opt.value = item.id;
-              opt.textContent = '\u00A0\u00A0'.repeat(depth) + item.name;
-              bmPopupFolder.appendChild(opt);
-              addFolders(item.children, depth + 1);
-            }
+      function addFolders(children, depth) {
+        if (!children) return;
+        for (const item of children) {
+          if (item.type === 'folder') {
+            const opt = document.createElement('option');
+            opt.value = item.id;
+            opt.textContent = '\u00A0\u00A0'.repeat(depth) + item.name;
+            bmPopupFolder.appendChild(opt);
+            addFolders(item.children, depth + 1);
           }
         }
+      }
 
-        addFolders(root?.children, 1);
-      } catch { /* ignore */ }
+      addFolders(root?.children, 1);
     }
 
     function positionPopup() {
@@ -257,15 +258,11 @@
       await loadFolderOptions();
 
       let existingBookmark = null;
-      try {
-        const resp = await fetch(`http://localhost:8765/bookmarks/check?url=${encodeURIComponent(url)}`, {
-          headers: { Authorization: `Bearer ${bmToken()}` }
-        });
-        if (resp.ok) {
-          const data = await resp.json();
-          if (data.bookmarked && data.bookmark) existingBookmark = data.bookmark;
-        }
-      } catch { /* ignore */ }
+      const store = getStore();
+      if (store) {
+        const { bookmarked, bookmark } = await store.check(url);
+        if (bookmarked && bookmark) existingBookmark = bookmark;
+      }
 
       bmPopupName.value = existingBookmark ? existingBookmark.name : title;
       bmPopupState.bookmarkId = existingBookmark?.id || null;
@@ -294,43 +291,37 @@
       const name = bmPopupName.value.trim();
       const parentId = bmPopupFolder.value;
       if (!name) return;
+      const store = getStore();
+      if (!store) return;
       try {
         if (bmPopupState.bookmarkId) {
-          await fetch('http://localhost:8765/bookmarks/update', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bmToken()}` },
-            body: JSON.stringify({ id: bmPopupState.bookmarkId, name, url: bmPopupState.url }),
-          });
-          await fetch('http://localhost:8765/bookmarks/move', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bmToken()}` },
-            body: JSON.stringify({ id: bmPopupState.bookmarkId, parentId }),
-          });
+          await store.update({ id: bmPopupState.bookmarkId, name, url: bmPopupState.url });
+          await store.move({ id: bmPopupState.bookmarkId, parentId });
         } else {
-          await fetch('http://localhost:8765/bookmarks/add', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bmToken()}` },
-            body: JSON.stringify({ name, url: bmPopupState.url, parentId }),
-          });
+          await store.add({ name, url: bmPopupState.url, parentId });
         }
         closeBookmarkPopup();
-        updateBookmarkStar();
-        loadBookmarksBar();
       } catch { /* ignore */ }
     });
 
     bmPopupDelete.addEventListener('click', async () => {
       if (!bmPopupState.bookmarkId) return;
+      const store = getStore();
+      if (!store) return;
       try {
-        await fetch('http://localhost:8765/bookmarks/remove', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${bmToken()}` },
-          body: JSON.stringify({ id: bmPopupState.bookmarkId }),
-        });
+        await store.remove(bmPopupState.bookmarkId);
         closeBookmarkPopup();
-        updateBookmarkStar();
-        loadBookmarksBar();
       } catch { /* ignore */ }
+    });
+
+    // Single source of truth: every bookmark mutation (star popup, sidebar panel,
+    // future surfaces) goes through the store, and the store notifies all
+    // subscribers. This keeps the top bar + star in sync without manual events.
+    whenStoreReady((store) => {
+      store.subscribe(() => {
+        updateBookmarkStar();
+        renderBookmarksBar();
+      });
     });
 
     bmPopupCancel.addEventListener('click', closeBookmarkPopup);
@@ -572,33 +563,41 @@
       if (bookmarksBarVisible && barItems.length > 0) layoutBookmarksBar();
     });
 
+    // Render the bar from whatever's currently in the store. Called by the
+    // store subscription on every mutation, and by loadBookmarksBar() after
+    // an explicit (re)load.
+    function renderBookmarksBar() {
+      if (!bookmarksBarVisible) return;
+      const store = getStore();
+      if (!store) return;
+      barItems = store.getBar();
+      if (barItems.length === 0) {
+        bookmarksBar.classList.remove('visible');
+        return;
+      }
+      layoutBookmarksBar();
+    }
+
+    // Ensure the store is populated, then render. Used for initial boot and
+    // the toggle-visible path. On subsequent mutations the subscription
+    // handles re-render automatically.
     async function loadBookmarksBar() {
       if (!bookmarksBarVisible) return;
-
-      let retries = 3;
-      while (retries > 0) {
-        try {
-          const resp = await fetch('http://localhost:8765/bookmarks', {
-            headers: { Authorization: `Bearer ${bmToken()}` }
-          });
-          if (!resp.ok) {
-            retries--;
-            if (retries > 0) { await new Promise(r => setTimeout(r, 1000)); continue; }
-            return;
-          }
-          const data = await resp.json();
-          barItems = (data.bar || []).slice(0, 30);
-          if (barItems.length === 0) {
-            bookmarksBar.classList.remove('visible');
-            return;
-          }
-          layoutBookmarksBar();
-          break;
-        } catch {
+      const store = getStore();
+      if (!store) return;
+      if (!store.isLoaded()) {
+        // API may not be ready at startup — retry a couple of times.
+        let retries = 3;
+        while (retries > 0 && !store.isLoaded()) {
+          await store.load();
+          if (store.isLoaded()) break;
           retries--;
-          if (retries > 0) { await new Promise(r => setTimeout(r, 1000)); }
+          if (retries > 0) await new Promise(r => setTimeout(r, 1000));
         }
+        // load() notified subscribers, which called renderBookmarksBar().
+        return;
       }
+      renderBookmarksBar();
     }
 
     setTimeout(async () => {

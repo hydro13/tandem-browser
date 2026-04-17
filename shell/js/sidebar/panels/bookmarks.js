@@ -1,23 +1,40 @@
 /**
  * Sidebar bookmarks panel — list, folders, add/edit/delete, search, breadcrumbs.
  *
+ * All bookmark I/O goes through the shared bookmarks-store; this module is a
+ * pure view over store.getTree() + local navigation state. Mutations call
+ * store.add/remove/update/addFolder and the store notifies all subscribers,
+ * keeping this panel and the top bookmarks bar in sync automatically.
+ *
  * Loaded from: shell/js/sidebar/index.js (via activateItem when 'bookmarks' is selected)
  * window exports: none
  */
 
-import { getToken } from '../config.js';
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
 import { getFaviconUrl } from '../util.js';
+import * as bookmarksStore from '../../bookmarks-store.js';
 
 // === BOOKMARKS PANEL MODULE ===
 export const BOOKMARK_PANEL_IDS = ['bookmarks'];
 
+// Local view state. The tree itself lives in the store — we only track where
+// the user is navigated and whether they're in search mode.
 const bmState = {
-  all: null,         // full bookmark tree from API
-  currentFolder: null, // current folder node
-  path: [],          // breadcrumb trail [{id, name}]
+  currentFolderId: null, // null = at root
+  path: [],              // breadcrumb trail [{id, name}]
   searchMode: false,
 };
+
+// Re-render the panel whenever the store changes (deletes/adds from any
+// surface, including the top bookmarks bar). No-op when the panel isn't
+// mounted; loadBookmarkPanel() always reads fresh data on open anyway.
+bookmarksStore.subscribe(() => {
+  if (!document.getElementById('bm-list')) return;
+  if (bmState.searchMode) return; // leave active search results alone
+  reNavigateToPath();
+  refreshBmList();
+  renderBmBreadcrumb();
+});
 
 function folderIcon() {
   return `<svg viewBox="0 0 20 20" fill="currentColor" style="color:#aaa"><path d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>`;
@@ -75,17 +92,38 @@ function renderBmBreadcrumb() {
   }).reverse().join('');
 }
 
-function bmNavigateFolder(node) {
-  if (!node) { bmState.currentFolder = null; bmState.path = []; }
-  else bmState.currentFolder = node;
-  refreshBmList();
-  renderBmBreadcrumb();
+// Resolve the currently-navigated folder node in the (possibly just-refreshed)
+// tree. Returns the root's children list if path is empty, or the matching
+// folder's children if the path still resolves; trims the path otherwise.
+function currentItems() {
+  const tree = bookmarksStore.getTree();
+  if (!tree) return [];
+  if (bmState.path.length === 0) return tree.children || [];
+  let node = tree;
+  for (const p of bmState.path) {
+    const child = node.children?.find(c => c.id === p.id);
+    if (!child) { bmState.path = []; bmState.currentFolderId = null; return tree.children || []; }
+    node = child;
+  }
+  bmState.currentFolderId = node.id;
+  return node.children || [];
+}
+
+function currentParentId() {
+  // Parent for new items = current folder, falling back to the tree root's id.
+  return bmState.currentFolderId || bookmarksStore.getTree()?.id || '';
+}
+
+// Called by the store subscriber after external mutations: re-resolve the
+// current folder against the refreshed tree (trims broken path segments).
+function reNavigateToPath() {
+  currentItems(); // updates bmState.currentFolderId + trims stale path
 }
 
 function refreshBmList() {
   const listEl = document.getElementById('bm-list');
   if (!listEl) return;
-  const items = bmState.currentFolder ? bmState.currentFolder.children : bmState.all?.children;
+  const items = currentItems();
   listEl.innerHTML = renderBmItems(items);
   // Attach click handlers (ignore clicks on action buttons)
   listEl.querySelectorAll('.bm-item').forEach(el => {
@@ -97,11 +135,12 @@ function refreshBmList() {
         if (url && window.tandem) window.tandem.newTab(url);
       } else if (type === 'folder') {
         const folderId = el.dataset.id;
-        const items = bmState.currentFolder ? bmState.currentFolder.children : bmState.all?.children;
-        const folder = items?.find(i => i.id === folderId);
+        const folder = items.find(i => i.id === folderId);
         if (folder) {
           bmState.path.push({ id: folder.id, name: folder.name });
-          bmNavigateFolder(folder);
+          bmState.currentFolderId = folder.id;
+          refreshBmList();
+          renderBmBreadcrumb();
         }
       }
     });
@@ -126,38 +165,9 @@ function refreshBmList() {
       const item = btn.closest('.bm-item');
       const name = item.dataset.name;
       if (!confirm(`Delete "${name}"?`)) return;
-      try {
-        await fetch('http://localhost:8765/bookmarks/remove', {
-          method: 'DELETE',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ id }),
-        });
-        await reloadBmData();
-      } catch { /* ignore */ }
+      try { await bookmarksStore.remove(id); } catch { /* ignore */ }
     });
   });
-}
-
-async function reloadBmData() {
-  try {
-    const res = await fetch('http://localhost:8765/bookmarks', { headers: { Authorization: `Bearer ${getToken()}` } });
-    const data = await res.json();
-    bmState.all = data.bookmarks?.[0] || { children: [] };
-    // Re-navigate to current folder if possible
-    if (bmState.path.length > 0) {
-      let node = bmState.all;
-      for (const p of bmState.path) {
-        const child = node.children?.find(c => c.id === p.id);
-        if (!child) { bmState.path = []; bmState.currentFolder = null; break; }
-        node = child;
-        bmState.currentFolder = node;
-      }
-    } else {
-      bmState.currentFolder = null;
-    }
-    refreshBmList();
-    renderBmBreadcrumb();
-  } catch { /* ignore */ }
 }
 
 function showBmEditForm(id, name, url, type) {
@@ -186,14 +196,9 @@ function showBmEditForm(id, name, url, type) {
     const newUrl = isFolder ? undefined : item.querySelector('#bm-edit-url')?.value.trim();
     if (!newName) return;
     try {
-      const body = { id, name: newName };
-      if (!isFolder && newUrl) body.url = newUrl;
-      await fetch('http://localhost:8765/bookmarks/update', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-        body: JSON.stringify(body),
-      });
-      await reloadBmData();
+      const payload = { id, name: newName };
+      if (!isFolder && newUrl) payload.url = newUrl;
+      await bookmarksStore.update(payload);
     } catch { /* ignore */ }
   });
 
@@ -236,15 +241,13 @@ export async function loadBookmarkPanel() {
       </div>
     </div>`);
 
-  // Fetch bookmarks if not cached
-  if (!bmState.all) {
-    const res = await fetch('http://localhost:8765/bookmarks', { headers: { Authorization: `Bearer ${getToken()}` } });
-    const data = await res.json();
-    bmState.all = data.bookmarks?.[0] || { children: [] }; // Bookmarks Bar root
-  }
-
-  bmState.currentFolder = null;
+  // Reset navigation to root for each panel open, then refresh from the store.
+  // load() always refetches so we show fresh data — other surfaces may have
+  // mutated the store while this panel was closed.
+  bmState.currentFolderId = null;
   bmState.path = [];
+  bmState.searchMode = false;
+  await bookmarksStore.load();
   refreshBmList();
   renderBmBreadcrumb();
 
@@ -253,15 +256,14 @@ export async function loadBookmarkPanel() {
     const crumb = e.target.closest('.bm-crumb');
     if (!crumb || crumb.classList.contains('active')) return;
     const crumbId = crumb.dataset.crumbId;
-    if (!crumbId) { bmState.path = []; bmNavigateFolder(null); return; }
-    const idx = bmState.path.findIndex(p => p.id === crumbId);
-    if (idx >= 0) { bmState.path = bmState.path.slice(0, idx + 1); }
-    // Navigate to that folder node
-    let node = bmState.all;
-    for (const p of bmState.path) {
-      node = node.children?.find(c => c.id === p.id) || node;
+    if (!crumbId) {
+      bmState.path = [];
+      bmState.currentFolderId = null;
+    } else {
+      const idx = bmState.path.findIndex(p => p.id === crumbId);
+      if (idx >= 0) bmState.path = bmState.path.slice(0, idx + 1);
+      bmState.currentFolderId = crumbId;
     }
-    bmState.currentFolder = node.id === bmState.all.id ? null : node;
     refreshBmList();
     renderBmBreadcrumb();
   });
@@ -279,13 +281,10 @@ export async function loadBookmarkPanel() {
     }
     searchTimer = setTimeout(async () => {
       bmState.searchMode = true;
-      const res = await fetch(`http://localhost:8765/bookmarks/search?q=${encodeURIComponent(q)}`, {
-        headers: { Authorization: `Bearer ${getToken()}` }
-      });
-      const data = await res.json();
+      const results = await bookmarksStore.search(q);
       const listEl = document.getElementById('bm-list');
       const breadEl = document.getElementById('bm-breadcrumb');
-      if (listEl) listEl.innerHTML = renderBmItems(data.results || []);
+      if (listEl) listEl.innerHTML = renderBmItems(results);
       if (breadEl) breadEl.innerHTML = `<span class="bm-crumb active">Search results</span>`;
       // Attach URL click handlers for search results
       listEl?.querySelectorAll('.bm-item.url').forEach(el => {
@@ -320,15 +319,8 @@ export async function loadBookmarkPanel() {
       const name = form.querySelector('#bm-add-name').value.trim();
       const url = form.querySelector('#bm-add-url').value.trim();
       if (!name || !url) return;
-      const parentId = bmState.currentFolder?.id || bmState.all?.id || '';
-      try {
-        await fetch('http://localhost:8765/bookmarks/add', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ name, url, parentId }),
-        });
-        await reloadBmData();
-      } catch { /* ignore */ }
+      try { await bookmarksStore.add({ name, url, parentId: currentParentId() }); }
+      catch { /* ignore */ }
     });
 
     form.querySelector('#bm-add-cancel').addEventListener('click', () => form.remove());
@@ -358,15 +350,8 @@ export async function loadBookmarkPanel() {
     form.querySelector('#bm-addfolder-save').addEventListener('click', async () => {
       const name = form.querySelector('#bm-addfolder-name').value.trim();
       if (!name) return;
-      const parentId = bmState.currentFolder?.id || bmState.all?.id || '';
-      try {
-        await fetch('http://localhost:8765/bookmarks/add-folder', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
-          body: JSON.stringify({ name, parentId }),
-        });
-        await reloadBmData();
-      } catch { /* ignore */ }
+      try { await bookmarksStore.addFolder({ name, parentId: currentParentId() }); }
+      catch { /* ignore */ }
     });
 
     form.querySelector('#bm-addfolder-cancel').addEventListener('click', () => form.remove());
