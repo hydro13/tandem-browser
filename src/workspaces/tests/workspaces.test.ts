@@ -228,8 +228,8 @@ describe('WorkspaceManager', () => {
       workspaces.get(kees.id)!.tabIds = [200];
 
       // Tracked/active state reflects "user currently viewing tab 200 in kees".
-      let tracked: number[] = [100, 200];
-      let activeWcId: number | null = 200;
+      const tracked: number[] = [100, 200];
+      const activeWcId: number | null = 200;
       wm.setTabStateResolvers({
         listTrackedTabIds: () => tracked,
         getActiveTabId: () => activeWcId,
