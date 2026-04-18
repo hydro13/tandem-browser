@@ -598,6 +598,27 @@
         });
       }
 
+      // Mirror: when the approval is resolved via ANY other path (Activity
+      // panel approve/reject, API route auto-resolve, etc.), the inline
+      // Chat card for the same requestId must dismiss itself so the two
+      // Wingman surfaces stay in sync. Without this, a user rejecting via
+      // Activity still saw the "Wingman wants to perform an action" card
+      // in Chat until they clicked it there too.
+      if (window.tandem && window.tandem.onApprovalResponse) {
+        window.tandem.onApprovalResponse((data) => {
+          if (!approvalContainer || !data || !data.requestId) return;
+          const card = approvalContainer.querySelector(
+            `.approval-card[data-request-id="${data.requestId}"]`,
+          );
+          if (card) {
+            card.remove();
+            if (approvalContainer.children.length === 0) {
+              approvalContainer.style.display = 'none';
+            }
+          }
+        });
+      }
+
       function showApprovalCard(data) {
         if (!approvalContainer) return;
         approvalContainer.style.display = 'block';

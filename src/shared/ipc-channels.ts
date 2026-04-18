@@ -117,6 +117,10 @@ export const IpcChannels = {
   // Agents / Tasks
   EMERGENCY_STOP: 'emergency-stop',
   APPROVAL_REQUEST: 'approval-request',
+  // Mirror of APPROVAL_REQUEST: fired when ANY path resolves the approval
+  // (Wingman Chat card, Activity panel, API route, etc.) so every open UI
+  // card for the same requestId can dismiss itself in sync.
+  APPROVAL_RESPONSE: 'approval-response',
   TASK_UPDATED: 'task-updated',
   HANDOFF_UPDATED: 'handoff-updated',
 
