@@ -232,7 +232,7 @@ describe('TabManager', () => {
       expect(tm.getActiveTab()?.id).toBe(tabA.id);
     });
 
-    it('falls back to any remaining tab when the closed tab was the last in its workspace', async () => {
+    it('falls back to any remaining tab when the closed tab was the last in its workspace AND no workspace-emptied handler is set', async () => {
       const tabKees = await tm.openTab('https://kees.com');
       const tabDefault = await tm.openTab('https://default.com'); // active
 
@@ -244,7 +244,87 @@ describe('TabManager', () => {
       await tm.closeTab(tabDefault.id);
 
       // Default is empty after closing tabDefault — falling back to kees is
-      // fine (user has no other choice).
+      // fine when no handler is wired (legacy behavior preserved for tests
+      // and edge cases where the closed workspace is unknown).
+      expect(tm.getActiveTab()?.id).toBe(tabKees.id);
+    });
+
+    // Repro for Bug 2 fix: closing the last tab in a non-default workspace
+    // used to silently sweep the user to another workspace. With a
+    // workspace-emptied handler wired, the handler opens a replacement tab
+    // in the emptied workspace and close focuses that instead.
+    it('invokes the workspace-emptied handler and focuses its returned tab when the closed workspace has no other tabs', async () => {
+      const tabKees = await tm.openTab('https://kees.com');
+      const tabDefault = await tm.openTab('https://default.com'); // active
+
+      tm.setWorkspaceIdResolver((wcId) => {
+        if (wcId === tabKees.webContentsId) return 'kees';
+        return 'default';
+      });
+
+      const handlerCalls: string[] = [];
+      tm.setWorkspaceEmptiedHandler(async (workspaceId) => {
+        handlerCalls.push(workspaceId);
+        // Simulate the handler creating a fresh new-tab in the emptied ws.
+        const replacement = await tm.openTab('file:///newtab.html', undefined, 'user', 'persist:tandem', false);
+        return replacement;
+      });
+
+      await tm.closeTab(tabDefault.id);
+
+      expect(handlerCalls).toEqual(['default']);
+      // Focus lands on the replacement tab, NOT on kees
+      const active = tm.getActiveTab();
+      expect(active?.id).not.toBe(tabKees.id);
+      expect(active?.url).toBe('file:///newtab.html');
+    });
+
+    it('does NOT invoke the workspace-emptied handler when the closed workspace still has other tabs', async () => {
+      const tabA = await tm.openTab('https://default-a.com');
+      const tabB = await tm.openTab('https://default-b.com'); // active, same ws
+
+      tm.setWorkspaceIdResolver(() => 'default');
+
+      const handler = vi.fn(async () => null);
+      tm.setWorkspaceEmptiedHandler(handler);
+
+      await tm.closeTab(tabB.id);
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(tm.getActiveTab()?.id).toBe(tabA.id);
+    });
+
+    it('falls back to any remaining tab if the workspace-emptied handler returns null', async () => {
+      const tabKees = await tm.openTab('https://kees.com');
+      const tabDefault = await tm.openTab('https://default.com'); // active
+
+      tm.setWorkspaceIdResolver((wcId) => {
+        if (wcId === tabKees.webContentsId) return 'kees';
+        return 'default';
+      });
+
+      tm.setWorkspaceEmptiedHandler(async () => null);
+
+      await tm.closeTab(tabDefault.id);
+
+      // Handler punted — legacy behavior kicks in.
+      expect(tm.getActiveTab()?.id).toBe(tabKees.id);
+    });
+
+    it('falls back to any remaining tab if the workspace-emptied handler throws', async () => {
+      const tabKees = await tm.openTab('https://kees.com');
+      const tabDefault = await tm.openTab('https://default.com'); // active
+
+      tm.setWorkspaceIdResolver((wcId) => {
+        if (wcId === tabKees.webContentsId) return 'kees';
+        return 'default';
+      });
+
+      tm.setWorkspaceEmptiedHandler(async () => { throw new Error('boom'); });
+
+      await tm.closeTab(tabDefault.id);
+
+      // Handler errored out — still land on a live tab, don't leave blank.
       expect(tm.getActiveTab()?.id).toBe(tabKees.id);
     });
 

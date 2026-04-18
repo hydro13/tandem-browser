@@ -66,6 +66,7 @@ export class TabManager {
   private sessionTimer: ReturnType<typeof setTimeout> | null = null;
   private workspaceIdResolver: ((webContentsId: number) => string | null) | null = null;
   private activeTabChangedHandler: ((tab: Tab | null) => void | Promise<void>) | null = null;
+  private workspaceEmptiedHandler: ((workspaceId: string) => Promise<Tab | null>) | null = null;
 
   // === 2. Constructor (BrowserWindow variant) ===
 
@@ -91,6 +92,26 @@ export class TabManager {
    */
   setWorkspaceIdResolver(resolver: ((webContentsId: number) => string | null) | null): void {
     this.workspaceIdResolver = resolver;
+  }
+
+  /**
+   * Set the callback invoked when closing a tab would leave its workspace
+   * with zero tabs. The handler is expected to open a fresh tab (typically
+   * Tandem's newtab page) and assign it to the given workspace, then
+   * return the created Tab. If it returns null, `closeTab` falls back to
+   * picking any remaining tab from another workspace, preserving prior
+   * behavior.
+   *
+   * Without this handler, closing the last tab in a non-default workspace
+   * silently transports the user to whichever workspace owns the fallback
+   * tab — the Bug-2 pattern observed during live dogfooding on 2026-04-18.
+   *
+   * @param handler - async function that creates and assigns a replacement
+   * tab to the emptied workspace, or returns null to defer to the default
+   * fallback
+   */
+  setWorkspaceEmptiedHandler(handler: ((workspaceId: string) => Promise<Tab | null>) | null): void {
+    this.workspaceEmptiedHandler = handler;
   }
 
   /** Wire a callback that runs after the active tab changes. */
@@ -285,10 +306,42 @@ export class TabManager {
 
     this.tabs.delete(tabId);
 
-    // If we closed the active tab, focus another
+    // If we closed the active tab, focus another.
+    //
+    // Successor selection rules (in order):
+    //   1. Prefer a tab in the SAME workspace as the closed tab. Prevents
+    //      silent cross-workspace focus swings during close.
+    //   2. If the closed workspace has no remaining tabs, delegate to the
+    //      workspace-emptied handler. The handler is expected to open a
+    //      fresh newtab.html in that workspace so the workspace itself
+    //      stays selected. This is the fix for Bug 2 (empty workspace
+    //      silently falls through to another workspace).
+    //   3. If no handler is wired, or it returns null, fall back to any
+    //      remaining tab anywhere. Preserves prior behavior for tests
+    //      and for edge cases where the closed workspace is unknown.
     if (this.activeTabId === tabId) {
       this.activeTabId = null;
-      const successor = this.pickCloseSuccessor(closedWorkspaceId);
+      let successor: Tab | null = null;
+
+      if (closedWorkspaceId) {
+        successor = this.pickSameWorkspaceSuccessor(closedWorkspaceId);
+      }
+
+      if (!successor && closedWorkspaceId && this.workspaceEmptiedHandler) {
+        try {
+          successor = await this.workspaceEmptiedHandler(closedWorkspaceId);
+        } catch (e) {
+          log.warn(
+            `workspaceEmptiedHandler failed for ${closedWorkspaceId}:`,
+            e instanceof Error ? e.message : String(e),
+          );
+        }
+      }
+
+      if (!successor) {
+        successor = this.pickAnyRemainingSuccessor();
+      }
+
       if (successor) {
         await this.focusTab(successor.id);
       } else {
@@ -580,30 +633,33 @@ export class TabManager {
   }
 
   /**
-   * Pick the next tab to focus after closing the active tab.
+   * Pick the most-recently-inserted remaining tab in the same workspace
+   * as the closed tab, or null if that workspace has no other tabs.
    *
-   * Prefers a tab in the same workspace as the closed tab so closing a new
-   * tab doesn't silently move the user to another workspace (the
-   * activeTabChanged reconcile runs followFocusedTab, which would otherwise
-   * switch activeId to whichever workspace the successor belongs to).
-   *
-   * If the closed tab's workspace is unknown or empty, fall back to the
-   * most-recently-inserted remaining tab from any workspace so the user
-   * isn't left on a blank screen.
+   * Same-workspace preference prevents silent cross-workspace focus
+   * swings: closing a new tab in workspace X should keep focus in X
+   * rather than reconciling activeId to whichever workspace owns the
+   * alphabetically-last remaining tab.
    */
-  private pickCloseSuccessor(closedWorkspaceId: string | null): Tab | null {
+  private pickSameWorkspaceSuccessor(closedWorkspaceId: string): Tab | null {
+    if (!this.workspaceIdResolver) return null;
+    const remaining = Array.from(this.tabs.values());
+    const sameWorkspace = remaining.filter(
+      (t) => this.workspaceIdResolver?.(t.webContentsId) === closedWorkspaceId,
+    );
+    if (sameWorkspace.length === 0) return null;
+    return sameWorkspace[sameWorkspace.length - 1];
+  }
+
+  /**
+   * Fallback successor picker used when neither the same-workspace
+   * preference nor the workspace-emptied handler produces a tab.
+   * Returns the most-recently-inserted remaining tab from any workspace,
+   * or null if no tabs remain anywhere.
+   */
+  private pickAnyRemainingSuccessor(): Tab | null {
     const remaining = Array.from(this.tabs.values());
     if (remaining.length === 0) return null;
-
-    if (closedWorkspaceId && this.workspaceIdResolver) {
-      const sameWorkspace = remaining.filter(
-        (t) => this.workspaceIdResolver?.(t.webContentsId) === closedWorkspaceId,
-      );
-      if (sameWorkspace.length > 0) {
-        return sameWorkspace[sameWorkspace.length - 1];
-      }
-    }
-
     return remaining[remaining.length - 1];
   }
 
