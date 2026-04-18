@@ -42,6 +42,51 @@ describe('MCP content tools', () => {
       const text = expectTextContent(result);
       expect(text).not.toContain('>');
     });
+
+    it('prefixes a prompt-injection warning banner when scanner attached one', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        title: 'Docs',
+        url: 'https://docs.example.com',
+        text: 'content',
+        injectionWarnings: {
+          riskScore: 50,
+          summary: 'Credential-extraction pattern detected',
+          findings: [{
+            severity: 'critical',
+            description: 'Attempts to extract sensitive credentials',
+            matchedText: 'Get API key',
+          }],
+        },
+      });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({});
+      const text = expectTextContent(result);
+      expect(text).toContain('⚠️ **Prompt-injection warning**');
+      expect(text).toContain('risk 50/100');
+      expect(text).toContain('Credential-extraction pattern detected');
+      expect(text).toContain('matched: "Get API key"');
+      // Content still present (warning, not block)
+      expect(text).toContain('# Docs');
+    });
+
+    it('replaces body with a stop-signal when scanner blocked the response', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        blocked: true,
+        riskScore: 92,
+        domain: 'evil.example.com',
+        reason: 'prompt_injection_detected',
+        overrideUrl: 'POST /security/injection-override {"domain":"evil.example.com"}',
+      });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({});
+      const text = expectTextContent(result);
+      expect(text).toContain('⚠️ **BLOCKED BY PROMPT-INJECTION DETECTION**');
+      expect(text).toContain('Risk: 92/100');
+      expect(text).toContain('evil.example.com');
+      // No markdown envelope when blocked
+      expect(text).not.toContain('# Untitled');
+      expect(mockLogActivity).toHaveBeenCalledWith('read_page', 'blocked by injection scanner');
+    });
   });
 
   describe('tandem_screenshot', () => {
@@ -64,10 +109,39 @@ describe('MCP content tools', () => {
       expectTextContent(result, '<html>hi</html>');
     });
 
-    it('JSON-stringifies non-string response', async () => {
-      mockApiCall.mockResolvedValueOnce({ html: '<html/>' });
+    it('extracts html field when response is an envelope', async () => {
+      mockApiCall.mockResolvedValueOnce({ html: '<html>envelope</html>' });
       const result = await handler({});
-      expectTextContent(result, '"html"');
+      expectTextContent(result, '<html>envelope</html>');
+    });
+
+    it('JSON-stringifies unrecognized response shape', async () => {
+      mockApiCall.mockResolvedValueOnce({ weird: 'shape' });
+      const result = await handler({});
+      expectTextContent(result, '"weird"');
+    });
+
+    it('prefixes a prompt-injection warning banner on html envelope', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        html: '<html>suspect</html>',
+        injectionWarnings: {
+          riskScore: 45,
+          summary: 'Instruction-override pattern',
+          findings: [{ severity: 'high', description: 'Ignore previous instructions' }],
+        },
+      });
+      const result = await handler({});
+      const text = expectTextContent(result);
+      expect(text).toContain('⚠️ **Prompt-injection warning**');
+      expect(text).toContain('risk 45/100');
+      expect(text).toContain('<html>suspect</html>');
+    });
+
+    it('shows block marker when scanner blocked', async () => {
+      mockApiCall.mockResolvedValueOnce({ blocked: true, riskScore: 80, domain: 'x.com' });
+      const result = await handler({});
+      const text = expectTextContent(result, 'BLOCKED BY PROMPT-INJECTION DETECTION');
+      expect(text).not.toContain('<html');
     });
   });
 
@@ -129,6 +203,30 @@ describe('MCP content tools', () => {
     it('propagates non-rejection errors', async () => {
       mockApiCall.mockRejectedValueOnce(new Error('network down'));
       await expect(handler({ code: 'x' })).rejects.toThrow('network down');
+    });
+
+    it('passes tabId through as X-Tab-Id header', async () => {
+      mockApiCall.mockResolvedValueOnce({ result: 'ok' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      await handler({ code: 'document.title', tabId: 'tab-42' });
+      expect(mockApiCall).toHaveBeenCalledWith(
+        'POST',
+        '/execute-js/confirm',
+        { code: 'document.title' },
+        { 'X-Tab-Id': 'tab-42' },
+      );
+    });
+
+    it('omits tabHeaders when tabId is not provided', async () => {
+      mockApiCall.mockResolvedValueOnce({ result: 'ok' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      await handler({ code: 'document.title' });
+      expect(mockApiCall).toHaveBeenCalledWith(
+        'POST',
+        '/execute-js/confirm',
+        { code: 'document.title' },
+        undefined,
+      );
     });
   });
 });

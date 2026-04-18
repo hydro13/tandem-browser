@@ -351,6 +351,32 @@ describe('Agent Routes', () => {
       expect(res.status).toBe(400);
       expect(res.body.error).toBe('No active tab');
     });
+
+    it('targets a specific tab when X-Tab-Id header is provided', async () => {
+      // Arrange: tab list contains two tabs, the targeted one has a distinct wcId
+      vi.mocked(ctx.tabManager.listTabs).mockReturnValue([
+        { id: 'tab-1', webContentsId: 100, url: 'https://a.com', title: 'A', active: true, source: 'user', partition: 'persist:tandem' } as any,
+        { id: 'tab-7', webContentsId: 707, url: 'https://b.com', title: 'B', active: false, source: 'user', partition: 'persist:tandem' } as any,
+      ]);
+      const { webContents } = await import('electron');
+      const targetWC = { executeJavaScript: vi.fn().mockResolvedValue('from-tab-7'), id: 707 } as any;
+      vi.mocked(webContents.fromId).mockImplementation((id: number) => (id === 707 ? targetWC : null));
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
+
+      // Act
+      const res = await request(app)
+        .post('/execute-js/confirm')
+        .set('X-Tab-Id', 'tab-7')
+        .send({ code: 'document.title' });
+
+      // Assert
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, result: 'from-tab-7' });
+      expect(targetWC.executeJavaScript).toHaveBeenCalledWith('document.title');
+      // The default active WC should NOT have been used
+      const activeWC = await (ctx.tabManager.getActiveWebContents as any)();
+      expect(activeWC.executeJavaScript).not.toHaveBeenCalled();
+    });
   });
 
   // ─── GET /tasks/check-approval ──────────────────
