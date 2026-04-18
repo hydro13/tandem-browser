@@ -58,6 +58,16 @@
     }
 
     function focusRendererTab(tabId) {
+      // Defensive DOM sweep: clear `.active` from every tab element in the
+      // tab-bar before applying the new active. The `tabs` Map iteration
+      // below only covers tabs known to this module's in-memory registry;
+      // the sweep catches any stragglers that ended up with a stale
+      // `.active` class via another code path (workspace switch, unmount
+      // race). Guarantees at most one `.active` in the tab-bar DOM.
+      // See docs/superpowers/tandem-bugs-to-fix.md (Bug 1).
+      document.querySelectorAll('#tab-bar .tab.active')
+        .forEach(el => el.classList.remove('active'));
+
       for (const [id, entry] of tabs) {
         entry.webview.classList.toggle('active', id === tabId);
         entry.tabEl.classList.toggle('active', id === tabId);
