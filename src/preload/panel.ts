@@ -75,6 +75,15 @@ export function createPanelApi() {
       ipcRenderer.on(IpcChannels.APPROVAL_RESPONSE, handler);
       return () => ipcRenderer.removeListener(IpcChannels.APPROVAL_RESPONSE, handler);
     },
+    /**
+     * Ask the main process to re-fire a Wingman native-OS notification
+     * (which plays the system sound on macOS) for an existing
+     * unacknowledged handoff. Used on escalation timeouts and on
+     * user-return. Fire-and-forget.
+     */
+    requestWingmanReAlert: (payload: { title: string; body: string }) => {
+      ipcRenderer.send(IpcChannels.WINGMAN_RE_ALERT, payload);
+    },
     onHandoffUpdated: (callback: (data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => callback(data);
       ipcRenderer.on(IpcChannels.HANDOFF_UPDATED, handler);

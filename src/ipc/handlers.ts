@@ -29,6 +29,7 @@ import { tandemDir } from '../utils/paths';
 import { createLogger } from '../utils/logger';
 import { IpcChannels } from '../shared/ipc-channels';
 import { buildOwnershipContextForTab, buildOwnershipContextForTabId } from '../tabs/runtime-context';
+import { wingmanAlert } from '../notifications/alert';
 
 const log = createLogger('IpcHandlers');
 
@@ -90,6 +91,7 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IpcChannels.WINDOW_CLOSE,
     IpcChannels.SHOW_SCREENSHOT_MENU,
     IpcChannels.RECORDING_CHUNK,
+    IpcChannels.WINGMAN_RE_ALERT,
   ];
   for (const channel of ipcChannels) {
     ipcMain.removeAllListeners(channel);
@@ -125,6 +127,19 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   for (const handler of ipcHandlers) {
     try { ipcMain.removeHandler(handler); } catch { /* handler may not exist yet */ }
   }
+
+  // ═══ Wingman re-alert — escalation + user-return ping ═══
+  // Shell calls this when an unacknowledged handoff escalates past its
+  // attention timer, or when the user returns to Tandem after being away
+  // long enough that they almost certainly didn't see the first alert.
+  // Re-emits the native-OS notification (which plays the system sound on
+  // macOS). Deliberately loose — any renderer on the shared preload can
+  // send this; the trust model covers "team-initiated" calls.
+  ipcMain.on(IpcChannels.WINGMAN_RE_ALERT, (_event, data: { title?: unknown; body?: unknown }) => {
+    const title = typeof data?.title === 'string' && data.title.trim() ? data.title : 'Wingman needs you';
+    const body = typeof data?.body === 'string' ? data.body : '';
+    wingmanAlert(title, body);
+  });
 
   // Listen for tab metadata updates from renderer
   ipcMain.on(IpcChannels.TAB_UPDATE, (_event, data: { tabId: string; title?: string; url?: string; favicon?: string }) => {

@@ -46,8 +46,38 @@
     const openHandoffs = new Map();
     const unacknowledgedHandoffs = new Set();
     const HANDOFF_ATTENTION_ESCALATION_MS = 12_000;
+    // "User was away" threshold: how long the Tandem window has to be out
+    // of focus before a focus-return should re-alert. Short blurs (e.g.
+    // Cmd-Tab to clipboard, quick system menu) shouldn't trigger pings.
+    const USER_RETURN_AWAY_MS = 10_000;
+    // Rate-limit re-alerts so escalation + user-return firing close
+    // together don't stack into a double ping.
+    const RE_ALERT_MIN_INTERVAL_MS = 5_000;
     let handoffAttentionEscalationTimer = null;
     let handoffAttentionEscalated = false;
+    let lastReAlertAt = 0;
+    let lastBlurAt = 0;
+
+    function topUnacknowledgedHandoff() {
+      for (const id of unacknowledgedHandoffs) {
+        const handoff = openHandoffs.get(id);
+        if (handoff) return handoff;
+      }
+      return null;
+    }
+
+    function fireHandoffReAlert() {
+      if (!window.tandem || !window.tandem.requestWingmanReAlert) return;
+      const now = Date.now();
+      if (now - lastReAlertAt < RE_ALERT_MIN_INTERVAL_MS) return;
+      const handoff = topUnacknowledgedHandoff();
+      if (!handoff) return;
+      lastReAlertAt = now;
+      window.tandem.requestWingmanReAlert({
+        title: handoff.title || 'Wingman needs you',
+        body: handoff.body || handoff.reason || 'Agent is waiting for input.',
+      });
+    }
 
     function formatHandoffStatus(status) {
       const labels = {
@@ -197,6 +227,7 @@
       if (remaining <= 0) {
         handoffAttentionEscalated = true;
         updateWingmanAttentionUI();
+        fireHandoffReAlert();
         return;
       }
 
@@ -205,9 +236,24 @@
       handoffAttentionEscalationTimer = setTimeout(() => {
         handoffAttentionEscalated = true;
         updateWingmanAttentionUI();
+        fireHandoffReAlert();
         scheduleHandoffAttentionEscalation();
       }, remaining);
     }
+
+    // User-return detection: if the user was away from Tandem long enough
+    // that they almost certainly didn't see the first alert, fire another
+    // one on return. Short blurs don't count (see USER_RETURN_AWAY_MS).
+    window.addEventListener('blur', () => {
+      lastBlurAt = Date.now();
+    });
+    window.addEventListener('focus', () => {
+      const awayMs = lastBlurAt ? Date.now() - lastBlurAt : 0;
+      lastBlurAt = 0;
+      if (awayMs < USER_RETURN_AWAY_MS) return;
+      if (unacknowledgedHandoffs.size === 0) return;
+      fireHandoffReAlert();
+    });
 
     function acknowledgeVisibleHandoffs() {
       for (const handoffId of openHandoffs.keys()) {

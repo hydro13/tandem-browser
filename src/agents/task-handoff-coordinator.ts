@@ -1,5 +1,6 @@
 import type { Handoff, HandoffManager } from '../handoffs/manager';
 import type { TaskManager } from './task-manager';
+import { wingmanAlert } from '../notifications/alert';
 
 function appendHandoffNote(body: string, note: string): string {
   const trimmedBody = body.trim();
@@ -42,12 +43,22 @@ export class TaskHandoffCoordinator {
       tabId: typeof params.tabId === 'string' ? params.tabId : null,
     };
 
+    const isNew = !existing;
     const handoff = existing
       ? this.handoffManager.update(existing.id, payload)
       : this.handoffManager.create(payload);
 
     if (!handoff) {
       return null;
+    }
+
+    // Fire a native-OS notification (which plays the system sound on
+    // macOS) so the user hears the agent stalling for input, even if
+    // they're in a different workspace or away from the keyboard. Only
+    // on the first creation — repeated emits for the same step (e.g.,
+    // a retry) shouldn't spam.
+    if (isNew) {
+      wingmanAlert(handoff.title, handoff.body || handoff.reason);
     }
 
     this.syncHandoffState(handoff);
