@@ -9,6 +9,8 @@ import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { isSafeNavigationUrl } from '../../utils/security';
 import { addInjectionOverride } from '../middleware/injection-scanner';
+import { behaviorCompiler } from '../../behavior/compiler';
+import { behaviorReplay } from '../../behavior/replay';
 import { createRateLimitMiddleware } from '../rate-limit';
 import { getActorContext, normalizeTabSource } from '../../tabs/context';
 import { buildOwnershipContextForTab } from '../../tabs/runtime-context';
@@ -448,6 +450,25 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         }
       }
       res.json({ ok: true, cleared: true });
+    } catch (e) {
+      handleRouteError(res, e);
+    }
+  });
+
+  // Force a fresh compile of the behavioural profile from the current
+  // raw JSONL stream and hand the agent the new numbers immediately.
+  // Useful after a long typing session when the user wants the agent
+  // to incorporate the new rhythm without restarting Tandem.
+  router.post('/behavior/recompile', createRateLimitMiddleware({
+    bucket: 'misc-behavior-recompile',
+    windowMs: 60_000,
+    max: 10,
+    message: 'Too many behavior recompile requests. Retry shortly.',
+  }), (_req: Request, res: Response) => {
+    try {
+      const profile = behaviorCompiler.compile();
+      behaviorReplay.refreshProfile();
+      res.json({ ok: true, profile });
     } catch (e) {
       handleRouteError(res, e);
     }
