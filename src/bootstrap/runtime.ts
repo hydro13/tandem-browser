@@ -90,6 +90,16 @@ function wireTaskManagerEvents(win: BrowserWindow, taskManager: TaskManager, can
       win.webContents.send(IpcChannels.APPROVAL_REQUEST, data);
     }
   });
+  // Broadcast every approval resolution to the shell so any UI surface
+  // showing a card for the same requestId (Wingman Chat, Activity, etc.)
+  // can dismiss or update itself — regardless of which surface actually
+  // triggered the response. Without this, the Chat inline card stayed
+  // visible after the user rejected via the Activity panel.
+  taskManager.on('approval-response', (data: { requestId: string; approved: boolean }) => {
+    if (canUseWindow(win)) {
+      win.webContents.send(IpcChannels.APPROVAL_RESPONSE, data);
+    }
+  });
   taskManager.on('task-updated', (task: Record<string, unknown>) => {
     if (canUseWindow(win)) {
       win.webContents.send(IpcChannels.TASK_UPDATED, task);

@@ -65,6 +65,16 @@ export function createPanelApi() {
       ipcRenderer.on(IpcChannels.APPROVAL_REQUEST, handler);
       return () => ipcRenderer.removeListener(IpcChannels.APPROVAL_REQUEST, handler);
     },
+    /**
+     * Mirror of onApprovalRequest. Fired whenever any path resolves the
+     * approval (Wingman Chat card, Activity panel, API route, etc.) so every
+     * open UI card for the same requestId can dismiss itself in sync.
+     */
+    onApprovalResponse: (callback: (data: { requestId: string; approved: boolean }) => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, data: { requestId: string; approved: boolean }) => callback(data);
+      ipcRenderer.on(IpcChannels.APPROVAL_RESPONSE, handler);
+      return () => ipcRenderer.removeListener(IpcChannels.APPROVAL_RESPONSE, handler);
+    },
     onHandoffUpdated: (callback: (data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => void) => {
       const handler = (_event: Electron.IpcRendererEvent, data: { kind: 'created' | 'updated'; handoff: Record<string, unknown> }) => callback(data);
       ipcRenderer.on(IpcChannels.HANDOFF_UPDATED, handler);
