@@ -163,6 +163,81 @@ describe('misc routes', () => {
   });
 
   // ═══════════════════════════════════════════════
+  // INJECTION OVERRIDE — audit #34 Medium #3
+  // ═══════════════════════════════════════════════
+
+  describe('POST /security/injection-override', () => {
+    it('returns 400 when domain is missing — no approval task created', async () => {
+      const res = await request(app)
+        .post('/security/injection-override')
+        .send({});
+      expect(res.status).toBe(400);
+      expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('shell-initiated call (Origin: file://...) passes through without approval', async () => {
+      const res = await request(app)
+        .post('/security/injection-override')
+        .set('Origin', 'file:///')
+        .send({ domain: 'example.com' });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ ok: true, domain: 'example.com' });
+      expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('shell-initiated call with Origin: null also passes through (Electron edge case)', async () => {
+      const res = await request(app)
+        .post('/security/injection-override')
+        .set('Origin', 'null')
+        .send({ domain: 'example.com' });
+      expect(res.status).toBe(200);
+      expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('agent/MCP call (no Origin) requires approval — approved path', async () => {
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
+      const res = await request(app)
+        .post('/security/injection-override')
+        .send({ domain: 'malicious.example' });
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ ok: true, domain: 'malicious.example' });
+      expect(ctx.taskManager.requestApproval).toHaveBeenCalledTimes(1);
+      expect(ctx.taskManager.createTask).toHaveBeenCalled();
+    });
+
+    it('agent/MCP call (no Origin) — rejected returns 403 and never records the override', async () => {
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(false);
+      const res = await request(app)
+        .post('/security/injection-override')
+        .send({ domain: 'malicious.example' });
+      expect(res.status).toBe(403);
+      expect(res.body.rejected).toBe(true);
+    });
+
+    it('call with a non-shell Origin (e.g. https://some-site) requires approval', async () => {
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
+      const res = await request(app)
+        .post('/security/injection-override')
+        .set('Origin', 'https://attacker.example')
+        .send({ domain: 'malicious.example' });
+      expect(res.status).toBe(200);
+      expect(ctx.taskManager.requestApproval).toHaveBeenCalled();
+    });
+
+    it('approval task created for agent calls has riskLevel high and requiresApproval', async () => {
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
+      await request(app)
+        .post('/security/injection-override')
+        .send({ domain: 'example.com' });
+      expect(ctx.taskManager.createTask).toHaveBeenCalled();
+      const createTaskCall = vi.mocked(ctx.taskManager.createTask).mock.calls[0];
+      const steps = createTaskCall[3] as Array<{ riskLevel: string; requiresApproval: boolean }>;
+      expect(steps[0].riskLevel).toBe('high');
+      expect(steps[0].requiresApproval).toBe(true);
+    });
+  });
+
+  // ═══════════════════════════════════════════════
   // ACTIVE TAB CONTEXT
   // ═══════════════════════════════════════════════
 

@@ -8,6 +8,7 @@ import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { isSafeNavigationUrl } from '../../utils/security';
+import { addInjectionOverride } from '../middleware/injection-scanner';
 import { createRateLimitMiddleware } from '../rate-limit';
 import { getActorContext, normalizeTabSource } from '../../tabs/context';
 import { buildOwnershipContextForTab } from '../../tabs/runtime-context';
@@ -72,15 +73,56 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   });
 
   // ═══ Injection Override ═══
-  router.post('/security/injection-override', (req: Request, res: Response) => {
+  // Audit #34 Medium #3: the injection scanner's 5-minute override is a
+  // security-weakening action — it silences the prompt-injection blocker for
+  // a domain. The *shell* already shows a double-confirmation modal before
+  // calling this route (see src/api/middleware/injection-scanner.ts), so
+  // shell-initiated calls pass through unchanged. Any other caller (MCP
+  // tool, agent HTTP client, extension) must go through an interactive user
+  // approval via taskManager.requestApproval — same pattern as the
+  // guardian-mode gate in #161.
+  //
+  // "Shell-initiated" = Origin header starts with file:// or is "null".
+  // Both correspond to the Electron shell's webContents origin (the
+  // injection-scanner's override script runs inside that context). Node.js
+  // fetch (MCP api-client) does not set Origin, so MCP calls never spoof
+  // their way past this gate. A caller that has the API token AND can set
+  // arbitrary headers is already a trusted team member by definition.
+  router.post('/security/injection-override', async (req: Request, res: Response) => {
     try {
       const { domain } = req.body;
       if (!domain || typeof domain !== 'string') {
         res.status(400).json({ error: 'domain required' });
         return;
       }
-      // Import the override map from the middleware
-      const { addInjectionOverride } = require('../middleware/injection-scanner');
+
+      const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
+      const isShellInitiated = origin.startsWith('file://') || origin === 'null';
+
+      if (!isShellInitiated) {
+        const description = `Silence prompt-injection scanner for ${domain} for 5 minutes`;
+        const task = ctx.taskManager.createTask(
+          description,
+          'claude',
+          'claude',
+          [{
+            description,
+            action: { type: 'security_weaken', params: { domain } },
+            riskLevel: 'high',
+            requiresApproval: true,
+          }],
+        );
+        const approved = await ctx.taskManager.requestApproval(task, 0);
+        if (!approved) {
+          res.status(403).json({
+            error: 'User rejected injection-override request',
+            rejected: true,
+            domain,
+          });
+          return;
+        }
+      }
+
       addInjectionOverride(domain);
       res.json({ ok: true, domain, expiresIn: '5 minutes' });
     } catch (e) {
