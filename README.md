@@ -7,20 +7,54 @@
 [![Coverage](https://codecov.io/gh/hydro13/tandem-browser/branch/main/graph/badge.svg)](https://codecov.io/gh/hydro13/tandem-browser)
 [![Ask a question](https://img.shields.io/badge/discussions-Q%26A-blue)](https://github.com/hydro13/tandem-browser/discussions/categories/q-a)
 
-**The human-AI symbiotic browser. A shared browser workspace for humans and multiple AI agents.**
+**A programmable workspace where human intent and AI capability meet — on the web that already exists.**
 
-Tandem Browser is a local-first Electron browser where a human and one or more AI agents browse together. Agents can connect on the same machine or remotely over Tailscale, operate inside the same real browser context, and work across tabs, workspaces, and authenticated sessions while an 8-layer security model keeps web content from attacking the agent layer.
+Tandem is a local-first Electron browser that shifts the AI from a sidebar next
+to your browser into the browser itself. Same tabs, same cookies, same
+logged-in sessions, same page you are looking at right now. The agent reads the
+accessibility tree, watches the live network, can rewrite the UI of the site
+you are on, and hands back to you when something needs a human. You are both
+in one runtime.
 
-Tandem Browser is built for the web that already exists. It does not require sites to
-ship special agent integrations before a human and an AI can work together in
-the same real browser.
+That shift matters because it is what makes a bunch of things *actually
+possible* for the first time:
 
-Connect via **MCP** (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama, any
-MCP client) or a **300+ endpoint HTTP API**. Those are connection layers, not
-the product story. The core idea is shared browser context, human oversight,
-and security around real browser work.
+- **Automate real SaaS without an API** — Gmail, Coolblue, Funda, your
+  bank's portal, your internal admin tool. If you can use it in a browser,
+  your agent can use it in Tandem, in your real logged-in session.
+- **Rewrite live UI on any site** — &ldquo;add a price-per-square-meter
+  column to this listing view&rdquo; becomes a userscript the agent injects
+  into the real page while you keep scrolling.
+- **See beyond pixels** — accessibility tree + DOM + live network log +
+  DevTools. The agent can answer &ldquo;what API did this page just hit and
+  what came back?&rdquo; without anything leaving your machine.
+- **Real co-browsing** — you and one or more agents in the same browser at
+  the same time, across tabs and workspaces, with tab locks and explicit
+  handoffs.
+- **Cold-start usable** — point a capable model (Claude, Cursor, a local
+  Ollama model) at a fresh Tandem install and a normal web task works on day
+  one. No per-site recipes to author, no retrain-per-flow phase.
 
-Tandem Browser is the local-first browser layer for real human-AI collaboration, not a wrapper or an automation toy.
+It works on the web that already exists — no site has to opt in, no new
+protocol has to land. Agents connect on the same machine or remotely over
+**Tailscale**, and multiple agents can share one browser without stepping on
+each other. An 8-layer security perimeter sits between web content and the
+agent layer, because when an AI has access to a real browser, a hidden
+instruction in a page is remote code execution without an exploit.
+
+Connect via **MCP** (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama,
+any MCP client) or a **300+ endpoint HTTP API**. The everyday version of the
+pitch: it feels like going on the internet with a brilliant teammate — not
+like using a chatbot parked next to a browser.
+
+### What Tandem is not
+
+- **Not an AI sidebar.** A chat panel next to a browser still leaves the AI outside the page.
+- **Not RPA or pixel automation.** No brittle coordinates, no record-and-replay macros. The agent works with structure.
+- **Not screenshot-driven automation.** Screenshot loops are slow, fragile, and expensive. Tandem gives the agent the page as semantic structure first.
+- **Not just another Chromium wrapper.** This is a daily-driver browser with a serious security perimeter around a first-class agent layer.
+- **Not &ldquo;chat with this webpage.&rdquo;** The agent opens tabs, fills forms, logs in, hands back for a CAPTCHA, injects a userscript, and comes back to finish — as one continuous piece of work.
+- **Not a cloud service.** Your browser, your machine, your sessions, your data. There is no Tandem backend.
 
 ## What's new now
 
@@ -102,15 +136,6 @@ browser work, local-first control, and governance around what the agent is
 doing.
 
 For the longer version, see [docs/tandem-browser-vs-webmcp.md](docs/tandem-browser-vs-webmcp.md).
-
-## Why this matters
-
-Most AI browser tooling still falls into one of two buckets:
-
-- browser automation in a separate session
-- AI features bolted onto a browser without true shared context
-
-Tandem Browser takes a different path. Humans and agents work in the same real browser, with the same tabs, sessions, cookies, and visibility, plus explicit handoffs and a serious security model around that collaboration.
 
 ## Quick Start
 
