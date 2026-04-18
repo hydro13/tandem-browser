@@ -5,8 +5,63 @@ It is based on the current code in `src/api/routes/` and related modules.
 
 ## Route Count
 
-Tandem currently exposes `301` HTTP routes across the API and security route
+Tandem currently exposes `302` HTTP routes across the API and security route
 modules.
+
+## New in v0.75.0
+
+### `POST /behavior/recompile`
+
+Forces an on-demand recompile of the per-user behavioural profile from the
+current `~/.tandem/behavior/raw/*.jsonl` stream and returns the freshly-
+computed profile. Useful after a long typing session when you want the
+agent's humanized click/type to incorporate new rhythm data without
+restarting Tandem.
+
+Response shape:
+
+```json
+{
+  "ok": true,
+  "profile": {
+    "typingSpeed": { "meanWpm": 62, "variance": 38 },
+    "mouseMovement": { "curveBias": "ease-in-out", "averageSpeedPxPerMs": 1.2 },
+    "source": "compiled",
+    "samples": 142,
+    "lastCompiledAt": 1776519584976
+  }
+}
+```
+
+The `source` discriminator lets callers tell at a glance whether the profile
+reflects real user data (`compiled`) or still-at-floor fallback values
+(`default-insufficient` = data exists but below the 100-sample floor;
+`default` = no data at all). Rate-limited at 10 requests / minute.
+
+The behavioural profile also auto-compiles on every Tandem boot. You only
+need `/behavior/recompile` if you want freshly-typed data to flow into the
+agent within the same session.
+
+### Interactive approval on security-weakening endpoints
+
+The following endpoints now require an interactive user approval via the
+Wingman panel when the requested change would *weaken* Tandem's security
+posture. Tightening and no-op changes still pass through without friction.
+Rejected requests return `403 { rejected: true }`.
+
+- `POST /security/guardian/mode` — lowering the per-domain guardian mode
+  (e.g., `balanced → permissive`) requires approval.
+- `POST /security/domains/:domain/trust` — raising the trust level for a
+  domain requires approval.
+- `POST /security/outbound/whitelist` — always requires approval (adding
+  a whitelist pair is inherently a bypass).
+- `POST /security/injection-override` — requires approval for agent / MCP
+  callers. Shell-initiated calls (after the scanner's own double-
+  confirmation modal) pass through via the `X-Tandem-Shell-Initiated: 1`
+  header.
+
+Approval tasks appear in Wingman's Activity panel and Chat panel with
+Approve / Reject buttons; clicking either dismisses both.
 
 ## `POST /tabs/open`
 

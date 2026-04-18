@@ -2,6 +2,44 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v0.75.0] - 2026-04-18
+
+Large release driven by an external security audit (#34) by **[@samantha-gb](https://github.com/samantha-gb)** and follow-up work that surfaced while implementing her findings. Five High-tier security fixes plus CORS and agent-initiated override hardening landed alongside a proper per-user behavioural learning pipeline and audio/visual escalation for agent-blocked approvals.
+
+Twelve merged PRs. Grouped below by area.
+
+### Security — audit #34 findings addressed
+
+- **Scheme + private-IP guard on `/navigate` and `/headless/open` (High-2)** — new `isSafeNavigationUrl()` helper rejects non-http(s) schemes (file://, javascript:, data:, …) and RFC1918 / link-local / cloud-metadata IP literals, including IPv6 edge cases. ([#159](https://github.com/hydro13/tandem-browser/pull/159))
+- **Form-memory files hardened to `0o600` (High-5)** — `{ mode: 0o600 }` on `~/.tandem/config.json` and `~/.tandem/forms/*.json`, with a `chmodSync` migration step that tightens pre-existing loose files on next boot. ([#159](https://github.com/hydro13/tandem-browser/pull/159))
+- **Per-install random stealth seed (Low/stealth)** — replaced the deterministic `sha256('persist:tandem')` seed with a per-install random secret persisted in `~/.tandem/config.json`. Every install now produces a unique fingerprint-noise pattern; previously every install shared the same signature. ([#159](https://github.com/hydro13/tandem-browser/pull/159))
+- **Security-weakening endpoints behind user approval (High-1)** — `POST /security/guardian/mode`, `POST /security/domains/:domain/trust`, and `POST /security/outbound/whitelist` now require interactive user approval via `taskManager.requestApproval` when the change would weaken posture. Tightening and no-op changes still pass through without friction. ([#161](https://github.com/hydro13/tandem-browser/pull/161))
+- **Unused `EXECUTE_JS` IPC channel removed (High-4)** — the channel had zero callers but would have amplified any XSS reaching the shell into arbitrary JS in the active tab. Agent-driven JS execution continues to flow through the scanner-protected HTTP routes. ([#162](https://github.com/hydro13/tandem-browser/pull/162))
+- **CRX3 RSA signature verification on extension install (High-3)** — hand-rolled protobuf decoder parses the CRX3 envelope, verifies the SHA-256-with-RSA signature, and binds the signing key back to the expected extension ID. CRX2 downloads are rejected outright. Defends against MITM or CDN compromise during CWS downloads. ([#163](https://github.com/hydro13/tandem-browser/pull/163))
+- **Agent-initiated `/security/injection-override` behind user approval (Medium #3)** — silencing the prompt-injection scanner now requires either the user clicking "Override" in the scanner modal (existing flow, unchanged) or an interactive approval prompt for any other caller. Prevents a prompt-injected agent from disabling the defence against its own compromise. ([#164](https://github.com/hydro13/tandem-browser/pull/164), corrected in [#165](https://github.com/hydro13/tandem-browser/pull/165))
+- **CORS `Origin: null` rejected on public routes (Medium #1)** — closes a cross-tab information leak where a sandboxed iframe or `data:` URI could fetch `/status` from localhost and read the active tab's URL/title. Shell-fetches pass through because modern Electron strips the Origin header (verified via logging investigation). ([#165](https://github.com/hydro13/tandem-browser/pull/165))
+- **Date.now jitter removed from the stealth script (Low #4)** — the ±1 ms jitter was itself a reliable "not real Chrome" fingerprint (real Chrome returns the same ms for back-to-back calls). `performance.now` rounding to 100 μs (Firefox parity) remains as the effective timing-fingerprint defence. Also fixed a BehaviorObserver bug that persisted `interval: 0` on every keypress event, and removed the unwired `recordClick` method. ([#168](https://github.com/hydro13/tandem-browser/pull/168))
+
+### Wingman UX
+
+- **Wingman Activity and Chat panels now sync on approval resolution** — clicking Approve/Reject in one panel dismisses the matching card in the other. The underlying `approval-response` event is now forwarded to the shell via a new IPC channel mirroring `APPROVAL_REQUEST`. ([#166](https://github.com/hydro13/tandem-browser/pull/166))
+- **Audio ping + escalation + user-return re-alert on approval requests** — when an agent stalls waiting for human input, the user now gets: (a) an immediate native-OS notification with the system sound; (b) a second ping after 12 s if the request is still unacknowledged; (c) a third ping when the user returns to Tandem after being away for more than 10 s. A 5 s rate limit prevents stacking. Exists because "AI is stalled on a call" is an invisible state today if the user happens to be in a different workspace or away. ([#167](https://github.com/hydro13/tandem-browser/pull/167))
+
+### Agent-learn layer — phase 1
+
+- **BehaviorCompiler is real now, not a stub** — reads `~/.tandem/behavior/raw/*.jsonl`, extracts valid keypress intervals, drops outliers (below 30 ms / above 2000 ms), percentile-trims 5%, and computes a per-user `meanWpm` / `variance`. Fallback to hardcoded defaults below a 100-sample floor or outside a `[20, 150]` WPM sane range. `BehavioralProfile` gained additive observability fields: `source` (default / default-insufficient / compiled), `samples`, `lastCompiledAt`. Compiled at every Tandem boot; new `POST /behavior/recompile` endpoint forces a fresh compile on demand. Was previously a comment saying "in a real scenario we would parse the data; for now we compile defaults" — so every install's agent typed at the same average-typist rhythm. ([#169](https://github.com/hydro13/tandem-browser/pull/169))
+- **Webview keystroke rhythm capture (intervals only, no content)** — a `before-input-event` listener inside the existing `web-contents-created` handler captures typing rhythm from tab content, feeding the same JSONL stream the shell observer already populates. PRIVACY FLOOR: only `input.type` and `input.key.length` are read; the key value itself, the webContents URL, origin, partition, and tabId are never read. Persisted events contain only `{type, ts, data: {interval}}`. A regression-guard test inspects every persisted event and fails red if anything else appears. ([#170](https://github.com/hydro13/tandem-browser/pull/170))
+
+### Documentation
+
+- **[@samantha-gb](https://github.com/samantha-gb) acknowledged in SECURITY.md and on the contributor graph via `Co-authored-by:` trailers.** Her security audit drove nine of the twelve PRs in this release. ([#160](https://github.com/hydro13/tandem-browser/pull/160))
+- **SECURITY.md restructured** with explicit "anonymous / pseudonymous reports welcome" copy, a "no bounty, yes gratitude" section describing what contributors can expect in exchange for a responsible report, and a new Hall of Fame.
+
+### Internal notes
+
+- **Threat model clarified for future security reviews.** Tandem's trust perimeter sits between web content and the team (user + paired local/remote agents), not between team members. Findings that describe authenticated callers receiving internal tokens or state are, under this model, not vulnerabilities. Several items from the #34 audit were re-evaluated and intentionally not changed on that basis; the reasoning is documented inline in the relevant PR comments and in `SECURITY.md`.
+- **Cross-panel sync bug surfaced and fixed while testing the injection-override approval flow.** The audio/escalation UX work was added after live-testing revealed that agent stalls could go unnoticed when the user was in a different workspace.
+
 ## [v0.74.0] - 2026-04-17
 
 - refactor: split the renderer shell into ES modules + fix a long-standing workspace assignment race
