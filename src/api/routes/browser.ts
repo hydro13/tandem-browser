@@ -11,7 +11,7 @@ import { humanizedClick, humanizedType } from '../../input/humanized';
 import { captureNavigationState, hasObservablePageChange, readPageState } from '../../interaction/page-state';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
-import { resolvePathInAllowedRoots } from '../../utils/security';
+import { isSafeNavigationUrl, resolvePathInAllowedRoots } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
 import { injectionScannerMiddleware } from '../middleware/injection-scanner';
 
@@ -90,6 +90,10 @@ export function registerBrowserRoutes(router: Router, ctx: RouteContext): void {
   router.post('/navigate', async (req: Request, res: Response) => {
     const { url, tabId } = req.body;
     if (!url) { res.status(400).json({ error: 'url required' }); return; }
+    if (!isSafeNavigationUrl(url)) {
+      res.status(400).json({ error: 'Unsafe URL scheme or private/loopback host', url });
+      return;
+    }
     try {
       const sessionName = req.headers['x-session'] as string;
       if (sessionName && sessionName !== 'default') {

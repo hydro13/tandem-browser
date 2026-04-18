@@ -7,6 +7,7 @@ import { getActiveWC } from '../context';
 import { getPasswordManager } from '../../passwords/manager';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
+import { isSafeNavigationUrl } from '../../utils/security';
 import { createRateLimitMiddleware } from '../rate-limit';
 import { getActorContext, normalizeTabSource } from '../../tabs/context';
 import { buildOwnershipContextForTab } from '../../tabs/runtime-context';
@@ -500,6 +501,10 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     try {
       const { url } = req.body;
       if (!url) { res.status(400).json({ error: 'url required' }); return; }
+      if (!isSafeNavigationUrl(url)) {
+        res.status(400).json({ error: 'Unsafe URL scheme or private/loopback host', url });
+        return;
+      }
       const result = await ctx.headlessManager.open(url);
       res.json(result);
     } catch (e) {
