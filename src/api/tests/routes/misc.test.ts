@@ -770,6 +770,28 @@ describe('misc routes', () => {
     });
   });
 
+  describe('POST /behavior/recompile', () => {
+    it('recompiles the behaviour profile and returns it', async () => {
+      // With the mocked fs returning false for existsSync, compile() hits
+      // the raw-dir-missing path and returns the default profile.
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+
+      const res = await request(app).post('/behavior/recompile');
+
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+      expect(res.body.profile).toBeDefined();
+      expect(res.body.profile.typingSpeed).toBeDefined();
+      expect(res.body.profile.source).toBeDefined();
+    });
+
+    it('returns the resulting profile source so callers can introspect', async () => {
+      vi.mocked(fs.existsSync).mockReturnValue(false);
+      const res = await request(app).post('/behavior/recompile');
+      expect(['default', 'default-insufficient', 'compiled']).toContain(res.body.profile.source);
+    });
+  });
+
   // ═══════════════════════════════════════════════
   // SITE MEMORY
   // ═══════════════════════════════════════════════

@@ -52,6 +52,8 @@ import { VoiceManager } from '../voice/recognition';
 import { WatchManager } from '../watch/watcher';
 import { HeadlessManager } from '../headless/manager';
 import { BehaviorObserver } from '../behavior/observer';
+import { behaviorCompiler } from '../behavior/compiler';
+import { behaviorReplay } from '../behavior/replay';
 import { WorkflowEngine } from '../workflow/engine';
 import { WorkspaceManager } from '../workspaces/manager';
 import { ClipboardManager } from '../clipboard/manager';
@@ -187,6 +189,18 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.activityTracker = new ActivityTracker(win, runtime.panelManager, runtime.drawManager, runtime.wingmanStream);
   runtime.voiceManager = new VoiceManager(win, runtime.panelManager);
   runtime.behaviorObserver = new BehaviorObserver(win);
+  // Compile the per-user behavioural profile at boot so the agent's
+  // humanized click/type uses *this* user's typing rhythm rather than
+  // the hardcoded default. Cheap (pure JSONL read), async-safe, and
+  // logs the resulting profile source so you can see at a glance
+  // whether the real statistics kicked in this boot.
+  try {
+    const profile = behaviorCompiler.compile();
+    behaviorReplay.refreshProfile();
+    log.info(`🧬 Behaviour profile compiled: source=${profile.source ?? 'default'}, samples=${profile.samples ?? 0}, meanWpm=${profile.typingSpeed.meanWpm}`);
+  } catch (e) {
+    log.warn('Behaviour profile compile failed on boot:', e instanceof Error ? e.message : String(e));
+  }
   runtime.siteMemory = new SiteMemoryManager();
   runtime.watchManager = new WatchManager();
   runtime.headlessManager = new HeadlessManager();
