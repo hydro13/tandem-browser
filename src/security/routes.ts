@@ -1,18 +1,64 @@
 import type express from 'express';
 import type { SecurityManager } from './security-manager';
 import type { GuardianMode, GatekeeperAction } from './types';
+import type { TaskManager } from '../agents/task-manager';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('SecurityRoutes');
 
 /**
+ * Default guardian mode when no per-domain record exists. Must match
+ * Guardian.defaultMode. Kept as a constant so mode-comparison logic in
+ * weakening detection stays consistent with runtime behavior.
+ */
+const DEFAULT_GUARDIAN_MODE: GuardianMode = 'balanced';
+
+/**
+ * Rank Guardian modes from most restrictive to least. Used to detect when a
+ * mode change weakens security posture (next rank < current rank) vs tightens
+ * it (next rank > current rank) — only weakening changes need user approval.
+ */
+const MODE_RANK: Record<GuardianMode, number> = {
+  strict: 3,
+  balanced: 2,
+  permissive: 1,
+};
+
+/**
+ * Gate a security-weakening mutation behind an interactive user approval.
+ * Mirrors POST /execute-js/confirm: create a high-risk task with
+ * requiresApproval, await the user's decision, resolve to true/false.
+ */
+async function requireWeakeningApproval(
+  taskManager: TaskManager,
+  description: string,
+): Promise<boolean> {
+  const task = taskManager.createTask(
+    description,
+    'claude',
+    'claude',
+    [{
+      description,
+      action: { type: 'security_weaken', params: {} },
+      riskLevel: 'high',
+      requiresApproval: true,
+    }],
+  );
+  return taskManager.requestApproval(task, 0);
+}
+
+/**
  * Register all 34 security API routes on the Express app.
- * Extracted from SecurityManager.registerRoutes() so the manager
- * class doesn't depend on Express directly.
+ *
+ * `taskManager` is required so security-weakening mutations
+ * (lowering guardian mode, raising domain trust, adding outbound whitelist
+ * pairs) can be gated behind an interactive user approval. Tightening
+ * changes pass through without friction. Addresses audit #34 High-1.
  */
 export function registerSecurityRoutes(
   app: express.Application,
   sm: SecurityManager,
+  taskManager: TaskManager,
 ): void {
   // === Phase 1 routes (1-9) ===
 
@@ -51,7 +97,7 @@ export function registerSecurityRoutes(
   });
 
   // 3. POST /security/guardian/mode — Set guardian mode per domain
-  app.post('/security/guardian/mode', (req, res) => {
+  app.post('/security/guardian/mode', async (req, res) => {
     try {
       const { domain, mode } = req.body;
       if (!domain || !mode) {
@@ -63,8 +109,23 @@ export function registerSecurityRoutes(
         res.status(400).json({ error: `Invalid mode. Use: ${validModes.join(', ')}` });
         return;
       }
-      sm.getGuardian().setMode(domain, mode);
-      res.json({ ok: true, domain, mode });
+      const nextMode = mode as GuardianMode;
+      const currentMode: GuardianMode =
+        (sm.getDb().getDomainInfo(domain)?.guardianMode as GuardianMode | undefined) ?? DEFAULT_GUARDIAN_MODE;
+      // Weakening = lowering the mode's rank (e.g. balanced → permissive)
+      if (MODE_RANK[nextMode] < MODE_RANK[currentMode]) {
+        const approved = await requireWeakeningApproval(
+          taskManager,
+          `Lower Guardian mode for ${domain}: ${currentMode} → ${nextMode}`,
+        );
+        if (!approved) {
+          log.warn(`guardian/mode weaken rejected by user: ${domain} ${currentMode} → ${nextMode}`);
+          res.status(403).json({ error: 'User rejected security-weakening change', rejected: true });
+          return;
+        }
+      }
+      sm.getGuardian().setMode(domain, nextMode);
+      res.json({ ok: true, domain, mode: nextMode });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }
@@ -111,13 +172,28 @@ export function registerSecurityRoutes(
   });
 
   // 7. POST /security/domains/:domain/trust — Manual trust adjustment
-  app.post('/security/domains/:domain/trust', (req, res) => {
+  app.post('/security/domains/:domain/trust', async (req, res) => {
     try {
       const domain = req.params.domain;
       const { trust } = req.body;
       if (trust === undefined || typeof trust !== 'number' || trust < 0 || trust > 100) {
         res.status(400).json({ error: 'trust must be a number between 0 and 100' });
         return;
+      }
+      // Treat unknown domains as trustLevel 0 — so raising from 0 to anything
+      // positive is a weakening change and requires approval.
+      const currentTrust: number = sm.getDb().getDomainInfo(domain)?.trustLevel ?? 0;
+      // Weakening = raising trust (more trust → less shield).
+      if (trust > currentTrust) {
+        const approved = await requireWeakeningApproval(
+          taskManager,
+          `Raise trust for ${domain}: ${currentTrust} → ${trust}`,
+        );
+        if (!approved) {
+          log.warn(`domains/trust raise rejected by user: ${domain} ${currentTrust} → ${trust}`);
+          res.status(403).json({ error: 'User rejected security-weakening change', rejected: true });
+          return;
+        }
       }
       sm.getDb().upsertDomain(domain, { trustLevel: trust });
       res.json({ ok: true, domain, trust });
@@ -180,15 +256,28 @@ export function registerSecurityRoutes(
   });
 
   // 12. POST /security/outbound/whitelist — Whitelist a domain pair
-  app.post('/security/outbound/whitelist', (req, res) => {
+  app.post('/security/outbound/whitelist', async (req, res) => {
     try {
       const { origin, destination } = req.body;
       if (!origin || !destination) {
         res.status(400).json({ error: 'origin and destination domains required' });
         return;
       }
-      sm.getDb().addWhitelistPair(origin.toLowerCase(), destination.toLowerCase());
-      res.json({ ok: true, origin: origin.toLowerCase(), destination: destination.toLowerCase() });
+      const o = String(origin).toLowerCase();
+      const d = String(destination).toLowerCase();
+      // Whitelisting always weakens posture: it bypasses OutboundGuard for
+      // the (origin, destination) pair. Every addition requires approval.
+      const approved = await requireWeakeningApproval(
+        taskManager,
+        `Whitelist outbound bypass: ${o} → ${d}`,
+      );
+      if (!approved) {
+        log.warn(`outbound/whitelist add rejected by user: ${o} → ${d}`);
+        res.status(403).json({ error: 'User rejected security-weakening change', rejected: true });
+        return;
+      }
+      sm.getDb().addWhitelistPair(o, d);
+      res.json({ ok: true, origin: o, destination: d });
     } catch (e) {
       res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
     }

@@ -146,10 +146,17 @@ function createMockSecurityManager() {
   };
 }
 
-function createSecurityTestApp(sm: any) {
+function createMockTaskManager() {
+  return {
+    createTask: vi.fn().mockReturnValue({ id: 'task-1', steps: [{ id: 'step-0' }] }),
+    requestApproval: vi.fn().mockResolvedValue(true), // default: approve
+  };
+}
+
+function createSecurityTestApp(sm: any, taskManager: any = createMockTaskManager()) {
   const app = express();
   app.use(express.json());
-  registerSecurityRoutes(app, sm);
+  registerSecurityRoutes(app, sm, taskManager);
   return app;
 }
 
@@ -157,12 +164,14 @@ function createSecurityTestApp(sm: any) {
 
 describe('security routes', () => {
   let mocks: ReturnType<typeof createMockSecurityManager>;
+  let taskManager: ReturnType<typeof createMockTaskManager>;
   let app: ReturnType<typeof createSecurityTestApp>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mocks = createMockSecurityManager();
-    app = createSecurityTestApp(mocks.sm);
+    taskManager = createMockTaskManager();
+    app = createSecurityTestApp(mocks.sm, taskManager);
   });
 
   // ── Phase 1 (1-9) ──────────────────────────────────────────
@@ -231,13 +240,79 @@ describe('security routes', () => {
 
   // 3. POST /security/guardian/mode
   describe('POST /security/guardian/mode', () => {
-    it('sets guardian mode and returns ok', async () => {
+    it('tightening (balanced → strict) passes through without user approval', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'balanced' });
       const res = await request(app)
         .post('/security/guardian/mode')
         .send({ domain: 'example.com', mode: 'strict' });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, domain: 'example.com', mode: 'strict' });
       expect(mocks.guardian.setMode).toHaveBeenCalledWith('example.com', 'strict');
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('same mode (no change) passes through without user approval', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'balanced' });
+      const res = await request(app)
+        .post('/security/guardian/mode')
+        .send({ domain: 'example.com', mode: 'balanced' });
+      expect(res.status).toBe(200);
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('weakening (balanced → permissive) requires user approval — approved', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'balanced' });
+      taskManager.requestApproval.mockResolvedValue(true);
+
+      const res = await request(app)
+        .post('/security/guardian/mode')
+        .send({ domain: 'example.com', mode: 'permissive' });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, domain: 'example.com', mode: 'permissive' });
+      expect(taskManager.requestApproval).toHaveBeenCalled();
+      expect(mocks.guardian.setMode).toHaveBeenCalledWith('example.com', 'permissive');
+    });
+
+    it('weakening (strict → permissive) requires user approval — rejected', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'strict' });
+      taskManager.requestApproval.mockResolvedValue(false);
+
+      const res = await request(app)
+        .post('/security/guardian/mode')
+        .send({ domain: 'example.com', mode: 'permissive' });
+
+      expect(res.status).toBe(403);
+      expect(res.body.rejected).toBe(true);
+      expect(mocks.guardian.setMode).not.toHaveBeenCalled();
+    });
+
+    it('weakening request creates a task with riskLevel high and requiresApproval', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'strict' });
+      taskManager.requestApproval.mockResolvedValue(true);
+
+      await request(app)
+        .post('/security/guardian/mode')
+        .send({ domain: 'example.com', mode: 'balanced' });
+
+      expect(taskManager.createTask).toHaveBeenCalled();
+      const taskArgs = taskManager.createTask.mock.calls[0];
+      const steps = taskArgs[3];
+      expect(steps[0].riskLevel).toBe('high');
+      expect(steps[0].requiresApproval).toBe(true);
+    });
+
+    it('unknown domain (no record) treats new mode as weakening when lower than default "balanced"', async () => {
+      // No domain info → current effective mode is the default 'balanced'
+      mocks.db.getDomainInfo.mockReturnValue(null);
+      taskManager.requestApproval.mockResolvedValue(true);
+
+      const res = await request(app)
+        .post('/security/guardian/mode')
+        .send({ domain: 'unseen.example', mode: 'permissive' });
+
+      expect(res.status).toBe(200);
+      expect(taskManager.requestApproval).toHaveBeenCalled();
     });
 
     it('returns 400 when domain or mode is missing', async () => {
@@ -256,11 +331,12 @@ describe('security routes', () => {
       expect(res.body.error).toContain('Invalid mode');
     });
 
-    it('returns 500 on error', async () => {
+    it('returns 500 on error during tightening', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', guardianMode: 'permissive' });
       mocks.guardian.setMode.mockImplementation(() => { throw new Error('setMode failed'); });
       const res = await request(app)
         .post('/security/guardian/mode')
-        .send({ domain: 'example.com', mode: 'balanced' });
+        .send({ domain: 'example.com', mode: 'strict' });
       expect(res.status).toBe(500);
       expect(res.body).toEqual({ error: 'setMode failed' });
     });
@@ -350,13 +426,69 @@ describe('security routes', () => {
 
   // 7. POST /security/domains/:domain/trust
   describe('POST /security/domains/:domain/trust', () => {
-    it('updates trust level for a domain', async () => {
+    it('lowering trust (tightening) passes through without approval', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', trustLevel: 80 });
       const res = await request(app)
         .post('/security/domains/example.com/trust')
-        .send({ trust: 75 });
+        .send({ trust: 30 });
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, domain: 'example.com', trust: 75 });
-      expect(mocks.db.upsertDomain).toHaveBeenCalledWith('example.com', { trustLevel: 75 });
+      expect(res.body).toEqual({ ok: true, domain: 'example.com', trust: 30 });
+      expect(mocks.db.upsertDomain).toHaveBeenCalledWith('example.com', { trustLevel: 30 });
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('same trust (no change) passes through without approval', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', trustLevel: 50 });
+      const res = await request(app)
+        .post('/security/domains/example.com/trust')
+        .send({ trust: 50 });
+      expect(res.status).toBe(200);
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
+    });
+
+    it('raising trust (weakening) requires approval — approved', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', trustLevel: 50 });
+      taskManager.requestApproval.mockResolvedValue(true);
+
+      const res = await request(app)
+        .post('/security/domains/example.com/trust')
+        .send({ trust: 90 });
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ ok: true, domain: 'example.com', trust: 90 });
+      expect(taskManager.requestApproval).toHaveBeenCalled();
+    });
+
+    it('raising trust (weakening) requires approval — rejected', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', trustLevel: 50 });
+      taskManager.requestApproval.mockResolvedValue(false);
+
+      const res = await request(app)
+        .post('/security/domains/example.com/trust')
+        .send({ trust: 90 });
+
+      expect(res.status).toBe(403);
+      expect(res.body.rejected).toBe(true);
+      expect(mocks.db.upsertDomain).not.toHaveBeenCalled();
+    });
+
+    it('unknown domain (no record) treats any new trust as weakening', async () => {
+      mocks.db.getDomainInfo.mockReturnValue(null);
+      taskManager.requestApproval.mockResolvedValue(true);
+      const res = await request(app)
+        .post('/security/domains/unseen.example/trust')
+        .send({ trust: 50 });
+      expect(res.status).toBe(200);
+      expect(taskManager.requestApproval).toHaveBeenCalled();
+    });
+
+    it('unknown domain with trust 0 is not weakening — no approval needed', async () => {
+      mocks.db.getDomainInfo.mockReturnValue(null);
+      const res = await request(app)
+        .post('/security/domains/unseen.example/trust')
+        .send({ trust: 0 });
+      expect(res.status).toBe(200);
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
     it('returns 400 when trust is missing', async () => {
@@ -383,15 +515,8 @@ describe('security routes', () => {
       expect(res.body.error).toContain('trust must be a number');
     });
 
-    it('accepts trust value of 0', async () => {
-      const res = await request(app)
-        .post('/security/domains/example.com/trust')
-        .send({ trust: 0 });
-      expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, domain: 'example.com', trust: 0 });
-    });
-
-    it('returns 500 on error', async () => {
+    it('returns 500 on error during tightening', async () => {
+      mocks.db.getDomainInfo.mockReturnValue({ domain: 'example.com', trustLevel: 80 });
       mocks.db.upsertDomain.mockImplementation(() => { throw new Error('upsert failed'); });
       const res = await request(app)
         .post('/security/domains/example.com/trust')
@@ -516,32 +641,57 @@ describe('security routes', () => {
 
   // 12. POST /security/outbound/whitelist
   describe('POST /security/outbound/whitelist', () => {
-    it('adds a whitelist pair and lowercases domains', async () => {
+    it('adding a whitelist pair always requires user approval — approved', async () => {
+      taskManager.requestApproval.mockResolvedValue(true);
       const res = await request(app)
         .post('/security/outbound/whitelist')
         .send({ origin: 'Example.COM', destination: 'Api.Service.IO' });
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ ok: true, origin: 'example.com', destination: 'api.service.io' });
+      expect(taskManager.requestApproval).toHaveBeenCalled();
       expect(mocks.db.addWhitelistPair).toHaveBeenCalledWith('example.com', 'api.service.io');
     });
 
-    it('returns 400 when origin is missing', async () => {
+    it('adding a whitelist pair — rejected returns 403 and never calls the DB', async () => {
+      taskManager.requestApproval.mockResolvedValue(false);
+      const res = await request(app)
+        .post('/security/outbound/whitelist')
+        .send({ origin: 'example.com', destination: 'attacker.example' });
+      expect(res.status).toBe(403);
+      expect(res.body.rejected).toBe(true);
+      expect(mocks.db.addWhitelistPair).not.toHaveBeenCalled();
+    });
+
+    it('whitelist request creates a high-risk approval task', async () => {
+      taskManager.requestApproval.mockResolvedValue(true);
+      await request(app)
+        .post('/security/outbound/whitelist')
+        .send({ origin: 'a.com', destination: 'b.com' });
+      const steps = taskManager.createTask.mock.calls[0][3];
+      expect(steps[0].riskLevel).toBe('high');
+      expect(steps[0].requiresApproval).toBe(true);
+    });
+
+    it('returns 400 when origin is missing — no approval task created', async () => {
       const res = await request(app)
         .post('/security/outbound/whitelist')
         .send({ destination: 'api.com' });
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ error: 'origin and destination domains required' });
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
-    it('returns 400 when destination is missing', async () => {
+    it('returns 400 when destination is missing — no approval task created', async () => {
       const res = await request(app)
         .post('/security/outbound/whitelist')
         .send({ origin: 'example.com' });
       expect(res.status).toBe(400);
       expect(res.body).toEqual({ error: 'origin and destination domains required' });
+      expect(taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
-    it('returns 500 on error', async () => {
+    it('returns 500 on DB error after approval', async () => {
+      taskManager.requestApproval.mockResolvedValue(true);
       mocks.db.addWhitelistPair.mockImplementation(() => { throw new Error('whitelist error'); });
       const res = await request(app)
         .post('/security/outbound/whitelist')

@@ -187,7 +187,7 @@ export class TandemAPI {
 
     // Register SecurityManager API routes
     if (this.registry.securityManager) {
-      registerSecurityRoutes(this.app, this.registry.securityManager);
+      registerSecurityRoutes(this.app, this.registry.securityManager, this.registry.taskManager);
     }
   }
 
