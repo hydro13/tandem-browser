@@ -123,3 +123,90 @@ describe('BehaviorObserver — keypress interval', () => {
     observer.destroy();
   });
 });
+
+describe('BehaviorObserver.recordWebviewKeypress — privacy floor', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+  });
+
+  it('persists keypress events that contain ONLY {type, ts, data.interval} — no keys, no site, no tab metadata', () => {
+    const win = makeMockWindow();
+    const observer = new BehaviorObserver(win as any);
+
+    observer.recordWebviewKeypress(150);
+    observer.recordWebviewKeypress(180);
+
+    const lines = extractWrittenKeypressLines();
+    expect(lines.length).toBe(2);
+    for (const parsed of lines) {
+      // The only allowed fields at the top level:
+      expect(Object.keys(parsed).sort()).toEqual(['data', 'ts', 'type']);
+      expect(parsed.type).toBe('keypress');
+      expect(typeof parsed.ts).toBe('number');
+      // And data may only carry "interval":
+      expect(Object.keys(parsed.data).sort()).toEqual(['interval']);
+      expect(typeof parsed.data.interval).toBe('number');
+    }
+    observer.destroy();
+  });
+
+  it('rejects non-positive intervals (no persisted event at all)', () => {
+    const win = makeMockWindow();
+    const observer = new BehaviorObserver(win as any);
+
+    observer.recordWebviewKeypress(0);
+    observer.recordWebviewKeypress(-5);
+    observer.recordWebviewKeypress(NaN);
+
+    expect(extractWrittenKeypressLines().length).toBe(0);
+    observer.destroy();
+  });
+
+  it('rejects intervals >= 5000ms as cross-session pauses (no persisted event)', () => {
+    const win = makeMockWindow();
+    const observer = new BehaviorObserver(win as any);
+
+    observer.recordWebviewKeypress(4999); // accepted
+    observer.recordWebviewKeypress(5000); // rejected
+    observer.recordWebviewKeypress(6000); // rejected
+
+    const lines = extractWrittenKeypressLines();
+    expect(lines.length).toBe(1);
+    expect(lines[0].data.interval).toBe(4999);
+    observer.destroy();
+  });
+
+  it('feeds recorded intervals into the same keypressIntervals stats as shell keypresses', () => {
+    const win = makeMockWindow();
+    const observer = new BehaviorObserver(win as any);
+
+    observer.recordWebviewKeypress(150);
+    observer.recordWebviewKeypress(180);
+    observer.recordWebviewKeypress(210);
+
+    const stats = observer.getStats() as Record<string, unknown>;
+    expect(stats.keypressSamples).toBe(3);
+    expect(stats.avgKeypressIntervalMs).toBe(Math.round((150 + 180 + 210) / 3));
+    observer.destroy();
+  });
+});
+
+/** Parse every keypress line written by the mocked file stream. */
+function extractWrittenKeypressLines(): Array<{ type: string; ts: number; data: { interval: number } }> {
+  const streamCalls = vi.mocked(fs.createWriteStream).mock.results;
+  const out: Array<{ type: string; ts: number; data: { interval: number } }> = [];
+  for (const r of streamCalls) {
+    if (r.type !== 'return') continue;
+    const stream = r.value as { write: ReturnType<typeof vi.fn> };
+    for (const [line] of stream.write.mock.calls) {
+      const text = String(line).trim();
+      if (!text) continue;
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.type === 'keypress') out.push(parsed);
+      } catch { /* ignore */ }
+    }
+  }
+  return out;
+}

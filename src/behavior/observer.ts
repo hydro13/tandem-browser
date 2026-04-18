@@ -58,6 +58,26 @@ export class BehaviorObserver {
   // click-cadence profile, the wiring belongs in ActivityTracker on the
   // same webContents.before-input-event listener that handles keypress.
 
+  /**
+   * Record a keystroke rhythm interval observed inside a tab webview.
+   *
+   * PRIVACY FLOOR — this method deliberately accepts only a bare interval
+   * number. The caller (src/main.ts webContents.before-input-event hook)
+   * must never pass the key, the webContents URL, origin, tabId, or any
+   * other identifying metadata. The persisted JSONL event contains
+   * exactly {type, ts, data:{interval}} — shaped identically to the
+   * shell keypress event so BehaviorCompiler can consume both the same
+   * way. Keystroke *content* never touches disk.
+   */
+  recordWebviewKeypress(interval: number): void {
+    if (!Number.isFinite(interval) || interval <= 0 || interval >= 5000) return;
+    if (this.keypressIntervals.length >= this.MAX_SAMPLES) {
+      this.keypressIntervals.shift();
+    }
+    this.keypressIntervals.push(interval);
+    this.record({ type: 'keypress', ts: Date.now(), data: { interval } });
+  }
+
   /** Record a scroll event */
   recordScroll(deltaY: number, url?: string): void {
     this.record({ type: 'scroll', ts: Date.now(), data: { deltaY, url } });
