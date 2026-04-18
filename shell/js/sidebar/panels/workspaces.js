@@ -224,7 +224,14 @@ export function filterTabBar() {
     if (visible) {
       visibleTabIds.push(tabId);
     } else {
+      // Clear both the webview AND the tab-bar element's .active class.
+      // Previously only the webview was cleared, which left the tab
+      // element's purple `.active` underline visible when its workspace
+      // later came back into view — producing a "multiple tabs look
+      // active" artifact when focus changed rapidly across workspaces.
+      // See docs/superpowers/tandem-bugs-to-fix.md (Bug 1).
       wv.classList.remove('active');
+      el.classList.remove('active');
     }
   });
 
