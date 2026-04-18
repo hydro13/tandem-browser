@@ -101,7 +101,7 @@ All persistent data is stored in `~/.tandem/`:
 | Workspaces | `workspaces.json` | WorkspaceManager |
 | Bookmarks | `bookmarks/` | BookmarkManager |
 | History | `history/` | HistoryManager |
-| Behavior profiles | `behavior/` | BehaviorObserver |
+| Behavior profiles | `behavior/` (raw JSONL + compiled `profile.json`) | BehaviorObserver + BehaviorCompiler |
 | Sessions | `sessions/` | SessionManager |
 | Extensions | `extensions/` | ExtensionLoader |
 | Passwords | `passwords/` (AES-256-GCM) | Password vault |
@@ -178,6 +178,34 @@ Security code lives in `src/security/`. Key files:
 | `prompt-injection-guard.ts` | Layer 8 — injection defense |
 | `security-manager.ts` | Orchestrator for all layers |
 | `guardian.ts` | Unified threat coordination |
+
+### Approval gates on posture-weakening actions
+
+Since v0.75.0, API routes that would **weaken** the security posture for a
+domain require an interactive user approval via the Wingman panel before the
+change takes effect. Covers `/security/guardian/mode` (lowering mode),
+`/security/domains/:domain/trust` (raising trust), `/security/outbound/whitelist`
+(adding a bypass pair), and `/security/injection-override` for agent-initiated
+callers. Tightening and no-op changes pass through without friction. The gate
+exists because a prompt-injected agent must not be able to silence the
+defences that protect against the injection itself.
+
+### Humanized interaction + stealth
+
+Tandem's stealth layer (`src/stealth/manager.ts`) injects per-session
+fingerprint-noise patches (canvas / WebGL / audio / font / timing) and
+scrubs Electron giveaways from `window`. Each install uses a random
+per-install base secret persisted in `~/.tandem/config.json`, so noise
+patterns are unique per install — there is no shared "Tandem" fingerprint.
+
+Agent-driven input (`/click`, `/type`) flows through `src/input/humanized.ts`
+which uses OS-level `sendInputEvent` (so `Event.isTrusted` is `true`), adds
+Gaussian offsets inside the target element, hesitates before the click, and
+samples a per-user Bézier-ish trajectory. The typing delay and trajectory
+come from `BehaviorReplay`, which reads a `profile.json` compiled from the
+raw keystroke JSONL by `BehaviorCompiler` on every boot (and on-demand via
+`POST /behavior/recompile`). Each user's agent types at that user's rhythm
+once enough samples have accumulated.
 
 ## Shell Architecture
 
