@@ -319,6 +319,28 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       });
 
+      // Webview keystroke rhythm capture for the BehaviorCompiler.
+      // PRIVACY FLOOR: we ONLY look at input.type to decide this is a
+      // character keydown, and we NEVER read input.key, input.code, the
+      // webContents URL, partition, tabId, or any other identifying
+      // metadata. The observer receives just a millisecond interval and
+      // persists it as the same shape as the shell keypress JSONL event.
+      // Keystroke content never touches disk. See design doc in
+      // docs/superpowers/behavior-compiler-design.md (phase 1, PR B).
+      let lastWebviewKeypressTs = 0;
+      contents.on('before-input-event', (_inputEvt, input) => {
+        if (input.type !== 'keyDown') return;
+        // input.key.length === 1 filters out modifier/arrow/function keys
+        // without reading the value — only its length.
+        if (!input.key || input.key.length !== 1) return;
+        const now = Date.now();
+        const interval = lastWebviewKeypressTs > 0 ? now - lastWebviewKeypressTs : 0;
+        lastWebviewKeypressTs = now;
+        if (interval > 0) {
+          runtime?.behaviorObserver?.recordWebviewKeypress(interval);
+        }
+      });
+
       if (!isSidebarWebview) {
         contents.on('did-finish-load', () => {
           runtime?.securityManager.onTabNavigated(contents.id).catch(e => log.warn('securityManager.onTabNavigated failed:', e instanceof Error ? e.message : e));
