@@ -17,7 +17,10 @@ export const IpcChannels = {
   // Page content
   GET_PAGE_CONTENT: 'get-page-content',
   GET_PAGE_STATUS: 'get-page-status',
-  EXECUTE_JS: 'execute-js',
+  // EXECUTE_JS removed in audit #34 High-4: the channel let any renderer
+  // reachable via window.tandem run arbitrary JS in the active webview,
+  // which is an unnecessary XSS amplifier. Use the HTTP /execute-js(/confirm)
+  // routes — they're gated by the injection scanner and user approval.
 
   // Tab management
   TAB_NEW: 'tab-new',

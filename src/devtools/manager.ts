@@ -273,7 +273,7 @@ export class DevToolsManager {
 
   // ── Evaluate ──
 
-  /** Evaluate JavaScript in the page context via CDP (more powerful than executeJS) */
+  /** Evaluate JavaScript in the page context via CDP (more powerful than wc.executeJavaScript) */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Runtime.evaluate returns arbitrary page values
   async evaluate(expression: string, opts?: { returnByValue?: boolean; awaitPromise?: boolean }): Promise<any> {
     const wc = await this.ensureAttached();

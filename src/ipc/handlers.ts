@@ -116,7 +116,6 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     IpcChannels.RELOAD,
     IpcChannels.GET_PAGE_CONTENT,
     IpcChannels.GET_PAGE_STATUS,
-    IpcChannels.EXECUTE_JS,
     IpcChannels.GET_API_TOKEN,
     IpcChannels.IS_WINDOW_MAXIMIZED,
     IpcChannels.START_RECORDING,
@@ -645,18 +644,11 @@ export function registerIpcHandlers(deps: IpcDeps): void {
     }
   });
 
-  ipcMain.handle(IpcChannels.EXECUTE_JS, async (_event, code: string) => {
-    const wc = await tabManager.getActiveWebContents();
-    if (!wc) return { success: false, error: 'No active tab' };
-
-    try {
-      const result = await wc.executeJavaScript(code);
-      return { success: true, result };
-    } catch (error) {
-      return { success: false, error: String(error) };
-    }
-  });
-
+  // EXECUTE_JS handler removed in audit #34 High-4 — the channel let any
+  // renderer call wc.executeJavaScript in the active tab, with no sender check
+  // and no approval gate. If a feature later needs agent-driven JS execution
+  // from a trusted surface, prefer the HTTP routes /execute-js/confirm (gated
+  // via taskManager.requestApproval) or /execute-js (scanner-protected).
   ipcMain.handle(IpcChannels.GET_API_TOKEN, async () => {
     try {
       return fs.readFileSync(tandemDir('api-token'), 'utf-8').trim();
