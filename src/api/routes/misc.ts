@@ -82,12 +82,18 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
   // approval via taskManager.requestApproval — same pattern as the
   // guardian-mode gate in #161.
   //
-  // "Shell-initiated" = Origin header starts with file:// or is "null".
-  // Both correspond to the Electron shell's webContents origin (the
-  // injection-scanner's override script runs inside that context). Node.js
-  // fetch (MCP api-client) does not set Origin, so MCP calls never spoof
-  // their way past this gate. A caller that has the API token AND can set
-  // arbitrary headers is already a trusted team member by definition.
+  // Shell-initiated calls mark themselves with `X-Tandem-Shell-Initiated: 1`.
+  // An earlier version of this gate (#164) checked the Origin header, but
+  // live investigation showed that modern Electron strips Origin on
+  // file:// → http://localhost cross-origin fetches, so Origin is absent
+  // for the shell. The dedicated header is explicit and doesn't depend on
+  // Electron version.
+  //
+  // No MCP tool grants agents the ability to set arbitrary HTTP headers,
+  // so a prompt-injected agent cannot spoof this header through the
+  // normal tool surface. Within Tandem's trust model the header is a
+  // sufficient signal — the perimeter sits between web content and the
+  // team, not between team members.
   router.post('/security/injection-override', async (req: Request, res: Response) => {
     try {
       const { domain } = req.body;
@@ -96,8 +102,8 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
 
-      const origin = typeof req.headers.origin === 'string' ? req.headers.origin : '';
-      const isShellInitiated = origin.startsWith('file://') || origin === 'null';
+      const shellMarker = req.headers['x-tandem-shell-initiated'];
+      const isShellInitiated = shellMarker === '1' || shellMarker === 'true';
 
       if (!isShellInitiated) {
         const description = `Silence prompt-injection scanner for ${domain} for 5 minutes`;

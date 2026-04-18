@@ -137,3 +137,60 @@ describe('TandemAPI extension auth', () => {
     expect(decision.reason).toContain('does not match requested extension');
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────
+// CORS origin policy — audit #34 Medium #1
+// ─────────────────────────────────────────────────────────────────────
+
+describe('TandemAPI CORS policy', () => {
+  function buildApi() {
+    const ctx = createMockContext();
+    const api = new TandemAPI({ win: ctx.win as any, registry: ctx as any });
+    const app = (api as unknown as { app: Application }).app;
+    return { app, ctx };
+  }
+
+  it('allows requests with no Origin header (shell, MCP, curl)', async () => {
+    const { app } = buildApi();
+    // /status is public so we don't need a token.
+    const res = await request(app).get('/status');
+    // CORS error would surface as 500 with "CORS not allowed"; we just need
+    // to see the request got past the CORS middleware and hit the route.
+    expect(res.status).not.toBe(500);
+  });
+
+  it('allows file:// origins (Electron shell)', async () => {
+    const { app } = buildApi();
+    const res = await request(app).get('/status').set('Origin', 'file:///Users/x/shell/index.html');
+    expect(res.status).not.toBe(500);
+  });
+
+  it('rejects Origin: null (sandboxed iframes, data: URIs — audit #34 Medium #1)', async () => {
+    const { app } = buildApi();
+    const res = await request(app).get('/status').set('Origin', 'null');
+    // cors middleware turns the error into a 500. The body varies by express
+    // version; the important contract is "did not get the public /status
+    // payload".
+    expect(res.status).toBe(500);
+    expect(res.body).not.toHaveProperty('ready');
+  });
+
+  it('rejects arbitrary http:// origins from random web pages', async () => {
+    const { app } = buildApi();
+    const res = await request(app).get('/status').set('Origin', 'https://evil.example');
+    expect(res.status).toBe(500);
+    expect(res.body).not.toHaveProperty('ready');
+  });
+
+  it('allows the X-Tandem-Shell-Initiated header in CORS preflight', async () => {
+    const { app } = buildApi();
+    const res = await request(app)
+      .options('/security/injection-override')
+      .set('Origin', 'file:///')
+      .set('Access-Control-Request-Method', 'POST')
+      .set('Access-Control-Request-Headers', 'X-Tandem-Shell-Initiated, Authorization, Content-Type');
+    expect(res.status).toBeLessThan(400);
+    const allowed = String(res.headers['access-control-allow-headers'] || '').toLowerCase();
+    expect(allowed).toContain('x-tandem-shell-initiated');
+  });
+});
