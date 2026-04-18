@@ -252,7 +252,16 @@ export function injectionScannerMiddleware(req: Request, res: Response, next: Ne
                         const token = window.__TANDEM_TOKEN__ || '';
                         await fetch('http://localhost:8765/security/injection-override', {
                           method: 'POST',
-                          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + token,
+                            // Marks this call as originating from the shell's
+                            // post-confirmation "Override" button. The route
+                            // handler trusts this header to skip the second
+                            // approval modal. See src/api/routes/misc.ts —
+                            // audit #34 Medium #3 and the header-based fix.
+                            'X-Tandem-Shell-Initiated': '1',
+                          },
                           body: JSON.stringify({ domain: '${domain}' }),
                         });
                         modal.innerHTML = '<div style="text-align:center;padding:20px;"><span style="font-size:24px;">✅</span><div style="margin-top:8px;">Override granted for 5 minutes.<br>Retry your request.</div></div>';

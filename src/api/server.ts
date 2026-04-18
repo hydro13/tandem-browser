@@ -123,19 +123,21 @@ export class TandemAPI {
     this.app = express();
     this.app.use(cors({
       origin: (origin, callback) => {
-        // Allow requests with no origin (curl, server-to-server)
+        // Allow requests with no origin (curl, MCP Node.js fetch, Electron
+        // shell — modern Electron strips Origin on file:// → http://localhost
+        // cross-origin fetches, so this is the shell's normal case).
         if (!origin) return callback(null, true);
-        // Allow file:// protocol (Electron shell + webview pages)
-        // Note: Electron may send 'file://', 'file:///', or 'file:///full/path'
+        // Allow file:// protocol — some Electron versions do send this.
+        // Note: may appear as 'file://', 'file:///', or 'file:///full/path'.
         if (origin.startsWith('file://')) return callback(null, true);
-        // Allow "null" origin — some Electron contexts send this for file:// → http:// fetches
-        if (origin === 'null') return callback(null, true);
         // Allow installed extensions to call their narrow helper routes.
         if (this.isTrustedExtensionOrigin(origin)) return callback(null, true);
-        // Block everything else
+        // Reject everything else. Origin: "null" in particular is the
+        // attacker-reachable case (data: URIs, sandbox=""  iframes) and
+        // must not reach public routes — see audit #34 Medium #1.
         callback(new Error('CORS not allowed'));
       },
-      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id', 'Mcp-Session-Id'],
+      allowedHeaders: ['Authorization', 'Content-Type', 'X-Session', 'X-Tab-Id', 'X-Tandem-Extension-Id', 'X-Tandem-Shell-Initiated', 'Mcp-Session-Id'],
       exposedHeaders: ['Mcp-Session-Id'],
     }));
     this.app.use(express.json({ limit: '50mb' }));

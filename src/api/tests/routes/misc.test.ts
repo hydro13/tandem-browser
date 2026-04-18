@@ -175,26 +175,26 @@ describe('misc routes', () => {
       expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
-    it('shell-initiated call (Origin: file://...) passes through without approval', async () => {
+    it('shell-initiated call (X-Tandem-Shell-Initiated: 1) passes through without approval', async () => {
       const res = await request(app)
         .post('/security/injection-override')
-        .set('Origin', 'file:///')
+        .set('X-Tandem-Shell-Initiated', '1')
         .send({ domain: 'example.com' });
       expect(res.status).toBe(200);
       expect(res.body).toMatchObject({ ok: true, domain: 'example.com' });
       expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
-    it('shell-initiated call with Origin: null also passes through (Electron edge case)', async () => {
+    it('shell-initiated header value "true" also passes through', async () => {
       const res = await request(app)
         .post('/security/injection-override')
-        .set('Origin', 'null')
+        .set('X-Tandem-Shell-Initiated', 'true')
         .send({ domain: 'example.com' });
       expect(res.status).toBe(200);
       expect(ctx.taskManager.requestApproval).not.toHaveBeenCalled();
     });
 
-    it('agent/MCP call (no Origin) requires approval — approved path', async () => {
+    it('call without the shell marker (MCP/agent) requires approval — approved path', async () => {
       vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
       const res = await request(app)
         .post('/security/injection-override')
@@ -205,7 +205,7 @@ describe('misc routes', () => {
       expect(ctx.taskManager.createTask).toHaveBeenCalled();
     });
 
-    it('agent/MCP call (no Origin) — rejected returns 403 and never records the override', async () => {
+    it('call without the shell marker — rejected returns 403 and never records the override', async () => {
       vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(false);
       const res = await request(app)
         .post('/security/injection-override')
@@ -214,17 +214,31 @@ describe('misc routes', () => {
       expect(res.body.rejected).toBe(true);
     });
 
-    it('call with a non-shell Origin (e.g. https://some-site) requires approval', async () => {
+    it('Origin header alone no longer bypasses the gate (regression guard for the #164 heuristic)', async () => {
+      // Before the live investigation we keyed the gate off Origin: file:// /
+      // null. Modern Electron strips Origin on file:// → http://localhost
+      // fetches so that heuristic was both unreliable for the real shell
+      // and easy to spoof from a web-side caller setting Origin.
       vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
       const res = await request(app)
         .post('/security/injection-override')
-        .set('Origin', 'https://attacker.example')
+        .set('Origin', 'file:///')
         .send({ domain: 'malicious.example' });
       expect(res.status).toBe(200);
       expect(ctx.taskManager.requestApproval).toHaveBeenCalled();
     });
 
-    it('approval task created for agent calls has riskLevel high and requiresApproval', async () => {
+    it('arbitrary header values other than 1/true do not count as shell-initiated', async () => {
+      vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
+      const res = await request(app)
+        .post('/security/injection-override')
+        .set('X-Tandem-Shell-Initiated', 'yes')
+        .send({ domain: 'malicious.example' });
+      expect(res.status).toBe(200);
+      expect(ctx.taskManager.requestApproval).toHaveBeenCalled();
+    });
+
+    it('approval task for agent calls has riskLevel high and requiresApproval', async () => {
       vi.mocked(ctx.taskManager.requestApproval).mockResolvedValue(true);
       await request(app)
         .post('/security/injection-override')
