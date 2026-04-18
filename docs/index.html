@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tandem Browser — The human-AI symbiotic browser</title>
-<meta name="description" content="Tandem Browser is the human-AI symbiotic browser. A local-first browser where humans and AI agents work in shared context, with real sessions, strong security boundaries, and human-in-the-loop workflows.">
-<meta property="og:title" content="Tandem Browser">
-<meta property="og:description" content="Tandem Browser is the human-AI symbiotic browser. Local-first, shared browser context, real sessions, strong security boundaries.">
+<title>Tandem Browser — A programmable workspace where human intent and AI capability meet</title>
+<meta name="description" content="Tandem is a local-first browser that turns the web into a shared runtime for humans and AI agents. Real SaaS automation without APIs, live UI rewriting on any site, web understanding that goes beyond pixels — on the web that already exists.">
+<meta property="og:title" content="Tandem Browser — agent infrastructure for the real web">
+<meta property="og:description" content="Not an AI sidebar. Not RPA. A local-first browser where humans and AI agents share the same runtime — same tabs, same sessions, same page. Makes possible what other tools cannot even attempt.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://tandembrowser.org">
 <link rel="canonical" href="https://tandembrowser.org">
@@ -141,8 +141,8 @@ footer a:hover{color:var(--text2)}
 
 <div class="hero">
 <div class="hero-label">Open source &middot; MIT license &middot; developer preview &middot; v0.75.0</div>
-<h1>Tandem Browser is the <em>human-AI symbiotic browser</em></h1>
-<p>A local-first browser where humans and AI agents work in shared context. Same tabs, same sessions, same authenticated browser state, with explicit handoffs when the human needs to step in. Local or remote, one agent or several. Not generic browser automation, an actual shared browser workspace for the web that already exists.</p>
+<h1>The browser becomes a <em>programmable workspace</em> where human intent and AI capability meet.</h1>
+<p>Tandem is a local-first browser built around a simple shift: the AI is not a sidebar talking <em>about</em> your browser, it is <em>inside</em> it. Same tabs, same cookies, same logged-in sessions, same page you are looking at right now. Reading the accessibility tree, watching the network, writing live styles, handing back to you when something needs a human. It turns the web that already exists into something agents can actually operate on — no per-site API, no RPA rig, no screenshot loop. The real browser, as a shared runtime.</p>
 <div class="hero-stats">
 <div class="stat"><span class="stat-num">513</span><span class="stat-label">GitHub stars</span></div>
 <div class="stat"><span class="stat-num">250</span><span class="stat-label">MCP tools</span></div>
@@ -156,23 +156,97 @@ footer a:hover{color:var(--text2)}
 <a href="/sponsor.html" class="btn btn-secondary" style="border-color:var(--accent);color:var(--accent)">&hearts; Sponsor</a>
 </div>
 <div class="proof-strip">
-<div class="proof-card"><strong>Human-AI symbiosis</strong><span>Built around humans and agents working together in the same browser, not taking turns through prompts.</span></div>
-<div class="proof-card"><strong>Open source, MIT</strong><span>Real public repo, source available now, developer preview, not vaporware.</span></div>
-<div class="proof-card"><strong>Works with your AI stack</strong><span>MCP and HTTP for local and remote agents. Connect on the same machine or over a private Tailscale network.</span></div>
-<div class="proof-card"><strong>Remote MCP is live</strong><span>Remote agents can now connect over Tailscale through MCP, not just raw HTTP.</span></div>
-<div class="proof-card"><strong>Worth watching for teams</strong><span>Shared human-AI browser workflows, not detached automation or brittle wrappers.</span></div>
+<div class="proof-card"><strong>Automate any SaaS, no API needed</strong><span>If you can use it in a browser, your agent can use it in Tandem. Gmail, Coolblue, Funda, internal tools — same session, same login, no wrapper per site.</span></div>
+<div class="proof-card"><strong>Rewrite live UI on the fly</strong><span>&quot;Overlay the square-meter-price on every listing&quot; and the agent injects a script into the real site, in the real session, while you keep scrolling.</span></div>
+<div class="proof-card"><strong>Read beyond what&rsquo;s rendered</strong><span>Accessibility tree + network log + DOM + DevTools. The agent sees structure and hidden traffic, not a screenshot and a guess.</span></div>
+<div class="proof-card"><strong>Strong model, useful on day one</strong><span>No per-site recipes to train. Install Tandem, point Claude or a local model at it, and a normal web task works straight away.</span></div>
 </div>
 </div>
 
 <div class="divider"><hr></div>
 
 <section id="how">
+<div class="section-label">What this unlocks</div>
+<div class="section-title">Things the &quot;browser + AI&quot; category could not actually do before.</div>
+<p style="font-size:.85rem;color:var(--text2);max-width:720px">Every point here is something you can reproduce today on a stock Tandem install with a capable model behind it. None of this needs a site to opt in, a new protocol to land, or a bespoke scraper per service.</p>
+<div class="concept" style="margin-top:2rem">
+<div class="concept-block">
+<h3>Real co-browsing in one runtime</h3>
+<p>You and the agent are in the same browser at the same time. When you click, it sees the new DOM. When it types, the form fills in front of you. No screen sharing, no &quot;now give me control,&quot; no second headless session trying to catch up to yours.</p>
+</div>
+<div class="concept-block">
+<h3>Web understanding beyond pixels</h3>
+<p>The agent gets the accessibility tree, the rendered DOM, live network requests, console output, and DevTools. It can answer &quot;what API did this page just hit and what came back?&quot; without any of that leaving your machine.</p>
+</div>
+</div>
+<div class="concept" style="margin-top:1rem">
+<div class="concept-block">
+<h3>Real SaaS, no API required</h3>
+<p>Gmail has no usable agent API. Coolblue has no agent API. Your bank, your municipality portal, your internal admin tool — none of them have one either. In Tandem all of that is just &quot;the browser&quot;: the agent logs in like you do, navigates the UI you already know, and gets work done in your real account.</p>
+</div>
+<div class="concept-block">
+<h3>Live UI rewriting, any site</h3>
+<p>Ask the agent to add a &ldquo;price per square meter&rdquo; column to Funda, or a keyboard shortcut to a SaaS tool that refuses to add one, and it injects a user script into the live site. Your browser, your modifications, persisted locally, no extension store involved.</p>
+</div>
+</div>
+<div class="concept" style="margin-top:1rem">
+<div class="concept-block">
+<h3>Cold-start usable</h3>
+<p>The moment you install Tandem and connect a strong model, normal web tasks work. No per-site training, no &ldquo;teach it your flow&rdquo; phase, no hand-authored recipes. The capability is in the model; Tandem just gives it a real browser to stand on.</p>
+</div>
+<div class="concept-block">
+<h3>AI improves, Tandem improves with it</h3>
+<p>A better Claude release or a smarter local Ollama model shows up as a better Tandem experience the same day. There is no prompt-chain glue between you and the model that needs to be rewritten every time the frontier moves — the agent&apos;s skill is the agent&apos;s skill, Tandem just gives it working hands.</p>
+</div>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+
+<section>
+<div class="section-label">What this is not</div>
+<div class="section-title">Useful to say out loud — because it keeps getting confused with these.</div>
+<div class="concept" style="margin-top:2rem">
+<div class="concept-block">
+<h3>Not an AI sidebar</h3>
+<p>A chat panel next to a browser still leaves the AI outside the page. Tandem runs the agent inside the same browser you use, in your real session, not in a separate window guessing what you see.</p>
+</div>
+<div class="concept-block">
+<h3>Not RPA or screen scraping</h3>
+<p>No brittle pixel coordinates, no &quot;record-and-replay&quot; macros. The agent works with structure — the accessibility tree and DOM — the way a careful human developer would.</p>
+</div>
+</div>
+<div class="concept" style="margin-top:1rem">
+<div class="concept-block">
+<h3>Not screenshot-driven automation</h3>
+<p>Screenshot loops are slow, fragile, and expensive. Tandem gives the agent the page as semantic structure first, with screenshots available when they genuinely help, not as the only input channel.</p>
+</div>
+<div class="concept-block">
+<h3>Not just another Chromium wrapper</h3>
+<p>This is a daily-driver browser — tabs, workspaces, extensions, bookmarks, password vault, sidebar apps — with a serious security perimeter between web content and the agent layer. The agent story is first-class, not a bolted-on feature.</p>
+</div>
+</div>
+<div class="concept" style="margin-top:1rem">
+<div class="concept-block">
+<h3>Not &ldquo;chat with this webpage&rdquo;</h3>
+<p>Reading the page aloud is the table-stakes version. Tandem&apos;s agent can open tabs, fill forms, cross-reference sources, log in, hand back to you for a CAPTCHA, inject a userscript, and come back to finish — as one continuous piece of work.</p>
+</div>
+<div class="concept-block">
+<h3>Not cloud-hosted &ldquo;AI agent SaaS&rdquo;</h3>
+<p>Your browser, your machine, your sessions, your data. Remote agents reach you only over your private Tailscale network. Nothing about your browsing is shipped to a Tandem backend — there isn&apos;t one.</p>
+</div>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+
+<section>
 <div class="section-label">Core idea</div>
 <div class="section-title">Symbiosis, not automation theater.</div>
 <div class="concept">
 <div class="concept-block">
 <h3>Other AI browsers</h3>
-<p>Build API wrappers for 40 services. Gmail wrapper, Slack wrapper, Notion wrapper. Each one is custom code. If they haven't built a wrapper for a site, the AI can't use it.</p>
+<p>Build API wrappers for 40 services. Gmail wrapper, Slack wrapper, Notion wrapper. Each one is custom code. If they haven&apos;t built a wrapper for a site, the AI cannot use it.</p>
 </div>
 <div class="concept-block">
 <h3>Tandem Browser</h3>
@@ -181,12 +255,12 @@ footer a:hover{color:var(--text2)}
 </div>
 <div class="concept" style="margin-top:1rem">
 <div class="concept-block">
-<h3>Anti-scraping doesn't apply</h3>
-<p>Tandem Browser is a real browser used by a real human. You browse in it daily. The AI rides alongside, using the same session and the same cookies. There is no bot to detect, just a person with an AI copilot.</p>
+<h3>Anti-scraping doesn&apos;t apply</h3>
+<p>Tandem is a real browser used by a real human. You browse in it daily. The AI rides alongside, using the same session and the same cookies. There is no bot to detect, just a person with an AI copilot.</p>
 </div>
 <div class="concept-block">
-<h3>AI evolves, Tandem Browser evolves</h3>
-<p>Smarter Claude? It automatically gets better at using Tandem Browser. New local model via Ollama? Plug it in. Tandem Browser does not chase AI evolution, it is the browser layer AI evolves on.</p>
+<h3>AI evolves, Tandem evolves with it</h3>
+<p>Smarter Claude? It automatically gets better at using Tandem. New local model via Ollama? Plug it in. Tandem does not chase AI evolution, it is the browser layer AI evolves on.</p>
 </div>
 </div>
 </section>
@@ -243,7 +317,7 @@ footer a:hover{color:var(--text2)}
 <p>Companies testing secure browser-based AI workflows, human-in-the-loop systems, and real authenticated browser work.</p>
 </div>
 </div>
-<p class="company-line"><strong>For teams exploring secure browser-based AI workflows, Tandem Browser is the human-AI symbiotic browser worth watching.</strong></p>
+<p class="company-line"><strong>The everyday version of the pitch: it feels like going on the internet with a brilliant teammate &mdash; not like using a chatbot parked next to a browser.</strong></p>
 </section>
 
 <div class="divider"><hr></div>
