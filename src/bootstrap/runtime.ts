@@ -265,6 +265,35 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
       { notify: true, followFocusedTab: true },
     );
   });
+  // Workspace-emptied handler: when closing a tab would leave its workspace
+  // empty, open Tandem's newtab.html in that workspace so the user keeps
+  // the workspace selected instead of silently sweeping into another one.
+  // Matches how most browsers handle "closed the last tab" (show a new
+  // tab page) while preserving workspace identity — the fix for Bug 2.
+  runtime.tabManager.setWorkspaceEmptiedHandler(async (workspaceId) => {
+    try {
+      const path = await import('path');
+      const newTabUrl = `file://${path.join(__dirname, '..', '..', 'shell', 'newtab.html')}`;
+      // focus:false so we can move-to-workspace first, then focus explicitly —
+      // same pattern used by POST /tabs/open when a workspaceId is supplied.
+      const tab = await runtime.tabManager.openTab(
+        newTabUrl,
+        undefined,
+        'user',
+        'persist:tandem',
+        false,
+      );
+      if (!tab) return null;
+      runtime.workspaceManager.moveTab(tab.webContentsId, workspaceId);
+      return tab;
+    } catch (e) {
+      log.warn(
+        `workspaceEmptiedHandler failed for ${workspaceId}:`,
+        e instanceof Error ? e.message : String(e),
+      );
+      return null;
+    }
+  });
   runtime.historyManager.setSyncManager(runtime.syncManager);
   runtime.workspaceManager.setSyncManager(runtime.syncManager);
   runtime.workspaceManager.setTabStateResolvers({
