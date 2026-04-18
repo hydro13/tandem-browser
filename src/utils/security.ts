@@ -46,6 +46,79 @@ export function isHttpUrl(rawValue: string, base?: string | URL): boolean {
   return !!parsed && (parsed.protocol === 'http:' || parsed.protocol === 'https:');
 }
 
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split('.').map((s) => Number.parseInt(s, 10));
+  if (parts.length !== 4 || parts.some((p) => !Number.isInteger(p) || p < 0 || p > 255)) {
+    return true;
+  }
+  const [a, b] = parts;
+  if (a === 0) return true;
+  if (a === 127) return true;
+  if (a === 10) return true;
+  if (a === 192 && b === 168) return true;
+  if (a === 172 && b >= 16 && b <= 31) return true;
+  if (a === 169 && b === 254) return true;
+  return false;
+}
+
+function isPrivateIPv6(hostname: string): boolean {
+  const v = hostname.toLowerCase();
+  if (v === '::' || v === '::1') return true;
+
+  // IPv4-mapped IPv6 in dotted form: ::ffff:A.B.C.D
+  const dotted = v.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (dotted) return isPrivateIPv4(dotted[1]);
+
+  // IPv4-mapped IPv6 in hex form (Node's normalized output): ::ffff:XXXX:YYYY
+  const hex = v.match(/^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+  if (hex) {
+    const hi = Number.parseInt(hex[1], 16);
+    const lo = Number.parseInt(hex[2], 16);
+    const a = (hi >> 8) & 0xff;
+    const b = hi & 0xff;
+    const c = (lo >> 8) & 0xff;
+    const d = lo & 0xff;
+    return isPrivateIPv4(`${a}.${b}.${c}.${d}`);
+  }
+
+  if (/^fe[89ab]/.test(v)) return true; // link-local
+  if (/^f[cd]/.test(v)) return true;    // ULA
+  return false;
+}
+
+/**
+ * Returns true when `raw` is a http(s) URL whose host is safe to navigate to
+ * from an agent-triggered route. Rejects non-web schemes (file/javascript/data/…)
+ * and private/loopback/link-local IP literals. DNS hostnames pass through — the
+ * 8-layer security shield handles those.
+ */
+export function isSafeNavigationUrl(raw: string): boolean {
+  if (!raw || typeof raw !== 'string') return false;
+  const trimmed = raw.trim();
+  if (!trimmed) return false;
+
+  const parsed = tryParseUrl(trimmed);
+  if (!parsed) return false;
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+
+  const rawHost = parsed.hostname;
+  if (!rawHost) return false;
+
+  const host = rawHost.replace(/^\[/, '').replace(/\]$/, '').toLowerCase();
+  if (!host) return false;
+  if (host === 'localhost') return false;
+
+  if (host.includes(':')) {
+    return !isPrivateIPv6(host);
+  }
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return !isPrivateIPv4(host);
+  }
+
+  return true;
+}
+
 export function hostnameMatches(url: URL, hostname: string): boolean {
   const normalizedHost = url.hostname.toLowerCase();
   const normalizedExpected = hostname.toLowerCase();

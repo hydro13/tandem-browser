@@ -207,6 +207,26 @@ describe('Browser Routes', () => {
       expect(res.status).toBe(500);
       expect(res.body.error).toBe('No active tab');
     });
+
+    it.each([
+      ['file://', 'file:///etc/shadow'],
+      ['javascript:', 'javascript:alert(1)'],
+      ['data:', 'data:text/html,<script>alert(1)</script>'],
+      ['chrome://', 'chrome://settings'],
+      ['devtools://', 'devtools://devtools/bundled/inspector.html'],
+      ['loopback IP', 'http://127.0.0.1:8765/admin'],
+      ['RFC1918 IP', 'http://192.168.1.1'],
+      ['link-local IP', 'http://169.254.169.254/latest/meta-data/'],
+    ])('rejects unsafe URL (%s) with 400 and never calls loadURL', async (_label, url) => {
+      const mockWC = await ctx.tabManager.getActiveWebContents();
+
+      const res = await request(app).post('/navigate').send({ url });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/unsafe/i);
+      expect(mockWC!.loadURL).not.toHaveBeenCalled();
+      expect(ctx.tabManager.openTab).not.toHaveBeenCalled();
+    });
   });
 
   // ═══════════════════════════════════════════════

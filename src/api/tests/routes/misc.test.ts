@@ -1021,6 +1021,20 @@ describe('misc routes', () => {
       expect(res.status).toBe(500);
       expect(res.body).toEqual({ error: 'open error' });
     });
+
+    it.each([
+      ['file://', 'file:///etc/shadow'],
+      ['javascript:', 'javascript:alert(1)'],
+      ['data:', 'data:text/html,x'],
+      ['loopback IP', 'http://127.0.0.1'],
+      ['link-local IP', 'http://169.254.169.254/latest/meta-data/'],
+    ])('rejects unsafe URL (%s) with 400 and never calls headlessManager.open', async (_label, url) => {
+      const res = await request(app).post('/headless/open').send({ url });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error).toMatch(/unsafe/i);
+      expect(ctx.headlessManager.open).not.toHaveBeenCalled();
+    });
   });
 
   describe('GET /headless/content', () => {
