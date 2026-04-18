@@ -40,3 +40,15 @@ Strong reports usually include:
 ## Disclosure
 
 Please allow time for triage and a fix before public disclosure.
+
+## Acknowledgments
+
+Tandem Browser is grateful to the security researchers who have responsibly
+reported issues and helped strengthen the project. If you would like to be
+listed here after reporting, say so in your report.
+
+- **[@samantha-gb](https://github.com/samantha-gb)** — external security audit
+  covering ungated JS execution, URL-scheme validation in the agent-facing API,
+  credential-file permissions, and fingerprint-seed determinism
+  ([#34](https://github.com/hydro13/tandem-browser/issues/34)). Findings are
+  being addressed across several releases starting with [#159](https://github.com/hydro13/tandem-browser/pull/159).
