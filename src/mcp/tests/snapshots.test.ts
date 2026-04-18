@@ -66,6 +66,33 @@ describe('MCP snapshot tools', () => {
       const text = expectTextContent(result);
       expect(text).toBe('');
     });
+
+    it('prefixes a warning banner when scanner attached injectionWarnings', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        snapshot: '<tree/>',
+        count: 3,
+        injectionWarnings: {
+          riskScore: 35,
+          summary: 'Suspicious pattern',
+          findings: [{ severity: 'medium', description: 'something fishy' }],
+        },
+      });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({});
+      const text = expectTextContent(result);
+      expect(text).toContain('⚠️ **Prompt-injection warning**');
+      expect(text).toContain('risk 35/100');
+      expect(text).toContain('<tree/>');
+    });
+
+    it('shows block marker when scanner blocked', async () => {
+      mockApiCall.mockResolvedValueOnce({ blocked: true, riskScore: 90, domain: 'bad.com' });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({});
+      const text = expectTextContent(result, 'BLOCKED BY PROMPT-INJECTION DETECTION');
+      expect(text).not.toContain('<tree');
+      expect(mockLogActivity).toHaveBeenCalledWith('snapshot', 'blocked by injection scanner');
+    });
   });
 
   // ── tandem_snapshot_click ─────────────────────────────────────────
@@ -147,6 +174,30 @@ describe('MCP snapshot tools', () => {
 
       await handler({ ref: '@e1', tabId: 'tab-5' });
       expect(vi.mocked(tabHeaders)).toHaveBeenCalledWith('tab-5');
+    });
+
+    it('prefixes a warning banner when scanner attached injectionWarnings', async () => {
+      mockApiCall.mockResolvedValueOnce({
+        text: 'suspicious inner text',
+        injectionWarnings: {
+          riskScore: 40,
+          summary: 'Pattern match',
+          findings: [{ severity: 'high', description: 'Injection hint' }],
+        },
+      });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({ ref: '@e1' });
+      const text = expectTextContent(result);
+      expect(text).toContain('⚠️ **Prompt-injection warning**');
+      expect(text).toContain('suspicious inner text');
+    });
+
+    it('shows block marker when scanner blocked', async () => {
+      mockApiCall.mockResolvedValueOnce({ blocked: true, riskScore: 85 });
+      mockLogActivity.mockResolvedValueOnce(undefined);
+      const result = await handler({ ref: '@e1' });
+      expectTextContent(result, 'BLOCKED BY PROMPT-INJECTION DETECTION');
+      expect(mockLogActivity).toHaveBeenCalledWith('snapshot_text', 'blocked by injection scanner');
     });
   });
 

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { apiCall, tabHeaders, logActivity } from '../api-client.js';
 import { coerceShape } from '../coerce.js';
+import { wrapWithSecurityContext } from './_security-context.js';
 
 function summarizeActionResult(prefix: string, result: Record<string, unknown>): string {
   const scope = result.scope as Record<string, unknown> | undefined;
@@ -30,8 +31,12 @@ export function registerSnapshotTools(server: McpServer): void {
       const qs = params.toString();
       const endpoint = qs ? `/snapshot?${qs}` : '/snapshot';
       const data = await apiCall('GET', endpoint, undefined, tabHeaders(tabId));
+      if (data && typeof data === 'object' && (data as Record<string, unknown>).blocked === true) {
+        await logActivity('snapshot', 'blocked by injection scanner');
+        return { content: [{ type: 'text', text: wrapWithSecurityContext(data, '') }] };
+      }
       await logActivity('snapshot', `${data.count ?? 0} nodes`);
-      return { content: [{ type: 'text', text: data.snapshot || '' }] };
+      return { content: [{ type: 'text', text: wrapWithSecurityContext(data, data.snapshot || '') }] };
     }
   );
 
@@ -74,8 +79,12 @@ export function registerSnapshotTools(server: McpServer): void {
     async ({ ref, tabId }) => {
       const params = new URLSearchParams({ ref });
       const data = await apiCall('GET', `/snapshot/text?${params.toString()}`, undefined, tabHeaders(tabId));
+      if (data && typeof data === 'object' && (data as Record<string, unknown>).blocked === true) {
+        await logActivity('snapshot_text', 'blocked by injection scanner');
+        return { content: [{ type: 'text', text: wrapWithSecurityContext(data, '') }] };
+      }
       await logActivity('snapshot_text', ref);
-      return { content: [{ type: 'text', text: data.text ?? '' }] };
+      return { content: [{ type: 'text', text: wrapWithSecurityContext(data, data.text ?? '') }] };
     }
   );
 

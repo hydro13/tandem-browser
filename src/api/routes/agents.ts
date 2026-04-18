@@ -1,6 +1,6 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext} from '../context';
-import { getActiveWC } from '../context';
+import { getSessionWC } from '../context';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 import type { TaskStatus } from '../../agents/task-manager';
@@ -136,8 +136,11 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
         return;
       }
 
-      // User approved — execute the code
-      const wc = await getActiveWC(ctx);
+      // User approved — execute the code.
+      // Use getSessionWC so the route honors X-Tab-Id / X-Session headers
+      // like other tab-aware routes. Falls back to active tab when no
+      // targeting header is present, preserving prior behavior.
+      const wc = await getSessionWC(ctx, req);
       if (!wc) {
         res.status(400).json({ error: 'No active tab' });
         return;
