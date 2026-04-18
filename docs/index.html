@@ -159,7 +159,7 @@ footer a:hover{color:var(--text2)}
 <div class="proof-card"><strong>Automate any SaaS, no API needed</strong><span>If you can use it in a browser, your agent can use it in Tandem. Gmail, Coolblue, Funda, internal tools — same session, same login, no wrapper per site.</span></div>
 <div class="proof-card"><strong>Rewrite live UI on the fly</strong><span>&quot;Overlay the square-meter-price on every listing&quot; and the agent injects a script into the real site, in the real session, while you keep scrolling.</span></div>
 <div class="proof-card"><strong>Read beyond what&rsquo;s rendered</strong><span>Accessibility tree + network log + DOM + DevTools. The agent sees structure and hidden traffic, not a screenshot and a guess.</span></div>
-<div class="proof-card"><strong>Strong model, useful on day one</strong><span>No per-site recipes to train. Install Tandem, point Claude or a local model at it, and a normal web task works straight away.</span></div>
+<div class="proof-card"><strong>Bring any AI</strong><span>Tandem is model-agnostic. Claude, GPT, Gemini, local Ollama, LM Studio, custom scripts &mdash; anything that speaks MCP or HTTP. Swap them, combine them, run fully offline.</span></div>
 </div>
 </div>
 
@@ -195,8 +195,8 @@ footer a:hover{color:var(--text2)}
 <p>The moment you install Tandem and connect a strong model, normal web tasks work. No per-site training, no &ldquo;teach it your flow&rdquo; phase, no hand-authored recipes. The capability is in the model; Tandem just gives it a real browser to stand on.</p>
 </div>
 <div class="concept-block">
-<h3>AI improves, Tandem improves with it</h3>
-<p>A better Claude release or a smarter local Ollama model shows up as a better Tandem experience the same day. There is no prompt-chain glue between you and the model that needs to be rewritten every time the frontier moves — the agent&apos;s skill is the agent&apos;s skill, Tandem just gives it working hands.</p>
+<h3>Bring any AI</h3>
+<p>Tandem is model-agnostic. Any agent that speaks MCP or HTTP works &mdash; Claude, GPT, Gemini, local Ollama, LM Studio, custom scripts. Swap models when a cheaper or faster one ships. Run two at once. Go fully offline with a local model. The browser doesn&apos;t care which brain you plug in &mdash; which also means a better Claude release or a smarter Ollama model shows up as a better Tandem experience the same day, without any glue code to rewrite.</p>
 </div>
 </div>
 </section>
@@ -324,8 +324,8 @@ footer a:hover{color:var(--text2)}
 
 <section>
 <div class="section-label">Multi-agent symbiosis</div>
-<div class="section-title">Multiple AI agents + one human. Same browser.</div>
-<p style="font-size:.85rem;color:var(--text2);max-width:640px">Tandem Browser supports multiple AI agents and a human working simultaneously in the same browser. Agents can connect locally or remotely over Tailscale. Each gets their own workspace. All share the same tabs, cookies, and sessions. Tab locks prevent conflicts.</p>
+<div class="section-title">Multiple AI agents + one human. Different model vendors. Same browser.</div>
+<p style="font-size:.85rem;color:var(--text2);max-width:680px">Tandem supports multiple AI agents and a human working simultaneously in the same browser &mdash; and they do not have to be the same model or the same vendor. A local Ollama model for private research, Claude Code on another machine for heavy reasoning, you in the driver&apos;s seat. Agents connect locally or remotely over Tailscale. Each gets their own workspace. All share the same tabs, cookies, and sessions. Tab locks prevent conflicts.</p>
 <div class="riders">
 <div class="rider">
 <div class="rider-icon">&#128100;</div>
@@ -407,7 +407,8 @@ The browser opens. The API starts automatically.</p>
 <div class="step-num">3</div>
 <div class="step-content">
 <h3>Connect your AI</h3>
-<p>Open Settings &rarr; Connected Agents. Choose whether your AI is on this machine or on another machine. Tandem generates the instructions, you paste them into your AI, and the agent discovers the rest through Tandem's own bootstrap surface.</p>
+<p><strong>Bring any AI.</strong> Tandem is model-agnostic. Any agent that speaks MCP or HTTP works &mdash; Claude, GPT, local Ollama, LM Studio, custom scripts. Swap models, combine models, run offline. The browser doesn&apos;t care which AI you bring.</p>
+<p style="margin-top:.4rem">Open Settings &rarr; Connected Agents. Choose whether your AI is on this machine or on another machine. Tandem generates the instructions, you paste them into your AI, and the agent discovers the rest through Tandem&apos;s own bootstrap surface.</p>
 <p style="margin-top:.4rem"><strong>Same machine:</strong> MCP via stdio (250 tools) or HTTP API (300+ endpoints).<br>
 <strong>Another machine:</strong> MCP via Streamable HTTP or HTTP API, over a private Tailscale network. Both machines must be on the same tailnet. Tandem is never exposed to the public internet.</p>
 </div>
