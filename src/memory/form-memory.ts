@@ -190,6 +190,8 @@ export class FormMemoryManager {
       let config: Record<string, unknown> = {};
       if (fs.existsSync(this.configPath)) {
         config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
+        // Migrate pre-fix installs: tighten any existing config.json to 0o600.
+        try { fs.chmodSync(this.configPath, 0o600); } catch { /* best effort */ }
       }
 
       if (config.formEncryptionKey && typeof config.formEncryptionKey === 'string') {
@@ -202,7 +204,10 @@ export class FormMemoryManager {
         if (!fs.existsSync(configDir)) {
           fs.mkdirSync(configDir, { recursive: true });
         }
-        fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2));
+        fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+        // writeFileSync's mode option only applies on file creation — chmod to
+        // enforce 0o600 on pre-existing files (e.g., upgrades from older builds).
+        try { fs.chmodSync(this.configPath, 0o600); } catch { /* best effort */ }
       }
     } catch {
       // Fallback: generate ephemeral key (won't persist across restarts)
@@ -268,6 +273,7 @@ export class FormMemoryManager {
   /** Save form data for a domain */
   private saveDomain(data: DomainFormData): void {
     const filePath = resolvePathWithinRoot(this.formsDir, this.domainToFilename(data.domain));
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), { mode: 0o600 });
+    try { fs.chmodSync(filePath, 0o600); } catch { /* best effort */ }
   }
 }
