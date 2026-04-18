@@ -121,6 +121,11 @@ export const IpcChannels = {
   // (Wingman Chat card, Activity panel, API route, etc.) so every open UI
   // card for the same requestId can dismiss itself in sync.
   APPROVAL_RESPONSE: 'approval-response',
+  // Shell → Main: re-fire a Wingman native-OS notification/ping for an
+  // already-existing unacknowledged handoff. Used on escalation timeouts
+  // and on user-return (focus returns after a longer absence). Payload:
+  // { title, body }.
+  WINGMAN_RE_ALERT: 'wingman-re-alert',
   TASK_UPDATED: 'task-updated',
   HANDOFF_UPDATED: 'handoff-updated',
 

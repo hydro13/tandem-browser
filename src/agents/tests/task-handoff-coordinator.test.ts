@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// Intercept the native-notification call so tests don't try to reach Electron.
+vi.mock('../../notifications/alert', () => ({
+  wingmanAlert: vi.fn(),
+}));
+
 import { TaskHandoffCoordinator } from '../task-handoff-coordinator';
+import { wingmanAlert } from '../../notifications/alert';
 
 function createHandoff(overrides: Record<string, unknown> = {}) {
   return {
@@ -67,6 +74,23 @@ describe('TaskHandoffCoordinator', () => {
     }));
     expect(taskManager.pauseTaskForHandoff).toHaveBeenCalledWith('task-1', 'step-1', 'handoff-1', 'approval');
     expect(handoff?.status).toBe('waiting_approval');
+    // Fires the native-OS notification / audio ping on first creation
+    // so the user hears the agent stalling even when away / in another
+    // workspace.
+    expect(wingmanAlert).toHaveBeenCalledTimes(1);
+    const [title, body] = vi.mocked(wingmanAlert).mock.calls[0];
+    expect(title).toBe('Need help');
+    expect(body).toBe('Solve captcha');
+  });
+
+  it('does NOT re-fire wingmanAlert when updating an existing approval handoff', () => {
+    taskManager.getTask.mockReturnValue({ createdBy: 'openclaw', assignedTo: 'claude' });
+    handoffManager.findOpenByTaskStep.mockReturnValue(createHandoff({ id: 'handoff-existing' }));
+    handoffManager.update.mockReturnValue(createHandoff({ id: 'handoff-existing', status: 'waiting_approval' }));
+
+    coordinator.handleApprovalRequest({ taskId: 'task-1', stepId: 'step-1', action: null });
+
+    expect(wingmanAlert).not.toHaveBeenCalled();
   });
 
   it('updates an existing approval handoff instead of creating a duplicate', () => {

@@ -3,6 +3,7 @@ import { IpcChannels } from '../../shared/ipc-channels';
 
 // Minimal ipcRenderer mock — we only care about on/removeListener wiring.
 const ipcListeners = new Map<string, Set<(...args: unknown[]) => void>>();
+const sentMessages: Array<{ channel: string; payload: unknown }> = [];
 
 vi.mock('electron', () => ({
   ipcRenderer: {
@@ -14,7 +15,9 @@ vi.mock('electron', () => ({
       ipcListeners.get(channel)?.delete(handler);
     }),
     invoke: vi.fn(),
-    send: vi.fn(),
+    send: vi.fn((channel: string, payload: unknown) => {
+      sentMessages.push({ channel, payload });
+    }),
   },
 }));
 
@@ -22,6 +25,7 @@ import { createPanelApi } from '../panel';
 
 beforeEach(() => {
   ipcListeners.clear();
+  sentMessages.length = 0;
   vi.clearAllMocks();
 });
 
@@ -57,5 +61,13 @@ describe('createPanelApi()', () => {
 
   it('onApprovalRequest and onApprovalResponse use distinct IPC channels', () => {
     expect(IpcChannels.APPROVAL_REQUEST).not.toBe(IpcChannels.APPROVAL_RESPONSE);
+  });
+
+  it('requestWingmanReAlert sends the payload over the WINGMAN_RE_ALERT channel', () => {
+    const api = createPanelApi();
+    api.requestWingmanReAlert({ title: 'Agent stalling', body: 'Approve or reject' });
+    expect(sentMessages).toEqual([
+      { channel: IpcChannels.WINGMAN_RE_ALERT, payload: { title: 'Agent stalling', body: 'Approve or reject' } },
+    ]);
   });
 });
