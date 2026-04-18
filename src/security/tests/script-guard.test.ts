@@ -303,27 +303,50 @@ describe('ScriptGuard', () => {
       guard = new ScriptGuard(makeDB(), FAKE_GUARDIAN, dt as unknown as DevToolsManager);
     });
 
-    it('registers the __tandemSecurityAlert binding', async () => {
+    it('registers __tandemSecurityAlert binding scoped to the TandemSecurity isolated world', async () => {
       await guard.injectMonitors(42);
       const bindingCall = dt.sendCommandToTab.mock.calls.find(c => c[1] === 'Runtime.addBinding');
       expect(bindingCall).toBeDefined();
-      expect(bindingCall![2]).toEqual({ name: '__tandemSecurityAlert' });
+      // Stealth: binding must NOT be in main world — scoped via executionContextName
+      expect(bindingCall![2]).toEqual({
+        name: '__tandemSecurityAlert',
+        executionContextName: 'TandemSecurity',
+      });
     });
 
-    it('injects the monitor script via Page.addScriptToEvaluateOnNewDocument', async () => {
+    it('injects a main-world monitor script WITHOUT any __tandem* global', async () => {
       await guard.injectMonitors(42);
-      const pageCall = dt.sendCommandToTab.mock.calls.find(c => c[1] === 'Page.addScriptToEvaluateOnNewDocument');
-      expect(pageCall).toBeDefined();
-      // Should include the monitor source and use the main world
-      const args = pageCall![2] as { source: string; worldName: string };
-      expect(args.source).toContain('__tandemSecurityMonitorsActive');
-      expect(args.worldName).toBe('');
+      const pageCalls = dt.sendCommandToTab.mock.calls.filter(c => c[1] === 'Page.addScriptToEvaluateOnNewDocument');
+      // Two calls: the main-world monitor and the isolated-world bridge
+      expect(pageCalls.length).toBeGreaterThanOrEqual(2);
+      const monitorCall = pageCalls.find(c => (c[2] as { worldName: string }).worldName === '');
+      expect(monitorCall).toBeDefined();
+      const src = (monitorCall![2] as { source: string }).source;
+      // Stealth regression guard: main-world monitor must not define any
+      // `__tandem*` global. The former guard flag is gone; the binding is
+      // reached via a CustomEvent bridge, not direct access.
+      expect(src).not.toContain('__tandemSecurityMonitorsActive');
+      expect(src).not.toContain('window.__tandem');
+      expect(src).not.toMatch(/\b__tandemSecurityAlert\(/);
+      // It DOES call alertSec(...) which dispatches a CustomEvent
+      expect(src).toContain('alertSec(');
+      expect(src).toContain('__tdm_sec_alert');
     });
 
-    it('also runs the script immediately via Runtime.evaluate', async () => {
+    it('injects a TandemSecurity isolated-world bridge that relays CustomEvent → binding', async () => {
       await guard.injectMonitors(42);
-      const runtimeCall = dt.sendCommandToTab.mock.calls.find(c => c[1] === 'Runtime.evaluate');
-      expect(runtimeCall).toBeDefined();
+      const pageCalls = dt.sendCommandToTab.mock.calls.filter(c => c[1] === 'Page.addScriptToEvaluateOnNewDocument');
+      const bridgeCall = pageCalls.find(c => (c[2] as { worldName: string }).worldName === 'TandemSecurity');
+      expect(bridgeCall).toBeDefined();
+      const src = (bridgeCall![2] as { source: string }).source;
+      expect(src).toContain('__tdm_sec_alert');
+      expect(src).toContain('__tandemSecurityAlert');
+    });
+
+    it('also runs the monitor script immediately via Runtime.evaluate', async () => {
+      await guard.injectMonitors(42);
+      const runtimeCalls = dt.sendCommandToTab.mock.calls.filter(c => c[1] === 'Runtime.evaluate');
+      expect(runtimeCalls.length).toBeGreaterThanOrEqual(1);
     });
 
     it('is idempotent — second call does not re-inject', async () => {

@@ -15,6 +15,14 @@ const log = createLogger('CDP');
 
 export type { CDPSubscriber };
 
+/**
+ * Name of the CDP isolated world that hosts Wingman Vision bindings and the
+ * listener script. Page JS in the main world cannot see globals declared in
+ * this world, which closes the `window.__tandem*` fingerprint leak that
+ * existed before this change. The name is CDP-internal — pages never see it.
+ */
+const WINGMAN_WORLD = 'TandemVision';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 interface AttachedSession {
@@ -61,6 +69,12 @@ export class DevToolsManager {
 
   // CDP subscriber system (Phase 3: security modules subscribe to events)
   private subscribers: CDPSubscriber[] = [];
+
+  // Wingman Vision idempotency: replaces the page-visible
+  // `window.__tandemVisionActive` guard that was fingerprintable from page JS.
+  // The bindings + listener script live in an isolated world ('TandemVision');
+  // this Set prevents double-installation on the main-process side.
+  private wingmanBindingsInstalled: Set<number> = new Set();
 
   // === 2. Constructor ===
 
@@ -423,25 +437,44 @@ export class DevToolsManager {
 
   private async installWingmanBindings(wc: WebContents): Promise<void> {
     if (!this.wingmanStream) return;
+    // Main-process idempotency guard: replaces the former main-world
+    // `window.__tandemVisionActive` flag that was fingerprintable from page JS.
+    if (this.wingmanBindingsInstalled.has(wc.id)) return;
 
     try {
-      // Create hidden bindings
-      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemScroll' });
-      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemSelection' });
-      await wc.debugger.sendCommand('Runtime.addBinding', { name: '__tandemFormFocus' });
+      // Stealth posture: the Wingman Vision bindings and the listener script
+      // both live in an ISOLATED world named 'TandemVision'. Page JS in the
+      // main world cannot see `__tandemScroll`, `__tandemSelection`, or
+      // `__tandemFormFocus` on its `window`, and cannot enumerate any
+      // Tandem-branded global. The binding surface is invisible to the page
+      // while still fully callable from inside the isolated world.
+      await wc.debugger.sendCommand('Runtime.addBinding', {
+        name: '__tandemScroll',
+        executionContextName: WINGMAN_WORLD,
+      });
+      await wc.debugger.sendCommand('Runtime.addBinding', {
+        name: '__tandemSelection',
+        executionContextName: WINGMAN_WORLD,
+      });
+      await wc.debugger.sendCommand('Runtime.addBinding', {
+        name: '__tandemFormFocus',
+        executionContextName: WINGMAN_WORLD,
+      });
 
-      // Inject listeners (runs in page context but communicates via invisible bindings)
+      // Inject listeners into the isolated world
       await this.injectWingmanListeners(wc);
+      this.wingmanBindingsInstalled.add(wc.id);
     } catch (e) {
       log.warn('⚠️ Wingman Vision bindings failed:', e instanceof Error ? e.message : e);
     }
   }
 
   private async injectWingmanListeners(wc: WebContents): Promise<void> {
+    // Script runs inside the 'TandemVision' isolated world. No need for a
+    // `window.__tandemVisionActive` guard — the main-process side already
+    // guarantees installWingmanBindings only runs once per webContents
+    // (wingmanBindingsInstalled Set).
     const script = `(function(){
-      if(window.__tandemVisionActive) return;
-      window.__tandemVisionActive = true;
-
       // --- Scroll ---
       var _sT=null, _lastPct=-1;
       window.addEventListener('scroll', function(){
@@ -479,20 +512,36 @@ export class DevToolsManager {
     })()`;
 
     try {
-      // Use addScriptToEvaluateOnNewDocument — runs in main world, survives navigations,
-      // and has reliable access to Runtime.addBinding bindings
+      // Future navigations: script auto-runs in the named isolated world
       await wc.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
         source: script,
-        worldName: '', // empty string = main world
+        worldName: WINGMAN_WORLD,
       });
 
-      // Also run it immediately on the current page (addScriptToEvaluateOnNewDocument
-      // only runs on FUTURE navigations)
-      await wc.debugger.sendCommand('Runtime.evaluate', {
-        expression: script,
-        silent: true,
-        returnByValue: true,
-      });
+      // Current document: create the isolated world explicitly for this frame,
+      // then evaluate inside it.
+      try {
+        const frame = await wc.debugger.sendCommand('Page.getFrameTree') as { frameTree?: { frame?: { id?: string } } };
+        const frameId = frame?.frameTree?.frame?.id;
+        if (frameId) {
+          const isolated = await wc.debugger.sendCommand('Page.createIsolatedWorld', {
+            frameId,
+            worldName: WINGMAN_WORLD,
+            grantUniveralAccess: true,
+          }) as { executionContextId?: number };
+          if (typeof isolated?.executionContextId === 'number') {
+            await wc.debugger.sendCommand('Runtime.evaluate', {
+              expression: script,
+              silent: true,
+              returnByValue: true,
+              contextId: isolated.executionContextId,
+            });
+          }
+        }
+      } catch {
+        // current-page inject is best-effort; addScriptToEvaluateOnNewDocument
+        // will still fire on the next navigation.
+      }
     } catch {
       // Page may not be ready
     }

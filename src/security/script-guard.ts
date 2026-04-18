@@ -17,6 +17,19 @@ import { createLogger } from '../utils/logger';
 
 const log = createLogger('ScriptGuard');
 
+/**
+ * Name of the CDP isolated world that hosts the security-alert binding and
+ * the bridge listener. Security monitors still run in the MAIN world (they
+ * must, in order to hook page APIs like `addEventListener`,
+ * `WebAssembly.instantiate`, `navigator.clipboard`, and `form.action`), but
+ * when an alert fires the monitor dispatches a same-frame CustomEvent which
+ * is relayed by a bridge script in this isolated world. The binding
+ * `__tandemSecurityAlert` is scoped to this world so page JS cannot see it
+ * on `window`. The CustomEvent name is not branded.
+ */
+const SECURITY_WORLD = 'TandemSecurity';
+const SECURITY_EVENT = '__tdm_sec_alert';
+
 // Re-export pure functions for backward compatibility
 export { calculateEntropy, normalizeScriptSource, computeASTHash, computeSimilarity } from './script-utils';
 
@@ -651,9 +664,30 @@ export class ScriptGuard {
   }
 
   /**
-   * Inject security monitor code into the current page.
-   * Uses Runtime.addBinding (invisible to page — same pattern as Wingman Vision).
-   * Uses Page.addScriptToEvaluateOnNewDocument for persistence across navigations.
+   * Inject security monitors into the current page.
+   *
+   * **Architecture (post-stealth fix 2026-04-18):**
+   * - The MONITOR script runs in the MAIN world because it must hook page
+   *   APIs (`addEventListener`, `WebAssembly.instantiate`,
+   *   `navigator.clipboard.readText`, `HTMLFormElement.prototype.action`).
+   *   Those hooks only work against the real main-world prototypes that
+   *   page JS uses.
+   * - When the monitor wants to alert, it dispatches a `CustomEvent` with
+   *   a non-branded type (`__tdm_sec_alert`) on `document`. The event is
+   *   local to the frame, not fingerprintable from another origin, and
+   *   doesn't expose any `window.__tandem*` global.
+   * - A BRIDGE script runs in an ISOLATED world ('TandemSecurity') and
+   *   listens for the CustomEvent. The CDP binding `__tandemSecurityAlert`
+   *   is scoped to this isolated world via `executionContextName`, so page
+   *   JS in the main world cannot see it on `window`.
+   * - Main-process idempotency (`state.monitorInjected`) replaces the
+   *   previous `window.__tandemSecurityMonitorsActive` guard, which was
+   *   itself a page-visible fingerprint.
+   *
+   * Net effect: page JS sees no Tandem-branded global, cannot enumerate any
+   * `__tandem*` on `window`, and the only trace is the non-branded
+   * CustomEvent type — which is only emitted when a known attack pattern
+   * fires, so its presence is conditional.
    */
   async injectMonitors(wcId?: number): Promise<void> {
     const resolvedWcId = wcId ?? this.resolveCurrentWcId();
@@ -662,10 +696,17 @@ export class ScriptGuard {
     const state = this.getOrCreateTabState(resolvedWcId);
     if (state.monitorInjected) return;
 
+    // MAIN-world monitor script. No window.__tandem* globals are exposed.
+    // Main-process `state.monitorInjected` prevents double-injection, so the
+    // previous JS-level guard flag is removed. Alerts are relayed via a
+    // same-frame CustomEvent instead of a direct binding call.
     const monitorScript = `(function() {
-      // Guard against double-injection
-      if (window.__tandemSecurityMonitorsActive) return;
-      window.__tandemSecurityMonitorsActive = true;
+      var EV = '${SECURITY_EVENT}';
+      function alertSec(data) {
+        try {
+          document.dispatchEvent(new CustomEvent(EV, { detail: JSON.stringify(data) }));
+        } catch(e) {}
+      }
 
       // === Keylogger detection ===
       var origAddEventListener = EventTarget.prototype.addEventListener;
@@ -674,15 +715,13 @@ export class ScriptGuard {
             (this instanceof HTMLInputElement || this instanceof HTMLTextAreaElement)) {
           try {
             var stack = new Error().stack || '';
-            if (typeof __tandemSecurityAlert === 'function') {
-              __tandemSecurityAlert(JSON.stringify({
-                type: 'keylogger_suspect',
-                eventType: type,
-                elementTag: this.tagName,
-                elementName: this.name || this.id || 'unknown',
-                callerStack: stack.substring(0, 500),
-              }));
-            }
+            alertSec({
+              type: 'keylogger_suspect',
+              eventType: type,
+              elementTag: this.tagName,
+              elementName: this.name || this.id || 'unknown',
+              callerStack: stack.substring(0, 500),
+            });
           } catch(e) {}
         }
         return origAddEventListener.call(this, type, listener, options);
@@ -693,12 +732,7 @@ export class ScriptGuard {
         var origWasmInstantiate = WebAssembly.instantiate;
         WebAssembly.instantiate = function() {
           try {
-            if (typeof __tandemSecurityAlert === 'function') {
-              __tandemSecurityAlert(JSON.stringify({
-                type: 'wasm_instantiate',
-                timestamp: Date.now(),
-              }));
-            }
+            alertSec({ type: 'wasm_instantiate', timestamp: Date.now() });
           } catch(e) {}
           return origWasmInstantiate.apply(this, arguments);
         };
@@ -709,12 +743,7 @@ export class ScriptGuard {
         var origClipboardRead = navigator.clipboard.readText.bind(navigator.clipboard);
         navigator.clipboard.readText = function() {
           try {
-            if (typeof __tandemSecurityAlert === 'function') {
-              __tandemSecurityAlert(JSON.stringify({
-                type: 'clipboard_read',
-                timestamp: Date.now(),
-              }));
-            }
+            alertSec({ type: 'clipboard_read', timestamp: Date.now() });
           } catch(e) {}
           return origClipboardRead.apply(this, arguments);
         };
@@ -728,13 +757,11 @@ export class ScriptGuard {
           get: formActionDescriptor.get,
           set: function(value) {
             try {
-              if (typeof __tandemSecurityAlert === 'function') {
-                __tandemSecurityAlert(JSON.stringify({
-                  type: 'form_action_change',
-                  newAction: String(value).substring(0, 200),
-                  formId: this.id || 'unknown',
-                }));
-              }
+              alertSec({
+                type: 'form_action_change',
+                newAction: String(value).substring(0, 200),
+                formId: this.id || 'unknown',
+              });
             } catch(e) {}
             return origSet.call(this, value);
           },
@@ -744,10 +771,24 @@ export class ScriptGuard {
       }
     })();`;
 
+    // ISOLATED-world bridge. Listens for the CustomEvent and forwards to the
+    // binding, which is only reachable from this world.
+    const bridgeScript = `(function() {
+      document.addEventListener('${SECURITY_EVENT}', function(e) {
+        try {
+          if (typeof __tandemSecurityAlert === 'function') {
+            __tandemSecurityAlert(String(e.detail || ''));
+          }
+        } catch(err) {}
+      });
+    })();`;
+
     try {
-      // Register the binding FIRST (invisible CDP-level binding)
+      // Register the binding scoped to the isolated world. Main-world page JS
+      // cannot see this binding on `window`.
       await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Runtime.addBinding', {
         name: '__tandemSecurityAlert',
+        executionContextName: SECURITY_WORLD,
       });
 
       // Subscribe to binding calls
@@ -763,20 +804,51 @@ export class ScriptGuard {
         }
       });
 
-      // Inject as persistent script (survives navigations)
+      // Persistent injection (future navigations).
+      // Main-world monitor:
       await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Page.addScriptToEvaluateOnNewDocument', {
         source: monitorScript,
-        worldName: '', // main world — must see page scripts
+        worldName: '', // main world — must see and hook page prototypes
+      });
+      // Isolated-world bridge (CDP auto-creates the world per document):
+      await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Page.addScriptToEvaluateOnNewDocument', {
+        source: bridgeScript,
+        worldName: SECURITY_WORLD,
       });
 
-      // Also run immediately on current page
+      // Immediate injection (current page).
+      // Main-world monitor runs via default Runtime.evaluate:
       await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Runtime.evaluate', {
         expression: monitorScript,
         silent: true,
       });
+      // Bridge needs an explicit isolated world on the current frame:
+      try {
+        const tree = await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Page.getFrameTree') as {
+          frameTree?: { frame?: { id?: string } };
+        };
+        const frameId = tree?.frameTree?.frame?.id;
+        if (frameId) {
+          const isolated = await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Page.createIsolatedWorld', {
+            frameId,
+            worldName: SECURITY_WORLD,
+            grantUniveralAccess: true,
+          }) as { executionContextId?: number };
+          if (typeof isolated?.executionContextId === 'number') {
+            await this.devToolsManager.sendCommandToTab(resolvedWcId, 'Runtime.evaluate', {
+              expression: bridgeScript,
+              silent: true,
+              contextId: isolated.executionContextId,
+            });
+          }
+        }
+      } catch {
+        // Bridge immediate-inject is best-effort; persistent variant will
+        // install on the next navigation.
+      }
 
       state.monitorInjected = true;
-      log.info('Security monitors injected');
+      log.info('Security monitors injected (main-world monitor + isolated-world bridge)');
     } catch (e) {
       log.warn('Monitor injection failed:', e instanceof Error ? e.message : String(e));
     }
