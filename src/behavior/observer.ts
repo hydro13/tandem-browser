@@ -37,7 +37,6 @@ export class BehaviorObserver {
   private eventCount = 0;
   private lastKeypressTs = 0;
   private keypressIntervals: number[] = [];
-  private clickTimestamps: number[] = [];
   private readonly MAX_SAMPLES = 1000;
 
   // === 2. Constructor ===
@@ -53,16 +52,11 @@ export class BehaviorObserver {
 
   // === 4. Public methods ===
 
-  /** Record a click event (called from activity tracker) */
-  recordClick(x: number, y: number): void {
-    const now = Date.now();
-    // Efficient circular buffer management
-    if (this.clickTimestamps.length >= this.MAX_SAMPLES) {
-      this.clickTimestamps.shift(); // Remove oldest
-    }
-    this.clickTimestamps.push(now);
-    this.record({ type: 'click', ts: now, data: { x, y } });
-  }
+  // recordClick was removed — it was defined here but never called from
+  // any caller in the codebase (no activity-tracker hook existed), so
+  // click events were never observed. When we decide to learn a real
+  // click-cadence profile, the wiring belongs in ActivityTracker on the
+  // same webContents.before-input-event listener that handles keypress.
 
   /** Record a scroll event */
   recordScroll(deltaY: number, url?: string): void {
@@ -84,16 +78,6 @@ export class BehaviorObserver {
     const avgKeypressInterval = this.keypressIntervals.length > 0
       ? Math.round(this.keypressIntervals.reduce((a, b) => a + b, 0) / this.keypressIntervals.length)
       : null;
-
-    // Average click delay (time between consecutive clicks)
-    let avgClickDelay: number | null = null;
-    if (this.clickTimestamps.length > 1) {
-      const delays: number[] = [];
-      for (let i = 1; i < this.clickTimestamps.length; i++) {
-        delays.push(this.clickTimestamps[i] - this.clickTimestamps[i - 1]);
-      }
-      avgClickDelay = Math.round(delays.reduce((a, b) => a + b, 0) / delays.length);
-    }
 
     // Count today's file lines
     let todayEvents = 0;
@@ -117,9 +101,7 @@ export class BehaviorObserver {
       todayEvents,
       totalFiles,
       avgKeypressIntervalMs: avgKeypressInterval,
-      avgClickDelayMs: avgClickDelay,
       keypressSamples: this.keypressIntervals.length,
-      clickSamples: this.clickTimestamps.length,
     };
   }
 
@@ -164,32 +146,32 @@ export class BehaviorObserver {
   private setupTracking(): void {
     const wc = this.win.webContents;
 
-    // Track mouse clicks via input events on the shell window
+    // Only keyboard timing for now. Mouse position is not available on the
+    // before-input-event payload, and webview mouse events live in a
+    // different webContents; a click-cadence observer will come with the
+    // full BehaviorCompiler rewrite.
     wc.on('before-input-event', (_event, input) => {
       const now = Date.now();
 
-      if (input.type === 'mouseDown' || input.type === 'mouseUp') {
-        // We can't easily get mouse position from before-input-event for mouse,
-        // so we track keyboard timing here instead
-      }
-
       if (input.type === 'keyDown' && input.key && input.key.length === 1) {
-        // Track keyboard timing (interval between keystrokes)
-        if (this.lastKeypressTs > 0) {
-          const interval = now - this.lastKeypressTs;
-          if (interval < 5000) { // Only track reasonable intervals
-            // Efficient circular buffer management
-            if (this.keypressIntervals.length >= this.MAX_SAMPLES) {
-              this.keypressIntervals.shift(); // Remove oldest
-            }
-            this.keypressIntervals.push(interval);
+        // Track keyboard timing (interval between keystrokes).
+        // NB: compute the interval BEFORE updating lastKeypressTs, so we
+        // actually measure now-minus-previous rather than zero. An earlier
+        // version persisted the post-update value and stored interval: 0
+        // in every JSONL record.
+        const prevTs = this.lastKeypressTs;
+        const interval = prevTs > 0 ? now - prevTs : 0;
+        if (prevTs > 0 && interval > 0 && interval < 5000) {
+          if (this.keypressIntervals.length >= this.MAX_SAMPLES) {
+            this.keypressIntervals.shift(); // Remove oldest
           }
+          this.keypressIntervals.push(interval);
         }
         this.lastKeypressTs = now;
         this.record({
           type: 'keypress',
           ts: now,
-          data: { interval: this.lastKeypressTs > 0 ? now - this.lastKeypressTs : 0 },
+          data: { interval },
         });
       }
     });

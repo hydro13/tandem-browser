@@ -217,3 +217,22 @@ describe('StealthManager — per-install seed', () => {
     expect(m1.getPartitionSeed()).not.toBe(m2.getPartitionSeed());
   });
 });
+
+describe('getStealthScript() — timing protection', () => {
+  it('rounds performance.now to 100μs (Firefox parity)', () => {
+    const script = StealthManager.getStealthScript('seed');
+    expect(script).toContain('performance.now = function');
+    expect(script).toContain('Math.round(origPerfNow() * 10) / 10');
+  });
+
+  it('does NOT patch Date.now — real Chrome returns the same ms for back-to-back calls', () => {
+    // Regression guard: an earlier version added +/-1ms noise to every
+    // Date.now call. That made Tandem trivially distinguishable from real
+    // Chrome (two back-to-back calls in real Chrome always return the same
+    // value; jittered calls almost never do). Keep this test red if anyone
+    // re-introduces the jitter without updating the comment / test.
+    const script = StealthManager.getStealthScript('seed');
+    expect(script).not.toMatch(/Date\.now\s*=\s*function/);
+    expect(script).not.toMatch(/origDateNow/);
+  });
+});

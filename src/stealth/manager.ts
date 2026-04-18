@@ -347,17 +347,20 @@ export class StealthManager {
 
       // ═══ 5.5 Timing Protection ═══
       (function() {
-        // Reduce performance.now() precision to 100μs (like Firefox)
+        // Reduce performance.now() precision to 100μs (like Firefox).
+        // This is the API where modern timing-based fingerprinting
+        // actually happens, and Firefox ships this exact behaviour, so
+        // it is a known legitimate browser pattern.
         var origPerfNow = performance.now.bind(performance);
         performance.now = function() {
           return Math.round(origPerfNow() * 10) / 10; // 100μs precision
         };
 
-        // Add small jitter to Date.now() (±1ms)
-        var origDateNow = Date.now;
-        Date.now = function() {
-          return origDateNow() + __noise(1);
-        };
+        // Note: we deliberately do NOT jitter Date.now. Real Chrome
+        // returns the same millisecond for back-to-back calls; adding
+        // +/-1ms noise makes every t1=Date.now(); t2=Date.now() differ
+        // consistently, which is itself a "not real Chrome" fingerprint.
+        // performance.now() above is the right place for timing defense.
       })();
 
       // Hide webdriver flag
