@@ -34,6 +34,11 @@ possible* for the first time:
 - **Cold-start usable** — point a capable model (Claude, Cursor, a local
   Ollama model) at a fresh Tandem install and a normal web task works on day
   one. No per-site recipes to author, no retrain-per-flow phase.
+- **Bring any AI** — Tandem is model-agnostic. Any agent that speaks MCP
+  or HTTP works — Claude, GPT, Gemini, local Ollama, LM Studio, custom
+  scripts. Swap models when a cheaper or faster one ships. Run two at
+  once. Go fully offline with a local model. The browser doesn't care
+  which brain you plug in.
 
 It works on the web that already exists — no site has to opt in, no new
 protocol has to land. Agents connect on the same machine or remotely over
@@ -160,6 +165,11 @@ Depending on what you want to do:
 - **Support development** -> sponsor Tandem on [GitHub Sponsors](https://github.com/sponsors/hydro13)
 
 ## Connect Your AI Agent
+
+**Tandem is model-agnostic.** Any agent that speaks MCP or HTTP works —
+Claude, GPT, Gemini, local Ollama, LM Studio, custom scripts. Swap models,
+combine models, run fully offline. The browser does not care which AI you
+bring.
 
 Tandem supports AI agents running on the same machine or on a remote machine
 over a private Tailscale network. Both can be active at the same time.
