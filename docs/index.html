@@ -139,6 +139,66 @@ footer a:hover{color:var(--text2)}
 .proof-strip{grid-template-columns:1fr}
 }
 </style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://tandembrowser.org/#software",
+      "name": "Tandem Browser",
+      "alternateName": "Tandem",
+      "applicationCategory": "WebBrowser",
+      "applicationSubCategory": "AI Agent Browser",
+      "operatingSystem": "macOS, Windows, Linux",
+      "description": "Tandem is the open-source, local-first browser where AI agents live inside your real browser session — bring any model via MCP.",
+      "url": "https://tandembrowser.org",
+      "downloadUrl": "https://github.com/hydro13/tandem-browser",
+      "softwareVersion": "0.75.0",
+      "license": "https://opensource.org/licenses/MIT",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": { "@id": "https://tandembrowser.org/#author" },
+      "publisher": { "@id": "https://tandembrowser.org/#author" },
+      "featureList": [
+        "Local-first architecture",
+        "Model-agnostic via MCP",
+        "Same-session human and AI co-browsing",
+        "250+ MCP tools",
+        "300+ HTTP endpoints",
+        "8-layer security pipeline",
+        "Tailscale-based remote agent support",
+        "Works with Claude, GPT, Gemini, Ollama, LM Studio"
+      ]
+    },
+    {
+      "@type": "Person",
+      "@id": "https://tandembrowser.org/#author",
+      "name": "Robin Waslander",
+      "url": "https://github.com/hydro13",
+      "sameAs": [
+        "https://github.com/hydro13",
+        "https://x.com/Robin_waslander",
+        "https://linkedin.com/in/robinwaslander"
+      ],
+      "jobTitle": "AI Architect",
+      "description": "Creator of Tandem Browser. AI Architect with 35 years of IT experience."
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://tandembrowser.org/#website",
+      "url": "https://tandembrowser.org",
+      "name": "Tandem Browser",
+      "description": "The open-source browser for AI agents.",
+      "publisher": { "@id": "https://tandembrowser.org/#author" },
+      "inLanguage": "en"
+    }
+  ]
+}
+</script>
 </head>
 <body>
 <div class="grain"></div>
