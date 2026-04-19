@@ -66,6 +66,8 @@ animation:fadeUp .6s ease both}
 color:var(--text);margin-bottom:1.5rem;animation:fadeUp .6s ease .1s both}
 .hero h1 em{font-style:italic;color:var(--accent)}
 .hero p{font-size:.95rem;color:var(--text2);max-width:580px;line-height:1.8;animation:fadeUp .6s ease .2s both}
+.hero-lead{font-family:var(--serif);font-size:1.05rem;color:var(--text);max-width:700px;margin-bottom:1.5rem;line-height:1.6;animation:fadeUp .6s ease .05s both}
+.hero-lead strong{color:var(--accent);font-weight:600}
 .hero-stats{display:flex;gap:2.5rem;margin-top:2.5rem;animation:fadeUp .6s ease .3s both}
 .stat{display:flex;flex-direction:column}
 .stat-num{font-size:1.4rem;font-weight:600;color:var(--text)}
@@ -220,8 +222,9 @@ footer a:hover{color:var(--text2)}
 
 <div class="hero">
 <div class="hero-label">Open source &middot; MIT license &middot; developer preview &middot; v0.75.0</div>
+<p class="hero-lead">Tandem Browser is the <strong>open-source, local-first browser for AI agents</strong> — where the AI lives inside your real browser session, sharing the same tabs, cookies, and DOM you do.</p>
 <h1>The browser becomes a <em>programmable workspace</em> where human intent and AI capability meet.</h1>
-<p>Tandem is a local-first browser built around a simple shift: the AI is not a sidebar talking <em>about</em> your browser, it is <em>inside</em> it. Same tabs, same cookies, same logged-in sessions, same page you are looking at right now. Reading the accessibility tree, watching the network, writing live styles, handing back to you when something needs a human. It turns the web that already exists into something agents can actually operate on — no per-site API, no RPA rig, no screenshot loop. The real browser, as a shared runtime.</p>
+<p>Tandem is built around a simple shift: the AI is not a sidebar talking <em>about</em> your browser, it is <em>inside</em> it. Same tabs, same cookies, same logged-in sessions, same page you are looking at right now. Reading the accessibility tree, watching the network, writing live styles, handing back to you when something needs a human. It turns the web that already exists into something agents can actually operate on — no per-site API, no RPA rig, no screenshot loop. The real browser, as a shared runtime.</p>
 <div class="hero-stats">
 <div class="stat"><span class="stat-num">513</span><span class="stat-label">GitHub stars</span></div>
 <div class="stat"><span class="stat-num">250</span><span class="stat-label">MCP tools</span></div>
