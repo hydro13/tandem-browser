@@ -2,7 +2,7 @@
 
 > Tandem Browser is the open-source, local-first browser for AI agents — where the AI lives inside your real browser session, bring any model via MCP.
 
-Tandem Browser is a Chromium-based desktop browser (macOS, Windows, Linux) built for one job: letting AI agents and a human work together inside the same browser session. The agent sees the same tabs, cookies, accessibility tree, network log, and DOM that the human sees. There is no per-site API, no headless second browser, and no screenshot loop — the agent operates the real browser the human is already using. This makes Tandem Browser the symbiotic browser: human and AI sharing one real session, neither in control alone.
+Tandem Browser is a Chromium-based desktop browser built for one job: letting AI agents and a human work together inside the same browser session. It currently runs on macOS as a developer preview (the most complete platform), with Linux in pre-beta and Windows planned. The agent sees the same tabs, cookies, accessibility tree, network log, and DOM that the human sees. There is no per-site API, no headless second browser, and no screenshot loop — the agent operates the real browser the human is already using. This makes Tandem Browser the symbiotic browser: human and AI sharing one real session, neither in control alone.
 
 ## Origin
 
