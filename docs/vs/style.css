@@ -1,0 +1,71 @@
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0a0b;--bg2:#111113;--bg3:#1a1a1d;
+--text:#e8e6e0;--text2:#a8a6a0;--text3:#6a6862;
+--accent:#da7756;--accent2:#e89b7d;
+--green:#5DCAA5;--blue:#85B7EB;--red:#F09595;
+--mono:'JetBrains Mono',monospace;
+--serif:'Source Serif 4',Georgia,serif;
+--border:#2a2a2d;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.7;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--accent2)}
+
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.03;z-index:9999;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+header{padding:2rem 0;border-bottom:1px solid var(--border)}
+.nav{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.logo span{color:var(--accent)}
+.nav-links{display:flex;gap:1.5rem;font-size:.8rem;color:var(--text2)}
+.nav-links a{color:var(--text2)}
+.nav-links a:hover{color:var(--text)}
+
+.hero{max-width:960px;margin:0 auto;padding:4rem 2rem 2rem}
+.hero-label{font-size:.75rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1rem}
+.hero h1{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;line-height:1.2;letter-spacing:-.03em;color:var(--text);margin-bottom:1rem}
+.hero p{font-size:.92rem;color:var(--text2);max-width:680px;line-height:1.7}
+.hero p strong{color:var(--text)}
+
+section{max-width:960px;margin:0 auto;padding:3rem 2rem}
+.section-label{font-size:.7rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:.75rem}
+.section-title{font-family:var(--serif);font-size:1.4rem;font-weight:600;letter-spacing:-.02em;margin-bottom:1rem}
+
+.preview-banner{max-width:960px;margin:1.5rem auto 0;padding:0 2rem}
+.preview-banner-inner{padding:.85rem 1.1rem;background:rgba(218,119,86,.06);border:1px solid rgba(218,119,86,.2);border-radius:6px;font-size:.78rem;color:var(--text2);line-height:1.6}
+.preview-banner-inner strong{color:var(--accent)}
+
+.divider{max-width:960px;margin:0 auto;padding:0 2rem}
+.divider hr{border:none;border-top:1px solid var(--border)}
+
+.vs-table{width:100%;border-collapse:collapse;margin-top:1.5rem;font-size:.8rem}
+.vs-table th,.vs-table td{padding:.85rem 1rem;text-align:left;border-bottom:1px solid var(--border);vertical-align:top}
+.vs-table th{font-size:.72rem;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;font-weight:500}
+.vs-table td:first-child{color:var(--text);font-weight:500}
+.vs-table .tandem{color:var(--accent)}
+.vs-table .other{color:var(--blue)}
+.vs-table .neutral{color:var(--text2)}
+.vs-cols{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:1.5rem}
+.vs-col{padding:1.25rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.vs-col h3{font-size:.95rem;color:var(--text);margin-bottom:1rem}
+.vs-col ul{list-style:none;padding:0}
+.vs-col li{padding:.5rem 0;font-size:.8rem;color:var(--text2);border-bottom:1px solid var(--border);line-height:1.6}
+.vs-col li:last-child{border-bottom:none}
+
+.common-block{margin-top:2rem;padding:1.5rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.common-block h3{font-size:.9rem;color:var(--text);margin-bottom:.75rem}
+.common-block p{font-size:.82rem;color:var(--text2);line-height:1.7;max-width:760px}
+
+footer{max-width:960px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:.75rem;color:var(--text3);flex-wrap:wrap;gap:1rem}
+footer a{color:var(--text3)}
+footer a:hover{color:var(--text2)}
+
+@media(max-width:700px){
+.vs-cols{grid-template-columns:1fr}
+.nav-links{display:none}
+.vs-table{font-size:.72rem}
+.vs-table th,.vs-table td{padding:.6rem .5rem}
+}
