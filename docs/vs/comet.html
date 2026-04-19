@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tandem Browser vs Comet — comparing two AI browsers with different goals</title>
+<meta name="description" content="Honest comparison of Tandem Browser (open-source, local-first, model-agnostic, development preview) and Comet (Perplexity's polished AI browser). Both serve real users; this page helps you pick which fits.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://tandembrowser.org/vs/comet">
+<meta property="og:title" content="Tandem Browser vs Comet — honest comparison">
+<meta property="og:description" content="Open-source, local-first, model-agnostic Tandem Browser vs Perplexity's polished Comet. Different choices for different users.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://tandembrowser.org/vs/comet">
+<meta property="og:image" content="https://tandembrowser.org/og.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vs/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Tandem Browser vs Comet",
+  "description": "Honest, balanced comparison of Tandem Browser and Perplexity's Comet AI browser.",
+  "author": {"@type": "Person", "name": "Robin Waslander"},
+  "publisher": {"@type": "Person", "name": "Robin Waslander"},
+  "datePublished": "2026-04-19",
+  "mainEntityOfPage": "https://tandembrowser.org/vs/comet",
+  "about": [
+    {"@type": "SoftwareApplication", "name": "Tandem Browser", "applicationCategory": "WebBrowser"},
+    {"@type": "SoftwareApplication", "name": "Comet", "applicationCategory": "WebBrowser"}
+  ]
+}
+</script>
+</head>
+<body>
+<div class="grain"></div>
+<header>
+<nav class="nav">
+<div class="logo"><a href="/" style="color:inherit"><span>Tandem</span> Browser</a></div>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/#how">How it works</a>
+<a href="/#faq">FAQ</a>
+<a href="/api">API</a>
+<a href="https://github.com/hydro13/tandem-browser">GitHub</a>
+</div>
+</nav>
+</header>
+
+<div class="hero">
+<div class="hero-label">Comparison</div>
+<h1>Tandem Browser vs Comet</h1>
+<p>Both Tandem Browser and Comet (Perplexity's AI browser) are part of the wave of browsers that take AI seriously as a first-class participant rather than a sidebar. They make different choices about <strong>openness</strong>, <strong>which AI model you can use</strong>, and <strong>where your data lives</strong>. This page is a balanced look at where each fits.</p>
+</div>
+
+<div class="preview-banner">
+<div class="preview-banner-inner"><strong>Note:</strong> Tandem Browser is in active development preview (v0.75). Comet is a production-grade, polished product. Some of the differences below reflect that maturity gap, not just architectural choice — please factor that in when deciding.</div>
+</div>
+
+<section>
+<h2 class="section-title">Side-by-side</h2>
+<table class="vs-table">
+<thead><tr><th></th><th>Tandem Browser</th><th>Comet</th></tr></thead>
+<tbody>
+<tr><td>License</td><td class="tandem">MIT (open source)</td><td class="other">Proprietary</td></tr>
+<tr><td>Source available</td><td class="tandem">Yes — full repo on GitHub</td><td class="neutral">No</td></tr>
+<tr><td>Where it runs</td><td class="tandem">Your machine, local-first</td><td class="other">Cloud-hosted features</td></tr>
+<tr><td>Model choice</td><td class="tandem">Bring your own (Claude, GPT, Gemini, OpenClaw, Ollama, LM Studio, custom)</td><td class="other">Perplexity-managed</td></tr>
+<tr><td>Works offline</td><td class="tandem">Yes (with local model)</td><td class="neutral">No — needs cloud</td></tr>
+<tr><td>MCP support</td><td class="tandem">Native — 250+ tools</td><td class="neutral">No</td></tr>
+<tr><td>Multi-agent</td><td class="tandem">Yes — multiple agents in one browser</td><td class="neutral">Single AI</td></tr>
+<tr><td>Remote agents over Tailscale</td><td class="tandem">Yes</td><td class="neutral">N/A</td></tr>
+<tr><td>UX polish</td><td class="neutral">Developer preview — rough edges</td><td class="other">Production-grade, refined</td></tr>
+<tr><td>Install effort</td><td class="neutral">Clone repo, npm install</td><td class="other">Download installer</td></tr>
+<tr><td>Support</td><td class="neutral">Community via GitHub Discussions</td><td class="other">Paid tiers with support</td></tr>
+<tr><td>Price</td><td class="tandem">Free</td><td class="other">Free + paid subscription tiers</td></tr>
+</tbody>
+</table>
+
+<div class="vs-cols">
+<div class="vs-col">
+<h3>Choose Tandem Browser if...</h3>
+<ul>
+<li>You need full control over which AI model the browser uses</li>
+<li>Privacy or local-first is a hard requirement (e.g. work data, regulated industries)</li>
+<li>You want to script, extend, or audit the browser via MCP, HTTP, or source code</li>
+<li>You run multiple agents (mixing Claude, OpenClaw, local Ollama, etc.) and want them in one browser</li>
+<li>You're comfortable with development-preview software and willing to file issues</li>
+</ul>
+</div>
+<div class="vs-col">
+<h3>Choose Comet if...</h3>
+<ul>
+<li>You want a polished, production-ready experience right now without rough edges</li>
+<li>Perplexity's search and model integration is already part of how you work</li>
+<li>You prefer a managed product with paid support over self-hosted software</li>
+<li>You don't need to bring your own model or audit the source</li>
+<li>You want a one-click installer rather than cloning a repo</li>
+</ul>
+</div>
+</div>
+
+<div class="common-block">
+<h3>What both share</h3>
+<p>Both reject the "AI sidebar bolted onto a normal browser" pattern. Both treat browsing as something an AI should be able to participate in directly, not just observe. The category is young and there's genuine room for multiple approaches — Comet's polished managed-product approach and Tandem Browser's open-source local-first approach are both legitimate answers to "how should browsers and AI work together."</p>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+<footer>
+<div>&copy; 2026 Tandem Browser &middot; MIT License</div>
+<div><a href="/">Home</a> &middot; <a href="/#faq">FAQ</a> &middot; <a href="https://github.com/hydro13/tandem-browser">GitHub</a></div>
+</footer>
+</body>
+</html>
