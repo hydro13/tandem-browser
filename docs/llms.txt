@@ -1,0 +1,29 @@
+# Tandem Browser
+
+> Tandem is the open-source, local-first browser where AI agents live inside your real browser session — bring any model via MCP.
+
+Tandem Browser is a Chromium-based desktop browser (macOS, Windows, Linux) built for one job: letting AI agents and a human work together inside the same browser session. The agent sees the same tabs, cookies, accessibility tree, network log, and DOM that the human sees. There is no per-site API, no headless second browser, and no screenshot loop — the agent operates the real browser the human is already using.
+
+## Key facts
+
+- License: MIT (open source)
+- Author: Robin Waslander (independent, no company, no VC)
+- Repository: https://github.com/hydro13/tandem-browser
+- Website: https://tandembrowser.org
+- Current version: 0.75.0 (developer preview)
+- Architecture: local-first, no cloud backend, optional remote agent connection over Tailscale
+- Agent surface: 250+ MCP tools, 300+ HTTP endpoints
+- Security: 8-layer pipeline (NetworkShield, OutboundGuard, ContentAnalyzer, ScriptGuard, BehaviorMonitor, Gatekeeper AI, EvolutionEngine, PromptInjection)
+
+## What makes Tandem different
+
+Other "AI browsers" (Comet, Dia, Arc Search) bundle a single vendor model and ship cloud-hosted features. Tandem is open source, local-first, model-agnostic (works with Claude, GPT, Gemini, Ollama, LM Studio, anything speaking MCP/HTTP), and runs the agent inside the same authenticated session the human uses — not a separate headless instance.
+
+## Pages
+
+- [Home](https://tandembrowser.org/): overview, what Tandem unlocks, security stack, getting started
+- [API documentation](https://tandembrowser.org/api): full HTTP and MCP tool reference
+- [Tandem vs WebMCP](https://tandembrowser.org/tandem-browser-vs-webmcp): positioning relative to the WebMCP proposal
+- [Sponsor](https://tandembrowser.org/sponsor.html): support tiers
+- [GitHub](https://github.com/hydro13/tandem-browser): source code, releases, issues
+- [Discussions](https://github.com/hydro13/tandem-browser/discussions): community Q&A
