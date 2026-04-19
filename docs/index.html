@@ -205,6 +205,100 @@ footer a:hover{color:var(--text2)}
       "description": "The open-source browser for AI agents.",
       "publisher": { "@id": "https://tandembrowser.org/#author" },
       "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://tandembrowser.org/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is Tandem Browser?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tandem is the open-source, local-first browser where AI agents live inside your real browser session. The agent shares the same tabs, cookies, accessibility tree, and DOM you see — no per-site API, no headless second browser, no screenshot loop. It is built on Chromium and licensed MIT."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Tandem Browser free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tandem is free and open source under the MIT license. There is no cloud backend, no subscription, and no telemetry. If you want to support development, you can sponsor on GitHub."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which AI models work with Tandem?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tandem is model-agnostic. Any agent that speaks MCP (Model Context Protocol) or HTTP works — including Claude, GPT, Gemini, local Ollama models, LM Studio, and custom scripts. You can swap models, combine them, or run fully offline with a local model."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can the AI agent ask for help when it gets stuck?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes — that's a core part of how Tandem works. When the agent hits a CAPTCHA, an unclear form, or a judgment call, it pauses and asks you. You answer in seconds, the agent picks back up. You can also interrupt the agent mid-task — type, click, or redirect with a sentence — and it adapts without restarting. Human and AI work as one team, not as a hand-off."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Tandem different from Comet, Dia, or Arc Search?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Comet (Perplexity), Dia (Browser Company), and Arc Search bundle a single vendor model and ship cloud-hosted features. Tandem is open source, local-first, model-agnostic, and runs the agent inside the same authenticated session the human uses — not a separate headless instance. Your data never leaves your machine unless you choose to send it somewhere."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How is Tandem different from Browser Use or Playwright?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Browser Use and Playwright are libraries for headless or scripted automation. Tandem is a daily-driver desktop browser where the agent operates inside your real session alongside you. You don't write a script per workflow — the agent reads the page like a human would, and pauses to ask you when it needs human judgment."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Tandem safe against prompt injection?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tandem ships an 8-layer security pipeline between every byte of external content and the agent: NetworkShield, OutboundGuard, ContentAnalyzer, ScriptGuard, BehaviorMonitor, Gatekeeper AI, EvolutionEngine, and a dedicated PromptInjection layer. It includes an 811K+ entry blocklist, YARA-style rules, AST fingerprinting, Shannon entropy detection, and 51 automated tests."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What operating systems does Tandem support?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Tandem runs on macOS, Windows, and Linux. It is built on Chromium and distributed as source — clone the repo, run npm install, then npm start."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can multiple AI agents use Tandem at the same time?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. Tandem supports multiple agents and a human working simultaneously in the same browser. Each agent gets its own workspace; all share the same tabs, cookies, and sessions. Tab locks prevent conflicts. Agents can run locally or connect remotely over Tailscale — Tandem is never exposed to the public internet."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Tandem work without an internet connection?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. With a local model (Ollama, LM Studio) Tandem runs fully offline. There is no Tandem cloud backend that needs to be reachable."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "How does Tandem compare to WebMCP?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "WebMCP and Tandem solve different layers. WebMCP is a proposal for websites to expose structured agent tools — it requires sites to opt in. Tandem makes the browser itself a shared human-AI workspace, working on every site that exists today, no opt-in required. They are complementary: if WebMCP succeeds, Tandem benefits too."
+          }
+        }
+      ]
     }
   ]
 }
