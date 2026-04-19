@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tandem Browser vs Browser Use — daily-driver browser vs automation library</title>
+<meta name="description" content="Tandem Browser is a desktop browser where AI agents work alongside you. Browser Use is a Python library for headless browser automation. They look adjacent but solve different problems.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://tandembrowser.org/vs/browser-use">
+<meta property="og:title" content="Tandem Browser vs Browser Use — honest comparison">
+<meta property="og:description" content="Daily-driver browser with human-in-the-loop vs Python automation library. Different tools for different jobs.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://tandembrowser.org/vs/browser-use">
+<meta property="og:image" content="https://tandembrowser.org/og.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vs/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Tandem Browser vs Browser Use",
+  "description": "Honest, balanced comparison of Tandem Browser (desktop AI agent browser) and Browser Use (Python headless automation library).",
+  "author": {"@type": "Person", "name": "Robin Waslander"},
+  "publisher": {"@type": "Person", "name": "Robin Waslander"},
+  "datePublished": "2026-04-19",
+  "mainEntityOfPage": "https://tandembrowser.org/vs/browser-use",
+  "about": [
+    {"@type": "SoftwareApplication", "name": "Tandem Browser", "applicationCategory": "WebBrowser"},
+    {"@type": "SoftwareApplication", "name": "Browser Use", "applicationCategory": "DeveloperApplication"}
+  ]
+}
+</script>
+</head>
+<body>
+<div class="grain"></div>
+<header>
+<nav class="nav">
+<div class="logo"><a href="/" style="color:inherit"><span>Tandem</span> Browser</a></div>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/#how">How it works</a>
+<a href="/#faq">FAQ</a>
+<a href="/api">API</a>
+<a href="https://github.com/hydro13/tandem-browser">GitHub</a>
+</div>
+</nav>
+</header>
+
+<div class="hero">
+<div class="hero-label">Comparison</div>
+<h1>Tandem Browser vs Browser Use</h1>
+<p>Tandem Browser and Browser Use both let AI agents operate web pages. They look adjacent from a distance but solve genuinely different problems. <strong>Browser Use is a Python library</strong> for scripted, headless automation. <strong>Tandem Browser is a desktop browser</strong> where the agent works in your real session, alongside you. This page is for picking the right tool for your situation.</p>
+</div>
+
+<div class="preview-banner">
+<div class="preview-banner-inner"><strong>Note:</strong> Tandem Browser is in active development preview (v0.75). Browser Use is a mature, actively maintained library. Some differences below reflect category (browser vs library), not maturity — please weigh both.</div>
+</div>
+
+<section>
+<h2 class="section-title">Side-by-side</h2>
+<table class="vs-table">
+<thead><tr><th></th><th>Tandem Browser</th><th>Browser Use</th></tr></thead>
+<tbody>
+<tr><td>Distribution</td><td class="tandem">Desktop browser app</td><td class="other">Python library</td></tr>
+<tr><td>Mode</td><td class="tandem">Headed (visible browser)</td><td class="other">Typically headless</td></tr>
+<tr><td>Who runs the session</td><td class="tandem">You and the agent share one session</td><td class="other">Agent runs its own session</td></tr>
+<tr><td>Integration</td><td class="tandem">MCP or HTTP from any language</td><td class="other">Python only</td></tr>
+<tr><td>Human-in-the-loop</td><td class="tandem">Yes — agent can ask you, you can interrupt</td><td class="neutral">No — designed for unattended runs</td></tr>
+<tr><td>Authentication</td><td class="tandem">Uses your existing logged-in session</td><td class="other">You handle auth in script</td></tr>
+<tr><td>Works offline</td><td class="tandem">Yes (with local model)</td><td class="neutral">Depends on model setup</td></tr>
+<tr><td>License</td><td class="neutral">MIT (open source)</td><td class="neutral">MIT (open source)</td></tr>
+<tr><td>Maturity</td><td class="neutral">Development preview</td><td class="other">Mature, widely used</td></tr>
+<tr><td>Best for</td><td class="tandem">Co-browsing with AI</td><td class="other">Headless automation pipelines</td></tr>
+</tbody>
+</table>
+
+<div class="vs-cols">
+<div class="vs-col">
+<h3>Choose Tandem Browser if...</h3>
+<ul>
+<li>You want to browse alongside an AI, not script unattended automations</li>
+<li>You need the agent to use your real logged-in sessions in a daily-driver browser</li>
+<li>You want the agent to ask you for help when it gets stuck</li>
+<li>You're not a Python developer or want to integrate from a different language</li>
+<li>You need a desktop browser, not a library</li>
+</ul>
+</div>
+<div class="vs-col">
+<h3>Choose Browser Use if...</h3>
+<ul>
+<li>You're building a headless automation pipeline that runs unattended</li>
+<li>You're a Python developer comfortable writing scripts per workflow</li>
+<li>You want a battle-tested library with a wide user base</li>
+<li>You don't need a human in the loop — the script knows what to do</li>
+<li>You want a library to embed, not a browser to install</li>
+</ul>
+</div>
+</div>
+
+<div class="common-block">
+<h3>What both share</h3>
+<p>Both Tandem Browser and Browser Use are open-source, both let AI agents act on the real web instead of through brittle wrappers, and both bet that real-browser interaction is more honest than synthetic APIs. They serve different points on the same spectrum.</p>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+<footer>
+<div>&copy; 2026 Tandem Browser &middot; MIT License</div>
+<div><a href="/">Home</a> &middot; <a href="/#faq">FAQ</a> &middot; <a href="https://github.com/hydro13/tandem-browser">GitHub</a></div>
+</footer>
+</body>
+</html>
