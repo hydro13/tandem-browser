@@ -211,7 +211,7 @@ main{{max-width:960px;margin:0 auto;padding:2rem 2rem 4rem}}
 .release-body p{{font-size:.82rem;color:var(--text2);margin-bottom:.8rem;line-height:1.7}}
 .release-body ul{{list-style:none;padding-left:0;margin-bottom:.8rem}}
 .release-body li{{font-size:.82rem;color:var(--text2);line-height:1.7;padding-left:1.2rem;position:relative;margin-bottom:.3rem}}
-.release-body li::before{{content:"\2192";position:absolute;left:0;color:var(--accent);font-weight:600}}
+.release-body li::before{{content:"→";position:absolute;left:0;color:var(--accent);font-weight:600}}
 .release-body code{{background:var(--bg3);padding:.1rem .35rem;border-radius:3px;font-size:.75rem;color:var(--green)}}
 .release-body pre{{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:1rem;overflow-x:auto;margin:.8rem 0;font-size:.75rem;line-height:1.5}}
 .release-body pre code{{background:transparent;padding:0;color:var(--text)}}
