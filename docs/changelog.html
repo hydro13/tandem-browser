@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Changelog — Tandem Browser releases</title>
+<meta name="description" content="Release notes for Tandem Browser — every version, what changed, when. Tandem Browser is in active development; this page is regenerated from GitHub Releases.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://tandembrowser.org/changelog">
+<meta property="og:title" content="Tandem Browser changelog">
+<meta property="og:description" content="Release notes for Tandem Browser — every version, what changed.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://tandembrowser.org/changelog">
+<meta property="og:image" content="https://tandembrowser.org/og.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--bg:#0a0a0b;--bg2:#111113;--bg3:#1a1a1d;
+--text:#e8e6e0;--text2:#a8a6a0;--text3:#6a6862;
+--accent:#da7756;--accent2:#e89b7d;
+--green:#5DCAA5;--blue:#85B7EB;--red:#F09595;
+--mono:'JetBrains Mono',monospace;
+--serif:'Source Serif 4',Georgia,serif;
+--border:#2a2a2d;
+}
+html{scroll-behavior:smooth;font-size:16px}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);line-height:1.7;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none;transition:color .2s}
+a:hover{color:var(--accent2)}
+
+.grain{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;opacity:.03;z-index:9999;
+background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+header.site{padding:2rem 0;border-bottom:1px solid var(--border)}
+.nav{max-width:960px;margin:0 auto;padding:0 2rem;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:1.1rem;font-weight:600;letter-spacing:-.02em;color:var(--text)}
+.logo span{color:var(--accent)}
+.nav-links{display:flex;gap:1.5rem;font-size:.8rem;color:var(--text2)}
+.nav-links a{color:var(--text2)}
+.nav-links a:hover{color:var(--text)}
+
+.hero{max-width:960px;margin:0 auto;padding:4rem 2rem 2rem}
+.hero-label{font-size:.75rem;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:1rem}
+.hero h1{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.6rem);font-weight:600;line-height:1.2;letter-spacing:-.03em;color:var(--text);margin-bottom:1rem}
+.hero p{font-size:.92rem;color:var(--text2);max-width:680px;line-height:1.7}
+
+.preview-banner{max-width:960px;margin:1.5rem auto 0;padding:0 2rem}
+.preview-banner-inner{padding:.85rem 1.1rem;background:rgba(218,119,86,.06);border:1px solid rgba(218,119,86,.2);border-radius:6px;font-size:.78rem;color:var(--text2);line-height:1.6}
+.preview-banner-inner strong{color:var(--accent)}
+
+main{max-width:960px;margin:0 auto;padding:2rem 2rem 4rem}
+
+.release{margin-top:2.5rem;padding-top:2rem;border-top:1px solid var(--border)}
+.release:first-of-type{border-top:none;padding-top:0}
+.release-head h2{font-family:var(--serif);font-size:1.4rem;font-weight:600;letter-spacing:-.02em;margin-bottom:.4rem;line-height:1.3}
+.release-head h2 a{color:var(--text)}
+.release-head h2 a:hover{color:var(--accent)}
+.cl-pre{display:inline-block;font-family:var(--mono);font-size:.65rem;color:var(--text3);background:var(--bg3);padding:.15rem .45rem;border-radius:3px;margin-left:.4rem;letter-spacing:.05em;text-transform:uppercase;vertical-align:middle}
+.release-meta{font-size:.75rem;color:var(--text3);margin-bottom:1.2rem}
+.release-meta a{color:var(--text3)}
+.release-meta a:hover{color:var(--text2)}
+.release-body h3{font-family:var(--serif);font-size:1rem;font-weight:600;color:var(--text);margin:1.5rem 0 .6rem;letter-spacing:-.01em}
+.release-body h4{font-size:.82rem;font-weight:600;color:var(--text);margin:1.1rem 0 .4rem;text-transform:uppercase;letter-spacing:.05em}
+.release-body p{font-size:.82rem;color:var(--text2);margin-bottom:.8rem;line-height:1.7}
+.release-body ul{list-style:none;padding-left:0;margin-bottom:.8rem}
+.release-body li{font-size:.82rem;color:var(--text2);line-height:1.7;padding-left:1.2rem;position:relative;margin-bottom:.3rem}
+.release-body li::before{content:"92";position:absolute;left:0;color:var(--accent);font-weight:600}
+.release-body code{background:var(--bg3);padding:.1rem .35rem;border-radius:3px;font-size:.75rem;color:var(--green)}
+.release-body pre{background:var(--bg2);border:1px solid var(--border);border-radius:6px;padding:1rem;overflow-x:auto;margin:.8rem 0;font-size:.75rem;line-height:1.5}
+.release-body pre code{background:transparent;padding:0;color:var(--text)}
+.release-body strong{color:var(--text)}
+.release-body a{color:var(--accent);text-decoration:underline;text-decoration-color:rgba(218,119,86,.3)}
+.release-body a:hover{text-decoration-color:var(--accent2)}
+
+.footer-note{text-align:center;font-size:.7rem;color:var(--text3);margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border)}
+
+footer{max-width:960px;margin:0 auto;padding:3rem 2rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:.75rem;color:var(--text3);flex-wrap:wrap;gap:1rem}
+footer a{color:var(--text3)}
+footer a:hover{color:var(--text2)}
+
+@media(max-width:700px){
+.nav-links{display:none}
+}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+<header class="site">
+<nav class="nav">
+<div class="logo"><a href="/" style="color:inherit"><span>Tandem</span> Browser</a></div>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/#how">How it works</a>
+<a href="/#security">Security</a>
+<a href="/#faq">FAQ</a>
+<a href="/api">API</a>
+<a href="https://github.com/hydro13/tandem-browser">GitHub</a>
+</div>
+</nav>
+</header>
+
+<div class="hero">
+<div class="hero-label">Changelog</div>
+<h1>Tandem Browser releases</h1>
+<p>Every release of Tandem Browser, with full notes. This page is regenerated from <a href="https://github.com/hydro13/tandem-browser/releases">GitHub Releases</a> after each version ships.</p>
+</div>
+
+<div class="preview-banner">
+<div class="preview-banner-inner"><strong>Note:</strong> Tandem Browser is in active development preview (v0.75.0). Releases ship frequently; expect rough edges, breaking changes between minor versions, and rapid iteration on the agent and security layers.</div>
+</div>
+
+<main>
+
+<article class="release" id="v0.75.0">
+<header class="release-head">
+<h2><a href="#v0.75.0">v0.75.0 — security audit follow-through + agent-learn layer phase 1</a></h2>
+<div class="release-meta">v0.75.0 &middot; 2026-04-18 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.75.0">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<p>Large release driven by an external security audit (#34) by <strong><a href="https://github.com/samantha-gb">@samantha-gb</a></strong> and follow-up work that surfaced while implementing her findings. Five High-tier security fixes plus CORS and agent-initiated override hardening landed alongside a proper per-user behavioural learning pipeline and audio/visual escalation for agent-blocked approvals.</p>
+<p>Twelve merged PRs. Grouped below by area.</p>
+<h4>Security — audit #34 findings addressed</h4>
+<ul>
+  <li><strong>Scheme + private-IP guard on <code>/navigate</code> and <code>/headless/open</code> (High-2)</strong> — new <code>isSafeNavigationUrl()</code> helper rejects non-http(s) schemes (file://, javascript:, data:, …) and RFC1918 / link-local / cloud-metadata IP literals, including IPv6 edge cases. (<a href="https://github.com/hydro13/tandem-browser/pull/159">#159</a>)</li>
+  <li><strong>Form-memory files hardened to <code>0o600</code> (High-5)</strong> — <code>{ mode: 0o600 }</code> on <code>~/.tandem/config.json</code> and <code>~/.tandem/forms/*.json</code>, with a <code>chmodSync</code> migration step that tightens pre-existing loose files on next boot. (<a href="https://github.com/hydro13/tandem-browser/pull/159">#159</a>)</li>
+  <li><strong>Per-install random stealth seed (Low/stealth)</strong> — replaced the deterministic <code>sha256(&#x27;persist:tandem&#x27;)</code> seed with a per-install random secret persisted in <code>~/.tandem/config.json</code>. Every install now produces a unique fingerprint-noise pattern; previously every install shared the same signature. (<a href="https://github.com/hydro13/tandem-browser/pull/159">#159</a>)</li>
+  <li><strong>Security-weakening endpoints behind user approval (High-1)</strong> — <code>POST /security/guardian/mode</code>, <code>POST /security/domains/:domain/trust</code>, and <code>POST /security/outbound/whitelist</code> now require interactive user approval via <code>taskManager.requestApproval</code> when the change would weaken posture. Tightening and no-op changes still pass through without friction. (<a href="https://github.com/hydro13/tandem-browser/pull/161">#161</a>)</li>
+  <li><strong>Unused <code>EXECUTE_JS</code> IPC channel removed (High-4)</strong> — the channel had zero callers but would have amplified any XSS reaching the shell into arbitrary JS in the active tab. Agent-driven JS execution continues to flow through the scanner-protected HTTP routes. (<a href="https://github.com/hydro13/tandem-browser/pull/162">#162</a>)</li>
+  <li><strong>CRX3 RSA signature verification on extension install (High-3)</strong> — hand-rolled protobuf decoder parses the CRX3 envelope, verifies the SHA-256-with-RSA signature, and binds the signing key back to the expected extension ID. CRX2 downloads are rejected outright. Defends against MITM or CDN compromise during CWS downloads. (<a href="https://github.com/hydro13/tandem-browser/pull/163">#163</a>)</li>
+  <li><strong>Agent-initiated <code>/security/injection-override</code> behind user approval (Medium #3)</strong> — silencing the prompt-injection scanner now requires either the user clicking &quot;Override&quot; in the scanner modal (existing flow, unchanged) or an interactive approval prompt for any other caller. Prevents a prompt-injected agent from disabling the defence against its own compromise. (<a href="https://github.com/hydro13/tandem-browser/pull/164">#164</a>, corrected in <a href="https://github.com/hydro13/tandem-browser/pull/165">#165</a>)</li>
+  <li><strong>CORS <code>Origin: null</code> rejected on public routes (Medium #1)</strong> — closes a cross-tab information leak where a sandboxed iframe or <code>data:</code> URI could fetch <code>/status</code> from localhost and read the active tab&#x27;s URL/title. Shell-fetches pass through because modern Electron strips the Origin header (verified via logging investigation). (<a href="https://github.com/hydro13/tandem-browser/pull/165">#165</a>)</li>
+  <li><strong>Date.now jitter removed from the stealth script (Low #4)</strong> — the ±1 ms jitter was itself a reliable &quot;not real Chrome&quot; fingerprint (real Chrome returns the same ms for back-to-back calls). <code>performance.now</code> rounding to 100 μs (Firefox parity) remains as the effective timing-fingerprint defence. Also fixed a BehaviorObserver bug that persisted <code>interval: 0</code> on every keypress event, and removed the unwired <code>recordClick</code> method. (<a href="https://github.com/hydro13/tandem-browser/pull/168">#168</a>)</li>
+</ul>
+<h4>Wingman UX</h4>
+<ul>
+  <li><strong>Wingman Activity and Chat panels now sync on approval resolution</strong> — clicking Approve/Reject in one panel dismisses the matching card in the other. The underlying <code>approval-response</code> event is now forwarded to the shell via a new IPC channel mirroring <code>APPROVAL_REQUEST</code>. (<a href="https://github.com/hydro13/tandem-browser/pull/166">#166</a>)</li>
+  <li><strong>Audio ping + escalation + user-return re-alert on approval requests</strong> — when an agent stalls waiting for human input, the user now gets: (a) an immediate native-OS notification with the system sound; (b) a second ping after 12 s if the request is still unacknowledged; (c) a third ping when the user returns to Tandem after being away for more than 10 s. A 5 s rate limit prevents stacking. Exists because &quot;AI is stalled on a call&quot; is an invisible state today if the user happens to be in a different workspace or away. (<a href="https://github.com/hydro13/tandem-browser/pull/167">#167</a>)</li>
+</ul>
+<h4>Agent-learn layer — phase 1</h4>
+<ul>
+  <li><strong>BehaviorCompiler is real now, not a stub</strong> — reads <code>~/.tandem/behavior/raw/*.jsonl</code>, extracts valid keypress intervals, drops outliers (below 30 ms / above 2000 ms), percentile-trims 5%, and computes a per-user <code>meanWpm</code> / <code>variance</code>. Fallback to hardcoded defaults below a 100-sample floor or outside a <code>[20, 150]</code> WPM sane range. <code>BehavioralProfile</code> gained additive observability fields: <code>source</code> (default / default-insufficient / compiled), <code>samples</code>, <code>lastCompiledAt</code>. Compiled at every Tandem boot; new <code>POST /behavior/recompile</code> endpoint forces a fresh compile on demand. Was previously a comment saying &quot;in a real scenario we would parse the data; for now we compile defaults&quot; — so every install&#x27;s agent typed at the same average-typist rhythm. (<a href="https://github.com/hydro13/tandem-browser/pull/169">#169</a>)</li>
+  <li><strong>Webview keystroke rhythm capture (intervals only, no content)</strong> — a <code>before-input-event</code> listener inside the existing <code>web-contents-created</code> handler captures typing rhythm from tab content, feeding the same JSONL stream the shell observer already populates. PRIVACY FLOOR: only <code>input.type</code> and <code>input.key.length</code> are read; the key value itself, the webContents URL, origin, partition, and tabId are never read. Persisted events contain only <code>{type, ts, data: {interval}}</code>. A regression-guard test inspects every persisted event and fails red if anything else appears. (<a href="https://github.com/hydro13/tandem-browser/pull/170">#170</a>)</li>
+</ul>
+<h4>Documentation</h4>
+<ul>
+  <li><strong><a href="https://github.com/samantha-gb">@samantha-gb</a> acknowledged in SECURITY.md and on the contributor graph via <code>Co-authored-by:</code> trailers.</strong> Her security audit drove nine of the twelve PRs in this release. (<a href="https://github.com/hydro13/tandem-browser/pull/160">#160</a>)</li>
+  <li><strong>SECURITY.md restructured</strong> with explicit &quot;anonymous / pseudonymous reports welcome&quot; copy, a &quot;no bounty, yes gratitude&quot; section describing what contributors can expect in exchange for a responsible report, and a new Hall of Fame.</li>
+</ul>
+<h4>Internal notes</h4>
+<ul>
+  <li><strong>Threat model clarified for future security reviews.</strong> Tandem&#x27;s trust perimeter sits between web content and the team (user + paired local/remote agents), not between team members. Findings that describe authenticated callers receiving internal tokens or state are, under this model, not vulnerabilities. Several items from the #34 audit were re-evaluated and intentionally not changed on that basis; the reasoning is documented inline in the relevant PR comments and in <code>SECURITY.md</code>.</li>
+  <li><strong>Cross-panel sync bug surfaced and fixed while testing the injection-override approval flow.</strong> The audio/escalation UX work was added after live-testing revealed that agent stalls could go unnoticed when the user was in a different workspace.</li>
+</ul>
+</div>
+</article>
+
+<article class="release" id="v0.72.2">
+<header class="release-head">
+<h2><a href="#v0.72.2">Tandem Browser v0.72.2</a></h2>
+<div class="release-meta">v0.72.2 &middot; 2026-04-14 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.72.2">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>Tandem Browser v0.72.2</h3>
+<p>This is a source-only release. No binaries are attached.</p>
+<p>Since <code>v0.69.1</code>, Tandem has moved forward in three main areas: tab-scoped reliability, explicit human↔agent handoffs, and version/documentation consistency.</p>
+<h4>Highlights</h4>
+<ul>
+  <li>Added explicit durable handoffs across HTTP API, MCP, events, and the Wingman Activity UI</li>
+  <li>Added task-linked handoff actions for <code>ready</code>, <code>resume</code>, <code>approve</code>, and <code>reject</code></li>
+  <li>Improved closed-panel Wingman attention so open handoffs remain visible without popup/audio spam</li>
+  <li>Fixed <code>/wingman-alert</code> follow-through so it no longer steals the human into the agent workspace by default, and opens Wingman on <code>Activity</code> when responding to handoffs</li>
+  <li>Fixed standalone <code>waiting_approval</code> handoffs so <code>Approve</code> and <code>Reject</code> work even without a linked paused task step</li>
+  <li>Strengthened tab-scoped DevTools, network inspection, interaction confirmation, and fill/typing replacement semantics</li>
+  <li>Synced package, MCP, runtime, and repo-doc version metadata to <code>v0.72.2</code></li>
+  <li>Published updated repo skill guidance so users pulling <code>skill/SKILL.md</code> get the current Tandem runtime model</li>
+</ul>
+<h4>Notable changes included in this release</h4>
+<p>#### Handoffs and Wingman</p>
+<ul>
+  <li>Durable handoff persistence with explicit statuses: <code>needs_human</code>, <code>blocked</code>, <code>waiting_approval</code>, <code>ready_to_resume</code>, <code>completed_review</code>, and <code>resolved</code></li>
+  <li>New handoff routes and MCP tools for create, list, get, update, resolve, activate, ready, resume, approve, and reject flows</li>
+  <li>Wingman Activity inbox now shows context-aware actions and better persistent attention cues when the panel is closed</li>
+</ul>
+<p>#### Interaction reliability</p>
+<ul>
+  <li>Tab-scoped DevTools and network inspection now report explicit scope more reliably</li>
+  <li>Click, fill, snapshot-ref, and keyboard actions now return richer completion and post-action metadata</li>
+  <li>Filled inputs now use deterministic replacement semantics instead of caret-dependent append behavior</li>
+  <li>Label locator fallback and focus-shift confirmation were tightened for dynamic pages</li>
+</ul>
+<p>#### Docs and metadata</p>
+<ul>
+  <li>README, PROJECT, TODO, landing page, package metadata, and MCP version reporting are aligned again</li>
+  <li><code>scripts/check-consistency.js</code> now catches future version drift automatically</li>
+  <li><code>skill/SKILL.md</code> reflects the current MCP-first / durable-handoff Tandem runtime model</li>
+</ul>
+<h4>Validation</h4>
+<ul>
+  <li><code>npx tsc</code></li>
+  <li><code>npx vitest run</code></li>
+  <li>live Tandem validation of the new handoff flow</li>
+</ul>
+</div>
+</article>
+
+<article class="release" id="v0.69.1">
+<header class="release-head">
+<h2><a href="#v0.69.1">Tandem Browser v0.69.1 — 231 MCP tools, full API parity</a></h2>
+<div class="release-meta">v0.69.1 &middot; 2026-04-10 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.69.1">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>Tandem Browser v0.69.1</h3>
+<p><strong>The MCP release.</strong> Tandem now speaks MCP with 231 tools — full parity with the 300+ endpoint HTTP API. Any AI agent that supports MCP (Claude Code, Claude Desktop, Cursor, Windsurf, Ollama, or custom) can plug in and control the browser.</p>
+<h4>Highlights</h4>
+<ul>
+  <li><strong>MCP server: 24 → 231 tools</strong> across 29 modular files covering every HTTP API endpoint</li>
+  <li><strong>Agent-first positioning</strong> — Tandem is no longer OpenClaw-only; any MCP or HTTP agent works</li>
+  <li><strong>Full API parity</strong> — navigation, tabs, snapshots, devtools, network, sessions, workspaces, bookmarks, history, passwords, forms, workflows, extensions, media, and more</li>
+  <li><strong>Type coercion</strong> — centralized z.preprocess() fix ensures boolean/number params work across all MCP clients</li>
+</ul>
+<h4>New Features</h4>
+<ul>
+  <li>Chrome-style <strong>URL bar autocomplete</strong> from browsing history</li>
+  <li><strong>Keyboard input</strong> tools (<code>press_key</code>, <code>press_key_combo</code>) with new HTTP endpoints</li>
+  <li><strong>Live HTML preview</strong> tools — create and update pages in the browser with instant reload</li>
+  <li><strong>Workspace emoji icons</strong> — emoji strings render in the sidebar</li>
+  <li><strong>231 MCP tools</strong> organized in 29 modular files matching the API route structure</li>
+</ul>
+<h4>Bug Fixes</h4>
+<ul>
+  <li><strong>Preload sandbox fix</strong> — esbuild bundling for Electron sandbox compatibility</li>
+  <li><strong>Dark mode rendering</strong> — disabled Chromium&#x27;s forced dark mode on websites</li>
+  <li><strong>Google CookieMismatch</strong> — restored real Electron UA for Google auth, fixed cookie partitioning</li>
+  <li><strong>Stealth UA auto-sync</strong> — dynamic Chrome version from <code>process.versions.chrome</code> instead of hardcoded v131</li>
+  <li><strong>MCP logging</strong> — routed to stderr to prevent protocol corruption</li>
+  <li><strong>History date formatting</strong> — fixed field name mismatch</li>
+  <li><strong>URL autocomplete auth</strong> — added missing Bearer token</li>
+</ul>
+<h4>Security</h4>
+<ul>
+  <li>Updated electron 40.6.0 → 40.8.5 (17 alerts)</li>
+  <li>Updated hono, @hono/node-server, lodash (11 alerts)</li>
+  <li>Fixed brace-expansion and path-to-regexp</li>
+  <li><strong>All 28 Dependabot alerts resolved → 0 vulnerabilities</strong></li>
+</ul>
+<h4>Documentation</h4>
+<ul>
+  <li>README refreshed for post-launch clarity with tool categories table</li>
+  <li>All docs updated from &quot;OpenClaw-first&quot; to &quot;agent-first&quot; positioning</li>
+  <li>SKILL.md now documents MCP as primary connection method</li>
+  <li>CHANGELOG fully documented</li>
+</ul>
+<h4>Breaking Changes</h4>
+<p>None. All existing HTTP API endpoints continue to work unchanged.</p>
+<h4>Connecting Your Agent</h4>
+<pre><code>{
+  &quot;mcpServers&quot;: {
+    &quot;tandem&quot;: {
+      &quot;command&quot;: &quot;node&quot;,
+      &quot;args&quot;: [&quot;/path/to/tandem-browser/dist/mcp/server.js&quot;]
+    }
+  }
+}</code></pre>
+<p>Start Tandem, connect your agent, and 231 tools are available immediately.</p>
+</div>
+</article>
+
+<article class="release" id="v0.67.0">
+<header class="release-head">
+<h2><a href="#v0.67.0">Tandem Browser v0.67.0</a></h2>
+<div class="release-meta">v0.67.0 &middot; 2026-04-02 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.67.0">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>What&#x27;s new since v0.62.16</h3>
+<h4>v0.67.0 — AI Agent Workspace API</h4>
+<p>AI agents now get their own dedicated workspace. OpenClaw (or any AI agent) can create and use a separate workspace in Tandem to open, manage, and persist tabs autonomously — completely isolated from the user&#x27;s browsing.</p>
+<p>When the agent hits a captcha or needs human help, it calls <code>POST /wingman-alert</code> with <code>workspaceId</code> and Tandem automatically switches to the agent&#x27;s workspace so the user can take over immediately.</p>
+<ul>
+  <li><code>POST /tabs/open</code> now accepts <code>workspaceId</code> to assign tabs directly to a workspace</li>
+  <li><code>POST /workspaces/:id/activate</code> — switch the active workspace via API</li>
+  <li><code>POST /workspaces/:id/tabs</code> — move an existing tab into a workspace</li>
+  <li><code>POST /wingman-alert</code> now accepts optional <code>workspaceId</code></li>
+</ul>
+<h4>v0.66.0 — Background Tab Targeting via X-Tab-Id</h4>
+<p>Inspect background tabs without stealing focus from the user.</p>
+<ul>
+  <li><code>X-Tab-Id</code> header support on <code>GET /snapshot</code>, <code>GET /page-content</code>, <code>GET /page-html</code>, <code>POST /execute-js</code>, <code>POST /wait</code>, <code>GET /links</code>, <code>GET /forms</code></li>
+  <li>Snapshot refs now remember which tab produced them — ref follow-up actions stay on the correct tab</li>
+  <li><code>skill/SKILL.md</code> updated with current API model and ClawHub frontmatter</li>
+  <li>Fix: error handling in <code>/find/click</code> and <code>/find/fill</code> routes</li>
+</ul>
+<h4>v0.65.0 — Prompt Injection Guard (Layer 8)</h4>
+<p>Browser-level AI content defense. Tandem now scans agent-facing content routes for prompt injection attempts before forwarding content to the agent.</p>
+<ul>
+  <li>Routes scanned: <code>/snapshot</code>, <code>/page-content</code>, <code>/snapshot/text</code>, <code>/execute-js</code></li>
+  <li>Responses include <code>injectionWarnings</code> when suspicious content is detected</li>
+  <li>High-risk pages return <code>blocked: true</code> — content is not forwarded to the agent</li>
+  <li>Override via <code>POST /security/injection-override</code> when needed</li>
+  <li>Multiple CodeQL hardening fixes for HTML/JS escaping</li>
+</ul>
+<h4>v0.64.x / v0.63.x — Session Inheritance, Fixes and Polish</h4>
+<ul>
+  <li><code>inheritSessionFrom</code> on <code>POST /tabs/open</code> — copies cookies, localStorage, and IndexedDB from source tab, preserving login state (e.g. Discord, LinkedIn) in new tabs</li>
+  <li>Fix: V8 heap limit increased to 4GB to prevent OOM crashes on memory-heavy SPAs</li>
+  <li>Fix: Linux main process blocking + sidebar overflow</li>
+  <li>Fix: zhipin.com added to stealth skip list (bypasses bot detection)</li>
+  <li>UI/UX polish pass — 18 fixes across shell, sidebar, settings, screenshots</li>
+  <li>Linux CI and sidebar stability improvements</li>
+  <li>Dependency updates (xmldom, flatted)</li>
+</ul>
+<p>---</p>
+<p>Source code only. No binaries yet.</p>
+</div>
+</article>
+
+<article class="release" id="v0.62.16">
+<header class="release-head">
+<h2><a href="#v0.62.16">Tandem Browser v0.62.16</a></h2>
+<div class="release-meta">v0.62.16 &middot; 2026-03-17 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.62.16">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>Tandem Browser v0.62.16</h3>
+<h4>Fixed</h4>
+<ul>
+  <li>Restored stock OpenClaw Wingman chat so Tandem no longer depends on a local tandem-chat bridge or <code>/chat</code> polling workaround</li>
+  <li>Tandem now signs a real OpenClaw device identity for the Wingman gateway handshake</li>
+  <li>Wingman chat uses the official OpenClaw gateway send/receive path and persists replies into Tandem chat history</li>
+  <li>Updated the OpenClaw chat client to handle the current gateway response frames and report honest connection state in the panel</li>
+  <li>Satisfied the CodeQL rate-limit gate for the OpenClaw config/connect endpoints</li>
+</ul>
+<h4>Docs</h4>
+<ul>
+  <li>Updated the public README and TODO version references to <code>v0.62.16</code></li>
+  <li>Clarified that stock Wingman chat only needs the local OpenClaw gateway and <code>~/.openclaw/openclaw.json</code></li>
+</ul>
+<h4>Notes</h4>
+<ul>
+  <li>This GitHub release is source-only for now</li>
+  <li>The old files in <code>release/</code> are historical <code>0.1.0</code> artifacts and were intentionally not attached to this release</li>
+</ul>
+</div>
+</article>
+
+<article class="release" id="v0.62.4">
+<header class="release-head">
+<h2><a href="#v0.62.4">Tandem Browser v0.62.4</a></h2>
+<div class="release-meta">v0.62.4 &middot; 2026-03-16 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.62.4">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>v0.62.4 — Lint fixes</h3>
+<p>Patch release fixing two lint errors in v0.62.3:</p>
+<ul>
+  <li>Removed unused <code>detectBackend</code> import in IPC handlers</li>
+  <li>Fixed async Promise executor in speech-transcriber (no-async-promise-executor)</li>
+</ul>
+<p>All features from v0.62.3 are included. CI is now green ✅</p>
+<p>See <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.62.3">v0.62.3 release notes</a> for the full changelog.</p>
+</div>
+</article>
+
+<article class="release" id="v0.62.3">
+<header class="release-head">
+<h2><a href="#v0.62.3">Tandem Browser v0.62.3</a></h2>
+<div class="release-meta">v0.62.3 &middot; 2026-03-16 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.62.3">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>What&#x27;s New in v0.62.3</h3>
+<h4>🎤 Native Voice-to-Text (macOS)</h4>
+<ul>
+  <li>Added mic button in Wingman chat — records audio and transcribes via Apple Speech Framework</li>
+  <li>On macOS the button is hidden (use system dictation Fn+Fn instead — it&#x27;s better!)</li>
+  <li>On Linux: Whisper fallback for offline transcription</li>
+  <li>Swift binary bundled: <code>native/speech/tandem-speech</code></li>
+</ul>
+<h4>🌙 Light Theme — Full Support</h4>
+<ul>
+  <li>Tab bar, toolbar, bookmarks bar now correctly switch to light colors</li>
+  <li>Wingman panel, settings, help, bookmarks, newtab pages all theme-aware</li>
+  <li>Fixed dark gap between webview and wingman panel in light mode</li>
+  <li>Settings page now applies theme on load (not just on change)</li>
+  <li>Removed deprecated &quot;Wingman panel position&quot; setting</li>
+</ul>
+<h4>🔧 Bug Fixes</h4>
+<ul>
+  <li>Fixed GitHub dashboard not loading (github.githubassets.com now trusted)</li>
+  <li>Fixed recording overlay not showing (source variable guard in video-recorder)</li>
+  <li>Fixed recording corruption on force-stop — now converts webm→mp4 on app quit</li>
+  <li>Fixed panel toggle feedback loop (flickering)</li>
+  <li>Fixed chat backend selector crash after UI cleanup</li>
+  <li>Webhook secret auto-syncs with OpenClaw on every startup (not just when empty)</li>
+  <li>Added <code>/devtools/shell</code> API endpoint for debugging the browser shell</li>
+</ul>
+<h4>🔒 Security</h4>
+<ul>
+  <li>Added Google APIs to trusted script domains (apis.google.com, gstatic.com)</li>
+  <li>Added Google WebSocket endpoints to KNOWN_WS_SERVICES</li>
+  <li>OutboundGuard bypass for known Google API domains</li>
+  <li>autoplay-policy: user-gesture-required logged as BUG-008 (fix pending)</li>
+</ul>
+<h4>📝 UI / UX</h4>
+<ul>
+  <li>Wingman chat: Claude/Both backend tabs removed — Wingman only</li>
+  <li>Panel open state synced to backend for notification suppression</li>
+  <li>GitHub profile README created (github.com/hydro13)</li>
+  <li>Live HTML preview system: Tandem landing page built and deployed</li>
+</ul>
+<p><strong>Full changelog:</strong> See CHANGELOG.md</p>
+<p><strong>From:</strong> v0.59.4 → v0.62.3 (38 releases in one day 🚀)</p>
+</div>
+</article>
+
+<article class="release" id="v0.57.21">
+<header class="release-head">
+<h2><a href="#v0.57.21">v0.57.21 — Security model refinement &amp; daily browsing fixes</a></h2>
+<div class="release-meta">v0.57.21 &middot; 2026-03-15 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.57.21">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<h3>Security model refinement — daily browsing fixed, real threats still caught</h3>
+<p>This release addresses a series of false positives in the security stack that made normal browsing impractical, and adds background tab API access for OpenClaw agents.</p>
+<h4>Security fixes</h4>
+<ul>
+  <li><strong>Script analysis containment removed</strong> — ScriptGuard was triggering containment popups on virtually every news site and SPA because minified/obfuscated JavaScript scored high on threat rules. Script analysis now logs anomalies and reports to the gatekeeper channel, but does not activate containment. Containment still activates on confirmed behavioral signals (crypto miner CPU patterns, sustained WASM activity via BehaviorMonitor).</li>
+</ul>
+<ul>
+  <li><strong>LinkedIn fully unblocked</strong> — Three separate layers were blocking LinkedIn:</li>
+</ul>
+<p>  - NetworkShield blocklist contained <code>ads.linkedin.com</code> and <code>snap.licdn.com</code>, causing the parent domain check to block all of <code>linkedin.com</code></p>
+<p>  - Gatekeeper was blocking scripts from <code>static.licdn.com</code> due to low trust score on first visit</p>
+<p>  - ScriptGuard rule engine was running on trusted CDN domains and triggering containment on LinkedIn&#x27;s minified JS</p>
+<p>  - Fixed by adding an explicit domain allowlist in NetworkShield, a trusted script domain list in Guardian, and skipping the rule engine for known CDN domains in ScriptGuard</p>
+<h4>API improvements</h4>
+<ul>
+  <li><strong><code>X-Tab-Id</code> header support</strong> — <code>GET /page-content</code>, <code>GET /page-html</code>, and <code>GET /snapshot</code> now accept an <code>X-Tab-Id</code> request header to target a specific background tab without changing focus. Background tab content extraction uses DevTools <code>Runtime.evaluate</code> instead of <code>executeJavaScript</code> to avoid hangs on non-active tabs.</li>
+</ul>
+<h4>UX fixes</h4>
+<ul>
+  <li><strong>Sidebar links now open in new tab</strong> — Links clicked inside sidebar webviews (Telegram, WhatsApp, etc.) were silently denied. They now open in a new Tandem tab as expected.</li>
+</ul>
+<h4>Docs</h4>
+<ul>
+  <li>Added hero screenshot and browser interaction screenshot to README</li>
+  <li>Security model description moved to top of README per maintainer feedback</li>
+</ul>
+</div>
+</article>
+
+<article class="release" id="v0.57.13">
+<header class="release-head">
+<h2><a href="#v0.57.13">Tandem Browser v0.57.13</a></h2>
+<div class="release-meta">v0.57.13 &middot; 2026-03-14 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.57.13">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<p>Tandem Browser <code>v0.57.13</code> is the second public developer preview release.</p>
+<h3>What&#x27;s new since v0.57.9</h3>
+<p><strong>Security hardening (CodeQL-driven, 3 passes):</strong></p>
+<ul>
+  <li>XSS/ReDoS fixes in API server, shell renderer, and OAuth callback</li>
+  <li>Path injection hardening across extension loader, chrome importer, and native messaging proxy</li>
+  <li>Prototype pollution fix in task manager</li>
+  <li>Modulo bias removed from password generation</li>
+  <li>Shared security helpers in <code>src/utils/security.ts</code> (URL validation, path root containment, HTML escaping)</li>
+  <li>Rate limiting added globally and on sensitive routes</li>
+  <li>DOM-only rendering for new tab page and bookmarks (no more innerHTML with user content)</li>
+  <li>Google Photos callback no longer reflects error text back into HTML</li>
+  <li>Type-loop bounds added for CodeQL loop-bound findings</li>
+</ul>
+<p><strong>CI and repo hygiene:</strong></p>
+<ul>
+  <li>CodeQL scanning workflow added (runs on push, PR, and weekly schedule)</li>
+  <li>Dependency security alerts resolved (tar, hono, yauzl)</li>
+  <li>Lint warnings cleared across the full source tree</li>
+  <li>Verify CI badge and CodeQL badge in README</li>
+  <li>GitHub topics, homepage, and PR template added</li>
+</ul>
+<h3>Status</h3>
+<ul>
+  <li>primary platform: macOS</li>
+  <li>secondary platform: Linux</li>
+  <li>local API on <code>127.0.0.1:8765</code> (Bearer auth required)</li>
+  <li>intended for maintainers, contributors, and serious testers</li>
+  <li>not yet a polished end-user production release</li>
+</ul>
+<h3>Start here</h3>
+<ul>
+  <li>README: https://github.com/hydro13/tandem-browser#readme</li>
+  <li>Changelog: https://github.com/hydro13/tandem-browser/blob/main/CHANGELOG.md</li>
+  <li>Tandem skill for OpenClaw: https://github.com/hydro13/tandem-browser/blob/main/skill/SKILL.md</li>
+</ul>
+</div>
+</article>
+
+<article class="release" id="v0.57.9">
+<header class="release-head">
+<h2><a href="#v0.57.9">Tandem Browser v0.57.9</a> <span class="cl-pre">pre-release</span></h2>
+<div class="release-meta">v0.57.9 &middot; 2026-03-14 &middot; <a href="https://github.com/hydro13/tandem-browser/releases/tag/v0.57.9">View on GitHub &rarr;</a></div>
+</header>
+<div class="release-body">
+<p>Tandem Browser <code>v0.57.9</code> is the first public developer preview release of Tandem as a first-party OpenClaw companion browser.</p>
+<p>Highlights:</p>
+<ul>
+  <li>OpenClaw-first positioning and contributor-facing public docs cleanup</li>
+  <li>refreshed Tandem skill for OpenClaw installations</li>
+  <li>green <code>verify</code> baseline and clean lint state</li>
+  <li>GitHub security hardening: secret scanning, push protection, Dependabot, CodeQL</li>
+  <li>dependency alert cleanup across the current tree</li>
+</ul>
+<p>What to expect:</p>
+<ul>
+  <li>primary platform: macOS</li>
+  <li>secondary platform: Linux</li>
+  <li>local API on <code>127.0.0.1:8765</code></li>
+  <li>intended for maintainers, contributors, and serious testers</li>
+  <li>not positioned yet as a polished end-user production release</li>
+</ul>
+<p>Start here:</p>
+<ul>
+  <li>README: https://github.com/hydro13/tandem-browser#readme</li>
+  <li>Changelog: https://github.com/hydro13/tandem-browser/blob/main/CHANGELOG.md</li>
+  <li>Tandem skill: https://github.com/hydro13/tandem-browser/blob/main/skill/SKILL.md</li>
+</ul>
+</div>
+</article>
+
+<div class="footer-note">Generated 2026-04-19 09:12 UTC. Updates with each release on <a href="https://github.com/hydro13/tandem-browser/releases">GitHub</a>.</div>
+</main>
+
+<footer>
+<div>&copy; 2026 Tandem Browser &middot; MIT License</div>
+<div><a href="/">Home</a> &middot; <a href="/#faq">FAQ</a> &middot; <a href="https://github.com/hydro13/tandem-browser">GitHub</a></div>
+</footer>
+</body>
+</html>
