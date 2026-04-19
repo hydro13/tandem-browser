@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tandem Browser vs Dia — comparing open-source and design-led AI browsers</title>
+<meta name="description" content="Honest comparison of Tandem Browser (open-source, local-first, model-agnostic, development preview) and Dia (The Browser Company's design-led AI browser). Both serve real users with different priorities.">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://tandembrowser.org/vs/dia">
+<meta property="og:title" content="Tandem Browser vs Dia — honest comparison">
+<meta property="og:description" content="Model-agnostic developer-facing Tandem Browser vs The Browser Company's design-led Dia. Different choices for different users.">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://tandembrowser.org/vs/dia">
+<meta property="og:image" content="https://tandembrowser.org/og.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/vs/style.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "Tandem Browser vs Dia",
+  "description": "Honest, balanced comparison of Tandem Browser and The Browser Company's design-led Dia AI browser.",
+  "author": {"@type": "Person", "name": "Robin Waslander"},
+  "publisher": {"@type": "Person", "name": "Robin Waslander"},
+  "datePublished": "2026-04-19",
+  "mainEntityOfPage": "https://tandembrowser.org/vs/dia",
+  "about": [
+    {"@type": "SoftwareApplication", "name": "Tandem Browser", "applicationCategory": "WebBrowser"},
+    {"@type": "SoftwareApplication", "name": "Dia", "applicationCategory": "WebBrowser"}
+  ]
+}
+</script>
+</head>
+<body>
+<div class="grain"></div>
+<header>
+<nav class="nav">
+<div class="logo"><a href="/" style="color:inherit"><span>Tandem</span> Browser</a></div>
+<div class="nav-links">
+<a href="/">Home</a>
+<a href="/#how">How it works</a>
+<a href="/#faq">FAQ</a>
+<a href="/api">API</a>
+<a href="https://github.com/hydro13/tandem-browser">GitHub</a>
+</div>
+</nav>
+</header>
+
+<div class="hero">
+<div class="hero-label">Comparison</div>
+<h1>Tandem Browser vs Dia</h1>
+<p>Both Tandem Browser and Dia (from The Browser Company) take AI seriously as part of the browsing experience. They differ on <strong>openness</strong>, <strong>model choice</strong>, and <strong>design philosophy</strong> — Dia leads with refined consumer design; Tandem Browser leads with developer-facing flexibility. This page lays out the honest tradeoffs.</p>
+</div>
+
+<div class="preview-banner">
+<div class="preview-banner-inner"><strong>Note:</strong> Tandem Browser is in active development preview (v0.75). Dia is a production-grade, polished product. Some of the differences below reflect that maturity gap, not just architectural choice — please factor that in when deciding.</div>
+</div>
+
+<section>
+<h2 class="section-title">Side-by-side</h2>
+<table class="vs-table">
+<thead><tr><th></th><th>Tandem Browser</th><th>Dia</th></tr></thead>
+<tbody>
+<tr><td>License</td><td class="tandem">MIT (open source)</td><td class="other">Proprietary</td></tr>
+<tr><td>Source available</td><td class="tandem">Yes — full repo on GitHub</td><td class="neutral">No</td></tr>
+<tr><td>Where it runs</td><td class="tandem">Your machine, local-first</td><td class="other">Cloud-backed</td></tr>
+<tr><td>Model choice</td><td class="tandem">Bring your own (Claude, GPT, Gemini, OpenClaw, Ollama, LM Studio, custom)</td><td class="other">Anthropic-managed</td></tr>
+<tr><td>Works offline</td><td class="tandem">Yes (with local model)</td><td class="neutral">No — needs cloud</td></tr>
+<tr><td>MCP support</td><td class="tandem">Native — 250+ tools</td><td class="neutral">No</td></tr>
+<tr><td>Multi-agent</td><td class="tandem">Yes — multiple agents in one browser</td><td class="neutral">No</td></tr>
+<tr><td>Remote agents over Tailscale</td><td class="tandem">Yes</td><td class="neutral">N/A</td></tr>
+<tr><td>UX polish</td><td class="neutral">Developer preview — rough edges</td><td class="other">Production-grade, design-led</td></tr>
+<tr><td>Install effort</td><td class="neutral">Clone repo, npm install</td><td class="other">Download installer</td></tr>
+<tr><td>Support</td><td class="neutral">Community via GitHub Discussions</td><td class="other">Paid product with support</td></tr>
+<tr><td>Price</td><td class="tandem">Free</td><td class="other">Subscription tiers</td></tr>
+</tbody>
+</table>
+
+<div class="vs-cols">
+<div class="vs-col">
+<h3>Choose Tandem Browser if...</h3>
+<ul>
+<li>You need full control over which AI model the browser uses</li>
+<li>Privacy or local-first is a hard requirement (e.g. work data, regulated industries)</li>
+<li>You want to script, extend, or audit the browser via MCP, HTTP, or source code</li>
+<li>You run multiple agents (mixing Claude, OpenClaw, local Ollama, etc.) and want them in one browser</li>
+<li>You're comfortable with development-preview software and willing to file issues</li>
+</ul>
+</div>
+<div class="vs-col">
+<h3>Choose Dia if...</h3>
+<ul>
+<li>You want one of the most refined consumer AI-browser experiences available</li>
+<li>Anthropic's models match your workflow and you're happy without alternatives</li>
+<li>Design polish and UX are higher priorities than openness</li>
+<li>You don't need to bring your own model or modify the browser</li>
+<li>You prefer a managed product over self-hosted software</li>
+</ul>
+</div>
+</div>
+
+<div class="common-block">
+<h3>What both share</h3>
+<p>Both Tandem Browser and Dia recognize that browsers built before AI weren't designed for this kind of collaboration. Dia's polished design-led approach and Tandem Browser's open-source developer-facing approach answer the same question — "how should browsers and AI work together" — from genuinely different starting points.</p>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+<footer>
+<div>&copy; 2026 Tandem Browser &middot; MIT License</div>
+<div><a href="/">Home</a> &middot; <a href="/#faq">FAQ</a> &middot; <a href="https://github.com/hydro13/tandem-browser">GitHub</a></div>
+</footer>
+</body>
+</html>
