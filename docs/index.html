@@ -129,6 +129,14 @@ display:flex;justify-content:space-between;align-items:center;font-size:.75rem;c
 footer a{color:var(--text3)}
 footer a:hover{color:var(--text2)}
 
+.faq-list{margin-top:2rem;display:flex;flex-direction:column;gap:.5rem}
+.faq-item{padding:1rem 1.25rem;border:1px solid var(--border);border-radius:6px;background:var(--bg2)}
+.faq-item summary{font-size:.85rem;font-weight:500;color:var(--text);cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:1rem}
+.faq-item summary::-webkit-details-marker{display:none}
+.faq-item summary::after{content:'+';color:var(--accent);font-size:1.2rem;font-weight:300;transition:transform .2s;flex-shrink:0}
+.faq-item[open] summary::after{transform:rotate(45deg)}
+.faq-item p{margin-top:.75rem;font-size:.78rem;color:var(--text2);line-height:1.7}
+.faq-item code{background:var(--bg3);padding:.1rem .35rem;border-radius:3px;font-size:.72rem;color:var(--green)}
 @keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:700px){
 .concept,.security-grid,.riders,.proof-strip,.audience-grid{grid-template-columns:1fr}
@@ -211,6 +219,7 @@ footer a:hover{color:var(--text2)}
 <div class="nav-links">
 <a href="#how">How it works</a>
 <a href="#security">Security</a>
+<a href="#faq">FAQ</a>
 <a href="/api">API</a>
 <a href="#start">Get started</a>
 <a href="https://github.com/hydro13/tandem-browser">GitHub</a>
@@ -544,6 +553,71 @@ The browser opens. The API starts automatically.</p>
 <div style="margin-top:1.25rem;display:flex;gap:1rem;flex-wrap:wrap">
 <a href="https://github.com/sponsors/hydro13" class="btn btn-primary">&hearts; Sponsor on GitHub &rarr;</a>
 <a href="/sponsor.html" class="btn btn-secondary">See sponsor details</a>
+</div>
+</section>
+
+<div class="divider"><hr></div>
+
+<section id="faq">
+<div class="section-label">FAQ</div>
+<h2 class="section-title">Frequently asked questions</h2>
+<div class="faq-list">
+
+<details class="faq-item">
+<summary>What is Tandem Browser?</summary>
+<p>Tandem is the open-source, local-first browser where AI agents live inside your real browser session. The agent shares the same tabs, cookies, accessibility tree, and DOM you see — no per-site API, no headless second browser, no screenshot loop. It is built on Chromium and licensed MIT.</p>
+</details>
+
+<details class="faq-item">
+<summary>Is Tandem Browser free?</summary>
+<p>Yes. Tandem is free and open source under the MIT license. There is no cloud backend, no subscription, and no telemetry. If you want to support development, you can sponsor on GitHub.</p>
+</details>
+
+<details class="faq-item">
+<summary>Which AI models work with Tandem?</summary>
+<p>Tandem is model-agnostic. Any agent that speaks MCP (Model Context Protocol) or HTTP works — including Claude, GPT, Gemini, local Ollama models, LM Studio, and custom scripts. You can swap models, combine them, or run fully offline with a local model.</p>
+</details>
+
+<details class="faq-item">
+<summary>Can the AI agent ask for help when it gets stuck?</summary>
+<p>Yes — that's a core part of how Tandem works. When the agent hits a CAPTCHA, an unclear form, or a judgment call, it pauses and asks you. You answer in seconds, the agent picks back up. You can also interrupt the agent mid-task — type, click, or redirect with a sentence — and it adapts without restarting. Human and AI work as one team, not as a hand-off.</p>
+</details>
+
+<details class="faq-item">
+<summary>How is Tandem different from Comet, Dia, or Arc Search?</summary>
+<p>Comet (Perplexity), Dia (Browser Company), and Arc Search bundle a single vendor model and ship cloud-hosted features. Tandem is open source, local-first, model-agnostic, and runs the agent inside the same authenticated session the human uses — not a separate headless instance. Your data never leaves your machine unless you choose to send it somewhere.</p>
+</details>
+
+<details class="faq-item">
+<summary>How is Tandem different from Browser Use or Playwright?</summary>
+<p>Browser Use and Playwright are libraries for headless or scripted automation. Tandem is a daily-driver desktop browser where the agent operates inside your real session alongside you. You don't write a script per workflow — the agent reads the page like a human would, and pauses to ask you when it needs human judgment.</p>
+</details>
+
+<details class="faq-item">
+<summary>Is Tandem safe against prompt injection?</summary>
+<p>Tandem ships an 8-layer security pipeline between every byte of external content and the agent: NetworkShield, OutboundGuard, ContentAnalyzer, ScriptGuard, BehaviorMonitor, Gatekeeper AI, EvolutionEngine, and a dedicated PromptInjection layer. It includes an 811K+ entry blocklist, YARA-style rules, AST fingerprinting, Shannon entropy detection, and 51 automated tests.</p>
+</details>
+
+<details class="faq-item">
+<summary>What operating systems does Tandem support?</summary>
+<p>Tandem runs on macOS, Windows, and Linux. It is built on Chromium and distributed as source — clone the repo, run <code>npm install</code>, then <code>npm start</code>.</p>
+</details>
+
+<details class="faq-item">
+<summary>Can multiple AI agents use Tandem at the same time?</summary>
+<p>Yes. Tandem supports multiple agents and a human working simultaneously in the same browser. Each agent gets its own workspace; all share the same tabs, cookies, and sessions. Tab locks prevent conflicts. Agents can run locally or connect remotely over Tailscale — Tandem is never exposed to the public internet.</p>
+</details>
+
+<details class="faq-item">
+<summary>Does Tandem work without an internet connection?</summary>
+<p>Yes. With a local model (Ollama, LM Studio) Tandem runs fully offline. There is no Tandem cloud backend that needs to be reachable.</p>
+</details>
+
+<details class="faq-item">
+<summary>How does Tandem compare to WebMCP?</summary>
+<p>WebMCP and Tandem solve different layers. WebMCP is a proposal for websites to expose structured agent tools — it requires sites to opt in. Tandem makes the browser itself a shared human-AI workspace, working on every site that exists today, no opt-in required. They are complementary: if WebMCP succeeds, Tandem benefits too.</p>
+</details>
+
 </div>
 </section>
 
