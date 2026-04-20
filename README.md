@@ -144,6 +144,22 @@ For the longer version, see [docs/tandem-browser-vs-webmcp.md](docs/tandem-brows
 
 ## Quick Start
 
+**macOS Apple Silicon (M1+)** — download the signed and notarized binary:
+
+**[Download Tandem Browser v1.0.0 →](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0)**
+
+1. Open the `.dmg`, drag Tandem Browser to Applications, launch it
+2. Open **Settings → Connected Agents** and scroll to *Connect your AI to Tandem*
+3. Choose **On this machine** or **On another machine**
+4. Click **Generate connection instructions**
+5. Click **Copy instructions** and paste into your AI agent
+
+That's it. Tandem publishes its own bootstrap surface — the agent reads `/agent` and connects automatically.
+
+### Building from source
+
+For Linux, Windows, or if you want to hack on Tandem itself:
+
 ```bash
 git clone https://github.com/hydro13/tandem-browser.git
 cd tandem-browser
@@ -157,7 +173,7 @@ macOS is the primary platform. Linux works. Windows is validated as a remote age
 
 Depending on what you want to do:
 
-- **Try Tandem locally** -> follow the Quick Start above
+- **Install Tandem** -> [Download v1.0.0](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0) (macOS) or follow Quick Start above
 - **Connect an agent** -> see [Connect Your AI Agent](#connect-your-ai-agent)
 - **Explore the API and docs** -> browse [docs/](docs/) and [docs/INDEX.md](docs/INDEX.md)
 - **See the product story and website** -> visit [tandembrowser.org](https://tandembrowser.org)

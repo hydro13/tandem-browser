@@ -163,7 +163,7 @@ footer a:hover{color:var(--text2)}
       "operatingSystem": "macOS (developer preview), Linux (pre-beta)",
       "description": "Tandem Browser is the open-source, local-first browser for AI agents — where the AI lives inside your real browser session, bring any model via MCP.",
       "url": "https://tandembrowser.org",
-      "downloadUrl": "https://github.com/hydro13/tandem-browser",
+      "downloadUrl": "https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0",
       "softwareVersion": "1.0.0",
       "license": "https://opensource.org/licenses/MIT",
       "offers": {
@@ -586,31 +586,32 @@ footer a:hover{color:var(--text2)}
 <div class="step">
 <div class="step-num">1</div>
 <div class="step-content">
-<h3>Clone and install</h3>
-<p><code>git clone https://github.com/hydro13/tandem-browser.git</code><br>
-<code>cd tandem-browser && npm install</code></p>
-<p style="font-size:.72rem;color:var(--text3);margin-top:.5rem">Currently most complete on macOS (developer preview). Linux is in pre-beta. Windows is planned but not yet available.</p>
+<h3>Download and install</h3>
+<p><a href="https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0" style="font-weight:600">Download Tandem Browser v1.0.0 &rarr;</a></p>
+<p style="margin-top:.4rem">macOS Apple Silicon (M1+). Signed and notarized — Gatekeeper accepts it without any override.</p>
+<p style="font-size:.72rem;color:var(--text3);margin-top:.5rem">Linux pre-beta and Windows support are on the roadmap. For now, build from source on those platforms.</p>
 </div>
 </div>
 <div class="step">
 <div class="step-num">2</div>
 <div class="step-content">
-<h3>Start the browser</h3>
-<p><code>npm start</code><br>
-The browser opens. The API starts automatically.</p>
+<h3>Open Tandem and go to Settings</h3>
+<p>Launch Tandem Browser. Open <strong>Settings &rarr; Connected Agents</strong> and scroll to <em>Connect your AI to Tandem</em>.</p>
+<p style="margin-top:.4rem">Choose <strong>On this machine</strong> if your AI runs locally, or <strong>On another machine</strong> if it runs remotely over Tailscale. Then click <strong>Generate connection instructions</strong>.</p>
 </div>
 </div>
 <div class="step">
 <div class="step-num">3</div>
 <div class="step-content">
-<h3>Connect your AI</h3>
-<p><strong>Bring any AI.</strong> Tandem Browser is model-agnostic. Any agent that speaks MCP or HTTP works &mdash; Claude, GPT, OpenClaw, local Ollama, LM Studio, custom scripts. Swap models, combine models, run offline. The browser doesn&apos;t care which AI you bring.</p>
-<p style="margin-top:.4rem">Open Settings &rarr; Connected Agents. Choose whether your AI is on this machine or on another machine. Tandem generates the instructions, you paste them into your AI, and the agent discovers the rest through Tandem&apos;s own bootstrap surface.</p>
+<h3>Copy the instructions into your AI</h3>
+<p>Tandem generates a ready-to-paste block. Copy it and give it to your AI agent. That&apos;s it &mdash; the agent reads Tandem&apos;s bootstrap surface and connects automatically.</p>
+<p style="margin-top:.4rem"><strong>Bring any AI.</strong> Claude, GPT, OpenClaw, local Ollama, LM Studio, custom scripts &mdash; anything that speaks MCP or HTTP works. Swap models, combine models, run fully offline. The browser doesn&apos;t care which AI you bring.</p>
 <p style="margin-top:.4rem"><strong>Same machine:</strong> MCP via stdio (253 tools) or HTTP API (300+ endpoints).<br>
-<strong>Another machine:</strong> MCP via Streamable HTTP or HTTP API, over a private Tailscale network. Both machines must be on the same tailnet. Tandem is never exposed to the public internet.</p>
+<strong>Another machine:</strong> MCP via Streamable HTTP or HTTP API over a private Tailscale network.</p>
 </div>
 </div>
 </div>
+<p style="font-size:.75rem;color:var(--text3);margin-top:1.5rem">Prefer to build from source? <a href="https://github.com/hydro13/tandem-browser#quick-start">See the README &rarr;</a></p>
 </section>
 
 <div class="divider"><hr></div>
