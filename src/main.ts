@@ -294,6 +294,10 @@ async function createWindow(): Promise<BrowserWindow> {
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
   const stealthScript = StealthManager.getStealthScript(stealthSeed);
+  // Minimal early script for CDP OOPIF injection — omits canvas/audio/timing patches
+  // that crash Cloudflare Turnstile's OOPIF (ctx.getImageData() triggers GPU IPC in
+  // a sandboxed cross-origin frame, causing V8 crash in challenges.cloudflare.com)
+  const earlyScript = StealthManager.getEarlyScript();
 
   // Apply stealth patches to every webview's webContents on creation
   app.on('web-contents-created', (_event, contents) => {
@@ -321,15 +325,19 @@ async function createWindow(): Promise<BrowserWindow> {
             if (!contents.debugger.isAttached()) {
               contents.debugger.attach('1.3');
             }
+            // Use the minimal early script (no canvas/audio/timing noise) so it is
+            // safe inside Cloudflare's sandboxed Turnstile OOPIF — the full stealth
+            // script's ctx.getImageData() call triggers GPU readback IPC that causes
+            // a V8 crash inside challenges.cloudflare.com renderer.
             await contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-              source: stealthScript,
+              source: earlyScript,
             });
-            log.info('🛡️ CDP OOPIF stealth injection registered');
+            log.info('🛡️ CDP OOPIF early stealth injection registered');
           } catch (e) {
             // DevToolsManager may have already attached — try using its session
             if (!contents.isDestroyed() && contents.debugger.isAttached()) {
               contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-                source: stealthScript,
+                source: earlyScript,
               }).catch(e2 => log.warn('CDP stealth shared-session failed:', e2 instanceof Error ? e2.message : e2));
             } else {
               log.warn('CDP OOPIF stealth attach failed:', e instanceof Error ? e.message : e);

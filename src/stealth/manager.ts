@@ -253,6 +253,114 @@ export class StealthManager {
   }
 
   /**
+   * Minimal "early" stealth script — safe to inject into cross-origin OOPIFs
+   * (e.g. Cloudflare Turnstile) via CDP Page.addScriptToEvaluateOnNewDocument.
+   *
+   * Deliberately omits canvas/audio/timing patches that:
+   *   a) call ctx.getImageData() → GPU readback IPC → V8 crash inside sandboxed OOPIF
+   *   b) implement Firefox-like precision reduction that Cloudflare detects as non-Chrome
+   *
+   * Uses its own idempotency guard (Symbol '__tandem_early_v1') so it doesn't
+   * collide with the full stealth script that runs at dom-ready on main frames.
+   */
+  static getEarlyScript(chromeVersion: string = process.versions.chrome): string {
+    const chromeMajor = chromeVersion.split('.')[0];
+    return `
+(function() {
+  var _sym = Symbol.for('__tandem_early_v1');
+  if (window[_sym]) return;
+  Object.defineProperty(window, _sym, { value: 1, configurable: false, writable: false, enumerable: false });
+
+  // 1. Hide webdriver flag
+  try { Object.defineProperty(navigator, 'webdriver', { get: function() { return false; }, configurable: true }); } catch(e) {}
+
+  // 2. navigator.userAgentData — inject "Google Chrome" brand (the critical Cloudflare check)
+  try {
+    var _chromeMajor = '${chromeMajor}';
+    var _chromeVersion = '${chromeVersion}';
+    Object.defineProperty(navigator, 'userAgentData', {
+      get: function() {
+        return {
+          brands: [
+            { brand: 'Google Chrome',  version: _chromeMajor },
+            { brand: 'Chromium',       version: _chromeMajor },
+            { brand: 'Not(A:Brand',    version: '8' },
+          ],
+          mobile: false,
+          platform: 'macOS',
+          getHighEntropyValues: function(hints) {
+            return Promise.resolve({
+              brands: [
+                { brand: 'Google Chrome',  version: _chromeMajor },
+                { brand: 'Chromium',       version: _chromeMajor },
+                { brand: 'Not(A:Brand',    version: '8' },
+              ],
+              mobile: false,
+              platform: 'macOS',
+              platformVersion: '15.3.0',
+              architecture: 'arm',
+              bitness: '64',
+              model: '',
+              uaFullVersion: _chromeVersion,
+              fullVersionList: [
+                { brand: 'Google Chrome',  version: _chromeVersion },
+                { brand: 'Chromium',       version: _chromeVersion },
+                { brand: 'Not(A:Brand',    version: '8.0.0.0' },
+              ],
+            });
+          },
+          toJSON: function() {
+            return { brands: this.brands, mobile: this.mobile, platform: this.platform };
+          },
+        };
+      },
+      configurable: true,
+    });
+  } catch(e) {}
+
+  // 3. Minimal window.chrome stub (Cloudflare checks chrome.runtime existence)
+  try {
+    if (!window.chrome) window.chrome = {};
+    if (!window.chrome.runtime) {
+      window.chrome.runtime = {
+        connect: function() { return { onDisconnect: { addListener: function() {} }, onMessage: { addListener: function() {} }, postMessage: function() {}, disconnect: function() {} }; },
+        sendMessage: function() {},
+        id: undefined,
+      };
+    }
+  } catch(e) {}
+
+  // 4. Remove Electron giveaways from window (safe — no GPU IPC involved)
+  try { delete window.process; } catch(e) {}
+  try { delete window.require; } catch(e) {}
+  try { Object.defineProperty(window, 'process', { get: function() { return undefined; }, configurable: true }); } catch(e) {}
+
+  // 5. Realistic navigator.plugins (Cloudflare may check for empty plugins list)
+  try {
+    Object.defineProperty(navigator, 'plugins', {
+      get: function() {
+        return [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+          { name: 'Native Client',     filename: 'internal-nacl-plugin' },
+        ];
+      },
+      configurable: true,
+    });
+  } catch(e) {}
+
+  // 6. Realistic languages
+  try {
+    Object.defineProperty(navigator, 'languages', {
+      get: function() { return ['nl-BE', 'nl', 'en-US', 'en']; },
+      configurable: true,
+    });
+  } catch(e) {}
+})();
+    `;
+  }
+
+  /**
    * JavaScript to inject into pages to hide automation indicators.
    * Phase 5: includes canvas, WebGL, audio, font, and timing fingerprint protection.
    * @param seed - Deterministic seed for consistent noise per session

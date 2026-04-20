@@ -461,3 +461,81 @@ describe('getStealthScript() — userAgentData GREASE brand consistency', () => 
     expect(chromeCount).toBeGreaterThanOrEqual(3);
   });
 });
+
+// ─── getEarlyScript() ─────────────────────────────────────────────────────────
+// This is the minimal script injected via CDP Page.addScriptToEvaluateOnNewDocument
+// into EVERY frame including cross-origin OOPIFs (e.g. Cloudflare Turnstile).
+// It must NOT contain canvas/audio/timing patches that crash sandboxed iframes.
+
+describe('getEarlyScript() — minimal OOPIF-safe stealth', () => {
+  it('uses its own idempotency guard distinct from the full stealth script', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('__tandem_early_v1');
+    expect(script).not.toContain('__tandem_stealth_v1');
+  });
+
+  it('includes "Google Chrome" in userAgentData brands', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('Google Chrome');
+    // Must appear in brands array AND fullVersionList
+    const chromeCount = (script.match(/Google Chrome/g) || []).length;
+    expect(chromeCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it('uses "Not(A:Brand" GREASE token (Chrome 120+)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('Not(A:Brand');
+    expect(script).not.toContain('Not_A Brand');
+  });
+
+  it('patches navigator.webdriver', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('webdriver');
+    expect(script).toContain('false');
+  });
+
+  it('includes a minimal window.chrome.runtime stub', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('window.chrome');
+    expect(script).toContain('chrome.runtime');
+  });
+
+  it('does NOT contain canvas fingerprint noise (getImageData crash risk in OOPIF)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('getImageData');
+    expect(script).not.toContain('toDataURL');
+    expect(script).not.toContain('toBlob');
+    expect(script).not.toContain('HTMLCanvasElement');
+  });
+
+  it('does NOT contain audio fingerprint noise (not needed for Cloudflare Turnstile)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('AudioContext');
+    expect(script).not.toContain('OfflineAudioContext');
+    expect(script).not.toContain('AnalyserNode');
+  });
+
+  it('does NOT contain timing precision reduction (Firefox-like 100μs is a Cloudflare non-Chrome signal)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('performance.now');
+    expect(script).not.toContain('origPerfNow');
+  });
+
+  it('does NOT contain WebGL parameter patching (not needed in Turnstile OOPIF)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('WebGLRenderingContext');
+    expect(script).not.toContain('WebGL2RenderingContext');
+  });
+
+  it('accepts an optional chromeVersion parameter', () => {
+    const script = StealthManager.getEarlyScript('130.0.6723.116');
+    expect(script).toContain('130.0.6723.116');
+    expect(script).toContain('130'); // chromeMajor
+  });
+
+  it('uses process.versions.chrome by default', () => {
+    const script = StealthManager.getEarlyScript();
+    // The test environment sets chrome to 132.0.6834.160 in beforeAll
+    expect(script).toContain(process.versions.chrome);
+  });
+});
