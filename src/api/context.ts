@@ -8,6 +8,50 @@ import { DEFAULT_PARTITION } from '../utils/constants';
 export type RouteContext = ManagerRegistry & { win: BrowserWindow };
 export type TabTargetSource = 'header' | 'body' | 'query' | 'session' | 'active';
 
+/**
+ * Derive a stable agent identifier from the incoming request.
+ *
+ * Used by the agent-trust system (T2/T3/T4 tiers) to key per-agent
+ * trust state. Local agents (using `~/.tandem/api-token`) resolve to
+ * `'local'`. Paired remote agents (binding tokens starting with
+ * `tdm_ast_`) resolve to a short stable suffix of their binding token,
+ * so two paired agents get separate trust buckets. Requests with no
+ * bearer token resolve to `'shell'` (shell-internal paths).
+ *
+ * NOTE: This is intentionally simple and does not consult pairingManager
+ * for the human-readable agentLabel. That's a UI concern — the store
+ * only needs a *stable* key. If the binding-metadata lookup becomes
+ * cheap later, we can upgrade this helper without touching callers.
+ */
+export function agentIdFromRequest(req: Request): string {
+  const auth = req.headers.authorization;
+  if (!auth) return 'shell';
+  // Manual, linear-time parse. Avoids a regex with a greedy `\s+`
+  // quantifier on uncontrolled input (CodeQL ReDoS warning).
+  const trimmed = String(auth).trim();
+  if (trimmed.length > 8192) return 'shell'; // header size sanity
+  // Case-insensitive "Bearer " prefix.
+  if (trimmed.length < 7) return 'shell';
+  const prefix = trimmed.slice(0, 6);
+  if (prefix.toLowerCase() !== 'bearer') return 'shell';
+  // Exactly one whitespace separator required between "Bearer" and token.
+  // This matches the existing auth middleware's expectations and avoids a
+  // backtracking quantifier.
+  const separator = trimmed.charCodeAt(6);
+  if (separator !== 0x20 && separator !== 0x09) return 'shell';
+  const token = trimmed.slice(7).trim();
+  if (!token) return 'shell';
+  if (token.startsWith('tdm_ast_')) {
+    // Paired binding token — take the 8-char suffix after the prefix as
+    // the stable per-agent id. Collisions within that 8-char space are
+    // astronomically unlikely given the tokens are already random.
+    const rest = token.slice('tdm_ast_'.length);
+    return 'agent:' + rest.slice(0, 8);
+  }
+  // Any other valid bearer = local api-token user.
+  return 'local';
+}
+
 export interface RequestedTabResolution {
   requestedTabId: string | null;
   tab: Tab | null;

@@ -4,6 +4,7 @@
  * Replaces the 35+ param TandemAPIOptions object and the duplicate RouteContext interface.
  * Built once in main.ts, passed to TandemAPI, and used as RouteContext for route handlers.
  */
+import type { AgentTrustStore } from './security/agent-trust';
 import type { TabManager } from './tabs/manager';
 import type { PanelManager } from './panel/manager';
 import type { DrawOverlayManager } from './draw/overlay';
@@ -147,4 +148,6 @@ export interface ManagerRegistry {
   clipboardManager: ClipboardManager;
   /** Remote agent pairing with setup codes, binding tokens, and lifecycle management. See src/pairing/manager.ts */
   pairingManager: PairingManager;
+  /** Per-agent trust tiers (T2 windows, T3 trusted domains, T4 global window) layered over approval gates. See src/security/agent-trust.ts */
+  agentTrust: AgentTrustStore;
 }

@@ -101,7 +101,7 @@ Want the fastest path in?
 | **System** | 6 | Browser status, headless mode, Google Photos, security overrides |
 | **Awareness** | 2 | Activity digest, real-time focus detection — the AI knows what you're doing |
 
-**250 tools total** — full parity with the HTTP API.
+**253 tools total** — full parity with the HTTP API.
 
 ## Why Not Just Use Playwright?
 
@@ -207,7 +207,7 @@ Cursor, Windsurf, or any MCP client):
 }
 ```
 
-Start Tandem, and 250 tools are available immediately.
+Start Tandem, and 253 tools are available immediately.
 
 **HTTP API** — Use the local API token directly:
 
@@ -253,7 +253,7 @@ Connected Agents UI.
 
 **HTTP API** works the same way as local, using the binding token as Bearer auth.
 
-Both transports give remote agents the same 250 tools and 300+ endpoints as local agents.
+Both transports give remote agents the same 253 tools and 300+ endpoints as local agents.
 
 <details>
 <summary>Manual pairing (for scripts or custom tooling)</summary>

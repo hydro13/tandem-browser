@@ -1,9 +1,10 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext} from '../context';
-import { getSessionWC } from '../context';
+import { getSessionWC, agentIdFromRequest } from '../context';
 import { handleRouteError } from '../../utils/errors';
 import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
 import type { TaskStatus } from '../../agents/task-manager';
+import { domainKeyFromUrl } from '../../security/agent-trust';
 
 /**
  * Register agent task management, tab-lock, workflow, and watch routes.
@@ -112,31 +113,59 @@ export function registerAgentRoutes(router: Router, ctx: RouteContext): void {
 
       const preview = code.length > 120 ? code.substring(0, 120) + '...' : code;
 
-      // Create a task with a single step that requires approval
-      const task = ctx.taskManager.createTask(
-        `Execute JavaScript: ${preview}`,
-        'claude',
-        'claude',
-        [{
-          description: `Execute JS in active tab: ${preview}`,
-          action: { type: 'execute_js', params: { code } },
-          riskLevel: 'high',
-          requiresApproval: true,
-        }]
-      );
-
-      // Request approval — resolves when user clicks approve/reject
-      const approved = await Promise.race([
-        ctx.taskManager.requestApproval(task, 0),
-        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), DEFAULT_TIMEOUT_MS)),
-      ]);
-
-      if (!approved) {
-        res.status(403).json({ error: 'User rejected JS execution', rejected: true });
-        return;
+      // Agent-trust precheck: if this (agent, domain) pair is already
+      // covered by a T2 window, T3 trusted-domain entry, or T4 global
+      // window, skip the modal and execute directly. This lets legitimate
+      // iterative agent work proceed without per-call friction while
+      // keeping full per-call approval as the default.
+      //
+      // The domain used for the check is the URL of the target tab at
+      // the moment of the call. Cross-domain navigation invalidates T2
+      // windows naturally (different key), which is intentional. Any
+      // error in the precheck is swallowed — the call falls through to
+      // the normal approval modal, which is the safe default.
+      let isTrusted = false;
+      try {
+        const agentId = agentIdFromRequest(req);
+        const preTargetWC = await getSessionWC(ctx, req);
+        const targetUrl = preTargetWC && !preTargetWC.isDestroyed() && typeof preTargetWC.getURL === 'function'
+          ? preTargetWC.getURL()
+          : '';
+        const domain = domainKeyFromUrl(targetUrl);
+        if (domain && ctx.agentTrust.isApproved(agentId, domain)) {
+          isTrusted = true;
+        }
+      } catch {
+        // precheck is best-effort; fall through to approval
       }
 
-      // User approved — execute the code.
+      if (!isTrusted) {
+        // Create a task with a single step that requires approval
+        const task = ctx.taskManager.createTask(
+          `Execute JavaScript: ${preview}`,
+          'claude',
+          'claude',
+          [{
+            description: `Execute JS in active tab: ${preview}`,
+            action: { type: 'execute_js', params: { code } },
+            riskLevel: 'high',
+            requiresApproval: true,
+          }]
+        );
+
+        // Request approval — resolves when user clicks approve/reject
+        const approved = await Promise.race([
+          ctx.taskManager.requestApproval(task, 0),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), DEFAULT_TIMEOUT_MS)),
+        ]);
+
+        if (!approved) {
+          res.status(403).json({ error: 'User rejected JS execution', rejected: true });
+          return;
+        }
+      }
+
+      // User approved (or trust tier covered this) — execute the code.
       // Use getSessionWC so the route honors X-Tab-Id / X-Session headers
       // like other tab-aware routes. Falls back to active tab when no
       // targeting header is present, preserving prior behavior.

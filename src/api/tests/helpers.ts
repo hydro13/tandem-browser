@@ -2,6 +2,7 @@ import { vi } from 'vitest';
 import express from 'express';
 import type { Router } from 'express';
 import type { RouteContext } from '../context';
+import { AgentTrustStore } from '../../security/agent-trust';
 
 /**
  * Creates a mock WebContents object with common methods stubbed.
@@ -686,6 +687,12 @@ export function createMockContext(): RouteContext {
       on: vi.fn(),
       emit: vi.fn(),
     } as any,
+
+    // ── agentTrust ──────────────────────────────
+    // Real store (in-memory T2/T4 work fine; T3 persist() would touch disk
+    // at ~/.tandem/agent-trust.json — tests that care should inject their
+    // own path via new AgentTrustStore(path)).
+    agentTrust: new AgentTrustStore(),
   };
 
   return ctx;
