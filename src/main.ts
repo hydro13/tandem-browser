@@ -319,6 +319,33 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       });
 
+      // Inject stealth into cross-origin subframes (e.g. Cloudflare Turnstile iframes).
+      // executeJavaScript() on the main webContents only reaches the top-level frame.
+      // Cross-origin iframes run in their own renderer context and see Electron's raw
+      // navigator.userAgentData (missing "Google Chrome") — a direct bot signal.
+      // did-frame-navigate fires after a subframe's document is committed and ready,
+      // at which point we can patch the frame's main world before challenge scripts read it.
+      contents.on('did-frame-navigate', (
+        _event, url, _httpCode, _httpText, isMainFrame
+      ) => {
+        if (isMainFrame) return; // main frame handled by dom-ready above
+        if (!url || url.startsWith('about:') || url.startsWith('data:')) return;
+        if (isGoogleAuthUrl(url)) return; // never touch Google auth iframes
+
+        // Walk the frame tree and inject into every non-Google subframe
+        const injectFrame = (frame: { url: string; frames: typeof frame[]; executeJavaScript: (s: string) => Promise<unknown> }) => {
+          const frameUrl = frame.url || '';
+          if (!isGoogleAuthUrl(frameUrl)) {
+            frame.executeJavaScript(stealthScript)
+              .catch(() => { /* frame may have navigated away or be restricted */ });
+          }
+          for (const child of frame.frames) injectFrame(child);
+        };
+        if (contents.mainFrame) {
+          for (const child of contents.mainFrame.frames) injectFrame(child);
+        }
+      });
+
       // Webview keystroke rhythm capture for the BehaviorCompiler.
       // PRIVACY FLOOR: we ONLY look at input.type to decide this is a
       // character keydown, and we NEVER read input.key, input.code, the
