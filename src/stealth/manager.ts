@@ -137,7 +137,9 @@ export class StealthManager {
 
     const preloadPath = path.join(tandemDir(), 'stealth-preload.js');
     await fs.promises.writeFile(preloadPath, preloadContent, { mode: 0o600 });
-    this.session.setPreloads([preloadPath]);
+    // Use the new registerPreloadScript API (setPreloads deprecated in Electron 40).
+    // type:'frame' registers this for every frame including cross-origin subframes.
+    this.session.registerPreloadScript({ filePath: preloadPath, type: 'frame' });
     log.info('🛡️ Stealth preload registered for all frames (including OOPIF)');
   }
 
