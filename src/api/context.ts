@@ -26,10 +26,21 @@ export type TabTargetSource = 'header' | 'body' | 'query' | 'session' | 'active'
 export function agentIdFromRequest(req: Request): string {
   const auth = req.headers.authorization;
   if (!auth) return 'shell';
+  // Manual, linear-time parse. Avoids a regex with a greedy `\s+`
+  // quantifier on uncontrolled input (CodeQL ReDoS warning).
   const trimmed = String(auth).trim();
-  const match = /^Bearer\s+(.+)$/i.exec(trimmed);
-  if (!match) return 'shell';
-  const token = match[1].trim();
+  if (trimmed.length > 8192) return 'shell'; // header size sanity
+  // Case-insensitive "Bearer " prefix.
+  if (trimmed.length < 7) return 'shell';
+  const prefix = trimmed.slice(0, 6);
+  if (prefix.toLowerCase() !== 'bearer') return 'shell';
+  // Exactly one whitespace separator required between "Bearer" and token.
+  // This matches the existing auth middleware's expectations and avoids a
+  // backtracking quantifier.
+  const separator = trimmed.charCodeAt(6);
+  if (separator !== 0x20 && separator !== 0x09) return 'shell';
+  const token = trimmed.slice(7).trim();
+  if (!token) return 'shell';
   if (token.startsWith('tdm_ast_')) {
     // Paired binding token — take the 8-char suffix after the prefix as
     // the stable per-agent id. Collisions within that 8-char space are
