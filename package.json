@@ -1,7 +1,7 @@
 {
   "name": "tandem-browser",
   "version": "0.75.0",
-  "description": "Local-first Electron browser with a 250-tool MCP server, MCP/HTTP control surfaces, and built-in security controls",
+  "description": "Local-first Electron browser with a 253-tool MCP server, MCP/HTTP control surfaces, and built-in security controls",
   "main": "dist/main.js",
   "author": "Tandem Browser contributors",
   "license": "MIT",

@@ -1,3 +1,4 @@
+import type { AgentTrustStore } from '../security/agent-trust';
 import type { ExtensionLoader } from '../extensions/loader';
 import type { ActivityTracker } from '../activity/tracker';
 import type { TabManager } from '../tabs/manager';
@@ -100,6 +101,7 @@ export interface RuntimeManagers {
   googlePhotosManager: GooglePhotosManager;
   clipboardManager: ClipboardManager;
   pairingManager: PairingManager;
+  agentTrust: AgentTrustStore;
 }
 
 export interface PendingTabRegister {

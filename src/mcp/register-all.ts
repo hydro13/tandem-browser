@@ -42,6 +42,7 @@ import { registerEventTools } from './tools/events.js';
 import { registerSystemTools } from './tools/system.js';
 import { registerAwarenessTools } from './tools/awareness.js';
 import { registerClipboardTools } from './tools/clipboard.js';
+import { registerAgentTrustTools } from './tools/agent-trust.js';
 
 /** Register all MCP tools on the given server instance. */
 export function registerAllTools(server: McpServer): void {
@@ -78,6 +79,7 @@ export function registerAllTools(server: McpServer): void {
   registerSystemTools(server);
   registerAwarenessTools(server);
   registerClipboardTools(server);
+  registerAgentTrustTools(server);
 }
 
 /** Register all MCP resources on the given server instance. */

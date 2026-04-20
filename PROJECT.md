@@ -10,7 +10,7 @@ bicycle: two riders, one machine, each contributing what the other can't do
 alone.
 
 The browser runs two things in parallel. The human uses it like any other browser
-while AI agents operate through a built-in **MCP server** (250 tools) or a
+while AI agents operate through a built-in **MCP server** (253 tools) or a
 **300+ endpoint HTTP API** for navigation, interaction, data extraction,
 automation, sessions, sync, extensions, and developer tooling. Local agents can
 use MCP or HTTP. Remote agents on the same Tailscale network connect via HTTP

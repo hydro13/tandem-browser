@@ -65,7 +65,7 @@ Practical notes:
 
 ### Option 1: MCP Server (local or remote)
 
-The MCP server exposes 250 tools with full API parity.
+The MCP server exposes 253 tools with full API parity.
 
 **Same machine (stdio):** Add to your MCP client configuration
 (e.g. `~/.claude/settings.json` for Claude Code):
@@ -717,6 +717,75 @@ curl -sS "$API/screenshot" \
   -H "X-Tab-Id: $TAB_ID" \
   -o screenshot.png
 ```
+
+## Trust tiers — when you get modaled and when you don't
+
+Tandem gates three content-mutating operations behind user approval:
+
+- `POST /execute-js/confirm` (MCP: `tandem_execute_js`) — run ad-hoc JS
+- `POST /scripts/add` — register a persistent userscript
+- `POST /styles/add` — register a persistent CSS injection
+
+By default each call fires a user-approval modal. Once the user has
+granted you trust on a domain (or globally, or permanently), subsequent
+calls on the covered surface skip the modal.
+
+### Four tiers
+
+1. **T1 Default** — modal every call (this is the default).
+2. **T2 Per-domain window** — from the approval modal the user can grant
+   "allow on X for 15min / 1h / this session" when they approve your
+   action. Covers just that domain for the window. Session-scoped.
+3. **T3 Trusted sites** — a persistent allowlist per agent. The user can
+   add sites from Settings → Connected Agents → <agent> → Trusted sites,
+   OR you can request a domain be added via
+   `tandem_request_trusted_domain(domain, rationale)`.
+4. **T4 Global window** — temporary cross-site access for 30 or 60
+   minutes. Agent-requested via `tandem_request_global_window(minutes,
+   rationale)`. Auto-expires. Must be re-requested afterward.
+
+### When to request a grant
+
+Ask yourself: *will I do repeat work on this surface?*
+
+- One-shot overlay experiment? Let the default T1 modal fire, user picks
+  "Just this once".
+- Iterative work on one site over the next ~15 min (e.g., debugging a
+  userscript on Funda)? Let the T1 modal fire, note that the user can
+  choose a T2 window from the same modal.
+- Recurring work on a specific site you expect to return to?
+  `tandem_request_trusted_domain` — one approval, then free forever on
+  that site until the user revokes.
+- Cross-site sweep happening now (research across 10 sites)?
+  `tandem_request_global_window` — one approval, 30 or 60 min of
+  cross-site freedom.
+
+### Rate limits
+
+`tandem_request_trusted_domain` and `tandem_request_global_window` are
+rate-limited to one per 5 minutes per agent. On rate-limit the tool
+returns an error string that includes `retryAfterMs`. Back off — do not
+modal-spam the user. If the task is urgent, tell the user and let them
+grant the trust manually from Settings.
+
+### What NEVER skips a modal
+
+These endpoints always require interactive approval regardless of your
+trust tier:
+
+- `POST /security/injection-override`
+- `POST /security/guardian/mode` (when lowering posture)
+- `POST /security/domains/:domain/trust` (when raising a domain's trust)
+- `POST /security/outbound/whitelist`
+
+Those are meta-level actions that must always be a conscious decision.
+Your T3/T4 grants do not propagate to them.
+
+### Check current trust state
+
+`tandem_list_trust` returns a snapshot of active windows, trusted sites,
+and any global window. Useful before deciding whether to request a new
+grant (maybe you already have one).
 
 ## Interaction Confirmation
 

@@ -5,6 +5,7 @@ import { ActivityTracker } from '../activity/tracker';
 import { WingmanStream } from '../activity/wingman-stream';
 import { TaskManager } from '../agents/task-manager';
 import { TaskHandoffCoordinator } from '../agents/task-handoff-coordinator';
+import { AgentTrustStore } from '../security/agent-trust';
 import { TabLockManager } from '../agents/tab-lock-manager';
 import { LoginManager } from '../auth/login-manager';
 import { GooglePhotosManager } from '../integrations/google-photos';
@@ -227,6 +228,11 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.eventStream = new EventStreamManager();
   runtime.handoffManager = new HandoffManager();
   runtime.taskManager = new TaskManager();
+  runtime.agentTrust = new AgentTrustStore();
+  // Load persisted T3 trusted domains from disk. Errors are logged
+  // internally; a failure leaves the store in the empty state which is
+  // the safe default (every action returns to T1 modal).
+  await runtime.agentTrust.load();
   runtime.taskHandoffCoordinator = new TaskHandoffCoordinator(runtime.taskManager, runtime.handoffManager);
   runtime.tabLockManager = new TabLockManager();
   runtime.devToolsManager = new DevToolsManager(runtime.tabManager);
@@ -454,6 +460,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     googlePhotosManager: runtime.googlePhotosManager,
     clipboardManager: runtime.clipboardManager,
     pairingManager: runtime.pairingManager,
+    agentTrust: runtime.agentTrust,
   };
 }
 

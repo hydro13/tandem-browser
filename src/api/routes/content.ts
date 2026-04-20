@@ -1,7 +1,64 @@
 import type { Router, Request, Response } from 'express';
 import type { RouteContext} from '../context';
-import { getActiveWC, getSessionWC } from '../context';
+import { getActiveWC, getSessionWC, agentIdFromRequest } from '../context';
 import { handleRouteError } from '../../utils/errors';
+import { DEFAULT_TIMEOUT_MS } from '../../utils/constants';
+import { domainKeyFromUrl } from '../../security/agent-trust';
+
+/**
+ * Shared precheck for agent-initiated script/style persistence.
+ *
+ * Fix for the asymmetry uncovered in 2026-04-20 review: `/execute-js/confirm`
+ * was approval-gated but `/scripts/add` and `/styles/add` were not, even
+ * though registering a persistent script is *more* powerful (runs on every
+ * matching page, forever). Same agent-trust precheck as execute-js:
+ * if the (agent, current-tab-domain) pair is covered by T2/T3/T4 trust,
+ * pass through; otherwise fire the approval modal.
+ *
+ * Returns true if the call may proceed. Returns false iff the user
+ * explicitly rejected the modal; in that case the caller must have
+ * already sent a 403 response.
+ */
+async function requireAgentApproval(
+  ctx: RouteContext,
+  req: Request,
+  res: Response,
+  description: string,
+  riskLevel: 'medium' | 'high',
+): Promise<boolean> {
+  try {
+    const agentId = agentIdFromRequest(req);
+    const wc = await getSessionWC(ctx, req);
+    const targetUrl = wc && !wc.isDestroyed() && typeof wc.getURL === 'function' ? wc.getURL() : '';
+    const domain = domainKeyFromUrl(targetUrl);
+    if (domain && ctx.agentTrust.isApproved(agentId, domain)) {
+      return true;
+    }
+  } catch {
+    // precheck best-effort — fall through to approval modal
+  }
+
+  const task = ctx.taskManager.createTask(
+    description,
+    'claude',
+    'claude',
+    [{
+      description,
+      action: { type: 'script_inject', params: {} },
+      riskLevel,
+      requiresApproval: true,
+    }],
+  );
+  const approved = await Promise.race([
+    ctx.taskManager.requestApproval(task, 0),
+    new Promise<boolean>((resolve) => setTimeout(() => resolve(false), DEFAULT_TIMEOUT_MS)),
+  ]);
+  if (!approved) {
+    res.status(403).json({ error: 'User rejected script/style injection', rejected: true });
+    return false;
+  }
+  return true;
+}
 
 /**
  * Register content extraction and URL-fetch routes.
@@ -118,10 +175,17 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     }
   });
 
-  router.post('/scripts/add', (req: Request, res: Response) => {
+  router.post('/scripts/add', async (req: Request, res: Response) => {
     const { name, code } = req.body;
     if (!name || !code) { res.status(400).json({ error: 'name and code required' }); return; }
     try {
+      const preview = String(code).slice(0, 120);
+      const ok = await requireAgentApproval(
+        ctx, req, res,
+        `Register persistent script "${name}": ${preview}`,
+        'high',
+      );
+      if (!ok) return; // response already sent
       const entry = ctx.scriptInjector.addScript(name, code);
       res.json({ ok: true, name: entry.name, active: entry.enabled });
     } catch (e) {
@@ -186,6 +250,13 @@ export function registerContentRoutes(router: Router, ctx: RouteContext): void {
     const { name, css } = req.body;
     if (!name || !css) { res.status(400).json({ error: 'name and css required' }); return; }
     try {
+      const preview = String(css).slice(0, 120);
+      const ok = await requireAgentApproval(
+        ctx, req, res,
+        `Register persistent style "${name}": ${preview}`,
+        'medium',
+      );
+      if (!ok) return;
       ctx.scriptInjector.addStyle(name, css);
       // Inject immediately into active tab
       const wc = await getSessionWC(ctx, req);

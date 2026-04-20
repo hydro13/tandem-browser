@@ -18,6 +18,7 @@ import { registerExtensionRoutes, TRUSTED_EXTENSION_ROUTE_PATHS } from './routes
 import { registerNetworkRoutes } from './routes/network';
 import { registerSessionRoutes } from './routes/sessions';
 import { registerAgentRoutes } from './routes/agents';
+import { registerAgentTrustRoutes } from './routes/agent-trust';
 import { registerDataRoutes } from './routes/data';
 import { registerContentRoutes } from './routes/content';
 import { registerMediaRoutes } from './routes/media';
@@ -505,6 +506,7 @@ export class TandemAPI {
     registerNetworkRoutes(router, ctx);
     registerSessionRoutes(router, ctx);
     registerAgentRoutes(router, ctx);
+    registerAgentTrustRoutes(router, ctx);
     registerDataRoutes(router, ctx);
     registerContentRoutes(router, ctx);
     registerMediaRoutes(router, ctx);
