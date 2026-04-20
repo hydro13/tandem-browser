@@ -294,6 +294,10 @@ async function createWindow(): Promise<BrowserWindow> {
   // Inject stealth script into all webviews via session preload
   const stealthSeed = stealth.getPartitionSeed();
   const stealthScript = StealthManager.getStealthScript(stealthSeed);
+  // Minimal early script for CDP OOPIF injection — omits canvas/audio/timing patches
+  // that crash Cloudflare Turnstile's OOPIF (ctx.getImageData() triggers GPU IPC in
+  // a sandboxed cross-origin frame, causing V8 crash in challenges.cloudflare.com)
+  const earlyScript = StealthManager.getEarlyScript();
 
   // Apply stealth patches to every webview's webContents on creation
   app.on('web-contents-created', (_event, contents) => {
@@ -305,6 +309,43 @@ async function createWindow(): Promise<BrowserWindow> {
     );
 
     if (contents.getType() === 'webview') {
+      // === CDP-based OOPIF stealth injection ===
+      // session.setPreloads() only executes in the WebContents *main* frame.
+      // Cross-origin subframes (OOPIFs) — e.g. Cloudflare's Turnstile iframe at
+      // challenges.cloudflare.com — run in separate renderer processes and never
+      // receive that preload. CDP's Page.addScriptToEvaluateOnNewDocument runs
+      // BEFORE any scripts in EVERY frame upon creation, including OOPIFs.
+      // This is the same mechanism Chromium uses internally for content scripts.
+      // We eagerly attach here (before the first navigation) so the registration
+      // is in place when the renderer processes are later spawned.
+      if (!isSidebarWebview) {
+        void (async () => {
+          if (contents.isDestroyed()) return;
+          try {
+            if (!contents.debugger.isAttached()) {
+              contents.debugger.attach('1.3');
+            }
+            // Use the minimal early script (no canvas/audio/timing noise) so it is
+            // safe inside Cloudflare's sandboxed Turnstile OOPIF — the full stealth
+            // script's ctx.getImageData() call triggers GPU readback IPC that causes
+            // a V8 crash inside challenges.cloudflare.com renderer.
+            await contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+              source: earlyScript,
+            });
+            log.info('🛡️ CDP OOPIF early stealth injection registered');
+          } catch (e) {
+            // DevToolsManager may have already attached — try using its session
+            if (!contents.isDestroyed() && contents.debugger.isAttached()) {
+              contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+                source: earlyScript,
+              }).catch(e2 => log.warn('CDP stealth shared-session failed:', e2 instanceof Error ? e2.message : e2));
+            } else {
+              log.warn('CDP OOPIF stealth attach failed:', e instanceof Error ? e.message : e);
+            }
+          }
+        })();
+      }
+
       contents.on('dom-ready', () => {
         // Skip stealth injection on sites that detect and block stealth patches
         const url = contents.getURL();
@@ -316,6 +357,31 @@ async function createWindow(): Promise<BrowserWindow> {
 
         if (!isSidebarWebview) {
           queueSecurityCoverage(contents.id);
+        }
+      });
+
+      // did-frame-navigate: late-injection fallback for same-origin subframes.
+      // For cross-origin OOPIFs this fires too late (after the frame's inline
+      // scripts have already run), but the CDP registration above covers those.
+      // Kept here as a safety net for edge cases the CDP path misses.
+      contents.on('did-frame-navigate', (
+        _event, url, _httpCode, _httpText, isMainFrame
+      ) => {
+        if (isMainFrame) return; // main frame handled by dom-ready above
+        if (!url || url.startsWith('about:') || url.startsWith('data:')) return;
+        if (isGoogleAuthUrl(url)) return; // never touch Google auth iframes
+
+        // Walk the frame tree and inject into every non-Google subframe
+        const injectFrame = (frame: { url: string; frames: typeof frame[]; executeJavaScript: (s: string) => Promise<unknown> }) => {
+          const frameUrl = frame.url || '';
+          if (!isGoogleAuthUrl(frameUrl)) {
+            frame.executeJavaScript(stealthScript)
+              .catch(() => { /* frame may have navigated away or be restricted */ });
+          }
+          for (const child of frame.frames) injectFrame(child);
+        };
+        if (contents.mainFrame) {
+          for (const child of contents.mainFrame.frames) injectFrame(child);
         }
       });
 

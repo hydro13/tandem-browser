@@ -98,7 +98,49 @@ export class StealthManager {
     // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
     this.session.setUserAgent(this.USER_AGENT);
 
+    // Write a session-level preload that injects stealth patches into EVERY
+    // renderer frame — including cross-origin out-of-process iframes (OOPIF)
+    // such as Cloudflare's Turnstile challenge iframe.  executeJavaScript() on
+    // the top-level webContents only reaches the main frame; session.setPreloads()
+    // runs the script in each renderer process (including OOPIF) BEFORE any page
+    // scripts, so navigator.userAgentData and other APIs are patched early enough.
+    await this.writeAndRegisterPreload();
+
     log.info('🛡️ Stealth patches applied (advanced fingerprint protection active)');
+  }
+
+  /**
+   * Writes a preload script to disk and registers it with the session.
+   * The preload uses webFrame.executeJavaScriptInIsolatedWorld(0, ...) to
+   * run the stealth patches in world 0 (the main/page world) before any page
+   * scripts, for every frame including cross-origin iframes.
+   */
+  private async writeAndRegisterPreload(): Promise<void> {
+    const stealthScript = StealthManager.getStealthScript(this.partitionSeed);
+
+    // The preload runs in Electron's isolated renderer world.
+    // executeJavaScriptInIsolatedWorld(0, ...) injects into world 0 = main page world,
+    // running BEFORE the frame's own scripts because the preload executes first.
+    // We skip file:// (Tandem shell UI) and Google auth frames.
+    const preloadContent = [
+      `'use strict';`,
+      `try {`,
+      `  var _url = (typeof location !== 'undefined' && location.href) || '';`,
+      `  var _skip = _url.startsWith('file://') ||`,
+      `    /accounts\\.google\\.com|accounts-google\\.com/i.test(_url);`,
+      `  if (!_skip) {`,
+      `    var _wf = require('electron').webFrame;`,
+      `    _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
+      `  }`,
+      `} catch(e) { /* preload injection failed — ignored */ }`,
+    ].join('\n');
+
+    const preloadPath = path.join(tandemDir(), 'stealth-preload.js');
+    await fs.promises.writeFile(preloadPath, preloadContent, { mode: 0o600 });
+    // Use the new registerPreloadScript API (setPreloads deprecated in Electron 40).
+    // type:'frame' registers this for every frame including cross-origin subframes.
+    this.session.registerPreloadScript({ filePath: preloadPath, type: 'frame' });
+    log.info('🛡️ Stealth preload registered for all frames (including OOPIF)');
   }
 
   /** Register header modification as a dispatcher consumer */
@@ -143,15 +185,62 @@ export class StealthManager {
         }
 
         // Ensure realistic Accept-Language
-        if (!headers['Accept-Language']) {
-          headers['Accept-Language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
+        // Key-casing note: Chromium sends 'accept-language' (lowercase HTTP/2).
+        // Checking headers['Accept-Language'] always returns undefined, so the
+        // condition was always true but set a capitalized key that coexists with
+        // the original. Use case-insensitive lookup, then set with lowercase key.
+        const hasAcceptLanguage = Object.keys(headers).some(
+          k => k.toLowerCase() === 'accept-language'
+        );
+        if (!hasAcceptLanguage) {
+          headers['accept-language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
         }
 
-        // Ensure Sec-CH-UA matches our UA (Google checks these for login)
-        headers['Sec-CH-UA'] = `"Google Chrome";v="${this.chromeMajor}", "Chromium";v="${this.chromeMajor}", "Not_A Brand";v="24"`;
-        headers['Sec-CH-UA-Mobile'] = '?0';
-        headers['Sec-CH-UA-Platform'] = '"macOS"';
-        headers['Sec-CH-UA-Full-Version-List'] = `"Google Chrome";v="${process.versions.chrome}", "Chromium";v="${process.versions.chrome}", "Not_A Brand";v="24.0.0.0"`;
+        // === Sec-CH-UA client hints — inject "Google Chrome" brand ===
+        // Chromium omits "Google Chrome" from its auto-generated sec-ch-ua,
+        // sending only "Chromium" + a rotating GREASE token. Cloudflare (and
+        // other bot-detection systems) detect the missing brand as Electron.
+        //
+        // Key-casing bug: Chromium uses lowercase HTTP/2-style keys
+        // ('sec-ch-ua'). Setting 'Sec-CH-UA' (capitalized) does NOT overwrite
+        // the original — both coexist as separate object keys.  We must
+        // enumerate all keys case-insensitively, capture the value, delete
+        // the originals, then re-set with the correct (lowercase) key name.
+
+        // Capture Chromium's natural values — preserves the correct GREASE token
+        const getHdr = (lower: string): string => {
+          for (const k of Object.keys(headers)) {
+            if (k.toLowerCase() === lower) return String(headers[k]);
+          }
+          return '';
+        };
+        const chromiumBrands   = getHdr('sec-ch-ua');
+        const chromiumFullList = getHdr('sec-ch-ua-full-version-list');
+
+        // Delete all sec-ch-ua* headers regardless of casing
+        for (const k of Object.keys(headers)) {
+          if (k.toLowerCase().startsWith('sec-ch-ua')) delete headers[k];
+        }
+
+        // Inject "Google Chrome" brand while preserving the natural GREASE token
+        const withGoogleChrome = (brands: string, version: string): string => {
+          if (brands.includes('Google Chrome')) return brands;
+          if (!brands) {
+            // Chromium didn't send this header — build minimal correct list
+            return `"Chromium";v="${version}", "Google Chrome";v="${version}", "Not(A:Brand";v="8"`;
+          }
+          return `${brands}, "Google Chrome";v="${version}"`;
+        };
+
+        headers['sec-ch-ua']          = withGoogleChrome(chromiumBrands, this.chromeMajor);
+        headers['sec-ch-ua-mobile']   = '?0';
+        headers['sec-ch-ua-platform'] = '"macOS"';
+        // Only send full-version-list if Chromium already included it;
+        // it's a high-entropy hint that browsers normally send only on request.
+        if (chromiumFullList) {
+          headers['sec-ch-ua-full-version-list'] =
+            withGoogleChrome(chromiumFullList, process.versions.chrome);
+        }
 
         return headers;
       }
@@ -164,6 +253,114 @@ export class StealthManager {
   }
 
   /**
+   * Minimal "early" stealth script — safe to inject into cross-origin OOPIFs
+   * (e.g. Cloudflare Turnstile) via CDP Page.addScriptToEvaluateOnNewDocument.
+   *
+   * Deliberately omits canvas/audio/timing patches that:
+   *   a) call ctx.getImageData() → GPU readback IPC → V8 crash inside sandboxed OOPIF
+   *   b) implement Firefox-like precision reduction that Cloudflare detects as non-Chrome
+   *
+   * Uses its own idempotency guard (Symbol '__tandem_early_v1') so it doesn't
+   * collide with the full stealth script that runs at dom-ready on main frames.
+   */
+  static getEarlyScript(chromeVersion: string = process.versions.chrome): string {
+    const chromeMajor = chromeVersion.split('.')[0];
+    return `
+(function() {
+  var _sym = Symbol.for('__tandem_early_v1');
+  if (window[_sym]) return;
+  Object.defineProperty(window, _sym, { value: 1, configurable: false, writable: false, enumerable: false });
+
+  // 1. Hide webdriver flag
+  try { Object.defineProperty(navigator, 'webdriver', { get: function() { return false; }, configurable: true }); } catch(e) {}
+
+  // 2. navigator.userAgentData — inject "Google Chrome" brand (the critical Cloudflare check)
+  try {
+    var _chromeMajor = '${chromeMajor}';
+    var _chromeVersion = '${chromeVersion}';
+    Object.defineProperty(navigator, 'userAgentData', {
+      get: function() {
+        return {
+          brands: [
+            { brand: 'Google Chrome',  version: _chromeMajor },
+            { brand: 'Chromium',       version: _chromeMajor },
+            { brand: 'Not(A:Brand',    version: '8' },
+          ],
+          mobile: false,
+          platform: 'macOS',
+          getHighEntropyValues: function(hints) {
+            return Promise.resolve({
+              brands: [
+                { brand: 'Google Chrome',  version: _chromeMajor },
+                { brand: 'Chromium',       version: _chromeMajor },
+                { brand: 'Not(A:Brand',    version: '8' },
+              ],
+              mobile: false,
+              platform: 'macOS',
+              platformVersion: '15.3.0',
+              architecture: 'arm',
+              bitness: '64',
+              model: '',
+              uaFullVersion: _chromeVersion,
+              fullVersionList: [
+                { brand: 'Google Chrome',  version: _chromeVersion },
+                { brand: 'Chromium',       version: _chromeVersion },
+                { brand: 'Not(A:Brand',    version: '8.0.0.0' },
+              ],
+            });
+          },
+          toJSON: function() {
+            return { brands: this.brands, mobile: this.mobile, platform: this.platform };
+          },
+        };
+      },
+      configurable: true,
+    });
+  } catch(e) {}
+
+  // 3. Minimal window.chrome stub (Cloudflare checks chrome.runtime existence)
+  try {
+    if (!window.chrome) window.chrome = {};
+    if (!window.chrome.runtime) {
+      window.chrome.runtime = {
+        connect: function() { return { onDisconnect: { addListener: function() {} }, onMessage: { addListener: function() {} }, postMessage: function() {}, disconnect: function() {} }; },
+        sendMessage: function() {},
+        id: undefined,
+      };
+    }
+  } catch(e) {}
+
+  // 4. Remove Electron giveaways from window (safe — no GPU IPC involved)
+  try { delete window.process; } catch(e) {}
+  try { delete window.require; } catch(e) {}
+  try { Object.defineProperty(window, 'process', { get: function() { return undefined; }, configurable: true }); } catch(e) {}
+
+  // 5. Realistic navigator.plugins (Cloudflare may check for empty plugins list)
+  try {
+    Object.defineProperty(navigator, 'plugins', {
+      get: function() {
+        return [
+          { name: 'Chrome PDF Plugin', filename: 'internal-pdf-viewer' },
+          { name: 'Chrome PDF Viewer', filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai' },
+          { name: 'Native Client',     filename: 'internal-nacl-plugin' },
+        ];
+      },
+      configurable: true,
+    });
+  } catch(e) {}
+
+  // 6. Realistic languages
+  try {
+    Object.defineProperty(navigator, 'languages', {
+      get: function() { return ['nl-BE', 'nl', 'en-US', 'en']; },
+      configurable: true,
+    });
+  } catch(e) {}
+})();
+    `;
+  }
+
+  /**
    * JavaScript to inject into pages to hide automation indicators.
    * Phase 5: includes canvas, WebGL, audio, font, and timing fingerprint protection.
    * @param seed - Deterministic seed for consistent noise per session
@@ -172,7 +369,12 @@ export class StealthManager {
     const chromeMajor = chromeVersion.split('.')[0];
     return `
       // ═══ All stealth patches in one IIFE — no globals leaked to window ═══
+      // Idempotency guard: both the session preload and the dom-ready injection
+      // run this script. The Symbol key is invisible to page JS (not enumerable).
       (function() {
+        var _appliedSym = Symbol.for('__tandem_stealth_v1');
+        if (window[_appliedSym]) return;
+        Object.defineProperty(window, _appliedSym, { value: 1, configurable: false, writable: false, enumerable: false });
         // Seeded PRNG (mulberry32) — consistent noise per session
         var __seed = 0;
         var seedStr = '${seed}';
@@ -423,24 +625,30 @@ export class StealthManager {
       Object.defineProperty(window, 'process', { get: () => undefined, configurable: true });
 
       // navigator.userAgentData — ALWAYS override to match real Chrome
-      // Electron exposes its own brands (Chromium/130, Not?A_Brand/99) which Google detects
+      // Electron exposes its own brands which bot-detection systems detect.
+      // The GREASE brand MUST match what Chromium sends in the sec-ch-ua HTTP
+      // header — Cloudflare cross-checks them.  Chromium 120+ uses "Not(A:Brand"
+      // version "8".  The header handler (registerWith) preserves this naturally.
       {
         var __chromeMajor = '${chromeMajor}';
         var __chromeVersion = '${chromeVersion}';
+        // Chrome 120+ GREASE brand — must stay in sync with the sec-ch-ua header
+        var __greaseBrand   = 'Not(A:Brand';
+        var __greaseVersion = '8';
         Object.defineProperty(navigator, 'userAgentData', {
           get: () => ({
             brands: [
-              { brand: 'Google Chrome', version: __chromeMajor },
-              { brand: 'Chromium', version: __chromeMajor },
-              { brand: 'Not_A Brand', version: '24' },
+              { brand: 'Google Chrome',  version: __chromeMajor },
+              { brand: 'Chromium',       version: __chromeMajor },
+              { brand: __greaseBrand,    version: __greaseVersion },
             ],
             mobile: false,
             platform: 'macOS',
             getHighEntropyValues: (hints) => Promise.resolve({
               brands: [
-                { brand: 'Google Chrome', version: __chromeMajor },
-                { brand: 'Chromium', version: __chromeMajor },
-                { brand: 'Not_A Brand', version: '24' },
+                { brand: 'Google Chrome',  version: __chromeMajor },
+                { brand: 'Chromium',       version: __chromeMajor },
+                { brand: __greaseBrand,    version: __greaseVersion },
               ],
               mobile: false,
               platform: 'macOS',
@@ -450,9 +658,9 @@ export class StealthManager {
               model: '',
               uaFullVersion: __chromeVersion,
               fullVersionList: [
-                { brand: 'Google Chrome', version: __chromeVersion },
-                { brand: 'Chromium', version: __chromeVersion },
-                { brand: 'Not_A Brand', version: '24.0.0.0' },
+                { brand: 'Google Chrome',  version: __chromeVersion },
+                { brand: 'Chromium',       version: __chromeVersion },
+                { brand: __greaseBrand,    version: __greaseVersion + '.0.0.0' },
               ],
             }),
             toJSON: function() {

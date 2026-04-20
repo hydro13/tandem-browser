@@ -380,11 +380,13 @@ export class DevToolsManager {
     try {
       wc.debugger.attach('1.3');
     } catch (e) {
-      // Already attached (DevTools open) or other error
+      // Already attached (DevTools open, or stealth pre-attach) or other error.
+      // Note: Electron 40 returns "Debugger is already attached to the target"
+      // (lowercase 'already'), not "Already attached" — use case-insensitive check.
       const msg = e instanceof Error ? e.message : String(e);
-      if (msg.includes('Already attached')) {
-        // DevTools is open — we can still try to use it
-        log.warn('⚠️ DevTools debugger already attached (DevTools open?) — sharing session');
+      if (msg.toLowerCase().includes('already attached')) {
+        // DevTools is open or another component attached first — share the session.
+        log.info('⚠️ CDP debugger already attached — sharing session');
       } else {
         log.warn('❌ CDP attach failed:', msg);
         return null;

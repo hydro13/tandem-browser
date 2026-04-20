@@ -218,6 +218,195 @@ describe('StealthManager — per-install seed', () => {
   });
 });
 
+// ─── Helpers for registerWith() tests ────────────────────────────────────────
+
+type HeaderHandler = (
+  details: { url: string },
+  headers: Record<string, string>
+) => Record<string, string>;
+
+/** Creates a minimal mock RequestDispatcher that captures the last registered
+ *  BeforeSendHeaders handler so tests can invoke it directly. */
+function makeDispatcherMock() {
+  let capturedHandler: HeaderHandler | null = null;
+  return {
+    registerBeforeSendHeaders: vi.fn(({ handler }: { handler: HeaderHandler }) => {
+      capturedHandler = handler;
+    }),
+    getHandler: (): HeaderHandler => {
+      if (!capturedHandler) throw new Error('handler not registered');
+      return capturedHandler;
+    },
+  };
+}
+
+/** Sets up a StealthManager backed by a deterministic fake install secret. */
+function makeManagerWithFixedSecret(): StealthManager {
+  vi.mocked(fs.existsSync).mockReturnValue(true);
+  vi.mocked(fs.readFileSync).mockReturnValue(
+    JSON.stringify({ stealthInstallSecret: 'a'.repeat(64) })
+  );
+  return new StealthManager(makeMockSession(), 'persist:tandem');
+}
+
+// ─── registerWith() — Sec-CH-UA header patching ───────────────────────────────
+
+describe('registerWith() — Sec-CH-UA client-hints injection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('adds "Google Chrome" brand to Chromium-generated lowercase sec-ch-ua', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+  });
+
+  it('preserves Chromium\'s natural GREASE token (does not replace "Not(A:Brand")', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    expect(result['sec-ch-ua']).toContain('Not(A:Brand');
+  });
+
+  it('emits exactly one sec-ch-ua key (no casing duplicates)', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://cloudflare.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    const allChUaKeys = Object.keys(result).filter(k => k.toLowerCase() === 'sec-ch-ua');
+    expect(allChUaKeys).toHaveLength(1);
+    expect(allChUaKeys[0]).toBe('sec-ch-ua');
+  });
+
+  it('drops any pre-existing capitalized Sec-CH-UA duplicate', () => {
+    // The old code set headers['Sec-CH-UA'] without removing the lowercase
+    // original.  Both would reach the network — Cloudflare reads the lowercase
+    // one (no "Google Chrome") and treats the request as bot traffic.
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    // Simulate a headers object that already has BOTH casings (old-code artifact)
+    const result = handle(
+      { url: 'https://cloudflare.com' },
+      {
+        'sec-ch-ua':     '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'Sec-CH-UA':     '"Google Chrome";v="132", "Chromium";v="132", "Not_A Brand";v="24"',
+      }
+    );
+
+    // No capitalized variant should survive
+    expect(result['Sec-CH-UA']).toBeUndefined();
+    // The single lowercase key must contain "Google Chrome"
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+  });
+
+  it('builds a correct sec-ch-ua from scratch when Chromium did not send it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle({ url: 'https://example.com' }, {});
+
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+    expect(result['sec-ch-ua']).toContain('Chromium');
+    expect(result['sec-ch-ua']).toContain('Not(A:Brand');
+  });
+
+  it('does not add sec-ch-ua-full-version-list when Chromium did not send it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    const fullListKeys = Object.keys(result).filter(
+      k => k.toLowerCase() === 'sec-ch-ua-full-version-list'
+    );
+    expect(fullListKeys).toHaveLength(0);
+  });
+
+  it('enriches sec-ch-ua-full-version-list when Chromium sent it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      {
+        'sec-ch-ua':                  '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'sec-ch-ua-full-version-list': '"Not(A:Brand";v="8.0.0.0", "Chromium";v="132.0.6834.160"',
+      }
+    );
+
+    expect(result['sec-ch-ua-full-version-list']).toContain('Google Chrome');
+    expect(result['sec-ch-ua-full-version-list']).toContain('Not(A:Brand');
+  });
+
+  it('strips sec-ch-ua headers from Google auth requests (existing behaviour unchanged)', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://accounts.google.com/o/oauth2/auth' },
+      {
+        'User-Agent':  'Mozilla/5.0 Chrome/132',
+        'sec-ch-ua':   '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'sec-ch-ua-mobile': '?0',
+      }
+    );
+
+    const chUaKeys = Object.keys(result).filter(k => k.toLowerCase().startsWith('sec-ch-ua'));
+    expect(chUaKeys).toHaveLength(0);
+  });
+
+  it('uses lowercase sec-ch-ua-mobile and sec-ch-ua-platform keys', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle({ url: 'https://example.com' }, {});
+
+    expect(result['sec-ch-ua-mobile']).toBe('?0');
+    expect(result['sec-ch-ua-platform']).toBe('"macOS"');
+    // Old uppercase variants must not appear
+    expect(result['Sec-CH-UA-Mobile']).toBeUndefined();
+    expect(result['Sec-CH-UA-Platform']).toBeUndefined();
+  });
+});
+
 describe('getStealthScript() — timing protection', () => {
   it('rounds performance.now to 100μs (Firefox parity)', () => {
     const script = StealthManager.getStealthScript('seed');
@@ -234,5 +423,119 @@ describe('getStealthScript() — timing protection', () => {
     const script = StealthManager.getStealthScript('seed');
     expect(script).not.toMatch(/Date\.now\s*=\s*function/);
     expect(script).not.toMatch(/origDateNow/);
+  });
+});
+
+describe('getStealthScript() — userAgentData GREASE brand consistency', () => {
+  it('uses "Not(A:Brand" (Chrome 120+ GREASE token), not the old "Not_A Brand"', () => {
+    // Cloudflare cross-checks navigator.userAgentData.brands against the
+    // sec-ch-ua HTTP header. The header handler preserves Chromium's natural
+    // GREASE token ("Not(A:Brand" for Chrome 120+). The injected JS must match.
+    const script = StealthManager.getStealthScript('seed');
+    expect(script).toContain('Not(A:Brand');
+    expect(script).not.toContain('Not_A Brand');
+    expect(script).not.toContain('Not.A/Brand');
+  });
+
+  it('uses GREASE version "8", not the old "24"', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // The __greaseVersion variable must be '8'
+    expect(script).toContain("__greaseVersion = '8'");
+    expect(script).not.toMatch(/__greaseVersion\s*=\s*'24'/);
+  });
+
+  it('fullVersionList GREASE version is built from __greaseVersion (e.g. "8.0.0.0")', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // Should not hardcode the old wrong "24.0.0.0"
+    expect(script).not.toContain('"24.0.0.0"');
+    expect(script).not.toContain("'24.0.0.0'");
+    // Should compose it from the variable
+    expect(script).toContain("__greaseVersion + '.0.0.0'");
+  });
+
+  it('includes "Google Chrome" in all brand lists', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // Must appear in both the low-entropy brands and the getHighEntropyValues response
+    const chromeCount = (script.match(/Google Chrome/g) || []).length;
+    // brands (1) + getHighEntropyValues brands (1) + fullVersionList (1) = min 3
+    expect(chromeCount).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ─── getEarlyScript() ─────────────────────────────────────────────────────────
+// This is the minimal script injected via CDP Page.addScriptToEvaluateOnNewDocument
+// into EVERY frame including cross-origin OOPIFs (e.g. Cloudflare Turnstile).
+// It must NOT contain canvas/audio/timing patches that crash sandboxed iframes.
+
+describe('getEarlyScript() — minimal OOPIF-safe stealth', () => {
+  it('uses its own idempotency guard distinct from the full stealth script', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('__tandem_early_v1');
+    expect(script).not.toContain('__tandem_stealth_v1');
+  });
+
+  it('includes "Google Chrome" in userAgentData brands', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('Google Chrome');
+    // Must appear in brands array AND fullVersionList
+    const chromeCount = (script.match(/Google Chrome/g) || []).length;
+    expect(chromeCount).toBeGreaterThanOrEqual(2);
+  });
+
+  it('uses "Not(A:Brand" GREASE token (Chrome 120+)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('Not(A:Brand');
+    expect(script).not.toContain('Not_A Brand');
+  });
+
+  it('patches navigator.webdriver', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('webdriver');
+    expect(script).toContain('false');
+  });
+
+  it('includes a minimal window.chrome.runtime stub', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).toContain('window.chrome');
+    expect(script).toContain('chrome.runtime');
+  });
+
+  it('does NOT contain canvas fingerprint noise (getImageData crash risk in OOPIF)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('getImageData');
+    expect(script).not.toContain('toDataURL');
+    expect(script).not.toContain('toBlob');
+    expect(script).not.toContain('HTMLCanvasElement');
+  });
+
+  it('does NOT contain audio fingerprint noise (not needed for Cloudflare Turnstile)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('AudioContext');
+    expect(script).not.toContain('OfflineAudioContext');
+    expect(script).not.toContain('AnalyserNode');
+  });
+
+  it('does NOT contain timing precision reduction (Firefox-like 100μs is a Cloudflare non-Chrome signal)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('performance.now');
+    expect(script).not.toContain('origPerfNow');
+  });
+
+  it('does NOT contain WebGL parameter patching (not needed in Turnstile OOPIF)', () => {
+    const script = StealthManager.getEarlyScript();
+    expect(script).not.toContain('WebGLRenderingContext');
+    expect(script).not.toContain('WebGL2RenderingContext');
+  });
+
+  it('accepts an optional chromeVersion parameter', () => {
+    const script = StealthManager.getEarlyScript('130.0.6723.116');
+    expect(script).toContain('130.0.6723.116');
+    expect(script).toContain('130'); // chromeMajor
+  });
+
+  it('uses process.versions.chrome by default', () => {
+    const script = StealthManager.getEarlyScript();
+    // The test environment sets chrome to 132.0.6834.160 in beforeAll
+    expect(script).toContain(process.versions.chrome);
   });
 });
