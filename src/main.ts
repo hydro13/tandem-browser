@@ -319,7 +319,7 @@ async function createWindow(): Promise<BrowserWindow> {
       // We eagerly attach here (before the first navigation) so the registration
       // is in place when the renderer processes are later spawned.
       if (!isSidebarWebview) {
-        (async () => {
+        void (async () => {
           if (contents.isDestroyed()) return;
           try {
             if (!contents.debugger.isAttached()) {
