@@ -343,7 +343,7 @@ contributors, not yet a polished mass-user release.
 - Secondary platform: Linux
 - Windows: validated as a remote agent host (VS Code + Claude Code over Tailscale)
 - Binaries: not published yet (source-only)
-- Current version: `0.75.0`
+- Current version: `1.0.0`
 - Package metadata: [package.json](package.json)
 
 ## Community

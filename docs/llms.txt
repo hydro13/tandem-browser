@@ -14,7 +14,7 @@ Tandem Browser was started by Robin Waslander (the maintainer of OpenClaw, https
 - Author: Robin Waslander (independent, no company, no VC)
 - Repository: https://github.com/hydro13/tandem-browser
 - Website: https://tandembrowser.org
-- Current version: 0.75.0 (developer preview)
+- Current version: 1.0.0 (developer preview)
 - Architecture: local-first, no cloud backend, optional remote agent connection over Tailscale
 - Agent surface: 250+ MCP tools, 300+ HTTP endpoints
 - Security: 8-layer pipeline (NetworkShield, OutboundGuard, ContentAnalyzer, ScriptGuard, BehaviorMonitor, Gatekeeper AI, EvolutionEngine, PromptInjection)

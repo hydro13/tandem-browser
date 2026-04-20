@@ -2,6 +2,45 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v1.0.0] - 2026-04-20
+
+First binary release of Tandem Browser — signed and notarized for macOS Apple Silicon. This release also brings full Cloudflare/Turnstile stealth compatibility, agent trust tiers that reduce approval friction for legitimate agent work, and a raft of shell, SEO, and documentation improvements.
+
+Seventeen merged PRs since v0.75.0. Grouped below by area.
+
+### First binary release
+
+- **Signed + notarized macOS binary (Apple Silicon)** — `tandem-browser-1.0.0-arm64.dmg` and `.zip` are signed with `Developer ID Application: Robin Waslander (WFQNG992GW)` and notarized by Apple. Gatekeeper accepts the app on any Apple Silicon Mac without any override needed.
+
+### Security
+
+- **Agent trust tiers T2/T3/T4** — agents can now earn reduced approval friction by operating within documented scope. T2 (domain-scoped), T3 (session-scoped), and T4 (fully trusted local agents) each bypass a progressively larger set of approval gates. Approval is still required for security-weakening actions at all tiers. ([#179](https://github.com/hydro13/tandem-browser/pull/179))
+- **ReDoS fix in `agentIdFromRequest`** — replaced unbounded regex with a safe character-class match. Closes a theoretical CPU exhaustion vector on malformed `Authorization` headers. ([#179](https://github.com/hydro13/tandem-browser/pull/179))
+
+### Stealth — Cloudflare compatibility
+
+- **Google Chrome brand injected into `sec-ch-ua`** — Electron exposes `Chromium` in client-hint headers; Cloudflare Turnstile treats this as non-Chrome and triggers extra challenges. StealthManager now rewrites `sec-ch-ua` and `sec-ch-ua-full-version-list` to include the real `Google Chrome` brand at the correct version. ([#180](https://github.com/hydro13/tandem-browser/pull/180))
+- **GREASE brand mismatch fixed** — the GREASE token in `sec-ch-ua` was hardcoded; it now matches the token Chromium generates at runtime. ([#180](https://github.com/hydro13/tandem-browser/pull/180))
+- **`Accept-Language` casing normalised** — Electron sends lowercase `accept-language`; rewritten to `Accept-Language` to match Chrome wire format. ([#180](https://github.com/hydro13/tandem-browser/pull/180))
+- **CDP OOPIF stealth injection** — cross-origin subframes (e.g. Cloudflare's Turnstile iframe) run in separate renderer processes and never received the session preload. `Page.addScriptToEvaluateOnNewDocument` via CDP now registers a minimal early script in every frame before any JS runs, including OOPIFs, without triggering the GPU readback crash inside sandboxed renderers. ([#180](https://github.com/hydro13/tandem-browser/pull/180))
+- **`__tandem*` globals moved to CDP isolated worlds** — internal globals no longer leak into the page's JS context where sites could detect them. ([#175](https://github.com/hydro13/tandem-browser/pull/175))
+
+### MCP
+
+- **Prompt-injection trust-contract restored on content tools** — `read_page`, `extract_content`, and related tools re-gained their injection-warning contract after it was accidentally dropped in a refactor. `tabId` added to `execute_js` so background-tab JS execution is explicit and auditable. ([#174](https://github.com/hydro13/tandem-browser/pull/174))
+
+### Shell / UX
+
+- **Tab `.active` class cleared on workspace switch** — a stale active-class on tabs from a previous workspace caused visual ghost-selection after switching. Added a defensive DOM sweep at switch time. ([#177](https://github.com/hydro13/tandem-browser/pull/177))
+- **Empty workspace opens a fresh new-tab** — closing all tabs in a workspace previously left focus dangling; now a clean new-tab page opens automatically. ([#178](https://github.com/hydro13/tandem-browser/pull/178))
+
+### Documentation & SEO
+
+- **Website and README repositioned around what Tandem unlocks** — lead copy now centres the human+AI symbiosis angle and model-agnosticism rather than feature lists. ([#172](https://github.com/hydro13/tandem-browser/pull/172), [#173](https://github.com/hydro13/tandem-browser/pull/173))
+- **SKILL.md rewritten** — passive orientation, workspace scoping, SPA-state mining, and updated injection-warning contract documented for agent authors. ([#176](https://github.com/hydro13/tandem-browser/pull/176))
+- **FAQ, JSON-LD, OpenGraph, sitemap, robots.txt, llms.txt** — full SEO pass: FAQPage structured data, Twitter Card and OG metadata, AI-crawler allowlist, changelog page, `/vs/` comparison pages.
+- **OpenClaw origin story** — Tandem's origin as the browser built for OpenClaw is now surfaced across the site, FAQ, and llms.txt.
+
 ## [v0.75.0] - 2026-04-18
 
 Large release driven by an external security audit (#34) by **[@samantha-gb](https://github.com/samantha-gb)** and follow-up work that surfaced while implementing her findings. Five High-tier security fixes plus CORS and agent-initiated override hardening landed alongside a proper per-user behavioural learning pipeline and audio/visual escalation for agent-blocked approvals.
