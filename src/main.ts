@@ -305,6 +305,39 @@ async function createWindow(): Promise<BrowserWindow> {
     );
 
     if (contents.getType() === 'webview') {
+      // === CDP-based OOPIF stealth injection ===
+      // session.setPreloads() only executes in the WebContents *main* frame.
+      // Cross-origin subframes (OOPIFs) — e.g. Cloudflare's Turnstile iframe at
+      // challenges.cloudflare.com — run in separate renderer processes and never
+      // receive that preload. CDP's Page.addScriptToEvaluateOnNewDocument runs
+      // BEFORE any scripts in EVERY frame upon creation, including OOPIFs.
+      // This is the same mechanism Chromium uses internally for content scripts.
+      // We eagerly attach here (before the first navigation) so the registration
+      // is in place when the renderer processes are later spawned.
+      if (!isSidebarWebview) {
+        (async () => {
+          if (contents.isDestroyed()) return;
+          try {
+            if (!contents.debugger.isAttached()) {
+              contents.debugger.attach('1.3');
+            }
+            await contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+              source: stealthScript,
+            });
+            log.info('🛡️ CDP OOPIF stealth injection registered');
+          } catch (e) {
+            // DevToolsManager may have already attached — try using its session
+            if (!contents.isDestroyed() && contents.debugger.isAttached()) {
+              contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+                source: stealthScript,
+              }).catch(e2 => log.warn('CDP stealth shared-session failed:', e2 instanceof Error ? e2.message : e2));
+            } else {
+              log.warn('CDP OOPIF stealth attach failed:', e instanceof Error ? e.message : e);
+            }
+          }
+        })();
+      }
+
       contents.on('dom-ready', () => {
         // Skip stealth injection on sites that detect and block stealth patches
         const url = contents.getURL();
@@ -319,12 +352,10 @@ async function createWindow(): Promise<BrowserWindow> {
         }
       });
 
-      // Inject stealth into cross-origin subframes (e.g. Cloudflare Turnstile iframes).
-      // executeJavaScript() on the main webContents only reaches the top-level frame.
-      // Cross-origin iframes run in their own renderer context and see Electron's raw
-      // navigator.userAgentData (missing "Google Chrome") — a direct bot signal.
-      // did-frame-navigate fires after a subframe's document is committed and ready,
-      // at which point we can patch the frame's main world before challenge scripts read it.
+      // did-frame-navigate: late-injection fallback for same-origin subframes.
+      // For cross-origin OOPIFs this fires too late (after the frame's inline
+      // scripts have already run), but the CDP registration above covers those.
+      // Kept here as a safety net for edge cases the CDP path misses.
       contents.on('did-frame-navigate', (
         _event, url, _httpCode, _httpText, isMainFrame
       ) => {
