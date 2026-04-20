@@ -143,8 +143,15 @@ export class StealthManager {
         }
 
         // Ensure realistic Accept-Language
-        if (!headers['Accept-Language']) {
-          headers['Accept-Language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
+        // Key-casing note: Chromium sends 'accept-language' (lowercase HTTP/2).
+        // Checking headers['Accept-Language'] always returns undefined, so the
+        // condition was always true but set a capitalized key that coexists with
+        // the original. Use case-insensitive lookup, then set with lowercase key.
+        const hasAcceptLanguage = Object.keys(headers).some(
+          k => k.toLowerCase() === 'accept-language'
+        );
+        if (!hasAcceptLanguage) {
+          headers['accept-language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
         }
 
         // === Sec-CH-UA client hints — inject "Google Chrome" brand ===
@@ -463,24 +470,30 @@ export class StealthManager {
       Object.defineProperty(window, 'process', { get: () => undefined, configurable: true });
 
       // navigator.userAgentData — ALWAYS override to match real Chrome
-      // Electron exposes its own brands (Chromium/130, Not?A_Brand/99) which Google detects
+      // Electron exposes its own brands which bot-detection systems detect.
+      // The GREASE brand MUST match what Chromium sends in the sec-ch-ua HTTP
+      // header — Cloudflare cross-checks them.  Chromium 120+ uses "Not(A:Brand"
+      // version "8".  The header handler (registerWith) preserves this naturally.
       {
         var __chromeMajor = '${chromeMajor}';
         var __chromeVersion = '${chromeVersion}';
+        // Chrome 120+ GREASE brand — must stay in sync with the sec-ch-ua header
+        var __greaseBrand   = 'Not(A:Brand';
+        var __greaseVersion = '8';
         Object.defineProperty(navigator, 'userAgentData', {
           get: () => ({
             brands: [
-              { brand: 'Google Chrome', version: __chromeMajor },
-              { brand: 'Chromium', version: __chromeMajor },
-              { brand: 'Not_A Brand', version: '24' },
+              { brand: 'Google Chrome',  version: __chromeMajor },
+              { brand: 'Chromium',       version: __chromeMajor },
+              { brand: __greaseBrand,    version: __greaseVersion },
             ],
             mobile: false,
             platform: 'macOS',
             getHighEntropyValues: (hints) => Promise.resolve({
               brands: [
-                { brand: 'Google Chrome', version: __chromeMajor },
-                { brand: 'Chromium', version: __chromeMajor },
-                { brand: 'Not_A Brand', version: '24' },
+                { brand: 'Google Chrome',  version: __chromeMajor },
+                { brand: 'Chromium',       version: __chromeMajor },
+                { brand: __greaseBrand,    version: __greaseVersion },
               ],
               mobile: false,
               platform: 'macOS',
@@ -490,9 +503,9 @@ export class StealthManager {
               model: '',
               uaFullVersion: __chromeVersion,
               fullVersionList: [
-                { brand: 'Google Chrome', version: __chromeVersion },
-                { brand: 'Chromium', version: __chromeVersion },
-                { brand: 'Not_A Brand', version: '24.0.0.0' },
+                { brand: 'Google Chrome',  version: __chromeVersion },
+                { brand: 'Chromium',       version: __chromeVersion },
+                { brand: __greaseBrand,    version: __greaseVersion + '.0.0.0' },
               ],
             }),
             toJSON: function() {

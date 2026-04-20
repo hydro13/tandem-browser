@@ -425,3 +425,39 @@ describe('getStealthScript() — timing protection', () => {
     expect(script).not.toMatch(/origDateNow/);
   });
 });
+
+describe('getStealthScript() — userAgentData GREASE brand consistency', () => {
+  it('uses "Not(A:Brand" (Chrome 120+ GREASE token), not the old "Not_A Brand"', () => {
+    // Cloudflare cross-checks navigator.userAgentData.brands against the
+    // sec-ch-ua HTTP header. The header handler preserves Chromium's natural
+    // GREASE token ("Not(A:Brand" for Chrome 120+). The injected JS must match.
+    const script = StealthManager.getStealthScript('seed');
+    expect(script).toContain('Not(A:Brand');
+    expect(script).not.toContain('Not_A Brand');
+    expect(script).not.toContain('Not.A/Brand');
+  });
+
+  it('uses GREASE version "8", not the old "24"', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // The __greaseVersion variable must be '8'
+    expect(script).toContain("__greaseVersion = '8'");
+    expect(script).not.toMatch(/__greaseVersion\s*=\s*'24'/);
+  });
+
+  it('fullVersionList GREASE version is built from __greaseVersion (e.g. "8.0.0.0")', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // Should not hardcode the old wrong "24.0.0.0"
+    expect(script).not.toContain('"24.0.0.0"');
+    expect(script).not.toContain("'24.0.0.0'");
+    // Should compose it from the variable
+    expect(script).toContain("__greaseVersion + '.0.0.0'");
+  });
+
+  it('includes "Google Chrome" in all brand lists', () => {
+    const script = StealthManager.getStealthScript('seed');
+    // Must appear in both the low-entropy brands and the getHighEntropyValues response
+    const chromeCount = (script.match(/Google Chrome/g) || []).length;
+    // brands (1) + getHighEntropyValues brands (1) + fullVersionList (1) = min 3
+    expect(chromeCount).toBeGreaterThanOrEqual(3);
+  });
+});
