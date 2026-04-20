@@ -218,6 +218,195 @@ describe('StealthManager — per-install seed', () => {
   });
 });
 
+// ─── Helpers for registerWith() tests ────────────────────────────────────────
+
+type HeaderHandler = (
+  details: { url: string },
+  headers: Record<string, string>
+) => Record<string, string>;
+
+/** Creates a minimal mock RequestDispatcher that captures the last registered
+ *  BeforeSendHeaders handler so tests can invoke it directly. */
+function makeDispatcherMock() {
+  let capturedHandler: HeaderHandler | null = null;
+  return {
+    registerBeforeSendHeaders: vi.fn(({ handler }: { handler: HeaderHandler }) => {
+      capturedHandler = handler;
+    }),
+    getHandler: (): HeaderHandler => {
+      if (!capturedHandler) throw new Error('handler not registered');
+      return capturedHandler;
+    },
+  };
+}
+
+/** Sets up a StealthManager backed by a deterministic fake install secret. */
+function makeManagerWithFixedSecret(): StealthManager {
+  vi.mocked(fs.existsSync).mockReturnValue(true);
+  vi.mocked(fs.readFileSync).mockReturnValue(
+    JSON.stringify({ stealthInstallSecret: 'a'.repeat(64) })
+  );
+  return new StealthManager(makeMockSession(), 'persist:tandem');
+}
+
+// ─── registerWith() — Sec-CH-UA header patching ───────────────────────────────
+
+describe('registerWith() — Sec-CH-UA client-hints injection', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('adds "Google Chrome" brand to Chromium-generated lowercase sec-ch-ua', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+  });
+
+  it('preserves Chromium\'s natural GREASE token (does not replace "Not(A:Brand")', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    expect(result['sec-ch-ua']).toContain('Not(A:Brand');
+  });
+
+  it('emits exactly one sec-ch-ua key (no casing duplicates)', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://cloudflare.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    const allChUaKeys = Object.keys(result).filter(k => k.toLowerCase() === 'sec-ch-ua');
+    expect(allChUaKeys).toHaveLength(1);
+    expect(allChUaKeys[0]).toBe('sec-ch-ua');
+  });
+
+  it('drops any pre-existing capitalized Sec-CH-UA duplicate', () => {
+    // The old code set headers['Sec-CH-UA'] without removing the lowercase
+    // original.  Both would reach the network — Cloudflare reads the lowercase
+    // one (no "Google Chrome") and treats the request as bot traffic.
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    // Simulate a headers object that already has BOTH casings (old-code artifact)
+    const result = handle(
+      { url: 'https://cloudflare.com' },
+      {
+        'sec-ch-ua':     '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'Sec-CH-UA':     '"Google Chrome";v="132", "Chromium";v="132", "Not_A Brand";v="24"',
+      }
+    );
+
+    // No capitalized variant should survive
+    expect(result['Sec-CH-UA']).toBeUndefined();
+    // The single lowercase key must contain "Google Chrome"
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+  });
+
+  it('builds a correct sec-ch-ua from scratch when Chromium did not send it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle({ url: 'https://example.com' }, {});
+
+    expect(result['sec-ch-ua']).toContain('Google Chrome');
+    expect(result['sec-ch-ua']).toContain('Chromium');
+    expect(result['sec-ch-ua']).toContain('Not(A:Brand');
+  });
+
+  it('does not add sec-ch-ua-full-version-list when Chromium did not send it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      { 'sec-ch-ua': '"Not(A:Brand";v="8", "Chromium";v="132"' }
+    );
+
+    const fullListKeys = Object.keys(result).filter(
+      k => k.toLowerCase() === 'sec-ch-ua-full-version-list'
+    );
+    expect(fullListKeys).toHaveLength(0);
+  });
+
+  it('enriches sec-ch-ua-full-version-list when Chromium sent it', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://example.com' },
+      {
+        'sec-ch-ua':                  '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'sec-ch-ua-full-version-list': '"Not(A:Brand";v="8.0.0.0", "Chromium";v="132.0.6834.160"',
+      }
+    );
+
+    expect(result['sec-ch-ua-full-version-list']).toContain('Google Chrome');
+    expect(result['sec-ch-ua-full-version-list']).toContain('Not(A:Brand');
+  });
+
+  it('strips sec-ch-ua headers from Google auth requests (existing behaviour unchanged)', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle(
+      { url: 'https://accounts.google.com/o/oauth2/auth' },
+      {
+        'User-Agent':  'Mozilla/5.0 Chrome/132',
+        'sec-ch-ua':   '"Not(A:Brand";v="8", "Chromium";v="132"',
+        'sec-ch-ua-mobile': '?0',
+      }
+    );
+
+    const chUaKeys = Object.keys(result).filter(k => k.toLowerCase().startsWith('sec-ch-ua'));
+    expect(chUaKeys).toHaveLength(0);
+  });
+
+  it('uses lowercase sec-ch-ua-mobile and sec-ch-ua-platform keys', () => {
+    const mgr  = makeManagerWithFixedSecret();
+    const disp = makeDispatcherMock();
+    mgr.registerWith(disp as never);
+    const handle = disp.getHandler();
+
+    const result = handle({ url: 'https://example.com' }, {});
+
+    expect(result['sec-ch-ua-mobile']).toBe('?0');
+    expect(result['sec-ch-ua-platform']).toBe('"macOS"');
+    // Old uppercase variants must not appear
+    expect(result['Sec-CH-UA-Mobile']).toBeUndefined();
+    expect(result['Sec-CH-UA-Platform']).toBeUndefined();
+  });
+});
+
 describe('getStealthScript() — timing protection', () => {
   it('rounds performance.now to 100μs (Firefox parity)', () => {
     const script = StealthManager.getStealthScript('seed');

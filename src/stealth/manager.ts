@@ -147,11 +147,51 @@ export class StealthManager {
           headers['Accept-Language'] = 'nl-BE,nl;q=0.9,en-US;q=0.8,en;q=0.7';
         }
 
-        // Ensure Sec-CH-UA matches our UA (Google checks these for login)
-        headers['Sec-CH-UA'] = `"Google Chrome";v="${this.chromeMajor}", "Chromium";v="${this.chromeMajor}", "Not_A Brand";v="24"`;
-        headers['Sec-CH-UA-Mobile'] = '?0';
-        headers['Sec-CH-UA-Platform'] = '"macOS"';
-        headers['Sec-CH-UA-Full-Version-List'] = `"Google Chrome";v="${process.versions.chrome}", "Chromium";v="${process.versions.chrome}", "Not_A Brand";v="24.0.0.0"`;
+        // === Sec-CH-UA client hints — inject "Google Chrome" brand ===
+        // Chromium omits "Google Chrome" from its auto-generated sec-ch-ua,
+        // sending only "Chromium" + a rotating GREASE token. Cloudflare (and
+        // other bot-detection systems) detect the missing brand as Electron.
+        //
+        // Key-casing bug: Chromium uses lowercase HTTP/2-style keys
+        // ('sec-ch-ua'). Setting 'Sec-CH-UA' (capitalized) does NOT overwrite
+        // the original — both coexist as separate object keys.  We must
+        // enumerate all keys case-insensitively, capture the value, delete
+        // the originals, then re-set with the correct (lowercase) key name.
+
+        // Capture Chromium's natural values — preserves the correct GREASE token
+        const getHdr = (lower: string): string => {
+          for (const k of Object.keys(headers)) {
+            if (k.toLowerCase() === lower) return String(headers[k]);
+          }
+          return '';
+        };
+        const chromiumBrands   = getHdr('sec-ch-ua');
+        const chromiumFullList = getHdr('sec-ch-ua-full-version-list');
+
+        // Delete all sec-ch-ua* headers regardless of casing
+        for (const k of Object.keys(headers)) {
+          if (k.toLowerCase().startsWith('sec-ch-ua')) delete headers[k];
+        }
+
+        // Inject "Google Chrome" brand while preserving the natural GREASE token
+        const withGoogleChrome = (brands: string, version: string): string => {
+          if (brands.includes('Google Chrome')) return brands;
+          if (!brands) {
+            // Chromium didn't send this header — build minimal correct list
+            return `"Chromium";v="${version}", "Google Chrome";v="${version}", "Not(A:Brand";v="8"`;
+          }
+          return `${brands}, "Google Chrome";v="${version}"`;
+        };
+
+        headers['sec-ch-ua']          = withGoogleChrome(chromiumBrands, this.chromeMajor);
+        headers['sec-ch-ua-mobile']   = '?0';
+        headers['sec-ch-ua-platform'] = '"macOS"';
+        // Only send full-version-list if Chromium already included it;
+        // it's a high-entropy hint that browsers normally send only on request.
+        if (chromiumFullList) {
+          headers['sec-ch-ua-full-version-list'] =
+            withGoogleChrome(chromiumFullList, process.versions.chrome);
+        }
 
         return headers;
       }
