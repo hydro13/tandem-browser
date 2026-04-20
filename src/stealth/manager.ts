@@ -98,7 +98,47 @@ export class StealthManager {
     // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
     this.session.setUserAgent(this.USER_AGENT);
 
+    // Write a session-level preload that injects stealth patches into EVERY
+    // renderer frame — including cross-origin out-of-process iframes (OOPIF)
+    // such as Cloudflare's Turnstile challenge iframe.  executeJavaScript() on
+    // the top-level webContents only reaches the main frame; session.setPreloads()
+    // runs the script in each renderer process (including OOPIF) BEFORE any page
+    // scripts, so navigator.userAgentData and other APIs are patched early enough.
+    await this.writeAndRegisterPreload();
+
     log.info('🛡️ Stealth patches applied (advanced fingerprint protection active)');
+  }
+
+  /**
+   * Writes a preload script to disk and registers it with the session.
+   * The preload uses webFrame.executeJavaScriptInIsolatedWorld(0, ...) to
+   * run the stealth patches in world 0 (the main/page world) before any page
+   * scripts, for every frame including cross-origin iframes.
+   */
+  private async writeAndRegisterPreload(): Promise<void> {
+    const stealthScript = StealthManager.getStealthScript(this.partitionSeed);
+
+    // The preload runs in Electron's isolated renderer world.
+    // executeJavaScriptInIsolatedWorld(0, ...) injects into world 0 = main page world,
+    // running BEFORE the frame's own scripts because the preload executes first.
+    // We skip file:// (Tandem shell UI) and Google auth frames.
+    const preloadContent = [
+      `'use strict';`,
+      `try {`,
+      `  var _url = (typeof location !== 'undefined' && location.href) || '';`,
+      `  var _skip = _url.startsWith('file://') ||`,
+      `    /accounts\\.google\\.com|accounts-google\\.com/i.test(_url);`,
+      `  if (!_skip) {`,
+      `    var _wf = require('electron').webFrame;`,
+      `    _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
+      `  }`,
+      `} catch(e) { /* preload injection failed — ignored */ }`,
+    ].join('\n');
+
+    const preloadPath = path.join(tandemDir(), 'stealth-preload.js');
+    await fs.promises.writeFile(preloadPath, preloadContent, { mode: 0o600 });
+    this.session.setPreloads([preloadPath]);
+    log.info('🛡️ Stealth preload registered for all frames (including OOPIF)');
   }
 
   /** Register header modification as a dispatcher consumer */
@@ -219,7 +259,12 @@ export class StealthManager {
     const chromeMajor = chromeVersion.split('.')[0];
     return `
       // ═══ All stealth patches in one IIFE — no globals leaked to window ═══
+      // Idempotency guard: both the session preload and the dom-ready injection
+      // run this script. The Symbol key is invisible to page JS (not enumerable).
       (function() {
+        var _appliedSym = Symbol.for('__tandem_stealth_v1');
+        if (window[_appliedSym]) return;
+        Object.defineProperty(window, _appliedSym, { value: 1, configurable: false, writable: false, enumerable: false });
         // Seeded PRNG (mulberry32) — consistent noise per session
         var __seed = 0;
         var seedStr = '${seed}';
