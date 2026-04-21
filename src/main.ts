@@ -370,11 +370,15 @@ async function createWindow(): Promise<BrowserWindow> {
         if (isMainFrame) return; // main frame handled by dom-ready above
         if (!url || url.startsWith('about:') || url.startsWith('data:')) return;
         if (isGoogleAuthUrl(url)) return; // never touch Google auth iframes
+        // Skip Cloudflare challenge OOPIF — the full stealth script (canvas noise,
+        // timing reduction) causes Turnstile to score the browser as bot. The minimal
+        // CDP early script already runs there and patches userAgentData/webdriver.
+        if (shouldSkipStealth(url)) return;
 
-        // Walk the frame tree and inject into every non-Google subframe
+        // Walk the frame tree and inject into every non-Google, non-challenge subframe
         const injectFrame = (frame: { url: string; frames: typeof frame[]; executeJavaScript: (s: string) => Promise<unknown> }) => {
           const frameUrl = frame.url || '';
-          if (!isGoogleAuthUrl(frameUrl)) {
+          if (!isGoogleAuthUrl(frameUrl) && !shouldSkipStealth(frameUrl)) {
             frame.executeJavaScript(stealthScript)
               .catch(() => { /* frame may have navigated away or be restricted */ });
           }

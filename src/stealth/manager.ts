@@ -127,7 +127,7 @@ export class StealthManager {
       `try {`,
       `  var _url = (typeof location !== 'undefined' && location.href) || '';`,
       `  var _skip = _url.startsWith('file://') ||`,
-      `    /accounts\\.google\\.com|accounts-google\\.com/i.test(_url);`,
+      `    /accounts\\.google\\.com|accounts-google\\.com|challenges\\.cloudflare\\.com/i.test(_url);`,
       `  if (!_skip) {`,
       `    var _wf = require('electron').webFrame;`,
       `    _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
