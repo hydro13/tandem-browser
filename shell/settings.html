@@ -842,6 +842,14 @@
         </div>
         <input type="text" id="cfg-customAcceptLanguage" placeholder="nl-BE,nl;q=0.9,en-US;q=0.8" />
       </div>
+
+      <div class="field" style="flex-direction:column;align-items:flex-start;">
+        <div class="field-info" style="margin-bottom:8px;">
+          <div class="field-label">Stealth skip hosts</div>
+          <div class="field-desc">Sites that actively detect stealth patches and break when injected.<br/>These sites get no stealth injection — they run as a normal browser.</div>
+        </div>
+        <textarea id="cfg-skipHosts" style="width:100%;min-height:60px;background:var(--input-bg);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;" placeholder="x.com&#10;twitter.com&#10;abs.twimg.com"></textarea>
+      </div>
     </div>
 
     <!-- ═══ Sync ═══ -->
@@ -1204,6 +1212,11 @@
       toggleField('field-customUserAgent', st.userAgent === 'custom');
       toggleField('field-customAcceptLanguage', st.acceptLanguage === 'custom');
 
+      const skipHotsEl = document.getElementById('cfg-skipHosts');
+      if (skipHotsEl && st.skipHosts) {
+        skipHotsEl.value = st.skipHosts.join('\n');
+      }
+
       // Sync
       const sy = config.sync || {};
       setChecked('cfg-chromeBookmarks', !!sy.chromeBookmarks);
@@ -1440,6 +1453,16 @@
     wire('cfg-chromeBookmarks', 'sync.chromeBookmarks');
     wire('cfg-chromeProfile', 'sync.chromeProfile');
     wire('cfg-trackingEnabled', 'behavior.trackingEnabled');
+
+    // Stealth skip hosts
+    const skipHotsEl = document.getElementById('cfg-skipHosts');
+    if (skipHotsEl) {
+      skipHotsEl.addEventListener('change', () => {
+        const hosts = skipHotsEl.value.split('\n').map(s => s.trim()).filter(Boolean);
+        saveConfig({stealth: { skipHosts: hosts }});
+      });
+    }
+
     // Folder picker for screenshot storage path
     document.getElementById('btn-chooseFolder').addEventListener('click', async () => {
       try {

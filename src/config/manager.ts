@@ -59,6 +59,7 @@ export interface TandemConfig {
     stealthLevel: 'low' | 'medium' | 'high';
     acceptLanguage: 'auto' | 'custom';
     customAcceptLanguage: string;
+    skipHosts: string[];
   };
 
   // Sync (Chrome bookmarks import)
@@ -156,6 +157,7 @@ const DEFAULT_CONFIG: TandemConfig = {
     stealthLevel: 'medium',
     acceptLanguage: 'auto',
     customAcceptLanguage: '',
+    skipHosts: ['x.com', 'twitter.com', 'abs.twimg.com'],
   },
   sync: {
     chromeBookmarks: false,
