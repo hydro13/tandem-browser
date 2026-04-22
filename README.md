@@ -173,7 +173,7 @@ macOS is the primary platform. Linux works. Windows is validated as a remote age
 
 Depending on what you want to do:
 
-- **Install Tandem** -> [Download v1.0.1](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.1) (macOS) or follow Quick Start above
+- **Install Tandem** -> [Download v1.0.0](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0) (macOS) or follow Quick Start above
 - **Connect an agent** -> see [Connect Your AI Agent](#connect-your-ai-agent)
 - **Explore the API and docs** -> browse [docs/](docs/) and [docs/INDEX.md](docs/INDEX.md)
 - **See the product story and website** -> visit [tandembrowser.org](https://tandembrowser.org)
@@ -358,7 +358,7 @@ contributors, not yet a polished mass-user release.
 - Primary platform: macOS
 - Secondary platform: Linux
 - Windows: validated as a remote agent host (VS Code + Claude Code over Tailscale)
-- Binaries: signed & notarized macOS Apple Silicon builds published on [GitHub Releases](https://github.com/hydro13/tandem-browser/releases), starting at v1.0.1
+- Binaries: signed & notarized macOS Apple Silicon builds published on [GitHub Releases](https://github.com/hydro13/tandem-browser/releases), starting at v1.0.0
 - Current version: `1.0.1`
 - Package metadata: [package.json](package.json)
 
