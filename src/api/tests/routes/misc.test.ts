@@ -132,8 +132,31 @@ describe('misc routes', () => {
       expect(res.status).toBe(200);
       expect(res.body.ready).toBe(true);
       expect(res.body.loading).toBe(false);
+      expect(res.body.cloudflare).toBeNull();
       expect(res.body.viewport).toBeDefined();
       expect(res.body.viewport.innerWidth).toBe(1280);
+    });
+
+    it('returns the active tab cloudflare policy when one exists', async () => {
+      const mockWC = createMockWebContents(4);
+      mockWC.executeJavaScript.mockResolvedValue(JSON.stringify({
+        innerWidth: 1280,
+        innerHeight: 720,
+        scrollTop: 0,
+        scrollHeight: 2000,
+        clientHeight: 720,
+        screenWidth: 1920,
+        screenHeight: 1080,
+      }));
+      mockGetActiveWC.mockResolvedValue(mockWC as any);
+      ctx.cloudflarePolicyManager.onMainFrameNavigation(100, 'https://example.com/login');
+      ctx.cloudflarePolicyManager.markChallengeDetected(100, 'https://challenges.cloudflare.com/turnstile/v0/b/api.js', 'test');
+
+      const res = await request(app).get('/status');
+
+      expect(res.status).toBe(200);
+      expect(res.body.cloudflare.mode).toBe('challenge_detected');
+      expect(res.body.cloudflare.challengeDetected).toBe(true);
     });
 
     it('returns ready:true without viewport when executeJavaScript fails', async () => {

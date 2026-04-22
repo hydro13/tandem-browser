@@ -59,12 +59,14 @@ import { WorkflowEngine } from '../workflow/engine';
 import { WorkspaceManager } from '../workspaces/manager';
 import { ClipboardManager } from '../clipboard/manager';
 import { PairingManager } from '../pairing/manager';
+import type { CloudflarePolicyManager } from '../cloudflare/policy-manager';
 import { DEFAULT_PARTITION } from '../utils/constants';
 import type { RuntimeManagers } from './types';
 
 interface InitializeRuntimeOptions {
   win: BrowserWindow;
   dispatcher: RequestDispatcher | null;
+  cloudflarePolicyManager: CloudflarePolicyManager;
   pendingContextMenuWebContents: WebContents[];
   pendingSecurityCoverageWebContentsIds: number[];
   canUseWindow: (win: BrowserWindow | null) => win is BrowserWindow;
@@ -178,7 +180,15 @@ async function configureNativeMessagingHostDirectories(log: Logger): Promise<voi
 }
 
 export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions): Promise<RuntimeManagers> {
-  const { win, dispatcher, pendingContextMenuWebContents, pendingSecurityCoverageWebContentsIds, canUseWindow, log } = opts;
+  const {
+    win,
+    dispatcher,
+    cloudflarePolicyManager,
+    pendingContextMenuWebContents,
+    pendingSecurityCoverageWebContentsIds,
+    canUseWindow,
+    log,
+  } = opts;
   const runtime: RuntimeManagers = {} as RuntimeManagers;
 
   runtime.configManager = new ConfigManager();
@@ -252,6 +262,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.loginManager = new LoginManager();
   runtime.clipboardManager = new ClipboardManager();
   runtime.pairingManager = new PairingManager();
+  runtime.cloudflarePolicyManager = cloudflarePolicyManager;
   runtime.sessionRestoreManager = new SessionRestoreManager(runtime.syncManager);
 
   runtime.workspaceManager.setMainWindow(win);
@@ -355,6 +366,7 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
     dispatcher: dispatcher ?? undefined,
     devToolsManager: runtime.devToolsManager,
     session: ses,
+    cloudflarePolicyManager: runtime.cloudflarePolicyManager,
   });
   runtime.securityManager.onContainmentIncident = (incident: SecurityContainmentIncident) => {
     if (!canUseWindow(win)) {
@@ -461,6 +473,7 @@ export function createManagerRegistry(runtime: RuntimeManagers): ManagerRegistry
     clipboardManager: runtime.clipboardManager,
     pairingManager: runtime.pairingManager,
     agentTrust: runtime.agentTrust,
+    cloudflarePolicyManager: runtime.cloudflarePolicyManager,
   };
 }
 

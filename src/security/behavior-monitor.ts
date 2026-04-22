@@ -62,6 +62,7 @@ export class BehaviorMonitor {
   private guardian: Guardian;
   private devToolsManager: DevToolsManager;
   private scriptGuard: ScriptGuard | null = null;
+  private shouldMonitorTab: ((wcId: number) => boolean) | null = null;
   private permissionLog: PermissionRecord[] = [];
   private tabStates: Map<number, BehaviorTabState> = new Map();
   onCriticalDetection: ((detection: BehaviorCriticalDetection) => void) | null = null;
@@ -75,6 +76,11 @@ export class BehaviorMonitor {
   /** Set ScriptGuard reference for WASM event correlation */
   setScriptGuard(scriptGuard: ScriptGuard): void {
     this.scriptGuard = scriptGuard;
+  }
+
+  /** Set a runtime gate for whether resource monitoring may run on a tab. */
+  setMonitoringGate(shouldMonitorTab: ((wcId: number) => boolean) | null): void {
+    this.shouldMonitorTab = shouldMonitorTab;
   }
 
   /**
@@ -156,6 +162,13 @@ export class BehaviorMonitor {
     if (!resolvedWcId) return;
 
     const state = this.getOrCreateTabState(resolvedWcId);
+
+    if (this.shouldMonitorTab && !this.shouldMonitorTab(resolvedWcId)) {
+      if (state.cpuCheckInterval) {
+        this.stopResourceMonitoring(resolvedWcId);
+      }
+      return;
+    }
 
     // Guard: if already running, don't restart (prevents double-start on repeated lifecycle calls)
     if (state.cpuCheckInterval) return;

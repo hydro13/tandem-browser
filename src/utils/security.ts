@@ -152,6 +152,14 @@ export function isGoogleAuthUrl(rawValue: string): boolean {
 /**
  * Sites that actively detect stealth patches and break when injected.
  * These sites get no stealth injection — they run as a normal browser.
+ *
+ * challenges.cloudflare.com: Cloudflare Turnstile OOPIF. The full stealth
+ * script (canvas noise, audio noise, performance.now() precision reduction)
+ * causes Turnstile to score the browser as a bot:
+ *   - Canvas noise → hash differs from any known real Chrome fingerprint
+ *   - 100μs performance.now() precision → Firefox-like, not Chrome
+ * The minimal CDP early script still runs here (via Page.addScriptToEvaluateOnNewDocument)
+ * and patches userAgentData/webdriver — that's sufficient for Turnstile.
  */
 const STEALTH_SKIP_HOSTS = new Set([
   'x.com',
@@ -159,6 +167,7 @@ const STEALTH_SKIP_HOSTS = new Set([
   'abs.twimg.com',
   'zhipin.com',
   'login.zhipin.com',
+  'challenges.cloudflare.com',
 ]);
 
 export function shouldSkipStealth(rawValue: string): boolean {

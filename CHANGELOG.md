@@ -2,6 +2,26 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v1.0.1] - 2026-04-21
+
+Cloudflare human mode — phase 3. Challenge-sensitive tabs now run with reduced security instrumentation so Turnstile and the Cloudflare interstitial see a stock Chromium surface, while non-Cloudflare tabs keep the full security stack. Phases 4 (human handoff) and 5 (conservative resume after `cf_clearance`) are on hold.
+
+### Added
+
+- **`CloudflarePolicyManager`** — new tab/origin-scoped policy store that classifies tabs as challenge-sensitive based on URL, response headers (`cf_clearance`), DOM selectors, and interstitial title snippets. Exposes a `getStealthDispositionForUrl` decision function (`full` | `early` | `skip`) for the stealth preload.
+- **Shared Cloudflare utilities** (`src/utils/cloudflare.ts`) — challenge-host/path detection, no-touch partition prefix helpers, and the canonical list of challenge DOM selectors reused by `HeadlessManager` and the main-process probe.
+- **Early stealth script variant** — minimal navigator/UA patches without canvas, audio, or timing noise. Injected into cross-origin Turnstile iframes so stealth fingerprint perturbation no longer trips Cloudflare's challenge.
+
+### Changed
+
+- **Security gating on challenge-sensitive tabs** — `SecurityManager` now refuses to attach ScriptGuard main-world monitors and blocks `BehaviorMonitor` resource polling on tabs the policy manager flags as challenge-sensitive. Live policy flips trigger an immediate de-escalation on the affected tab. Normal non-Cloudflare tabs keep the existing instrumentation path.
+- **Stealth preload is mode-aware** — the per-frame preload now performs a synchronous IPC (`tandem:cloudflare-policy-sync`) to the main process before injecting, and chooses between `early` (Turnstile OOPIFs) and `full` (everything else) based on the returned disposition. Google auth and `file://` frames are still skipped entirely.
+- **DevTools attach logs include the `webContents` id** — every CDP attach, security-domain enable, and already-attached message now carries `wc <id>`, which makes diagnosing OOPIF-specific Cloudflare attach races possible from logs alone.
+
+### Fixed
+
+- **Stealth crash inside Cloudflare Turnstile OOPIFs** — the full stealth script is no longer injected into `challenges.cloudflare.com` sub-frames; those frames now receive only the early variant, which resolves the V8 crash observed during Turnstile challenges.
+
 ## [v1.0.0] - 2026-04-20
 
 First binary release of Tandem Browser — signed and notarized for macOS Apple Silicon. This release also brings full Cloudflare/Turnstile stealth compatibility, agent trust tiers that reduce approval friction for legitimate agent work, and a raft of shell, SEO, and documentation improvements.

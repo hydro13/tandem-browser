@@ -39,9 +39,25 @@ export function createLogger(namespace: string): Logger {
     LEVELS[level] >= LEVELS[minLevel()];
 
   return {
-    debug: (...args) => { if (shouldLog('debug')) console.debug(prefix, ...args); },
-    info:  (...args) => { if (shouldLog('info'))  console.info(prefix, ...args);  },
-    warn:  (...args) => { if (shouldLog('warn'))  console.warn(prefix, ...args);  },
-    error: (...args) => { if (shouldLog('error')) console.error(prefix, ...args); },
+    debug: (...args) => {
+      if (shouldLog('debug')) {
+        console.debug(prefix, ...args);
+      }
+    },
+    info: (...args) => {
+      if (shouldLog('info')) {
+        console.info(prefix, ...args);
+      }
+    },
+    warn: (...args) => {
+      if (shouldLog('warn')) {
+        console.warn(prefix, ...args);
+      }
+    },
+    error: (...args) => {
+      if (shouldLog('error')) {
+        console.error(prefix, ...args);
+      }
+    },
   };
 }

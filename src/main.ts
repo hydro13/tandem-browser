@@ -45,8 +45,22 @@ import type { PendingTabRegister, RuntimeManagers } from './bootstrap/types';
 import { isGoogleAuthUrl, shouldSkipStealth, pathnameMatchesPrefix, tryParseUrl, urlHasProtocol, hostnameMatches } from './utils/security';
 import { readConfigFileSync } from './config/io';
 import { resolveInitialTheme, buildThemeAdditionalArg, toNativeThemeSource, type ResolvedTheme } from './theme/resolver';
+import { CloudflarePolicyManager } from './cloudflare/policy-manager';
+import {
+  CLOUDFLARE_CHALLENGE_SELECTORS,
+  getCloudflareNoTouchPartition,
+  isCloudflareChallengeUrl,
+  isCloudflareNoTouchPartition,
+  responseHeadersContainCfClearance,
+} from './utils/cloudflare';
 
 const log = createLogger('Main');
+const CLOUDFLARE_POLICY_SYNC_CHANNEL = 'tandem:cloudflare-policy-sync';
+const CLOUDFLARE_INTERSTITIAL_TITLE_SNIPPETS = [
+  'just a moment',
+  'attention required',
+  'please wait',
+];
 
 const IS_DEV = process.argv.includes('--dev');
 
@@ -54,6 +68,10 @@ let mainWindow: BrowserWindow | null = null;
 let api: TandemAPI | null = null;
 let runtime: RuntimeManagers | null = null;
 let dispatcher: RequestDispatcher | null = null;
+let cloudflarePolicyManager: CloudflarePolicyManager | null = null;
+const earlyOopifStealthRegistered = new Set<number>();
+const cloudflareNoTouchPartitions = new Set<string>();
+const cloudflareNoTouchReroutes = new Set<number>();
 let cookieFlushTimer: ReturnType<typeof setInterval> | null = null;
 /** Queue webview webContents created before contextMenuManager is ready */
 const pendingContextMenuWebContents: WebContents[] = [];
@@ -68,6 +86,14 @@ function registerEarlyShellAuthIpc(): void {
     } catch {
       return '';
     }
+  });
+}
+
+function registerEarlyCloudflarePolicyIpc(): void {
+  ipcMain.removeAllListeners(CLOUDFLARE_POLICY_SYNC_CHANNEL);
+  ipcMain.on(CLOUDFLARE_POLICY_SYNC_CHANNEL, (event, rawUrl: string) => {
+    const url = typeof rawUrl === 'string' ? rawUrl : '';
+    event.returnValue = cloudflarePolicyManager?.getStealthDispositionForUrl(url) ?? 'full';
   });
 }
 
@@ -148,6 +174,11 @@ function clearStartApiIpcListeners(): void {
 }
 
 function queueSecurityCoverage(webContentsId: number): void {
+  if (cloudflarePolicyManager?.isChallengeSensitiveTab(webContentsId)) {
+    log.info(`☁️ Refusing security coverage queue for challenge-sensitive tab ${webContentsId}`);
+    return;
+  }
+
   if (runtime?.securityManager) {
     runtime.securityManager.onTabCreated(webContentsId).catch(e => log.warn('securityManager.onTabCreated failed:', e instanceof Error ? e.message : e));
     return;
@@ -156,6 +187,23 @@ function queueSecurityCoverage(webContentsId: number): void {
   if (!pendingSecurityCoverageWebContentsIds.includes(webContentsId)) {
     pendingSecurityCoverageWebContentsIds.push(webContentsId);
   }
+}
+
+function isCloudflareNoTouchWebContents(contents: WebContents): boolean {
+  const trackedPartition = runtime?.tabManager
+    .listTabs()
+    .find((tab) => tab.webContentsId === contents.id)?.partition ?? null;
+  if (trackedPartition && isCloudflareNoTouchPartition(trackedPartition)) {
+    return true;
+  }
+
+  for (const partition of cloudflareNoTouchPartitions) {
+    if (contents.session === session.fromPartition(partition)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 function teardown(): void {
@@ -175,15 +223,182 @@ function teardown(): void {
   dispatcher = null;
 }
 
+async function probeCloudflareChallengeSurface(contents: WebContents): Promise<boolean> {
+  if (!cloudflarePolicyManager || contents.isDestroyed()) {
+    return false;
+  }
+
+  const title = contents.getTitle().trim().toLowerCase();
+  if (title && CLOUDFLARE_INTERSTITIAL_TITLE_SNIPPETS.some((snippet) => title.includes(snippet))) {
+    cloudflarePolicyManager.markChallengeDetected(contents.id, contents.getURL() || null, 'title:interstitial');
+    return true;
+  }
+
+  try {
+    const detected = await contents.executeJavaScript(`
+      (() => {
+        const selectors = ${JSON.stringify(CLOUDFLARE_CHALLENGE_SELECTORS)};
+        return selectors.some((selector) => !!document.querySelector(selector));
+      })()
+    `) as boolean;
+
+    if (detected) {
+      cloudflarePolicyManager.markChallengeDetected(contents.id, contents.getURL() || null, 'dom:selectors');
+      return true;
+    }
+  } catch {
+    // DOM probe is best-effort only.
+  }
+
+  return cloudflarePolicyManager.isChallengeSensitiveTab(contents.id);
+}
+
+async function registerEarlyOopifStealth(contents: WebContents, earlyScript: string): Promise<void> {
+  if (contents.isDestroyed()) return;
+  if (earlyOopifStealthRegistered.has(contents.id)) return;
+
+  const currentUrl = contents.getURL();
+  if (currentUrl && (isGoogleAuthUrl(currentUrl) || shouldSkipStealth(currentUrl))) {
+    return;
+  }
+  if (cloudflarePolicyManager?.isChallengeSensitiveTab(contents.id)) {
+    log.info(`☁️ Skipping CDP OOPIF early stealth attach for challenge-sensitive tab ${contents.id}`);
+    return;
+  }
+  if (isCloudflareNoTouchWebContents(contents)) {
+    log.info(`☁️ Skipping CDP OOPIF early stealth attach for no-touch tab ${contents.id}`);
+    return;
+  }
+
+  try {
+    if (!contents.debugger.isAttached()) {
+      contents.debugger.attach('1.3');
+    }
+    await contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+      source: earlyScript,
+    });
+    earlyOopifStealthRegistered.add(contents.id);
+    log.info(`🛡️ CDP OOPIF early stealth injection registered for wc ${contents.id}`);
+  } catch (e) {
+    if (!contents.isDestroyed() && contents.debugger.isAttached()) {
+      contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
+        source: earlyScript,
+      }).then(() => {
+        earlyOopifStealthRegistered.add(contents.id);
+        log.info(`🛡️ CDP OOPIF early stealth injection registered via shared session for wc ${contents.id}`);
+      }).catch(e2 => log.warn(`CDP stealth shared-session failed for wc ${contents.id}:`, e2 instanceof Error ? e2.message : e2));
+    } else {
+      log.warn(`CDP OOPIF stealth attach failed for wc ${contents.id}:`, e instanceof Error ? e.message : e);
+    }
+  }
+}
+
+async function promoteTabToCloudflareNoTouchSession(webContentsId: number, preferredUrl: string | null): Promise<void> {
+  if (!runtime?.tabManager || !runtime.workspaceManager) {
+    return;
+  }
+  if (cloudflareNoTouchReroutes.has(webContentsId)) {
+    return;
+  }
+
+  const sourceTab = runtime.tabManager.listTabs().find((tab) => tab.webContentsId === webContentsId) ?? null;
+  if (!sourceTab) {
+    return;
+  }
+  if (isCloudflareNoTouchPartition(sourceTab.partition)) {
+    return;
+  }
+
+  const targetUrl = preferredUrl || sourceTab.url || null;
+  const targetPartition = targetUrl ? getCloudflareNoTouchPartition(targetUrl) : null;
+  if (!targetUrl || !targetPartition) {
+    return;
+  }
+
+  cloudflareNoTouchReroutes.add(webContentsId);
+  cloudflareNoTouchPartitions.add(targetPartition);
+
+  try {
+    const existingReplacement = runtime.tabManager.listTabs().find((tab) =>
+      tab.webContentsId !== webContentsId &&
+      tab.partition === targetPartition &&
+      tab.url === targetUrl
+    ) ?? null;
+
+    const workspaceId = runtime.workspaceManager.getWorkspaceIdForTab(webContentsId);
+
+    if (existingReplacement) {
+      if (workspaceId) {
+        runtime.workspaceManager.moveTab(existingReplacement.webContentsId, workspaceId);
+      }
+      await runtime.tabManager.focusTab(existingReplacement.id);
+      await runtime.tabManager.closeTab(sourceTab.id);
+      log.info(`☁️ Reused existing no-touch tab ${existingReplacement.webContentsId} for Cloudflare challenge on wc ${webContentsId}`);
+      return;
+    }
+
+    log.info(`☁️ Reopening Cloudflare tab ${webContentsId} in no-touch partition ${targetPartition}`);
+    const replacementTab = await runtime.tabManager.openTab(
+      targetUrl,
+      sourceTab.groupId ?? undefined,
+      sourceTab.source,
+      targetPartition,
+      true,
+    );
+
+    if (workspaceId) {
+      runtime.workspaceManager.moveTab(replacementTab.webContentsId, workspaceId);
+    }
+    if (sourceTab.pinned) {
+      runtime.tabManager.pinTab(replacementTab.id);
+    }
+    if (sourceTab.emoji) {
+      if (sourceTab.emojiFlash) {
+        runtime.tabManager.flashEmoji(replacementTab.id, sourceTab.emoji);
+      } else {
+        runtime.tabManager.setEmoji(replacementTab.id, sourceTab.emoji);
+      }
+    }
+
+    await runtime.tabManager.closeTab(sourceTab.id);
+  } catch (e) {
+    log.warn(`Cloudflare no-touch reroute failed for wc ${webContentsId}:`, e instanceof Error ? e.message : e);
+  } finally {
+    cloudflareNoTouchReroutes.delete(webContentsId);
+  }
+}
+
 async function createWindow(): Promise<BrowserWindow> {
   registerEarlyShellAuthIpc();
+  registerEarlyCloudflarePolicyIpc();
   registerEarlyTabRegisterIpc();
 
   const partition = DEFAULT_PARTITION;
   const ses = session.fromPartition(partition);
 
+  if (!cloudflarePolicyManager) {
+    cloudflarePolicyManager = new CloudflarePolicyManager();
+    cloudflarePolicyManager.on('challenge-detected', (event) => {
+      log.info(`☁️ Cloudflare challenge detected (${event.signal}) for ${event.origin ?? event.url ?? 'unknown origin'}`);
+      if (typeof event.webContentsId === 'number') {
+        runtime?.securityManager.onCloudflarePolicyChanged(event.webContentsId).catch(e => {
+          log.warn('securityManager.onCloudflarePolicyChanged failed:', e instanceof Error ? e.message : e);
+        });
+        void promoteTabToCloudflareNoTouchSession(event.webContentsId, event.url ?? null);
+      }
+    });
+    cloudflarePolicyManager.on('clearance-seen', (event) => {
+      log.info(`☁️ Cloudflare clearance seen (${event.signal}) for ${event.origin ?? event.url ?? 'unknown origin'}`);
+      if (typeof event.webContentsId === 'number') {
+        runtime?.securityManager.onCloudflarePolicyChanged(event.webContentsId).catch(e => {
+          log.warn('securityManager.onCloudflarePolicyChanged failed:', e instanceof Error ? e.message : e);
+        });
+      }
+    });
+  }
+
   const stealth = new StealthManager(ses, partition);
-  await stealth.apply();
+  await stealth.apply({ cloudflarePolicySyncChannel: CLOUDFLARE_POLICY_SYNC_CHANNEL });
 
   // Create RequestDispatcher — central hub for all webRequest hooks
   dispatcher = new RequestDispatcher(ses);
@@ -223,6 +438,10 @@ async function createWindow(): Promise<BrowserWindow> {
   // (e.g. cookies set via document.cookie or already present before the handler was attached)
   ses.cookies.on('changed', (_event, cookie, _cause, removed) => {
     if (removed) return;
+    if (cookie.name.toLowerCase() === 'cf_clearance') {
+      const cookieUrl = `https://${cookie.domain?.replace(/^\./, '') || 'unknown'}${cookie.path || '/'}`;
+      cloudflarePolicyManager?.markClearanceSeen(null, cookieUrl, 'cookies:changed');
+    }
     if (cookie.sameSite === 'no_restriction' && !cookie.secure) {
       const url = `https://${cookie.domain?.replace(/^\./, '') || 'unknown'}${cookie.path || '/'}`;
       ses.cookies.set({
@@ -282,6 +501,37 @@ async function createWindow(): Promise<BrowserWindow> {
     }
   });
 
+  dispatcher.registerHeadersReceived({
+    name: 'CloudflarePolicy',
+    priority: 80,
+    handler: (details, responseHeaders) => {
+      cloudflarePolicyManager?.recordUrlSignal(
+        typeof details.webContentsId === 'number' ? details.webContentsId : null,
+        details.url || null,
+        'headers:url',
+      );
+      if (responseHeadersContainCfClearance(responseHeaders)) {
+        cloudflarePolicyManager?.markClearanceSeen(
+          typeof details.webContentsId === 'number' ? details.webContentsId : null,
+          details.url || null,
+          'headers:set-cookie',
+        );
+      }
+      return responseHeaders;
+    }
+  });
+
+  dispatcher.registerBeforeRedirect({
+    name: 'CloudflareRedirectPolicy',
+    handler: (details) => {
+      cloudflarePolicyManager?.recordUrlSignal(
+        typeof details.webContentsId === 'number' ? details.webContentsId : null,
+        details.redirectURL || null,
+        'redirect:url',
+      );
+    }
+  });
+
   // Attach dispatcher — activates all hooks with current consumers
   dispatcher.attach();
 
@@ -309,55 +559,48 @@ async function createWindow(): Promise<BrowserWindow> {
     );
 
     if (contents.getType() === 'webview') {
-      // === CDP-based OOPIF stealth injection ===
-      // session.setPreloads() only executes in the WebContents *main* frame.
-      // Cross-origin subframes (OOPIFs) — e.g. Cloudflare's Turnstile iframe at
-      // challenges.cloudflare.com — run in separate renderer processes and never
-      // receive that preload. CDP's Page.addScriptToEvaluateOnNewDocument runs
-      // BEFORE any scripts in EVERY frame upon creation, including OOPIFs.
-      // This is the same mechanism Chromium uses internally for content scripts.
-      // We eagerly attach here (before the first navigation) so the registration
-      // is in place when the renderer processes are later spawned.
-      if (!isSidebarWebview) {
+      contents.on('did-navigate', (_event, url) => {
+        if (url && !url.startsWith('about:') && !url.startsWith('data:')) {
+          cloudflarePolicyManager?.onMainFrameNavigation(contents.id, url);
+          cloudflarePolicyManager?.recordUrlSignal(contents.id, url, 'main-frame:url');
+        }
+      });
+
+      contents.on('dom-ready', () => {
         void (async () => {
-          if (contents.isDestroyed()) return;
-          try {
-            if (!contents.debugger.isAttached()) {
-              contents.debugger.attach('1.3');
+          // Skip stealth injection on sites that detect and block stealth patches
+          const url = contents.getURL();
+          if (url && !url.startsWith('about:') && !url.startsWith('data:')) {
+            cloudflarePolicyManager?.onMainFrameNavigation(contents.id, url);
+            cloudflarePolicyManager?.recordUrlSignal(contents.id, url, 'dom-ready:url');
+          }
+          const noTouchPartition = isCloudflareNoTouchWebContents(contents);
+          const challengeSensitive = await probeCloudflareChallengeSurface(contents);
+          if (isGoogleAuthUrl(url) || shouldSkipStealth(url)) {
+            log.info('🔑 Skipping stealth for:', url.substring(0, 60));
+            return;
+          }
+          if (noTouchPartition) {
+            log.info(`☁️ No-touch partition active for tab ${contents.id}; skipping stealth and security hooks`);
+            return;
+          }
+          if (!challengeSensitive) {
+            if (!isSidebarWebview) {
+              await registerEarlyOopifStealth(contents, earlyScript);
             }
-            // Use the minimal early script (no canvas/audio/timing noise) so it is
-            // safe inside Cloudflare's sandboxed Turnstile OOPIF — the full stealth
-            // script's ctx.getImageData() call triggers GPU readback IPC that causes
-            // a V8 crash inside challenges.cloudflare.com renderer.
-            await contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-              source: earlyScript,
-            });
-            log.info('🛡️ CDP OOPIF early stealth injection registered');
-          } catch (e) {
-            // DevToolsManager may have already attached — try using its session
-            if (!contents.isDestroyed() && contents.debugger.isAttached()) {
-              contents.debugger.sendCommand('Page.addScriptToEvaluateOnNewDocument', {
-                source: earlyScript,
-              }).catch(e2 => log.warn('CDP stealth shared-session failed:', e2 instanceof Error ? e2.message : e2));
+            contents.executeJavaScript(stealthScript).catch((e) => log.warn('Stealth script injection failed:', e.message));
+          } else {
+            log.info(`☁️ Skipping full stealth for challenge-sensitive tab ${contents.id}`);
+          }
+
+          if (!isSidebarWebview) {
+            if (!challengeSensitive) {
+              queueSecurityCoverage(contents.id);
             } else {
-              log.warn('CDP OOPIF stealth attach failed:', e instanceof Error ? e.message : e);
+              log.info(`☁️ Skipping security coverage queue for challenge-sensitive tab ${contents.id}`);
             }
           }
         })();
-      }
-
-      contents.on('dom-ready', () => {
-        // Skip stealth injection on sites that detect and block stealth patches
-        const url = contents.getURL();
-        if (isGoogleAuthUrl(url) || shouldSkipStealth(url)) {
-          log.info('🔑 Skipping stealth for:', url.substring(0, 60));
-          return;
-        }
-        contents.executeJavaScript(stealthScript).catch((e) => log.warn('Stealth script injection failed:', e.message));
-
-        if (!isSidebarWebview) {
-          queueSecurityCoverage(contents.id);
-        }
       });
 
       // did-frame-navigate: late-injection fallback for same-origin subframes.
@@ -367,14 +610,29 @@ async function createWindow(): Promise<BrowserWindow> {
       contents.on('did-frame-navigate', (
         _event, url, _httpCode, _httpText, isMainFrame
       ) => {
+        const noTouchPartition = isCloudflareNoTouchWebContents(contents);
+        if (url && !url.startsWith('about:') && !url.startsWith('data:')) {
+          if (isMainFrame) {
+            cloudflarePolicyManager?.onMainFrameNavigation(contents.id, url);
+            cloudflarePolicyManager?.recordUrlSignal(contents.id, url, 'frame:main-url');
+          } else if (isCloudflareChallengeUrl(url)) {
+            cloudflarePolicyManager?.markChallengeDetected(contents.id, url, 'frame:subframe-url');
+          }
+        }
         if (isMainFrame) return; // main frame handled by dom-ready above
         if (!url || url.startsWith('about:') || url.startsWith('data:')) return;
         if (isGoogleAuthUrl(url)) return; // never touch Google auth iframes
+        if (noTouchPartition) return;
+        // Skip Cloudflare challenge OOPIF — the full stealth script (canvas noise,
+        // timing reduction) causes Turnstile to score the browser as bot. The minimal
+        // CDP early script already runs there and patches userAgentData/webdriver.
+        if (shouldSkipStealth(url)) return;
+        if (cloudflarePolicyManager?.isChallengeSensitiveTab(contents.id)) return;
 
-        // Walk the frame tree and inject into every non-Google subframe
+        // Walk the frame tree and inject into every non-Google, non-challenge subframe
         const injectFrame = (frame: { url: string; frames: typeof frame[]; executeJavaScript: (s: string) => Promise<unknown> }) => {
           const frameUrl = frame.url || '';
-          if (!isGoogleAuthUrl(frameUrl)) {
+          if (!isGoogleAuthUrl(frameUrl) && !shouldSkipStealth(frameUrl)) {
             frame.executeJavaScript(stealthScript)
               .catch(() => { /* frame may have navigated away or be restricted */ });
           }
@@ -409,10 +667,23 @@ async function createWindow(): Promise<BrowserWindow> {
 
       if (!isSidebarWebview) {
         contents.on('did-finish-load', () => {
-          runtime?.securityManager.onTabNavigated(contents.id).catch(e => log.warn('securityManager.onTabNavigated failed:', e instanceof Error ? e.message : e));
+          void (async () => {
+            if (isCloudflareNoTouchWebContents(contents)) {
+              log.info(`☁️ Skipping security onTabNavigated for no-touch tab ${contents.id}`);
+              return;
+            }
+            const challengeSensitive = await probeCloudflareChallengeSurface(contents);
+            if (challengeSensitive) {
+              log.info(`☁️ Skipping security onTabNavigated for challenge-sensitive tab ${contents.id}`);
+              return;
+            }
+            runtime?.securityManager.onTabNavigated(contents.id).catch(e => log.warn('securityManager.onTabNavigated failed:', e instanceof Error ? e.message : e));
+          })();
         });
 
         contents.on('destroyed', () => {
+          earlyOopifStealthRegistered.delete(contents.id);
+          cloudflarePolicyManager?.onTabClosed(contents.id);
           runtime?.securityManager.onTabClosed(contents.id);
         });
       }
@@ -604,6 +875,7 @@ async function startAPI(win: BrowserWindow): Promise<void> {
   runtime = await initializeRuntimeManagers({
     win,
     dispatcher,
+    cloudflarePolicyManager: cloudflarePolicyManager ?? new CloudflarePolicyManager(),
     pendingContextMenuWebContents,
     pendingSecurityCoverageWebContentsIds,
     canUseWindow,

@@ -52,6 +52,7 @@ import type { PinboardManager } from './pinboards/manager';
 import type { ClipboardManager } from './clipboard/manager';
 import type { GooglePhotosManager } from './integrations/google-photos';
 import type { PairingManager } from './pairing/manager';
+import type { CloudflarePolicyManager } from './cloudflare/policy-manager';
 
 export interface ManagerRegistry {
   /** Tab lifecycle, grouping, metadata, and focus tracking. See src/tabs/manager.ts */
@@ -150,4 +151,6 @@ export interface ManagerRegistry {
   pairingManager: PairingManager;
   /** Per-agent trust tiers (T2 windows, T3 trusted domains, T4 global window) layered over approval gates. See src/security/agent-trust.ts */
   agentTrust: AgentTrustStore;
+  /** Tab/origin-scoped Cloudflare challenge policy state. See src/cloudflare/policy-manager.ts */
+  cloudflarePolicyManager: CloudflarePolicyManager;
 }

@@ -15,6 +15,7 @@ import { ThreatIntel } from './threat-intel';
 import { BlocklistUpdater } from './blocklists/updater';
 import { AnalyzerManager } from './analyzer-manager';
 import { EventBurstAnalyzer } from './analyzers/example-analyzer';
+import type { CloudflarePolicyManager } from '../cloudflare/policy-manager';
 import type { PageMetrics} from './types';
 import { AnalysisConfidence, BLOCKLIST_REFRESH_INTERVALS_MS } from './types';
 import { createLogger } from '../utils/logger';
@@ -71,6 +72,7 @@ export class SecurityManager {
   private contentAnalyzer: ContentAnalyzer | null = null;
   private behaviorMonitor: BehaviorMonitor | null = null;
   private devToolsManager: DevToolsManager | null = null;
+  private cloudflarePolicyManager: CloudflarePolicyManager | null = null;
 
   // Phase 4: AI Gatekeeper Agent (initialized lazily via initGatekeeper)
   private gatekeeperWs: GatekeeperWebSocket | null = null;
@@ -191,12 +193,18 @@ export class SecurityManager {
     dispatcher?: RequestDispatcher;
     devToolsManager: DevToolsManager;
     session: Session;
+    cloudflarePolicyManager?: CloudflarePolicyManager;
   }): void {
     if (deps.dispatcher) {
       this.registerWith(deps.dispatcher);
     }
+    this.setCloudflarePolicyManager(deps.cloudflarePolicyManager ?? null);
     this.setDevToolsManager(deps.devToolsManager);
     this.setupPermissionHandler(deps.session);
+  }
+
+  setCloudflarePolicyManager(cloudflarePolicyManager: CloudflarePolicyManager | null): void {
+    this.cloudflarePolicyManager = cloudflarePolicyManager;
   }
 
   /** Register the Guardian's request interceptors with the network dispatcher. */
@@ -225,6 +233,7 @@ export class SecurityManager {
     });
     this.behaviorMonitor = new BehaviorMonitor(this.db, this.guardian, devToolsManager);
     this.behaviorMonitor.setScriptGuard(this.scriptGuard);
+    this.behaviorMonitor.setMonitoringGate((wcId) => !this.isChallengeSensitiveTab(wcId));
     this.behaviorMonitor.onCriticalDetection = (detection) => {
       void this.handleBehaviorCriticalDetection(detection);
     };
@@ -297,6 +306,24 @@ export class SecurityManager {
     this.devToolsManager?.detachFromTab(wcId);
     this.guardian.releaseWebContentsQuarantine(wcId);
     this.tabStates.delete(wcId);
+  }
+
+  /**
+   * Re-apply security coverage after Cloudflare policy changes on an attached tab.
+   * Challenge-sensitive tabs are reduced to minimal coverage, while other tabs
+   * keep the existing behavior.
+   */
+  async onCloudflarePolicyChanged(wcId: number): Promise<void> {
+    const state = this.getOrCreateTabState(wcId);
+    if (this.isChallengeSensitiveTab(wcId)) {
+      this.deescalateTabCoverage(wcId);
+      return;
+    }
+
+    await this.ensureTabCoverage(wcId, {
+      fullMonitoring: state.resourceMonitoringActive,
+      makePrimary: false,
+    });
   }
 
   /**
@@ -683,6 +710,11 @@ export class SecurityManager {
       state.lastUrl = wc.getURL();
       state.strictModePolicy = this.getStrictModeForUrl(state.lastUrl);
 
+      if (this.isChallengeSensitiveTab(wcId, state.lastUrl)) {
+        this.deescalateTabCoverage(wcId);
+        return;
+      }
+
       await this.devToolsManager.enableSecurityDomains(wcId);
 
       await this.scriptGuard?.injectMonitors(wcId);
@@ -699,6 +731,16 @@ export class SecurityManager {
     } catch (e) {
       log.warn('ensureTabCoverage error:', e instanceof Error ? e.message : String(e));
     }
+  }
+
+  private deescalateTabCoverage(wcId: number): void {
+    this.behaviorMonitor?.stopResourceMonitoring(wcId);
+    this.behaviorMonitor?.reset(wcId);
+    this.scriptGuard?.reset(wcId);
+
+    const state = this.getOrCreateTabState(wcId);
+    state.monitorsInjected = false;
+    state.resourceMonitoringActive = false;
   }
 
   private resetTabRuntime(wcId: number): void {
@@ -731,5 +773,21 @@ export class SecurityManager {
     } catch {
       return false;
     }
+  }
+
+  private isChallengeSensitiveTab(wcId: number, url?: string | null): boolean {
+    if (!this.cloudflarePolicyManager) {
+      return false;
+    }
+
+    if (this.cloudflarePolicyManager.isChallengeSensitiveTab(wcId)) {
+      return true;
+    }
+
+    if (!url) {
+      return false;
+    }
+
+    return this.cloudflarePolicyManager.getStealthDispositionForUrl(url) === 'early';
   }
 }

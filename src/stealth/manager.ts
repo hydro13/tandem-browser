@@ -93,7 +93,7 @@ export class StealthManager {
   // === 4. Public methods ===
 
   /** Apply stealth patches to the Electron session (User-Agent override). */
-  async apply(): Promise<void> {
+  async apply(options?: { cloudflarePolicySyncChannel?: string }): Promise<void> {
     // Set realistic User-Agent globally (LinkedIn etc. block "Electron" UA)
     // Google auth is excluded via the onBeforeSendHeaders handler in registerWith()
     this.session.setUserAgent(this.USER_AGENT);
@@ -104,7 +104,7 @@ export class StealthManager {
     // the top-level webContents only reaches the main frame; session.setPreloads()
     // runs the script in each renderer process (including OOPIF) BEFORE any page
     // scripts, so navigator.userAgentData and other APIs are patched early enough.
-    await this.writeAndRegisterPreload();
+    await this.writeAndRegisterPreload(options?.cloudflarePolicySyncChannel);
 
     log.info('🛡️ Stealth patches applied (advanced fingerprint protection active)');
   }
@@ -114,23 +114,45 @@ export class StealthManager {
    * The preload uses webFrame.executeJavaScriptInIsolatedWorld(0, ...) to
    * run the stealth patches in world 0 (the main/page world) before any page
    * scripts, for every frame including cross-origin iframes.
+   *
+   * Three cases:
+   *   • file:// or Google auth  → skip entirely (Tandem shell UI / OAuth)
+   *   • challenges.cloudflare.com → inject early script only (no canvas/audio/timing noise)
+   *   • everything else           → inject full stealth script
+   *
+   * Using the preload path (rather than CDP Page.addScriptToEvaluateOnNewDocument)
+   * is the only guaranteed way to reach cross-origin OOPIFs in Electron: the
+   * type:'frame' preload runs inside the OOPIF's own renderer process, before
+   * any of the frame's scripts. CDP's addScriptToEvaluateOnNewDocument may not
+   * propagate to cross-process iframes depending on the Electron / Chromium version.
    */
-  private async writeAndRegisterPreload(): Promise<void> {
+  private async writeAndRegisterPreload(cloudflarePolicySyncChannel?: string): Promise<void> {
     const stealthScript = StealthManager.getStealthScript(this.partitionSeed);
+    const earlyScript = StealthManager.getEarlyScript();
 
     // The preload runs in Electron's isolated renderer world.
     // executeJavaScriptInIsolatedWorld(0, ...) injects into world 0 = main page world,
     // running BEFORE the frame's own scripts because the preload executes first.
-    // We skip file:// (Tandem shell UI) and Google auth frames.
     const preloadContent = [
       `'use strict';`,
       `try {`,
       `  var _url = (typeof location !== 'undefined' && location.href) || '';`,
-      `  var _skip = _url.startsWith('file://') ||`,
-      `    /accounts\\.google\\.com|accounts-google\\.com/i.test(_url);`,
-      `  if (!_skip) {`,
-      `    var _wf = require('electron').webFrame;`,
-      `    _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
+      `  var _isFile      = _url.startsWith('file://');`,
+      `  var _isGoogleAuth = /accounts\\.google\\.com|accounts-google\\.com/i.test(_url);`,
+      `  var _isTurnstile  = /challenges\\.cloudflare\\.com/i.test(_url);`,
+      `  if (!_isFile && !_isGoogleAuth) {`,
+      `    var _electron = require('electron');`,
+      `    var _wf = _electron.webFrame;`,
+      `    var _mode = _isTurnstile ? 'early' : 'full';`,
+      cloudflarePolicySyncChannel
+        ? `    try { _mode = _electron.ipcRenderer.sendSync(${JSON.stringify(cloudflarePolicySyncChannel)}, _url) || _mode; } catch(e) { /* fall back to default mode */ }`
+        : `    /* no cloudflare policy sync channel configured */`,
+      `    if (_mode === 'early') {`,
+      `      // Minimal early patches only — no canvas/audio/timing noise that trips Turnstile`,
+      `      _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(earlyScript)}, url: 'tandem://stealth-early' }]);`,
+      `    } else if (_mode === 'full') {`,
+      `      _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
+      `    }`,
       `  }`,
       `} catch(e) { /* preload injection failed — ignored */ }`,
     ].join('\n');

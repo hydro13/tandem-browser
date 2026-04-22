@@ -67,6 +67,7 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
         activeTab: tab.id,
         tabs: ctx.tabManager.count,
         version: (() => { try { return app.getVersion(); } catch { return undefined; } })(),
+        cloudflare: ctx.cloudflarePolicyManager.getTabPolicy(tab.webContentsId),
         viewport,
       });
     } catch (e) {

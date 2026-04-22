@@ -3,6 +3,7 @@ import express from 'express';
 import type { Router } from 'express';
 import type { RouteContext } from '../context';
 import { AgentTrustStore } from '../../security/agent-trust';
+import { CloudflarePolicyManager } from '../../cloudflare/policy-manager';
 
 /**
  * Creates a mock WebContents object with common methods stubbed.
@@ -42,6 +43,7 @@ export function createMockWebContents(id = 1) {
  */
 export function createMockContext(): RouteContext {
   const mockWC = createMockWebContents(1);
+  const cloudflarePolicyManager = new CloudflarePolicyManager();
 
   const win = {
     webContents: mockWC,
@@ -693,6 +695,7 @@ export function createMockContext(): RouteContext {
     // at ~/.tandem/agent-trust.json — tests that care should inject their
     // own path via new AgentTrustStore(path)).
     agentTrust: new AgentTrustStore(),
+    cloudflarePolicyManager,
   };
 
   return ctx;
