@@ -21,3 +21,6 @@ native/speech/tandem-speech
 
 # Implementation plans (private, local only)
 docs/superpowers/
+
+# Local Claude Code settings and worktrees
+.claude/

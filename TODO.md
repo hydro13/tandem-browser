@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: April 16, 2026
+Last updated: April 21, 2026
 
 ## Purpose
 
@@ -49,6 +49,7 @@ Last updated: April 16, 2026
 
 ### Codebase Hygiene
 
+- [ ] Finish Cloudflare human mode phases 4-5 so challenge-sensitive tabs pause cleanly for the human and resume conservatively after `cf_clearance`; phase 3 now gates ScriptGuard and resource monitoring on Cloudflare tabs
 - [x] Make Wingman `openclaw` mode gateway-first for sends, sign a real OpenClaw device identity for the WebSocket handshake, and persist gateway replies into Tandem chat history so stock Tandem no longer depends on a local OpenClaw tandem-chat skill
 - [x] Split `src/main.ts` bootstrap and teardown wiring into dedicated `src/bootstrap/` modules so manager composition stops growing in one file
 - [x] Extract the largest shell surfaces out of `shell/index.html` and `shell/css/main.css` so sidebar logic, modal helpers, and stylesheet sections stop living in single inline or monolithic files
