@@ -2,6 +2,7 @@ import { BrowserWindow, session } from 'electron';
 import { StealthManager } from '../stealth/manager';
 import { wingmanAlert } from '../notifications/alert';
 import { createLogger } from '../utils/logger';
+import { CLOUDFLARE_CHALLENGE_SELECTORS } from '../utils/cloudflare';
 
 const log = createLogger('HeadlessManager');
 
@@ -21,10 +22,7 @@ const CAPTCHA_SELECTORS = [
   '.h-captcha',
   '#captcha',
   '[class*="captcha"]',
-  'iframe[src*="challenges.cloudflare.com"]',
-  '#challenge-running',
-  '#challenge-form',
-  '.cf-browser-verification',
+  ...CLOUDFLARE_CHALLENGE_SELECTORS,
 ];
 
 // ─── Types ──────────────────────────────────────────────────────────

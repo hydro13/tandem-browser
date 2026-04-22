@@ -16,11 +16,19 @@ vi.mock('fs', async () => {
     ...actual,
     default: {
       ...actual,
+      promises: {
+        ...((actual.default as { promises?: object } | undefined)?.promises ?? (actual as { promises?: object }).promises),
+        writeFile: vi.fn().mockResolvedValue(undefined),
+      },
       existsSync: vi.fn(),
       mkdirSync: vi.fn(),
       writeFileSync: vi.fn(),
       readFileSync: vi.fn(),
       chmodSync: vi.fn(),
+    },
+    promises: {
+      ...((actual as { promises?: object }).promises),
+      writeFile: vi.fn().mockResolvedValue(undefined),
     },
     existsSync: vi.fn(),
     mkdirSync: vi.fn(),
@@ -50,6 +58,7 @@ function makeMockSession() {
   return {
     getUserAgent: () => 'Electron/40',
     setUserAgent: vi.fn(),
+    registerPreloadScript: vi.fn(),
   } as unknown as Electron.Session;
 }
 
@@ -537,5 +546,33 @@ describe('getEarlyScript() — minimal OOPIF-safe stealth', () => {
     const script = StealthManager.getEarlyScript();
     // The test environment sets chrome to 132.0.6834.160 in beforeAll
     expect(script).toContain(process.versions.chrome);
+  });
+});
+
+describe('apply() — preload policy sync', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('writes a preload that queries the cloudflare policy channel when configured', async () => {
+    const existing = 'd'.repeat(64);
+    vi.mocked(fs.existsSync).mockReturnValue(true);
+    vi.mocked(fs.readFileSync).mockReturnValue(
+      JSON.stringify({ stealthInstallSecret: existing })
+    );
+
+    const session = makeMockSession() as unknown as {
+      setUserAgent: ReturnType<typeof vi.fn>;
+      registerPreloadScript: ReturnType<typeof vi.fn>;
+    };
+
+    const manager = new StealthManager(session as never, 'persist:tandem');
+    await manager.apply({ cloudflarePolicySyncChannel: 'tandem:cloudflare-policy-sync' });
+
+    expect(session.setUserAgent).toHaveBeenCalled();
+    expect(session.registerPreloadScript).toHaveBeenCalledTimes(1);
+    const writeCalls = vi.mocked(fs.promises.writeFile).mock.calls;
+    expect(writeCalls.length).toBeGreaterThan(0);
+    expect(String(writeCalls.at(-1)?.[1])).toContain('ipcRenderer.sendSync("tandem:cloudflare-policy-sync", _url)');
   });
 });

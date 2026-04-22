@@ -131,9 +131,9 @@ export class DevToolsManager {
     try {
       await wc.debugger.sendCommand('Debugger.enable');
       await wc.debugger.sendCommand('Performance.enable');
-      log.info('Security domains enabled (Debugger, Performance)');
+      log.info(`Security domains enabled (Debugger, Performance) for wc ${wc.id}`);
     } catch (e) {
-      log.warn('Security domain enable failed:', e instanceof Error ? e.message : e);
+      log.warn(`Security domain enable failed for wc ${wc.id}:`, e instanceof Error ? e.message : e);
     }
   }
 
@@ -174,6 +174,7 @@ export class DevToolsManager {
     const wc = webContents.fromId(wcId);
     if (!wc || wc.isDestroyed()) return null;
 
+    log.debug(`attachToTab request for wc ${wcId} (makePrimary=${opts?.makePrimary ?? true})`);
     return this.attach(wc, { makePrimary: opts?.makePrimary ?? true });
   }
 
@@ -386,9 +387,9 @@ export class DevToolsManager {
       const msg = e instanceof Error ? e.message : String(e);
       if (msg.toLowerCase().includes('already attached')) {
         // DevTools is open or another component attached first — share the session.
-        log.info('⚠️ CDP debugger already attached — sharing session');
+        log.info(`⚠️ CDP debugger already attached for wc ${wc.id} — sharing session`);
       } else {
-        log.warn('❌ CDP attach failed:', msg);
+        log.warn(`❌ CDP attach failed for wc ${wc.id}:`, msg);
         return null;
       }
     }

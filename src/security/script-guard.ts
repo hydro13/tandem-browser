@@ -848,7 +848,7 @@ export class ScriptGuard {
       }
 
       state.monitorInjected = true;
-      log.info('Security monitors injected (main-world monitor + isolated-world bridge)');
+      log.info(`Security monitors injected (main-world monitor + isolated-world bridge) for wc ${resolvedWcId}`);
     } catch (e) {
       log.warn('Monitor injection failed:', e instanceof Error ? e.message : String(e));
     }

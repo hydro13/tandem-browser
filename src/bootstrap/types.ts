@@ -49,6 +49,7 @@ import type { LoginManager } from '../auth/login-manager';
 import type { ClipboardManager } from '../clipboard/manager';
 import type { GooglePhotosManager } from '../integrations/google-photos';
 import type { PairingManager } from '../pairing/manager';
+import type { CloudflarePolicyManager } from '../cloudflare/policy-manager';
 
 export interface RuntimeManagers {
   configManager: ConfigManager;
@@ -102,6 +103,7 @@ export interface RuntimeManagers {
   clipboardManager: ClipboardManager;
   pairingManager: PairingManager;
   agentTrust: AgentTrustStore;
+  cloudflarePolicyManager: CloudflarePolicyManager;
 }
 
 export interface PendingTabRegister {
