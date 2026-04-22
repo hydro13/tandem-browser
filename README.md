@@ -146,7 +146,7 @@ For the longer version, see [docs/tandem-browser-vs-webmcp.md](docs/tandem-brows
 
 **macOS Apple Silicon (M1+)** — download the signed and notarized binary:
 
-**[Download Tandem Browser v1.0.1 →](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.1)**
+**[Download Tandem Browser v1.0.0 →](https://github.com/hydro13/tandem-browser/releases/tag/v1.0.0)**
 
 1. Open the `.dmg`, drag Tandem Browser to Applications, launch it
 2. Open **Settings → Connected Agents** and scroll to *Connect your AI to Tandem*
