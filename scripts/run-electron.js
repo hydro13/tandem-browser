@@ -7,6 +7,7 @@
  * Copied from TotalRecall Browser V2.
  */
 const { spawn } = require('child_process');
+const { execFileSync } = require('child_process');
 const path = require('path');
 
 let electronPath;
@@ -37,16 +38,109 @@ if (process.platform === 'darwin') {
     }
 }
 
-// Kill any leftover process on port 8765
-try {
-    const { execSync } = require('child_process');
-    const pids = execSync('/usr/sbin/lsof -ti :8765 2>/dev/null', { encoding: 'utf8' }).trim();
-    if (pids) {
-        execSync(`kill -9 ${pids.split('\n').join(' ')}`, { stdio: 'ignore' });
-        console.log('[run-electron] Killed leftover process on port 8765');
+function getWorkspaceElectronPath() {
+    return path.normalize(electronPath).toLowerCase();
+}
+
+function getWorkspaceElectronIdentity() {
+    return path.basename(electronPath).toLowerCase();
+}
+
+function listListeningPidsOn8765() {
+    try {
+        if (process.platform === 'win32') {
+            const output = execFileSync('netstat', ['-ano', '-p', 'tcp'], { encoding: 'utf8' });
+            const pids = new Set();
+            for (const line of output.split(/\r?\n/)) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith('TCP')) continue;
+                const parts = trimmed.split(/\s+/);
+                if (parts.length < 5) continue;
+                const localAddress = parts[1];
+                const state = parts[3];
+                const pid = parts[4];
+                if (!localAddress.endsWith(':8765') || state !== 'LISTENING') continue;
+                if (/^\d+$/.test(pid)) pids.add(pid);
+            }
+            return Array.from(pids);
+        }
+
+        const args = process.platform === 'darwin'
+            ? ['-ti', ':8765']
+            : ['-ti', 'TCP:8765', '-sTCP:LISTEN'];
+        const output = execFileSync('lsof', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+        return output ? output.split(/\s+/).filter(Boolean) : [];
+    } catch {
+        return [];
     }
-} catch (e) {
-    // No process on port — good
+}
+
+function getPidExecutablePath(pid) {
+    try {
+        if (process.platform === 'win32') {
+            const script = [
+                `$p = Get-CimInstance Win32_Process -Filter "ProcessId = ${pid}"`,
+                'if ($p) { $p.ExecutablePath }',
+            ].join('; ');
+            return execFileSync('powershell', ['-NoProfile', '-Command', script], { encoding: 'utf8' }).trim();
+        }
+
+        return execFileSync('ps', ['-p', String(pid), '-o', 'comm='], { encoding: 'utf8' }).trim();
+    } catch {
+        return '';
+    }
+}
+
+function terminatePid(pid) {
+    try {
+        if (process.platform === 'win32') {
+            execFileSync('taskkill', ['/PID', String(pid), '/T', '/F'], { stdio: 'ignore' });
+        } else {
+            execFileSync('kill', ['-9', String(pid)], { stdio: 'ignore' });
+        }
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function preflightPort8765() {
+    const pids = listListeningPidsOn8765();
+    if (pids.length === 0) return true;
+
+    const workspaceElectron = getWorkspaceElectronPath();
+    const workspaceElectronIdentity = getWorkspaceElectronIdentity();
+    const foreignPids = [];
+
+    for (const pid of pids) {
+        const executable = path.normalize(getPidExecutablePath(pid)).toLowerCase();
+        const executableIdentity = executable ? path.basename(executable).toLowerCase() : '';
+        const isWorkspaceElectron = executable && (
+            executable === workspaceElectron ||
+            executableIdentity === workspaceElectronIdentity
+        );
+        if (isWorkspaceElectron) {
+            if (terminatePid(pid)) {
+                console.log(`[run-electron] Killed prior Tandem Electron listener on port 8765 (PID ${pid})`);
+                continue;
+            }
+        }
+        foreignPids.push({ pid, executable: executable || 'unknown' });
+    }
+
+    if (foreignPids.length > 0) {
+        console.error('[run-electron] Port 8765 is already in use by another process. Refusing to start Tandem blindly.');
+        for (const entry of foreignPids) {
+            console.error(`[run-electron] Occupied by PID ${entry.pid} (${entry.executable})`);
+        }
+        return false;
+    }
+
+    return true;
+}
+
+if (!preflightPort8765()) {
+    process.exit(1);
 }
 
 // Clear stale Service Worker ScriptCache when extension source files are newer.
