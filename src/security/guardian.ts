@@ -50,6 +50,59 @@ const GATEKEEPER_PENDING_LIMIT = 100;
 const GATEKEEPER_HOLD_TIMEOUT_MS = 4_000;
 const GATEKEEPER_DENY_TIMEOUT_MS = 6_000;
 
+/**
+ * Gatekeeper fallback policy — what happens when the agent cannot decide.
+ *
+ * Two distinct fallback moments exist, and they deliberately differ:
+ *
+ * - 'timeout': an agent IS connected but did not answer within the decision
+ *   window (or its queue overflowed). The session is supervised — a block is
+ *   visible and recoverable (reload the page, or the agent raises trust), so
+ *   every security-relevant category fails closed here. Only the purely
+ *   advisory heuristic (first_visit_navigation_risky) still fails open: it
+ *   fires on weak signals (plain http://, mild risk score) and hard-blocking
+ *   it on a slow agent would punish normal browsing.
+ *
+ * - 'absent': no agent is connected (standalone browsing). The heuristics
+ *   stand alone with nobody to overrule a false positive. A blanket
+ *   fail-closed default was tried before and broke mainstream sites (see
+ *   TODO.md: `strict_low_trust_script` denying GitHub asset scripts when the
+ *   agent bridge was unavailable), so only categories with concrete,
+ *   hard-to-reverse damage potential fail closed: dangerous-executable
+ *   downloads, low-trust scripts inside strict-mode (banking) pages, and
+ *   strict-mode exfil-pattern outbound traffic — these all arrive as
+ *   decisionClass 'deny_on_timeout'. The 'hold_for_decision' heuristics fail
+ *   open and are logged; layers 1-5 (blocklist, outbound hard-blocks,
+ *   risk-score auto-block) still apply regardless.
+ *
+ * Per decision reason:
+ *
+ * | reason                              | timeout | absent | rationale                              |
+ * |-------------------------------------|---------|--------|----------------------------------------|
+ * | strict_low_trust_script             | block   | block  | script injection on strict/banking page |
+ * | suspicious_download                 | block   | block  | malware install is irreversible         |
+ * | strict-mode outbound/WS flags       | block   | block  | exfil pattern in a strict context       |
+ * | cross-origin-trusted-to-untrusted   | block   | allow  | exfil pattern, but heuristic FP rate    |
+ * | trusted-to-untrusted-websocket      | block   | allow  | too high to hard-block without an agent |
+ * | unknown-ws-no-referrer / -endpoint  | block   | allow  | (analytics, payment providers, CDNs)    |
+ * | first-visit-mutating-destination    | block   | allow  | balanced-mode escalation                |
+ * | first_visit_navigation_strict       | block   | allow  | strict first visits need agent review,  |
+ * |                                     |         |        | but absent-agent block would brick      |
+ * |                                     |         |        | strict mode for agentless users         |
+ * | first_visit_navigation_risky        | allow   | allow  | advisory only; score >= 65 already      |
+ * |                                     |         |        | auto-blocks far earlier                 |
+ */
+const TIMEOUT_FAIL_CLOSED_REASONS = new Set([
+  'cross-origin-trusted-to-untrusted',
+  'trusted-to-untrusted-websocket',
+  'unknown-ws-no-referrer',
+  'unknown-ws-endpoint',
+  'first-visit-mutating-destination',
+  'first_visit_navigation_strict',
+]);
+
+type GatekeeperFallbackMoment = 'timeout' | 'absent';
+
 interface GatekeeperRequestPolicy {
   decisionClass: GatekeeperDecisionClass;
   reason: string;
@@ -133,7 +186,7 @@ export class Guardian {
         policyReason: policy.reason,
         ...context,
       },
-      defaultAction: policy.decisionClass === 'deny_on_timeout' ? 'block' : 'allow',
+      defaultAction: this.getGatekeeperFallbackAction(policy, 'timeout'),
       timeout: policy.decisionClass === 'deny_on_timeout' ? GATEKEEPER_DENY_TIMEOUT_MS : GATEKEEPER_HOLD_TIMEOUT_MS,
       createdAt: Date.now(),
     };
@@ -149,6 +202,20 @@ export class Guardian {
     });
     this.gatekeeperWs.sendDecisionRequest(item);
     return { id: item.id, decision: decisionPromise };
+  }
+
+  /**
+   * Resolve the fallback action for a queued decision when the agent cannot
+   * answer. See the TIMEOUT_FAIL_CLOSED_REASONS table above for the
+   * per-reason policy and rationale.
+   */
+  private getGatekeeperFallbackAction(
+    policy: GatekeeperRequestPolicy,
+    moment: GatekeeperFallbackMoment,
+  ): 'block' | 'allow' {
+    if (policy.decisionClass === 'deny_on_timeout') return 'block';
+    if (moment === 'timeout' && TIMEOUT_FAIL_CLOSED_REASONS.has(policy.reason)) return 'block';
+    return 'allow';
   }
 
   private invokeDecisionCallback(
@@ -601,7 +668,8 @@ export class Guardian {
     };
 
     if (availability !== 'connected') {
-      if (policy.decisionClass === 'deny_on_timeout') {
+      const fallbackAction = this.getGatekeeperFallbackAction(policy, 'absent');
+      if (fallbackAction === 'block') {
         this.stats.blocked++;
         this.logGatekeeperRouting('blocked', domain, {
           id: 'inline',
@@ -629,7 +697,10 @@ export class Guardian {
 
     const pendingDecision = this.queueForGatekeeper(domain, url, policy, context);
     if (!pendingDecision) {
-      if (policy.decisionClass === 'deny_on_timeout') {
+      // Agent connected but its queue is saturated (or it raced a disconnect)
+      // — treat like an unanswered agent, i.e. the stricter 'timeout' column.
+      const fallbackAction = this.getGatekeeperFallbackAction(policy, 'timeout');
+      if (fallbackAction === 'block') {
         this.stats.blocked++;
         this.logGatekeeperRouting('blocked', domain, {
           id: 'inline',
@@ -665,7 +736,7 @@ export class Guardian {
     this.logGatekeeperRouting(decisionSource, domain, {
       id: pendingDecision.id,
       decisionClass: policy.decisionClass,
-      defaultAction: policy.decisionClass === 'deny_on_timeout' ? 'block' : 'allow',
+      defaultAction: this.getGatekeeperFallbackAction(policy, 'timeout'),
     }, {
       ...context,
       reason: policy.reason,
