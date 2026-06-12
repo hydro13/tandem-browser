@@ -236,6 +236,77 @@ describe('TandemAPI paired-agent startup gate', () => {
   });
 });
 
+describe('TandemAPI /watch/live upgrade auth', () => {
+  const validToken = 'a'.repeat(64);
+
+  function buildApi() {
+    const ctx = createMockContext();
+    const api = new TandemAPI({ win: ctx.win as any, registry: ctx as any });
+    return { api, ctx };
+  }
+
+  function buildUpgradeRequest(opts: {
+    headers?: Record<string, string>;
+    url?: string;
+    remoteAddress?: string;
+  } = {}) {
+    return {
+      url: opts.url ?? '/watch/live',
+      headers: opts.headers ?? {},
+      socket: { remoteAddress: opts.remoteAddress ?? '127.0.0.1' },
+    };
+  }
+
+  function authorize(api: TandemAPI, req: unknown): boolean {
+    return (api as unknown as { authorizeWatchLiveRequest(req: unknown): boolean }).authorizeWatchLiveRequest(req);
+  }
+
+  it('accepts the local api-token via Authorization: Bearer', () => {
+    const { api } = buildApi();
+    const req = buildUpgradeRequest({ headers: { authorization: `Bearer ${validToken}` } });
+    expect(authorize(api, req)).toBe(true);
+  });
+
+  it('accepts the local api-token via X-Tandem-Token', () => {
+    const { api } = buildApi();
+    const req = buildUpgradeRequest({ headers: { 'x-tandem-token': validToken } });
+    expect(authorize(api, req)).toBe(true);
+  });
+
+  it('rejects a correct token sent as a query parameter', () => {
+    const { api } = buildApi();
+    const req = buildUpgradeRequest({ url: `/watch/live?token=${validToken}` });
+    expect(authorize(api, req)).toBe(false);
+  });
+
+  it('rejects missing and invalid tokens', () => {
+    const { api } = buildApi();
+    expect(authorize(api, buildUpgradeRequest())).toBe(false);
+    expect(authorize(api, buildUpgradeRequest({ headers: { authorization: `Bearer ${'b'.repeat(64)}` } }))).toBe(false);
+  });
+
+  it('locks out a remote address after repeated failures, even with a valid token', () => {
+    const { api } = buildApi();
+    for (let i = 0; i < 5; i++) {
+      expect(authorize(api, buildUpgradeRequest({
+        headers: { authorization: 'Bearer wrong-token' },
+        remoteAddress: '10.0.0.9',
+      }))).toBe(false);
+    }
+
+    expect(authorize(api, buildUpgradeRequest({
+      headers: { authorization: `Bearer ${validToken}` },
+      remoteAddress: '10.0.0.9',
+    }))).toBe(false);
+
+    // Other callers are unaffected.
+    expect(authorize(api, buildUpgradeRequest({
+      headers: { authorization: `Bearer ${validToken}` },
+      remoteAddress: '10.0.0.10',
+    }))).toBe(true);
+  });
+});
+
 describe('TandemAPI CORS policy', () => {
   function buildApi() {
     const ctx = createMockContext();

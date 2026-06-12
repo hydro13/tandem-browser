@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
+import { timingSafeEqualStrings, WsAuthRateLimiter } from './ws-auth';
 import type { Guardian } from './guardian';
 import type { SecurityDB } from './security-db';
 import type {
@@ -35,6 +36,7 @@ export class GatekeeperWebSocket {
   private pendingTimeouts: Map<string, NodeJS.Timeout> = new Map();
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private authSecret: string;
+  private authLimiter = new WsAuthRateLimiter();
   private totalDecisions = 0;
   private lastAgentSeen: number | null = null;
   private history: GatekeeperHistoryEntry[] = [];
@@ -50,19 +52,45 @@ export class GatekeeperWebSocket {
     // non-matching paths with HTTP 400, breaking other WSS instances on the same server.
     this.wss = new WebSocketServer({ noServer: true });
 
+    // Auth contract: the secret is accepted ONLY via the X-Gatekeeper-Token
+    // header. The previous `?token=` query-string path was removed because
+    // query strings leak into logs, shell history, and proxies. Header-only
+    // is safe here: every known gatekeeper client is a Node/MCP agent process
+    // (which can set arbitrary headers); browser WebSocket clients — which
+    // cannot set custom headers — never connect to this endpoint.
     server.on('upgrade', (req: IncomingMessage, socket, head) => {
       const url = new URL(req.url ?? '', 'http://localhost');
       if (url.pathname !== '/security/gatekeeper') return; // not ours
 
-      const token = url.searchParams.get('token') ||
-        (req.headers['x-gatekeeper-token'] as string | undefined);
-      if (token !== this.authSecret) {
-        log.info('Auth rejected — invalid token');
-        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+      const remote = req.socket.remoteAddress ?? 'unknown';
+      if (this.authLimiter.isBlocked(remote)) {
+        const retryAfterSeconds = Math.max(1, Math.ceil(this.authLimiter.blockedForMs(remote) / 1000));
+        log.warn(`Auth temporarily locked for ${remote} after repeated failures (retry in ${retryAfterSeconds}s)`);
+        socket.write(`HTTP/1.1 429 Too Many Requests\r\nRetry-After: ${retryAfterSeconds}\r\nConnection: close\r\n\r\n`);
         socket.destroy();
         return;
       }
 
+      if (url.searchParams.has('token')) {
+        // Reject without comparing — a query-string token is already exposed,
+        // and accepting it would keep the leaky path alive.
+        this.authLimiter.recordFailure(remote);
+        log.warn('Auth rejected — query-string token support was removed; send the X-Gatekeeper-Token header instead');
+        socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      const token = req.headers['x-gatekeeper-token'];
+      if (typeof token !== 'string' || !timingSafeEqualStrings(token, this.authSecret)) {
+        this.authLimiter.recordFailure(remote);
+        log.info('Auth rejected — invalid token');
+        socket.write('HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n');
+        socket.destroy();
+        return;
+      }
+
+      this.authLimiter.recordSuccess(remote);
       this.wss.handleUpgrade(req, socket, head, (ws: WebSocket) => {
         this.wss.emit('connection', ws, req);
       });
