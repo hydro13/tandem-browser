@@ -441,6 +441,49 @@ describe('misc routes', () => {
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ error: 'Incorrect master password' });
     });
+
+    it('locks out unlock attempts after 5 consecutive failures', async () => {
+      mockPasswordManager.unlock.mockResolvedValue(false);
+
+      for (let i = 0; i < 5; i++) {
+        const res = await request(app)
+          .post('/passwords/unlock')
+          .send({ password: `wrong-${i}` });
+        expect(res.status).toBe(401);
+      }
+
+      // 6th attempt — even with the correct password — is locked out.
+      mockPasswordManager.unlock.mockResolvedValue(true);
+      const lockedOut = await request(app)
+        .post('/passwords/unlock')
+        .send({ password: 'master123' });
+
+      expect(lockedOut.status).toBe(429);
+      expect(lockedOut.headers['retry-after']).toBeDefined();
+      expect(lockedOut.body.retryAfterSeconds).toBeGreaterThan(0);
+      // The password manager must not even be consulted while locked.
+      expect(mockPasswordManager.unlock).toHaveBeenCalledTimes(5);
+    });
+
+    it('resets the failure counter after a successful unlock', async () => {
+      mockPasswordManager.unlock.mockResolvedValue(false);
+      for (let i = 0; i < 4; i++) {
+        await request(app).post('/passwords/unlock').send({ password: 'wrong' });
+      }
+
+      mockPasswordManager.unlock.mockResolvedValue(true);
+      const success = await request(app)
+        .post('/passwords/unlock')
+        .send({ password: 'master123' });
+      expect(success.status).toBe(200);
+
+      // Counter reset: more failures are allowed again before lockout.
+      mockPasswordManager.unlock.mockResolvedValue(false);
+      const afterReset = await request(app)
+        .post('/passwords/unlock')
+        .send({ password: 'wrong' });
+      expect(afterReset.status).toBe(401);
+    });
   });
 
   describe('POST /passwords/lock', () => {
