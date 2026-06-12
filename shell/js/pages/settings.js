@@ -1037,10 +1037,8 @@ document.getElementById('ext-chrome-import-all').addEventListener('click', async
 });
 
 // ── Gallery tab ──
-let galleryActiveCategory = null;
 
 async function loadExtGallery(category) {
-  galleryActiveCategory = category || null;
   const container = document.getElementById('ext-gallery-list');
   const filtersContainer = document.getElementById('ext-gallery-filters');
   container.innerHTML = '<div class="ext-empty">Loading...</div>';
@@ -1158,7 +1156,6 @@ async function loadExtGallery(category) {
 const esc = window.tandemEscape.escapeHtml;
 
 // ═══ Connected Agents ═══
-let activeSetupCode = null;
 let codeTimerInterval = null;
 let codePollInterval = null;
 let selectedMode = null; // 'local' | 'remote'
@@ -1349,7 +1346,6 @@ async function generateAndShowInstructions() {
       return;
     }
     const data = await res.json();
-    activeSetupCode = data;
 
     // Hide onboarding controls, show instruction area
     document.getElementById('agent-onboard').style.display = 'none';
@@ -1398,7 +1394,6 @@ async function generateAndShowInstructions() {
 }
 
 function cancelSetupCode() {
-  activeSetupCode = null;
   if (codeTimerInterval) clearInterval(codeTimerInterval);
   if (codePollInterval) clearInterval(codePollInterval);
   document.getElementById('agent-instruction-area').style.display = 'none';

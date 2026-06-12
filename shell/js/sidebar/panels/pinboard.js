@@ -663,7 +663,7 @@ function pbRenderItems(items) {
     const date = new Date(item.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     const typeIcons = { link: '🔗', image: '🖼️', text: '📝', quote: '💬' };
 
-    let preview = '';
+    let preview;
     switch (item.type) {
       case 'image':
         preview = `<img src="${pbEscape(item.url || item.thumbnail || '')}" alt="${title}" loading="lazy" data-pb-fallback="🖼️">`;

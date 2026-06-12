@@ -7,9 +7,9 @@
  *   (Kept as window binding for classic scripts and main-process IPC.)
  *
  * External globals used (loaded via classic <script> tags in shell/index.html
- * BEFORE this module): ChatRouter, TandemLocalBackend, OpenClawBackend,
- * ClaudeActivityBackend, DualMode. They are not ES modules, so they must be referenced as bare
- * identifiers rather than imported.
+ * BEFORE this module): window.ChatRouter, window.TandemLocalBackend,
+ * window.OpenClawBackend, window.ClaudeActivityBackend, window.DualMode.
+ * They are not ES modules; their files export onto window.
  *
  * initChat() return shape matches prior `chatRouter` object:
  *   { ensureConnected, disconnect, router, dualMode, sendMessage }
@@ -80,11 +80,12 @@ export function initChat() {
   }
 
   // ── Router setup ──
+  // Router/backends are classic scripts (shell/chat/*.js) exporting on window.
 
-  const router = new ChatRouter();
-  const tandemBackend = new TandemLocalBackend();
-  const openclawBackend = new OpenClawBackend();
-  const claudeBackend = new ClaudeActivityBackend();
+  const router = new window.ChatRouter();
+  const tandemBackend = new window.TandemLocalBackend();
+  const openclawBackend = new window.OpenClawBackend();
+  const claudeBackend = new window.ClaudeActivityBackend();
 
   router.register(tandemBackend);
   router.register(openclawBackend);
@@ -93,7 +94,7 @@ export function initChat() {
   // ── DualMode setup (Fase 5) ──
   // Must happen AFTER backends are registered — the DualMode constructor
   // iterates router.getAllBackends().
-  const dualMode = new DualMode(router);
+  const dualMode = new window.DualMode(router);
   let currentMode = 'tandem'; // 'tandem' | 'openclaw' | 'claude' | 'both'
 
   // ── Backend selector UI ──
@@ -437,7 +438,7 @@ export function initChat() {
 
     if (currentMode === 'both') {
       // Dual mode: parse @-mentions, send to appropriate backends
-      const { target, cleanText } = DualMode.parseMention(text);
+      const { target, cleanText } = window.DualMode.parseMention(text);
       if (!cleanText) return;
 
       // Check if target backend(s) connected

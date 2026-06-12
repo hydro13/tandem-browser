@@ -291,14 +291,6 @@
         await fetch(`http://localhost:8765/handoffs/${handoffId}/activate`, { method: 'POST' });
       }
 
-      async function updateHandoffStatus(handoffId, payload) {
-        await fetch(`http://localhost:8765/handoffs/${handoffId}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-      }
-
       async function resolveHandoff(handoffId) {
         await fetch(`http://localhost:8765/handoffs/${handoffId}/resolve`, { method: 'POST' });
       }
@@ -709,11 +701,7 @@
         approvalContainer.appendChild(card);
       }
 
-      // Emergency stop clears all approval cards
-      if (window.tandem) {
-        const origOnEmergency = window.tandem.onTabSourceChanged; // listen for emergency-stop event via IPC
-      }
-      // Also poll for emergency stop events (backup)
+      // Emergency stop clears all approval cards (via window message backup)
       window.addEventListener('message', (e) => {
         if (e.data && e.data.type === 'emergency-stop' && approvalContainer) {
           approvalContainer.innerHTML = '';

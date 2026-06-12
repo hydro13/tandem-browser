@@ -41,7 +41,7 @@
       document.getElementById('claronote-main').style.display = 'none';
     }
 
-    function showClaroNoteMain(user) {
+    function showClaroNoteMain(_user) {
       document.getElementById('claronote-login').style.display = 'none';
       document.getElementById('claronote-main').style.display = 'flex';
     }

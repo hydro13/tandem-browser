@@ -109,7 +109,7 @@ export function createStreamingRenderer({ messagesEl }) {
       }
 
       // Finalize any active streaming messages with correct timestamp
-      for (const [convId, streamData] of streamingMessages.entries()) {
+      for (const streamData of streamingMessages.values()) {
         const timeEl = streamData.element.querySelector('.msg-time');
         if (timeEl) timeEl.textContent = formatTime(Date.now());
       }

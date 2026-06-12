@@ -171,3 +171,6 @@ class ClaudeActivityBackend {
     }
   }
 }
+
+// Classic-script global export — consumed by shell/js/wingman/chat.js (ES module) via window.
+window.ClaudeActivityBackend = ClaudeActivityBackend;

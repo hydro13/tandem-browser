@@ -337,3 +337,6 @@ class OpenClawBackend {
     return response?.payload ?? response?.result ?? null;
   }
 }
+
+// Classic-script global export — consumed by shell/js/wingman/chat.js (ES module) via window.
+window.OpenClawBackend = OpenClawBackend;
