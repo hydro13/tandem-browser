@@ -34,6 +34,7 @@ import { registerIpcHandlers } from '../ipc/handlers';
 import { LocatorFinder } from '../locators/finder';
 import { SiteMemoryManager } from '../memory/site-memory';
 import { FormMemoryManager } from '../memory/form-memory';
+import { getDefaultSecretStore } from '../security/secret-store';
 import { NetworkInspector } from '../network/inspector';
 import type { RequestDispatcher } from '../network/dispatcher';
 import { PanelManager } from '../panel/manager';
@@ -215,6 +216,17 @@ export async function initializeRuntimeManagers(opts: InitializeRuntimeOptions):
   runtime.siteMemory = new SiteMemoryManager();
   runtime.watchManager = new WatchManager();
   runtime.headlessManager = new HeadlessManager();
+  // Re-encrypt secrets that a previous run had to write as plaintext
+  // fallback records (safeStorage unavailable during early startup). The app
+  // is ready by now, so safeStorage should be available again.
+  try {
+    const upgradedSecrets = getDefaultSecretStore().upgradePlaintextRecords();
+    if (upgradedSecrets.length > 0) {
+      log.info(`Secret store: re-encrypted ${upgradedSecrets.length} plaintext fallback record(s)`);
+    }
+  } catch (e) {
+    log.warn('Secret store plaintext upgrade sweep failed:', e instanceof Error ? e.message : String(e));
+  }
   runtime.formMemory = new FormMemoryManager();
   runtime.contextBridge = new ContextBridge();
   runtime.pipManager = new PiPManager();

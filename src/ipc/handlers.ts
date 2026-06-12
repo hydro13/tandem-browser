@@ -493,7 +493,12 @@ export function registerIpcHandlers(deps: IpcDeps): void {
   // ═══ Form submit tracking ═══
   ipcMain.on(IpcChannels.FORM_SUBMITTED, (_event, data: { url: string; fields: Array<{ name: string; type: string; id: string; value: string }> }) => {
     if (data.url && data.fields) {
-      formMemory.recordForm(data.url, data.fields);
+      try {
+        formMemory.recordForm(data.url, data.fields);
+      } catch (e) {
+        // Fail-closed form memory (no encryption key) throws — log, don't crash.
+        log.warn('Form memory record failed:', e instanceof Error ? e.message : String(e));
+      }
     }
     eventStream.handleFormSubmit({ url: data.url, fields: data.fields });
   });
