@@ -2,13 +2,16 @@
  * Wingman alert overlay — transient "agent needs you" toasts.
  *
  * Loaded from: shell/js/wingman/index.js
- * window exports: dismissAlert (inline onclick in index.html needs this)
+ * window exports: dismissAlert (kept for shortcut-router and console use)
  */
 
 let _overlay = null;
 
 export function initAlerts(renderer) {
   _overlay = renderer.overlay;
+
+  // CSP forbids inline onclick handlers — bind the dismiss button here.
+  document.getElementById('wingman-alert-dismiss')?.addEventListener('click', dismissAlert);
 
   if (window.tandem) {
     window.tandem.onWingmanAlert((data) => {
@@ -24,5 +27,4 @@ export function dismissAlert() {
   _overlay?.classList.remove('visible');
 }
 
-// Inline onclick="dismissAlert()" in shell/index.html requires this binding
 window.dismissAlert = dismissAlert;

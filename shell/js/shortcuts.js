@@ -50,6 +50,9 @@
       }
     });
 
+    // CSP forbids inline onclick handlers — bind the close button here.
+    document.getElementById('shortcuts-close-btn')?.addEventListener('click', hideShortcutsOverlay);
+
     // ═══════════════════════════════════════════════
     // Onboarding functionality
     // ═══════════════════════════════════════════════
