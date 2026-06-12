@@ -12,6 +12,7 @@
     import { initScreenshot, captureScreenshotMode } from './screenshot.js';
     import { initPanel } from './panel.js';
     import { initChat } from './chat.js';
+    import '../html-escape.js';
 
     const renderer = window.__tandemRenderer;
     if (!renderer) {
@@ -99,13 +100,9 @@
       });
     }
 
-    function escapeHtml(s) {
-      return String(s)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/\n/g, '<br>');
-    }
+    // Shared escaper (also covers quotes for attribute positions); the
+    // multiline variant preserves line breaks in handoff bodies.
+    const { escapeHtml, escapeHtmlMultiline } = window.tandemEscape;
 
     function getHandoffAttentionLevel(handoff) {
       if (!handoff || !handoff.open || handoff.status === 'resolved') return 'none';
@@ -344,7 +341,8 @@
 
         for (const handoff of handoffs) {
           const card = document.createElement('div');
-          card.className = `handoff-card status-${handoff.status}`;
+          const statusClass = String(handoff.status || '').replace(/[^a-z0-9_-]/gi, '');
+          card.className = `handoff-card status-${statusClass}`;
           const meta = [];
           if (handoff.reason) meta.push(`<span class="handoff-pill">Reason: ${escapeHtml(handoff.reason)}</span>`);
           if (handoff.workspaceName || handoff.workspaceId) meta.push(`<span class="handoff-pill">Workspace: ${escapeHtml(handoff.workspaceName || handoff.workspaceId)}</span>`);
@@ -369,7 +367,7 @@
               <span class="handoff-time">${escapeHtml(formatHandoffTime(handoff.updatedAt))}</span>
             </div>
             <div class="handoff-title">${escapeHtml(handoff.title || 'Untitled handoff')}</div>
-            <div class="handoff-body">${escapeHtml(handoff.body || '')}</div>
+            <div class="handoff-body">${escapeHtmlMultiline(handoff.body || '')}</div>
             <div class="handoff-meta">${meta.join('')}</div>
             <div class="handoff-actions">
               ${actionButtons.join('')}
@@ -679,12 +677,12 @@
 
         card.innerHTML = `
           <div class="approval-title">🤖 Wingman wants to perform an action:</div>
-          <div class="approval-desc">${escapeHtmlSimple(data.description || '')}</div>
-          <div class="approval-desc" style="font-family:monospace;font-size:10px;">${escapeHtmlSimple(actionDesc)}</div>
+          <div class="approval-desc">${escapeHtml(data.description || '')}</div>
+          <div class="approval-desc" style="font-family:monospace;font-size:10px;">${escapeHtml(actionDesc)}</div>
           <span class="approval-risk ${riskClass}">${riskLabel}</span>
           <div class="approval-actions">
-            <button class="btn-approve" data-task="${data.taskId}" data-step="${data.stepId}">✅ Goedkeuren</button>
-            <button class="btn-reject" data-task="${data.taskId}" data-step="${data.stepId}">❌ Afwijzen</button>
+            <button class="btn-approve" data-task="${escapeHtml(data.taskId)}" data-step="${escapeHtml(data.stepId)}">✅ Goedkeuren</button>
+            <button class="btn-reject" data-task="${escapeHtml(data.taskId)}" data-step="${escapeHtml(data.stepId)}">❌ Afwijzen</button>
           </div>
         `;
 
@@ -709,10 +707,6 @@
         });
 
         approvalContainer.appendChild(card);
-      }
-
-      function escapeHtmlSimple(s) {
-        return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
       }
 
       // Emergency stop clears all approval cards

@@ -380,12 +380,17 @@ export function initChat() {
   });
 
   function showImagePreview(dataUrl) {
-    imagePreviewEl.innerHTML = `
-      <img src="${dataUrl}" alt="Preview">
-      <button class="remove-preview" title="Remove image">✕</button>
-    `;
+    imagePreviewEl.replaceChildren();
+    const img = document.createElement('img');
+    img.src = dataUrl;
+    img.alt = 'Preview';
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-preview';
+    removeBtn.title = 'Remove image';
+    removeBtn.textContent = '✕';
+    imagePreviewEl.append(img, removeBtn);
     imagePreviewEl.style.display = 'block';
-    imagePreviewEl.querySelector('.remove-preview').addEventListener('click', () => {
+    removeBtn.addEventListener('click', () => {
       clearImagePreview();
     });
   }

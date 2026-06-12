@@ -13,6 +13,7 @@
 
 import { getToken } from '../config.js';
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
+import { escapeHtml } from '../util.js';
 
 // === PINBOARD PANEL MODULE ===
 export const PINBOARD_PANEL_IDS = ['pinboards'];
@@ -47,16 +48,25 @@ function ensurePinboardAddedHook() {
   }
 }
 
-// SECURITY: must be safe for both text-node and attribute contexts.
-// textContent/innerHTML escapes <, >, &, but not " or ' — board names flow
-// into data-name="..." attributes, so we must also encode quotes to prevent
-// attribute-context XSS (board names come from user input, including the
-// remote pairing API). Harmless in text-node contexts where &quot; renders
-// as ". Covered by manual review — no unit-test harness exists for shell JS.
-function pbEscape(text) {
-  const d = document.createElement('div');
-  d.textContent = text;
-  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+// SECURITY: must be safe for both text-node and attribute contexts — board
+// names come from user input, including the remote pairing API. The shared
+// escaper (shell/js/html-escape.js) covers &, <, >, " and '.
+const pbEscape = escapeHtml;
+
+// CSP-safe replacement for the former inline onerror= fallbacks: when a
+// preview image fails, swap the preview area for the card's type icon.
+function pbWirePreviewFallbacks(container) {
+  container.querySelectorAll('img[data-pb-fallback]').forEach(img => {
+    img.addEventListener('error', () => {
+      const fallback = img.dataset.pbFallback || '📄';
+      const parent = img.parentElement;
+      if (!parent) return;
+      const icon = document.createElement('span');
+      icon.className = 'pb-card-type-icon';
+      icon.textContent = fallback;
+      parent.replaceChildren(icon);
+    });
+  });
 }
 
 // Surface mutation failures to the user. Previously these fetches swallowed
@@ -106,12 +116,12 @@ function pbRenderBoardList(boards) {
     return;
   }
   container.innerHTML = boards.map(b => `
-    <div class="pb-board-item" data-board-id="${b.id}" data-name="${pbEscape(b.name)}" data-emoji="${pbEscape(b.emoji)}">
+    <div class="pb-board-item" data-board-id="${pbEscape(b.id)}" data-name="${pbEscape(b.name)}" data-emoji="${pbEscape(b.emoji)}">
       <span class="pb-board-emoji">${pbEscape(b.emoji)}</span>
       <span class="pb-board-name">${pbEscape(b.name)}</span>
-      <span class="pb-board-count">${b.itemCount}</span>
-      <button class="pb-board-rename" data-board-id="${b.id}" title="Rename board">✏️</button>
-      <button class="pb-board-delete" data-board-id="${b.id}" title="Delete board">&times;</button>
+      <span class="pb-board-count">${pbEscape(b.itemCount)}</span>
+      <button class="pb-board-rename" data-board-id="${pbEscape(b.id)}" title="Rename board">✏️</button>
+      <button class="pb-board-delete" data-board-id="${pbEscape(b.id)}" title="Delete board">&times;</button>
     </div>
   `).join('');
 
@@ -656,16 +666,16 @@ function pbRenderItems(items) {
     let preview = '';
     switch (item.type) {
       case 'image':
-        preview = `<img src="${pbEscape(item.url || item.thumbnail || '')}" alt="${title}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🖼️</span>'">`;
+        preview = `<img src="${pbEscape(item.url || item.thumbnail || '')}" alt="${title}" loading="lazy" data-pb-fallback="🖼️">`;
         break;
       case 'link': {
         if (item.thumbnail) {
-          preview = `<img src="${pbEscape(item.thumbnail)}" alt="${title}" loading="lazy" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🔗</span>'">`;
+          preview = `<img src="${pbEscape(item.thumbnail)}" alt="${title}" loading="lazy" data-pb-fallback="🔗">`;
         } else {
           let domain = '';
           try { domain = new URL(item.url).hostname; } catch { /* ignore */ }
           preview = domain
-            ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=64" alt="" style="width:32px;height:32px;object-fit:contain;" onerror="this.parentElement.innerHTML='<span class=pb-card-type-icon>🔗</span>'">`
+            ? `<img src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64" alt="" style="width:32px;height:32px;object-fit:contain;" data-pb-fallback="🔗">`
             : '<span class="pb-card-type-icon">🔗</span>';
         }
         break;
@@ -681,10 +691,10 @@ function pbRenderItems(items) {
     }
 
     return `
-      <div class="pb-card" draggable="true" data-item-id="${item.id}" ${item.url ? 'data-has-url="true"' : ''} data-url="${pbEscape(item.url || '')}">
+      <div class="pb-card" draggable="true" data-item-id="${pbEscape(item.id)}" ${item.url ? 'data-has-url="true"' : ''} data-url="${pbEscape(item.url || '')}">
         <div class="pb-card-actions">
-          <button class="pb-card-action-btn pb-edit-btn" data-item-id="${item.id}">✏️ Edit</button>
-          <button class="pb-card-action-btn danger pb-remove-btn" data-item-id="${item.id}">🗑️</button>
+          <button class="pb-card-action-btn pb-edit-btn" data-item-id="${pbEscape(item.id)}">✏️ Edit</button>
+          <button class="pb-card-action-btn danger pb-remove-btn" data-item-id="${pbEscape(item.id)}">🗑️</button>
         </div>
         <div class="pb-card-preview${(item.type === 'quote' || item.type === 'text') ? ' pb-card-preview--text' : ''}">${preview}</div>
         <div class="pb-card-info">
@@ -692,12 +702,13 @@ function pbRenderItems(items) {
           ${item.description ? `<div class="pb-card-desc">${pbEscape(item.description.substring(0, 120))}</div>` : ''}
           ${item.note ? `<div class="pb-card-note">${pbEscape(item.note)}</div>` : ''}
           <div class="pb-card-meta">
-            <span class="pb-card-type">${typeIcons[item.type] || ''} ${item.type}</span>
+            <span class="pb-card-type">${typeIcons[item.type] || ''} ${pbEscape(item.type)}</span>
             <span class="pb-card-date">${date}</span>
           </div>
         </div>
       </div>`;
   }).join('');
+  pbWirePreviewFallbacks(container);
 }
 
 // Public helper for other sidebar code (e.g. the tab context menu's "Add to
