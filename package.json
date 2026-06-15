@@ -72,7 +72,7 @@
     "@vitest/coverage-v8": "^4.0.18",
     "electron": "^40.6.0",
     "electron-builder": "^26.0.0",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.1",
     "eslint": "^10.0.3",
     "jsdom": "^29.0.2",
     "supertest": "^7.2.2",
