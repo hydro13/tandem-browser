@@ -4,6 +4,44 @@ All notable changes to Tandem Browser will be documented in this file.
 
 ## Unreleased
 
+### Security
+
+- **Shell renderer XSS hardening** (`shell/js/html-escape.js`, `shell/js/**`) -
+  one shared HTML escaper (covers quotes for attribute positions) replaces six
+  diverging per-file copies; every innerHTML sink that renders website- or
+  API-controlled titles/URLs/names (history, bookmarks, pinboards, workspaces,
+  sidebar, wingman handoffs/approvals, ClaroNote notes) now escapes text and
+  attribute positions. Render-level regression tests live in `shell/tests/`.
+- **Content-Security-Policy on all shell pages** (`shell/*.html`,
+  `shell/js/pages/`, `shell/js/theme-stamp.js`) - `script-src 'self'` without
+  `'unsafe-inline'`; all inline script blocks (including the ~1500-line
+  settings script) moved to external files and every inline `onclick=`/
+  `onerror=` handler converted to `addEventListener` wiring.
+- **WebSocket auth hardening** (`src/security/gatekeeper-ws.ts`,
+  `src/api/server.ts`, `src/security/ws-auth.ts`) - Gatekeeper and
+  `/watch/live` upgrades now use timing-safe token comparison, accept tokens
+  from headers only (`X-Gatekeeper-Token`, `Authorization: Bearer`,
+  `X-Tandem-Token`; the leaky `?token=` query path was removed), and lock out
+  callers after repeated failed attempts with exponential backoff.
+- **Fail-closed Gatekeeper fallbacks** (`src/security/guardian.ts`) - when a
+  connected agent times out, security-relevant decision categories (strict
+  first-visit navigations, trusted-to-untrusted outbound/WebSocket flags,
+  first-visit mutating destinations) now block instead of silently allowing;
+  the per-reason policy table and the absent-agent trade-off are documented in
+  `guardian.ts`.
+- **Form-memory key in SecretStore** (`src/memory/form-memory.ts`,
+  `src/security/secret-store/`) - the AES-256-GCM key moved from plaintext
+  `config.json` into the safeStorage-backed SecretStore with one-time
+  migration; missing key now fails closed (no silent ephemeral key), and
+  plaintext-fallback SecretStore records are re-encrypted once safeStorage is
+  available.
+- **Vault unlock brute-force lockout** (`src/passwords/unlock-limiter.ts`,
+  `src/api/routes/misc.ts`) - `POST /passwords/unlock` allows 5 consecutive
+  failures, then locks with exponential backoff (30s doubling, capped at 1h).
+- **Shell now linted** (`eslint.config.mjs`) - `shell/` (except `vendor/`) is
+  no longer ignored by ESLint; browser globals configured and all findings
+  fixed.
+
 ### Added
 
 - **OpenClaw-free Wingman chat path** (`shell/chat/tandem-local-backend.js`,

@@ -14,6 +14,9 @@
       overlay.classList.remove('visible');
     }
 
+    // Cross-file consumers (shell/js/shortcut-router.js) reach these via window.
+    window.showShortcutsOverlay = showShortcutsOverlay;
+
     function filterShortcuts(query) {
       const items = document.querySelectorAll('.shortcut-item');
       const lowerQuery = query.toLowerCase();
@@ -50,6 +53,9 @@
       }
     });
 
+    // CSP forbids inline onclick handlers — bind the close button here.
+    document.getElementById('shortcuts-close-btn')?.addEventListener('click', hideShortcutsOverlay);
+
     // ═══════════════════════════════════════════════
     // Onboarding functionality
     // ═══════════════════════════════════════════════
@@ -72,6 +78,9 @@
       const overlay = document.getElementById('onboarding-overlay');
       overlay.classList.remove('visible');
     }
+
+    // Cross-file consumers (shell/js/shortcut-router.js) reach this via window.
+    window.showOnboarding = showOnboarding;
 
     function showOnboardingStep(step) {
       currentOnboardingStep = step;
@@ -161,68 +170,9 @@
       });
     })();
 
-    async function startChromeImport() {
-      const statusEl = document.getElementById('import-status');
-
-      try {
-        statusEl.innerHTML = '📥 Importing Chrome bookmarks...';
-
-        const bookmarksResp = await fetch('http://localhost:8765/import/chrome/bookmarks', { method: 'POST' });
-        if (bookmarksResp.ok) {
-          statusEl.innerHTML += '<br>✅ Bookmarks imported';
-        }
-
-        statusEl.innerHTML += '<br>📚 Importing history...';
-        const historyResp = await fetch('http://localhost:8765/import/chrome/history', { method: 'POST' });
-        if (historyResp.ok) {
-          statusEl.innerHTML += '<br>✅ History imported';
-        }
-
-        statusEl.innerHTML += '<br>🍪 Importing cookies...';
-        const cookiesResp = await fetch('http://localhost:8765/import/chrome/cookies', { method: 'POST' });
-        if (cookiesResp.ok) {
-          statusEl.innerHTML += '<br>✅ Cookies imported';
-        } else {
-          statusEl.innerHTML += '<br>⚠️ Cookies could not be imported (encrypted)';
-        }
-
-        statusEl.innerHTML += '<br><br>🎉 Import complete!';
-
-        setTimeout(() => {
-          nextOnboardingStep();
-        }, 2000);
-
-      } catch (error) {
-        statusEl.innerHTML = '❌ Import failed. Chrome must be closed to import data.';
-      }
-    }
-
-    async function completeOnboarding() {
-      try {
-        // Mark onboarding as complete
-        await fetch('http://localhost:8765/config', {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            general: {
-              onboardingComplete: true
-            }
-          })
-        });
-
-        hideOnboarding();
-
-        // Show Wingman panel after a brief moment
-        setTimeout(() => {
-          if (window.tandem && window.tandem.openPanel) {
-            window.tandem.openPanel();
-          }
-        }, 1000);
-
-      } catch (error) {
-        hideOnboarding();
-      }
-    }
+    // (Dead onboarding helpers startChromeImport/completeOnboarding removed —
+    // they were unreferenced and called a nextOnboardingStep() that no longer
+    // exists.)
 
     // Check if onboarding should be shown
     async function checkOnboarding() {

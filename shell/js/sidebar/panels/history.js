@@ -7,7 +7,7 @@
 
 import { getToken } from '../config.js';
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
-import { getFaviconUrl } from '../util.js';
+import { escapeHtml, getFaviconUrl, wireFaviconFallbacks } from '../util.js';
 
 // === HISTORY PANEL MODULE ===
 export async function loadHistoryPanel() {
@@ -69,20 +69,24 @@ export async function loadHistoryPanel() {
   loadSyncDevices();
 }
 
-function renderHistoryItems(entries) {
+// Exported for tests: titles and URLs are page-controlled, so both the text
+// and the attribute positions must be escaped.
+export function renderHistoryItems(entries) {
   if (!entries || entries.length === 0) return '<div class="bm-empty">No history</div>';
   return entries.slice(0, 200).map(e => {
     const fav = e.url ? getFaviconUrl(e.url) : null;
-    const img = fav ? `<img src="${fav}" onerror="this.style.display='none'">` : '';
-    const title = e.title || e.url || 'Untitled';
-    return `<div class="bm-item url" data-url="${e.url}">
+    const img = fav ? `<img src="${escapeHtml(fav)}" data-favicon>` : '';
+    const title = escapeHtml(e.title || e.url || 'Untitled');
+    const url = escapeHtml(e.url || '');
+    return `<div class="bm-item url" data-url="${url}">
       <div class="bm-icon">${img}</div>
-      <span class="bm-name" title="${e.url}">${title}</span>
+      <span class="bm-name" title="${url}">${title}</span>
     </div>`;
   }).join('');
 }
 
 function attachHistoryClickHandlers(listEl) {
+  wireFaviconFallbacks(listEl);
   listEl.querySelectorAll('.bm-item.url').forEach(el => {
     el.addEventListener('click', () => {
       const url = el.dataset.url;
@@ -105,19 +109,20 @@ async function loadSyncDevices() {
     section.style.display = 'block';
     let html = '';
     for (const device of devices) {
-      html += `<div class="sync-device-name">${device.name}</div>`;
+      html += `<div class="sync-device-name">${escapeHtml(device.name)}</div>`;
       for (const tab of (device.tabs || [])) {
         const fav = tab.url ? getFaviconUrl(tab.url) : null;
-        const img = fav ? `<img class="sync-tab-favicon" src="${fav}" onerror="this.style.display='none'">` : '<div class="sync-tab-favicon"></div>';
-        const title = tab.title || tab.url || 'Untitled';
+        const img = fav ? `<img class="sync-tab-favicon" src="${escapeHtml(fav)}" data-favicon>` : '<div class="sync-tab-favicon"></div>';
+        const title = escapeHtml(tab.title || tab.url || 'Untitled');
         const truncUrl = (tab.url || '').length > 60 ? tab.url.substring(0, 60) + '…' : (tab.url || '');
-        html += `<div class="sync-tab-item" data-url="${tab.url}" title="${truncUrl}">
+        html += `<div class="sync-tab-item" data-url="${escapeHtml(tab.url || '')}" title="${escapeHtml(truncUrl)}">
           ${img}
           <span class="sync-tab-title">${title}</span>
         </div>`;
       }
     }
     list.innerHTML = html;
+    wireFaviconFallbacks(list);
     list.querySelectorAll('.sync-tab-item').forEach(el => {
       el.addEventListener('click', () => {
         const url = el.dataset.url;

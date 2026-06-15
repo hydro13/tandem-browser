@@ -83,6 +83,66 @@ describe('SecretStore', () => {
     expect(store.get('to-delete')).toBeNull();
   });
 
+  it('re-encrypts a plaintext fallback record on get() once encryption is available', () => {
+    const rootDir = createTempRoot();
+    tempRoots.push(rootDir);
+
+    const earlyStore = new SecretStore({ rootDir, safeStorage: createSafeStorageMock(false) });
+    const result = earlyStore.set('early-secret', 'bootstrap-value');
+    expect(result.encoding).toBe('plaintext-fallback-on-init');
+
+    // Later in the session safeStorage works again.
+    const lateStore = new SecretStore({ rootDir, safeStorage: createSafeStorageMock(true) });
+    expect(lateStore.get('early-secret')).toBe('bootstrap-value');
+
+    const upgraded = JSON.parse(fs.readFileSync(result.path, 'utf-8')) as {
+      encoding: string;
+      plaintext?: string;
+      ciphertext?: string;
+    };
+    expect(upgraded.encoding).toBe('safe-storage');
+    expect(upgraded.plaintext).toBeUndefined();
+    expect(upgraded.ciphertext).toBe(Buffer.from('encrypted:bootstrap-value').toString('base64'));
+    expect(lateStore.get('early-secret')).toBe('bootstrap-value');
+  });
+
+  it('upgradePlaintextRecords() sweeps all plaintext fallback records', () => {
+    const rootDir = createTempRoot();
+    tempRoots.push(rootDir);
+
+    const earlyStore = new SecretStore({ rootDir, safeStorage: createSafeStorageMock(false) });
+    earlyStore.set('secret-a', 'value-a');
+    earlyStore.set('secret-b', 'value-b');
+
+    const lateStore = new SecretStore({ rootDir, safeStorage: createSafeStorageMock(true) });
+    lateStore.set('secret-c', 'value-c'); // already encrypted — must be skipped
+
+    const upgraded = lateStore.upgradePlaintextRecords();
+    expect(upgraded.sort()).toEqual(['secret-a', 'secret-b']);
+
+    for (const key of ['secret-a', 'secret-b', 'secret-c']) {
+      const record = JSON.parse(
+        fs.readFileSync(lateStore.getRecordPath(key), 'utf-8')
+      ) as { encoding: string };
+      expect(record.encoding).toBe('safe-storage');
+    }
+    expect(lateStore.get('secret-a')).toBe('value-a');
+    expect(lateStore.get('secret-b')).toBe('value-b');
+  });
+
+  it('upgradePlaintextRecords() is a safe no-op while encryption stays unavailable', () => {
+    const rootDir = createTempRoot();
+    tempRoots.push(rootDir);
+
+    const store = new SecretStore({ rootDir, safeStorage: createSafeStorageMock(false) });
+    const result = store.set('still-early', 'value');
+
+    expect(store.upgradePlaintextRecords()).toEqual([]);
+    const record = JSON.parse(fs.readFileSync(result.path, 'utf-8')) as { encoding: string };
+    expect(record.encoding).toBe('plaintext-fallback-on-init');
+    expect(store.get('still-early')).toBe('value');
+  });
+
   it('rejects unsafe key names', () => {
     const rootDir = createTempRoot();
     tempRoots.push(rootDir);

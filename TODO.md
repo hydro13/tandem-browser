@@ -42,6 +42,7 @@ Last updated: May 5, 2026
 
 ### Maintenance Sweep
 
+- [x] Resolve the four urgent security-audit findings: shell XSS escaping + CSP without inline scripts, header-only timing-safe WebSocket auth with failed-attempt lockout (Gatekeeper + `/watch/live`), form-memory key migration into the SecretStore with fail-closed behavior, and fail-closed Gatekeeper timeout fallbacks plus a vault unlock brute-force lockout
 - [x] Align public-facing docs, repo metadata, and contribution guidance for a public developer preview
 - [x] Reduce the first high-signal GitHub CodeQL security backlog: fix the bearer-token ReDoS, new-tab and OAuth callback XSS paths, URL substring checks in auth/search heuristics, path containment for session/workflow/import/update files, and baseline API rate limiting on the most sensitive flagged routes
 - [x] Fix the `Snoze` typo in `docs/research/opera-browser-research.md` and do a quick spell-check in the same tab-snoozing section
@@ -60,7 +61,7 @@ Last updated: May 5, 2026
 - [x] Extract tab rendering, navigation, zoom, and shared renderer state out of `shell/js/main.js` into `shell/js/tabs.js`, and keep active-tab coordination explicit through the renderer bridge
 - [x] Extract the draw overlay surface out of `shell/js/main.js` into `shell/js/draw.js` so annotation state, screenshot compositing, and draw-mode lifecycles stop sharing a file with window chrome and shortcuts
 - [x] Replace the last mixed shell entrypoint with dedicated `shell/js/window-chrome.js` and `shell/js/shortcut-router.js` modules so `main.js` is no longer needed as a catch-all shell loader
-- [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`
+- [ ] Investigate strict Gatekeeper fallback blocking mainstream site scripts when the local agent bridge is unavailable; manual startup checks on March 14, 2026 showed GitHub asset scripts being denied under `strict_low_trust_script`. The per-reason fallback policy (timeout vs absent agent) is now explicit and documented in `getGatekeeperFallbackAction()` in `src/security/guardian.ts`; this item remains about tuning `strict_low_trust_script` itself (trusted-CDN coverage / trust accrual)
 - [ ] Investigate the remaining 1Password MV3 service-worker startup noise (`DidStartWorkerFail ...: 5` and policy calculation errors) and determine whether it affects any real user-facing behavior; the old `__tandemExtensionHeaders` background error is fixed, and current manual checks indicate the extension still works for normal use
 - [ ] Make `ContextBridge` summaries natively actor/workspace-aware so `/context/summary` and other non-MCP consumers stop relying on MCP-side enrichment for ownership context
 - [ ] Expand the new handoff system beyond the first Activity-tab inbox with a dedicated handoff history/detail view; task-linked ready/resume/approve/reject actions now flow through a shared task↔handoff coordinator

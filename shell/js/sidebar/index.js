@@ -41,6 +41,7 @@ import {
 // Importing tab-context-menu installs window.__tandemShowTabContextMenu as a
 // side effect; moveTabToWorkspace is passed to initDragDrop below.
 import { moveTabToWorkspace } from './tab-context-menu.js';
+import { escapeHtml } from './util.js';
 
   // ═══════════════════════════════════════
   // SIDEBAR
@@ -65,18 +66,18 @@ import { moveTabToWorkspace } from './tab-context-menu.js';
         const bg = icon.brand;
         return `
           <button class="sidebar-item messenger-item ${isActive ? 'active' : ''}"
-            data-id="${item.id}" title="${item.label}">
+            data-id="${escapeHtml(item.id)}" title="${escapeHtml(item.label)}">
             <div class="messenger-icon" style="background:${bg}">
               ${icon.svg}
             </div>
-            <span class="sidebar-item-label">${item.label}</span>
+            <span class="sidebar-item-label">${escapeHtml(item.label)}</span>
           </button>`;
       }
       return `
         <button class="sidebar-item ${isActive ? 'active' : ''}"
-          data-id="${item.id}" title="${item.label}">
+          data-id="${escapeHtml(item.id)}" title="${escapeHtml(item.label)}">
           ${icon?.svg || ''}
-          <span class="sidebar-item-label">${item.label}</span>
+          <span class="sidebar-item-label">${escapeHtml(item.label)}</span>
         </button>`;
     }
 
@@ -86,7 +87,7 @@ import { moveTabToWorkspace } from './tab-context-menu.js';
         const isActive = ws.id === getActiveWorkspaceId();
         return `
           <button class="sidebar-item workspace-icon ${isActive ? 'active' : ''}"
-            data-ws-id="${ws.id}" title="${ws.name}">
+            data-ws-id="${escapeHtml(ws.id)}" title="${escapeHtml(ws.name)}">
             <div class="workspace-icon-inner ${isActive ? 'ws-strip-active' : 'ws-strip-inactive'}">
               <span class="workspace-svg-icon">${getIconSvg(ws.icon)}</span>
             </div>
