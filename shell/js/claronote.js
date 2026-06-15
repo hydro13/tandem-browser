@@ -3,6 +3,10 @@
     // ClaroNote Integration
     // ═══════════════════════════════════════════════
 
+    // Shared escaper from shell/js/html-escape.js — note titles, summaries,
+    // and transcripts come from the ClaroNote service and must be escaped.
+    const { escapeHtml } = window.tandemEscape;
+
     let claroNoteInitialized = false;
     let claroNoteRecording = false;
     let claroNoteTimer = null;
@@ -37,7 +41,7 @@
       document.getElementById('claronote-main').style.display = 'none';
     }
 
-    function showClaroNoteMain(user) {
+    function showClaroNoteMain(_user) {
       document.getElementById('claronote-login').style.display = 'none';
       document.getElementById('claronote-main').style.display = 'flex';
     }
@@ -271,7 +275,7 @@
 
         // Status indicator
         let statusColor = 'var(--text-dim)';
-        let statusText = note.status;
+        let statusText = escapeHtml(note.status);
         if (note.status === 'READY') { statusColor = 'var(--success)'; statusText = 'Ready'; }
         else if (note.status === 'PROCESSING') { statusColor = 'var(--warning)'; statusText = 'Processing...'; }
         else if (note.status === 'UPLOADING') { statusColor = 'var(--accent)'; statusText = 'Uploading...'; }
@@ -281,11 +285,11 @@
           <div style="display:flex;justify-content:between;align-items:flex-start;gap:8px;">
             <div style="flex:1;">
               <div style="font-size:12px;color:var(--text);margin-bottom:4px;font-weight:500;">
-                ${note.title || 'Note'}
+                ${escapeHtml(note.title || 'Note')}
               </div>
               ${note.summary ? `
                 <div style="font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.3;">
-                  ${note.summary.length > 100 ? note.summary.substring(0, 100) + '...' : note.summary}
+                  ${escapeHtml(note.summary.length > 100 ? note.summary.substring(0, 100) + '...' : note.summary)}
                 </div>
               ` : ''}
               <div style="font-size:10px;color:var(--text-dim);display:flex;gap:8px;">
@@ -346,30 +350,32 @@
 
       content.innerHTML = `
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
-          <h3 style="margin:0;color:var(--text);">${note.title || 'Note'}</h3>
-          <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+          <h3 style="margin:0;color:var(--text);">${escapeHtml(note.title || 'Note')}</h3>
+          <button class="claronote-modal-close"
                   style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:18px;">✕</button>
         </div>
-        
+
         <div style="margin-bottom:15px;font-size:11px;color:var(--text-dim);display:flex;gap:12px;">
           <span>Duration: ${Math.floor(note.duration / 60)}:${(note.duration % 60).toString().padStart(2, '0')}</span>
           <span>Date: ${new Date(note.createdAt).toLocaleString('en-GB')}</span>
         </div>
-        
+
         ${note.summary ? `
           <div style="margin-bottom:15px;">
             <h4 style="margin:0 0 8px 0;font-size:12px;color:var(--accent);">Summary</h4>
-            <div style="font-size:12px;line-height:1.4;">${note.summary}</div>
+            <div style="font-size:12px;line-height:1.4;">${escapeHtml(note.summary)}</div>
           </div>
         ` : ''}
-        
+
         ${note.transcript ? `
           <div>
             <h4 style="margin:0 0 8px 0;font-size:12px;color:var(--accent);">Transcript</h4>
-            <div style="font-size:12px;line-height:1.5;white-space:pre-wrap;">${note.transcript}</div>
+            <div style="font-size:12px;line-height:1.5;white-space:pre-wrap;">${escapeHtml(note.transcript)}</div>
           </div>
         ` : '<div style="font-size:12px;color:var(--text-dim);">Transcript not available yet</div>'}
       `;
+
+      content.querySelector('.claronote-modal-close').addEventListener('click', () => modal.remove());
 
       modal.appendChild(content);
       document.body.appendChild(modal);

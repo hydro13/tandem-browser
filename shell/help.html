@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="nl">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <!-- Pre-paint theme stamp for webview-loaded shell pages.
        The main BrowserWindow gets the theme via preload+additionalArguments,
        but webviews don't inherit that path — so we do a tiny sync XHR here to
@@ -9,21 +10,7 @@
        to avoid a dark→light flash. Fails silently if the API isn't up. -->
   <script src="js/shortcut-labels.js"></script>
   <script src="js/api-base.js"></script>
-  <script>
-    (function () {
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', ((window.__TANDEM_API_BASE__ || 'http://127.0.0.1:8765') + '/config'), false);
-        xhr.send();
-        if (xhr.status === 200) {
-          var cfg = JSON.parse(xhr.responseText);
-          var theme = (cfg && cfg.appearance && cfg.appearance.theme) || 'dark';
-          if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-          else if (theme === 'system') document.documentElement.setAttribute('data-theme', 'system');
-        }
-      } catch (e) { /* API not ready; theme.js will apply on load */ }
-    })();
-  </script>
+  <script src="js/theme-stamp.js"></script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tandem — Help & Features</title>
@@ -579,56 +566,8 @@
     </main>
   </div>
 
-  <button class="keyboard-shortcut-btn" onclick="showShortcutsOverlay()" title="Shortcuts (Cmd+?)">⌨️</button>
+  <button class="keyboard-shortcut-btn" id="help-shortcuts-btn" title="Shortcuts (Cmd+?)">⌨️</button>
 
-  <script>
-    // Navigation highlighting
-    const sections = document.querySelectorAll('.section');
-    const navLinks = document.querySelectorAll('.nav-link');
-    
-    function highlightCurrentSection() {
-      const scrollY = window.scrollY + 100;
-      
-      sections.forEach((section, index) => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.offsetHeight;
-        
-        if (scrollY >= sectionTop && scrollY < sectionTop + sectionHeight) {
-          navLinks.forEach(link => link.classList.remove('active'));
-          navLinks[index].classList.add('active');
-        }
-      });
-    }
-    
-    window.addEventListener('scroll', highlightCurrentSection);
-    
-    // Smooth scroll for navigation
-    navLinks.forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        const targetId = link.getAttribute('href').substring(1);
-        const targetSection = document.getElementById(targetId);
-        targetSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
-    });
-    
-    // Shortcuts overlay trigger
-    function showShortcutsOverlay() {
-      // Send message to main process to show shortcuts overlay
-      if (window.electronAPI) {
-        window.electronAPI.showShortcutsOverlay();
-      }
-    }
-    
-    // Handle Cmd+? shortcut if pressed on this page
-    document.addEventListener('keydown', (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '?') {
-        e.preventDefault();
-        showShortcutsOverlay();
-      }
-    });
-
-    // Theme sync is handled by shell/js/theme.js (loaded in <head>).
-  </script>
+  <script src="js/pages/help.js"></script>
 </body>
 </html>

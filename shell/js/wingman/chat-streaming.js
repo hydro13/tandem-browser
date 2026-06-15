@@ -15,6 +15,8 @@
  *   so the renderer doesn't need to know about router/mode state.
  */
 
+import '../html-escape.js';
+
 export function createStreamingRenderer({ messagesEl }) {
   // Track streaming message elements per conversation
   const streamingMessages = new Map(); // conversationId -> { element, startTime }
@@ -39,9 +41,8 @@ export function createStreamingRenderer({ messagesEl }) {
     return d.toLocaleTimeString('nl-BE', { hour: '2-digit', minute: '2-digit' });
   }
 
-  function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-  }
+  // Shared escaper; the multiline variant preserves line breaks in chat text.
+  const { escapeHtmlMultiline: escapeHtml } = window.tandemEscape;
 
   function labelForSource(sourceClass, actorLabel) {
     if (actorLabel && typeof actorLabel === 'string') return actorLabel;
@@ -108,7 +109,7 @@ export function createStreamingRenderer({ messagesEl }) {
       }
 
       // Finalize any active streaming messages with correct timestamp
-      for (const [convId, streamData] of streamingMessages.entries()) {
+      for (const streamData of streamingMessages.values()) {
         const timeEl = streamData.element.querySelector('.msg-time');
         if (timeEl) timeEl.textContent = formatTime(Date.now());
       }

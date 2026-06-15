@@ -97,3 +97,6 @@ class ChatRouter {
   onConnectionChange(cb) { this._connectionCallbacks.push(cb); }
   onSwitch(cb) { this._switchCallbacks.push(cb); }
 }
+
+// Classic-script global export — consumed by shell/js/wingman/chat.js (ES module) via window.
+window.ChatRouter = ChatRouter;

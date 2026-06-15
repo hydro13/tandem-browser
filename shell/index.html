@@ -2,6 +2,11 @@
 <html lang="nl">
 
 <head>
+  <!-- CSP: no inline scripts (XSS hardening — escaped rendering is the first
+       line of defense, this is the second). Inline styles stay allowed; the
+       shell relies on style attributes. <webview> guests are separate
+       documents and are not governed by this policy. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Tandem Browser</title>
@@ -385,11 +390,12 @@
 
   <!-- Wingman alert overlay -->
   <div class="wingman-overlay" id="wingman-overlay">
-    <button class="dismiss" onclick="dismissAlert()">✕</button>
+    <button class="dismiss" id="wingman-alert-dismiss">✕</button>
     <h3 id="alert-title">🤖 Wingman needs you</h3>
     <p id="alert-body">...</p>
   </div>
 
+  <script src="js/html-escape.js"></script>
   <script src="js/api-base.js"></script>
   <script src="js/api-auth.js"></script>
 
@@ -427,7 +433,7 @@
     <div class="shortcuts-content">
       <div class="shortcuts-header">
         <h2>⌨️ Keyboard Shortcuts</h2>
-        <button class="shortcuts-close" onclick="hideShortcutsOverlay()">✕</button>
+        <button class="shortcuts-close" id="shortcuts-close-btn">✕</button>
       </div>
 
       <div class="shortcuts-search">

@@ -3,6 +3,15 @@ import path from 'path';
 import crypto from 'crypto';
 import { tandemDir } from '../utils/paths';
 import { resolvePathWithinRoot, tryParseUrl } from '../utils/security';
+import type { SecretStore } from '../security/secret-store';
+import { getDefaultSecretStore } from '../security/secret-store';
+import { createLogger } from '../utils/logger';
+
+const log = createLogger('FormMemory');
+
+// Name of the AES-256-GCM key record in the safeStorage-backed secret store.
+const ENCRYPTION_KEY_SECRET = 'form-memory-encryption-key';
+const KEY_HEX_PATTERN = /^[0-9a-f]{64}$/i;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -44,10 +53,12 @@ export class FormMemoryManager {
   private formsDir: string;
   private encryptionKey: Buffer | null = null;
   private configPath: string;
+  private secretStore: SecretStore;
 
   // === 2. Constructor ===
 
-  constructor() {
+  constructor(secretStore: SecretStore = getDefaultSecretStore()) {
+    this.secretStore = secretStore;
     const baseDir = tandemDir();
     this.formsDir = path.join(baseDir, 'forms');
     this.configPath = path.join(baseDir, 'config.json');
@@ -64,8 +75,15 @@ export class FormMemoryManager {
   /**
    * Record a form submission. Called when a form submit is detected.
    * Sensitive fields are encrypted before storage.
+   *
+   * Fail-closed: throws when the encryption key is unavailable rather than
+   * persisting data that could not be protected.
    */
   recordForm(url: string, fields: FormField[]): FormEntry {
+    if (!this.encryptionKey) {
+      log.warn('Refusing to record form data: encryption key unavailable (fail-closed)');
+      throw new Error('Form memory is disabled: encryption key unavailable');
+    }
     const domain = this.getDomain(url);
 
     // Encrypt sensitive fields
@@ -184,40 +202,95 @@ export class FormMemoryManager {
 
   // === 7. Private helpers ===
 
-  /** Initialize or load the encryption key from config */
+  /**
+   * Initialize the encryption key from the safeStorage-backed SecretStore.
+   *
+   * Legacy installs stored the key as plaintext hex in config.json — next to
+   * the data it encrypts. Such keys are migrated into the SecretStore once
+   * and then removed from config.json; existing encrypted form data stays
+   * decryptable because the key bytes do not change.
+   *
+   * Fail-closed: when no key can be loaded or persisted, recordForm refuses
+   * to store new form data instead of silently using an ephemeral key.
+   */
   private initEncryptionKey(): void {
     try {
-      let config: Record<string, unknown> = {};
       if (fs.existsSync(this.configPath)) {
-        config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
         // Migrate pre-fix installs: tighten any existing config.json to 0o600.
         try { fs.chmodSync(this.configPath, 0o600); } catch { /* best effort */ }
       }
 
-      if (config.formEncryptionKey && typeof config.formEncryptionKey === 'string') {
-        this.encryptionKey = Buffer.from(config.formEncryptionKey, 'hex');
-      } else {
-        // Generate new 256-bit key
-        this.encryptionKey = crypto.randomBytes(32);
-        config.formEncryptionKey = this.encryptionKey.toString('hex');
-        const configDir = path.dirname(this.configPath);
-        if (!fs.existsSync(configDir)) {
-          fs.mkdirSync(configDir, { recursive: true });
-        }
-        fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-        // writeFileSync's mode option only applies on file creation — chmod to
-        // enforce 0o600 on pre-existing files (e.g., upgrades from older builds).
-        try { fs.chmodSync(this.configPath, 0o600); } catch { /* best effort */ }
+      const stored = this.secretStore.get(ENCRYPTION_KEY_SECRET);
+      if (stored && KEY_HEX_PATTERN.test(stored)) {
+        this.encryptionKey = Buffer.from(stored, 'hex');
+        this.removeLegacyConfigKey(stored);
+        return;
       }
+
+      const legacyKey = this.readLegacyConfigKey();
+      if (legacyKey) {
+        this.secretStore.set(ENCRYPTION_KEY_SECRET, legacyKey);
+        this.encryptionKey = Buffer.from(legacyKey, 'hex');
+        this.removeLegacyConfigKey(legacyKey);
+        log.info('Migrated form-memory encryption key from config.json into the secret store');
+        return;
+      }
+
+      // Fresh install: generate a new 256-bit key directly in the store.
+      const key = crypto.randomBytes(32);
+      this.secretStore.set(ENCRYPTION_KEY_SECRET, key.toString('hex'));
+      this.encryptionKey = key;
+    } catch (e) {
+      this.encryptionKey = null;
+      log.error(
+        'Form-memory encryption key unavailable — refusing to persist new form data this session:',
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+  }
+
+  /** Read the pre-secret-store plaintext key from config.json, if any. */
+  private readLegacyConfigKey(): string | null {
+    if (!fs.existsSync(this.configPath)) return null;
+    try {
+      const config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8')) as Record<string, unknown>;
+      const key = config.formEncryptionKey;
+      return typeof key === 'string' && KEY_HEX_PATTERN.test(key) ? key : null;
     } catch {
-      // Fallback: generate ephemeral key (won't persist across restarts)
-      this.encryptionKey = crypto.randomBytes(32);
+      return null;
+    }
+  }
+
+  /**
+   * Remove the legacy plaintext key from config.json. Only removes a value
+   * that matches the active key — a differing value could still be needed to
+   * decrypt data from an older backup, so it is left in place with a warning.
+   */
+  private removeLegacyConfigKey(activeKeyHex: string): void {
+    try {
+      if (!fs.existsSync(this.configPath)) return;
+      const config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8')) as Record<string, unknown>;
+      if (typeof config.formEncryptionKey !== 'string') return;
+      if (config.formEncryptionKey.toLowerCase() !== activeKeyHex.toLowerCase()) {
+        log.warn('config.json contains a form encryption key that differs from the secret-store key — leaving it in place');
+        return;
+      }
+      delete config.formEncryptionKey;
+      fs.writeFileSync(this.configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
+      try { fs.chmodSync(this.configPath, 0o600); } catch { /* best effort */ }
+      log.info('Removed legacy plaintext form encryption key from config.json');
+    } catch (e) {
+      log.warn('Could not remove legacy form encryption key from config.json:', e instanceof Error ? e.message : String(e));
     }
   }
 
   /** Encrypt a value with AES-256-GCM */
   private encrypt(plaintext: string): string {
-    if (!this.encryptionKey) return plaintext;
+    if (!this.encryptionKey) {
+      // recordForm guards this path; throwing keeps it fail-closed if a new
+      // caller bypasses the guard.
+      throw new Error('Form memory encryption key unavailable');
+    }
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', this.encryptionKey, iv);
     let encrypted = cipher.update(plaintext, 'utf8', 'hex');
@@ -228,7 +301,7 @@ export class FormMemoryManager {
 
   /** Decrypt a value with AES-256-GCM */
   private decrypt(ciphertext: string): string {
-    if (!this.encryptionKey) return ciphertext;
+    if (!this.encryptionKey) return '[decryption unavailable]';
     try {
       const parts = ciphertext.split(':');
       if (parts.length !== 3) return ciphertext;

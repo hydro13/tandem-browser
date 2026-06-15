@@ -26,6 +26,7 @@ import {
 } from '../config.js';
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
 import { getPanelWidth, setPanelWidth } from '../panel-resize.js';
+import { escapeHtml } from '../util.js';
 
 // The sidebar panel id used when the workspaces panel is open. Not routed
 // through activateItem — index.js's click handler calls openWorkspacePanel
@@ -39,9 +40,11 @@ export function setWorkspacesRender(fn) { _render = fn; }
 
 export function getIconSvg(slug) {
   if (WORKSPACE_ICONS[slug]) return WORKSPACE_ICONS[slug];
-  // If the slug isn't a known icon name, render it directly (supports emoji icons)
+  // If the slug isn't a known icon name, render it directly (supports emoji
+  // icons). Escaped: workspace icons are settable through the HTTP API, so an
+  // arbitrary slug must never reach innerHTML as markup.
   if (slug && typeof slug === 'string' && slug.trim()) {
-    return `<span class="workspace-emoji-icon">${slug}</span>`;
+    return `<span class="workspace-emoji-icon">${escapeHtml(slug)}</span>`;
   }
   return WORKSPACE_ICONS.home;
 }

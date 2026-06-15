@@ -39,6 +39,7 @@ import {
   withBaseUrl,
 } from './agent-bootstrap';
 import { registerSecurityRoutes } from '../security/routes';
+import { extractWebSocketHeaderToken, WsAuthRateLimiter } from '../security/ws-auth';
 import { nmProxy, TRUSTED_EXTENSION_PROXY_PATHS } from '../extensions/nm-proxy';
 import { WatchLiveWebSocket } from '../watch/live-ws';
 import type { ExtensionRouteAccessDecision } from '../extensions/manager';
@@ -141,6 +142,7 @@ export class TandemAPI {
   private authToken: string;
   private port: number;
   private registry: ManagerRegistry;
+  private watchLiveAuthLimiter = new WsAuthRateLimiter();
 
   constructor(opts: TandemAPIOptions) {
     this.win = opts.win;
@@ -237,33 +239,38 @@ export class TandemAPI {
     }
   }
 
-  private getWebSocketToken(req: http.IncomingMessage): string | null {
-    const url = new URL(req.url ?? '', 'http://localhost');
-    const queryToken = url.searchParams.get('token')?.trim();
-    if (queryToken) {
-      return queryToken;
-    }
-
-    const authHeader = req.headers.authorization;
-    if (typeof authHeader === 'string') {
-      const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      if (match?.[1]?.trim()) {
-        return match[1].trim();
-      }
-    }
-
-    const headerToken = req.headers['x-tandem-token'];
-    if (typeof headerToken === 'string' && headerToken.trim()) {
-      return headerToken.trim();
-    }
-
-    return null;
-  }
-
+  /**
+   * Authorize a /watch/live WebSocket upgrade.
+   *
+   * Tokens are accepted from headers only (Authorization: Bearer or
+   * X-Tandem-Token) — the former `?token=` query path leaked tokens into
+   * logs and was removed. All known /watch/live clients are Node/HTTP agent
+   * processes that can set headers; no browser-context client exists.
+   * Failed attempts back off exponentially per remote address.
+   */
   private authorizeWatchLiveRequest(req: http.IncomingMessage): boolean {
-    const token = this.getWebSocketToken(req);
-    if (!token) return false;
-    return this.isTokenValid(token) || this.isBindingTokenValid(token);
+    const remote = req.socket?.remoteAddress ?? 'unknown';
+    if (this.watchLiveAuthLimiter.isBlocked(remote)) {
+      log.warn(`Blocked /watch/live upgrade from ${remote} — too many failed auth attempts`);
+      return false;
+    }
+
+    const url = new URL(req.url ?? '', 'http://localhost');
+    if (url.searchParams.has('token')) {
+      // Reject without comparing — query-string tokens are already exposed.
+      this.watchLiveAuthLimiter.recordFailure(remote);
+      log.warn('Rejected /watch/live upgrade — query-string token support was removed; use Authorization: Bearer or X-Tandem-Token');
+      return false;
+    }
+
+    const token = extractWebSocketHeaderToken(req);
+    const authorized = !!token && (this.isTokenValid(token) || this.isBindingTokenValid(token));
+    if (authorized) {
+      this.watchLiveAuthLimiter.recordSuccess(remote);
+    } else {
+      this.watchLiveAuthLimiter.recordFailure(remote);
+    }
+    return authorized;
   }
 
   /** Shared validator for extension-authenticated HTTP and WebSocket bridges. */

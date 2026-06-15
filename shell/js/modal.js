@@ -75,3 +75,7 @@ async function showConfirm(title, message) {
   );
   return result === true;
 }
+
+// Cross-file consumers (e.g. shell/js/sidebar/panels/pinboard.js) reach these via window.
+window.showPrompt = showPrompt;
+window.showConfirm = showConfirm;

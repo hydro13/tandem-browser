@@ -40,7 +40,7 @@
     "test:watch": "vitest",
     "test:security": "vitest run src/security/tests/",
     "test:extensions": "vitest run src/extensions/tests/",
-    "lint": "eslint src/",
+    "lint": "eslint src/ shell/",
     "check-consistency": "node scripts/check-consistency.js"
   },
   "dependencies": {

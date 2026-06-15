@@ -101,3 +101,6 @@ class DualMode {
   onMessage(cb) { this._messageCallbacks.push(cb); }
   onTyping(cb) { this._typingCallbacks.push(cb); }
 }
+
+// Classic-script global export — consumed by shell/js/wingman/chat.js (ES module) via window.
+window.DualMode = DualMode;

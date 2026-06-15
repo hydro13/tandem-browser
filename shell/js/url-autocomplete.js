@@ -176,11 +176,8 @@
     return escapeHtml(before) + '<strong>' + escapeHtml(match) + '</strong>' + escapeHtml(after);
   }
 
-  function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
+  // Shared escaper from shell/js/html-escape.js (loaded before this script).
+  const { escapeHtml } = window.tandemEscape;
 
   function selectItem(index, urlBar) {
     const prevEl = dropdown.querySelector('.url-autocomplete-item.selected');

@@ -62,7 +62,14 @@ export class SecretStore {
 
     const record = this.readRecord(recordPath);
     if (record.encoding === 'plaintext-fallback-on-init') {
-      return record.plaintext ?? null;
+      const value = record.plaintext ?? null;
+      // Plaintext fallback records only exist because safeStorage was
+      // unavailable during early startup — upgrade them to encrypted
+      // records as soon as safeStorage works again.
+      if (value !== null) {
+        this.tryUpgradePlaintextRecord(key, value);
+      }
+      return value;
     }
 
     if (!record.ciphertext) {
@@ -109,6 +116,50 @@ export class SecretStore {
     fs.writeFileSync(recordPath, JSON.stringify(record, null, 2), { mode: 0o600 });
     try { fs.chmodSync(recordPath, 0o600); } catch { /* best effort on platforms without chmod semantics */ }
     return { encoding: record.encoding, path: recordPath };
+  }
+
+  /**
+   * Re-encrypt every record still stored as 'plaintext-fallback-on-init'.
+   * Call once per session after Electron is ready (safeStorage available).
+   * Returns the keys that were upgraded; unreadable records are skipped.
+   */
+  upgradePlaintextRecords(): string[] {
+    const upgraded: string[] = [];
+    let files: string[];
+    try {
+      files = fs.readdirSync(this.rootDir).filter((file) => file.endsWith('.json'));
+    } catch {
+      return upgraded; // store directory does not exist yet
+    }
+
+    for (const file of files) {
+      const key = file.slice(0, -'.json'.length);
+      if (!KEY_PATTERN.test(key)) continue;
+      try {
+        const record = this.readRecord(path.join(this.rootDir, file));
+        if (record.encoding !== 'plaintext-fallback-on-init') continue;
+        if (typeof record.plaintext !== 'string') continue;
+        const safeStorage = this.getSafeStorage();
+        if (!safeStorage.isEncryptionAvailable()) {
+          return upgraded; // still too early — retry on a later sweep/get
+        }
+        this.set(key, record.plaintext);
+        upgraded.push(key);
+      } catch {
+        // Skip unreadable or unupgradable records; never fail the sweep.
+      }
+    }
+    return upgraded;
+  }
+
+  private tryUpgradePlaintextRecord(key: string, value: string): void {
+    try {
+      const safeStorage = this.getSafeStorage();
+      if (!safeStorage.isEncryptionAvailable()) return;
+      this.set(key, value);
+    } catch {
+      // Best effort — keep serving the plaintext value.
+    }
   }
 
   delete(key: string): void {

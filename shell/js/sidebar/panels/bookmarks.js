@@ -11,7 +11,7 @@
  */
 
 import { hideWebviews, safeSetPanelHTML } from '../webview.js';
-import { getFaviconUrl } from '../util.js';
+import { escapeHtml, getFaviconUrl, wireFaviconFallbacks } from '../util.js';
 import * as bookmarksStore from '../../bookmarks-store.js';
 
 // === BOOKMARKS PANEL MODULE ===
@@ -52,29 +52,34 @@ function trashIcon() {
   return `<svg viewBox="0 0 20 20" fill="currentColor" width="14" height="14"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>`;
 }
 
-function renderBmItems(items) {
+// Exported for tests: names and URLs are user/agent-controlled (bookmarks can
+// be created through the HTTP API), so escape text and attribute positions.
+export function renderBmItems(items) {
   if (!items || items.length === 0) return '<div class="bm-empty">Empty folder</div>';
   const folders = items.filter(i => i.type === 'folder');
   const urls    = items.filter(i => i.type === 'url');
   const sorted  = [...folders, ...urls];
   return sorted.map(item => {
+    const id = escapeHtml(item.id);
+    const name = escapeHtml(item.name);
     const actions = `<div class="bm-actions">
-      <button class="bm-action-btn bm-edit-btn" data-action="edit" data-id="${item.id}" title="Edit">${editIcon()}</button>
-      <button class="bm-action-btn bm-delete-btn" data-action="delete" data-id="${item.id}" title="Delete">${trashIcon()}</button>
+      <button class="bm-action-btn bm-edit-btn" data-action="edit" data-id="${id}" title="Edit">${editIcon()}</button>
+      <button class="bm-action-btn bm-delete-btn" data-action="delete" data-id="${id}" title="Delete">${trashIcon()}</button>
     </div>`;
     if (item.type === 'folder') {
-      return `<div class="bm-item folder" data-id="${item.id}" data-type="folder" data-name="${item.name.replace(/"/g, '&quot;')}">
+      return `<div class="bm-item folder" data-id="${id}" data-type="folder" data-name="${name}">
         <div class="bm-icon">${folderIcon()}</div>
-        <span class="bm-name">${item.name}</span>
+        <span class="bm-name">${name}</span>
         ${actions}
         <div class="bm-chevron">${chevronIcon()}</div>
       </div>`;
     } else {
+      const url = escapeHtml(item.url);
       const fav = getFaviconUrl(item.url);
-      const img = fav ? `<img src="${fav}" onerror="this.style.display='none'">` : '';
-      return `<div class="bm-item url" data-id="${item.id}" data-type="url" data-url="${item.url}" data-name="${item.name.replace(/"/g, '&quot;')}">
+      const img = fav ? `<img src="${escapeHtml(fav)}" data-favicon>` : '';
+      return `<div class="bm-item url" data-id="${id}" data-type="url" data-url="${url}" data-name="${name}">
         <div class="bm-icon">${img}</div>
-        <span class="bm-name" title="${item.url}">${item.name}</span>
+        <span class="bm-name" title="${url}">${name}</span>
         ${actions}
       </div>`;
     }
@@ -88,7 +93,7 @@ function renderBmBreadcrumb() {
   content.innerHTML = parts.map((p, i) => {
     const isLast = i === parts.length - 1;
     return (isLast ? '' : `<span class="bm-sep">›</span>`) +
-      `<span class="bm-crumb ${isLast ? 'active' : ''}" data-crumb-id="${p.id ?? ''}">${p.name}</span>`;
+      `<span class="bm-crumb ${isLast ? 'active' : ''}" data-crumb-id="${escapeHtml(p.id ?? '')}">${escapeHtml(p.name)}</span>`;
   }).reverse().join('');
 }
 
@@ -125,6 +130,7 @@ function refreshBmList() {
   if (!listEl) return;
   const items = currentItems();
   listEl.innerHTML = renderBmItems(items);
+  wireFaviconFallbacks(listEl);
   // Attach click handlers (ignore clicks on action buttons)
   listEl.querySelectorAll('.bm-item').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -178,8 +184,8 @@ function showBmEditForm(id, name, url, type) {
   const isFolder = type === 'folder';
   item.innerHTML = `
     <div class="bm-edit-form">
-      <input class="bm-edit-input" id="bm-edit-name" type="text" value="${name.replace(/"/g, '&quot;')}" placeholder="Name">
-      ${isFolder ? '' : `<input class="bm-edit-input" id="bm-edit-url" type="text" value="${url.replace(/"/g, '&quot;')}" placeholder="URL">`}
+      <input class="bm-edit-input" id="bm-edit-name" type="text" value="${escapeHtml(name)}" placeholder="Name">
+      ${isFolder ? '' : `<input class="bm-edit-input" id="bm-edit-url" type="text" value="${escapeHtml(url)}" placeholder="URL">`}
       <div class="bm-edit-actions">
         <button class="bm-edit-save" id="bm-edit-save">Save</button>
         <button class="bm-edit-cancel" id="bm-edit-cancel">Cancel</button>
@@ -284,7 +290,7 @@ export async function loadBookmarkPanel() {
       const results = await bookmarksStore.search(q);
       const listEl = document.getElementById('bm-list');
       const breadEl = document.getElementById('bm-breadcrumb');
-      if (listEl) listEl.innerHTML = renderBmItems(results);
+      if (listEl) { listEl.innerHTML = renderBmItems(results); wireFaviconFallbacks(listEl); }
       if (breadEl) breadEl.innerHTML = `<span class="bm-crumb active">Search results</span>`;
       // Attach URL click handlers for search results
       listEl?.querySelectorAll('.bm-item.url').forEach(el => {

@@ -64,7 +64,7 @@ export function initPanelResize() {
     setPanelWidth(newWidth);
   });
 
-  document.addEventListener('mouseup', async (e) => {
+  document.addEventListener('mouseup', async () => {
     if (!resizeDragging) return;
     resizeDragging = false;
     resizeHandle.classList.remove('dragging');

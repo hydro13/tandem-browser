@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' http://127.0.0.1:* http://localhost:* ws://127.0.0.1:* ws://localhost:*; media-src 'self' blob: data:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
   <!-- Pre-paint theme stamp for webview-loaded shell pages.
        The main BrowserWindow gets the theme via preload+additionalArguments,
        but webviews don't inherit that path — so we do a tiny sync XHR here to
@@ -8,21 +9,7 @@
        parser. Sync XHR is deprecated (console warning), but it's the only way
        to avoid a dark→light flash. Fails silently if the API isn't up. -->
   <script src="js/api-base.js"></script>
-  <script>
-    (function () {
-      try {
-        var xhr = new XMLHttpRequest();
-        xhr.open('GET', ((window.__TANDEM_API_BASE__ || 'http://127.0.0.1:8765') + '/config'), false);
-        xhr.send();
-        if (xhr.status === 200) {
-          var cfg = JSON.parse(xhr.responseText);
-          var theme = (cfg && cfg.appearance && cfg.appearance.theme) || 'dark';
-          if (theme === 'light') document.documentElement.setAttribute('data-theme', 'light');
-          else if (theme === 'system') document.documentElement.setAttribute('data-theme', 'system');
-        }
-      } catch (e) { /* API not ready; theme.js will apply on load */ }
-    })();
-  </script>
+  <script src="js/theme-stamp.js"></script>
   <meta charset="UTF-8">
   <title>About Tandem</title>
   <script type="module" src="js/theme.js"></script>
@@ -138,10 +125,7 @@
   <div class="subtitle">First-Party OpenClaw Companion Browser</div>
   <div class="status-badge">Developer Preview</div>
   <div class="version" id="version"></div>
-  <script>
-    const v = window.__TANDEM_VERSION__;
-    if (v) document.getElementById('version').textContent = 'v' + v;
-  </script>
+  <script src="js/pages/about.js"></script>
   <div class="info">
     Built specifically for human-AI collaboration with OpenClaw.<br>
     Maintained in the same ecosystem as OpenClaw, with security and local control built in.
