@@ -383,7 +383,11 @@
       let hostname = '';
       try { hostname = new URL(item.url).hostname; } catch { }
       const shortName = (item.name || hostname).substring(0, 40);
-      a.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${hostname}&sz=32" onerror="this.style.display='none'"> ${escapeHtml(shortName)}`;
+      const favicon = document.createElement('img');
+      favicon.src = `https://www.google.com/s2/favicons?domain=${encodeURIComponent(hostname)}&sz=32`;
+      favicon.addEventListener('error', () => { favicon.style.display = 'none'; });
+      a.appendChild(favicon);
+      a.appendChild(document.createTextNode(' ' + shortName));
       a.title = item.url;
       a.addEventListener('click', (e) => {
         e.preventDefault();

@@ -5,12 +5,6 @@
     const MAX_VISIBLE_EXTENSIONS = 6;
     let extToolbarData = [];
 
-    function escHtml(str) {
-      const d = document.createElement('div');
-      d.textContent = str;
-      return d.innerHTML;
-    }
-
     function renderExtToolbar(extensions) {
       extToolbarData = extensions || [];
       const container = document.getElementById('ext-toolbar');
@@ -35,7 +29,8 @@
       for (const ext of visible) {
         const btn = document.createElement('button');
         btn.className = 'ext-toolbar-btn';
-        btn.title = escHtml(ext.title || ext.name);
+        // Property assignment — no HTML parsing, so no escaping needed here.
+        btn.title = String(ext.title || ext.name || '');
         btn.dataset.extId = ext.id;
 
         const img = document.createElement('img');

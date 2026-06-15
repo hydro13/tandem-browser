@@ -1,7 +1,6 @@
 (() => {
-    function escapeHtml(s) {
-      return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
-    }
+    // Shared escaper from shell/js/html-escape.js (loaded before this script).
+    const { escapeHtml } = window.tandemEscape;
 
     const tabBar = document.getElementById('tab-bar');
     const btnNewTab = document.getElementById('btn-new-tab');

@@ -5,6 +5,7 @@ import fs from 'fs';
 import type { RouteContext} from '../context';
 import { getActiveWC } from '../context';
 import { getPasswordManager } from '../../passwords/manager';
+import { UnlockAttemptLimiter } from '../../passwords/unlock-limiter';
 import { tandemDir } from '../../utils/paths';
 import { handleRouteError } from '../../utils/errors';
 import { isSafeNavigationUrl } from '../../utils/security';
@@ -176,16 +177,34 @@ export function registerMiscRoutes(router: Router, ctx: RouteContext): void {
     });
   });
 
+  // Brute-force protection on top of the global API rate limit: the global
+  // limit (600 req/min) is far too generous for master-password guessing.
+  const unlockLimiter = new UnlockAttemptLimiter();
+
   router.post('/passwords/unlock', async (req: Request, res: Response) => {
     const { password } = req.body;
     if (!password) {
       res.status(400).json({ error: 'Password required' });
       return;
     }
+
+    const gate = unlockLimiter.check();
+    if (!gate.allowed) {
+      const retryAfterSeconds = Math.max(1, Math.ceil(gate.retryAfterMs / 1000));
+      res.setHeader('Retry-After', String(retryAfterSeconds));
+      res.status(429).json({
+        error: 'Too many failed unlock attempts. Vault unlock is temporarily locked.',
+        retryAfterSeconds,
+      });
+      return;
+    }
+
     const success = await getPasswordManager().unlock(password);
     if (success) {
+      unlockLimiter.recordSuccess();
       res.json({ success: true, isNewVault: false });
     } else {
+      unlockLimiter.recordFailure();
       res.status(401).json({ error: 'Incorrect master password' });
     }
   });

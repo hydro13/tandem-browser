@@ -205,3 +205,6 @@ class TandemLocalBackend {
     }
   }
 }
+
+// Classic-script global export — consumed by shell/js/wingman/chat.js (ES module) via window.
+window.TandemLocalBackend = TandemLocalBackend;

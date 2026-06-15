@@ -32,11 +32,11 @@
       } else if (action === 'open-history') {
         window.openHistoryPage?.();
       } else if (action === 'open-bookmarks') {
-        if (typeof ocSidebar !== 'undefined') ocSidebar.activateItem('bookmarks');
+        window.ocSidebar?.activateItem('bookmarks');
       } else if (action === 'show-about') {
-        renderAboutPanel();
+        window.renderAboutPanel?.();
       } else if (action === 'show-shortcuts') {
-        showShortcutsOverlay();
+        window.showShortcutsOverlay?.();
       } else if (action === 'zoom-in') {
         window.changeZoom?.('in');
       } else if (action === 'zoom-out') {
@@ -73,7 +73,7 @@
       } else if (action === 'voice-input') {
         window.tandem.toggleVoice();
       } else if (action === 'show-onboarding') {
-        showOnboarding();
+        window.showOnboarding?.();
       }
     });
 })();
