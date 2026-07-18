@@ -47,7 +47,7 @@
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@types/adm-zip": "^0.5.7",
     "acorn": "^8.16.0",
-    "adm-zip": "^0.5.16",
+    "adm-zip": "^0.6.0",
     "better-sqlite3": "^12.6.2",
     "cors": "^2.8.5",
     "electron-updater": "^6.8.3",
