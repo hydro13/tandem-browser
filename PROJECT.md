@@ -15,7 +15,11 @@ while AI agents operate through a built-in **MCP server** (257 tools) or a
 automation, sessions, sync, extensions, and developer tooling. Local agents can
 use MCP or HTTP. Remote agents on the same Tailscale network connect via HTTP
 and authenticate through Tandem's pairing system. Websites see a normal Chrome
-browser on macOS. They don't see the AI.
+browser on macOS. They don't see the AI — because a person browsing their own
+accounts with an assistant is just that: a normal person using their own browser.
+Tandem hides only the AI/Electron integration, never the real hardware; it does
+not spoof fingerprints or defeat security challenges, and the human stays in the
+loop (captchas are handed off to solve). It is a legitimate, allowed use.
 
 That distinction matters. Tandem Browser is not trying to be a generic automation shell,
 and it is not limited to sites that explicitly expose agent tools. It is the

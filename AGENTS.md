@@ -215,13 +215,39 @@ tandem-browser/
 
 ## Anti-Detection Architecture — Critical
 
+### Why this exists — intent and boundaries (read this first)
+
+Tandem is a browser that a **single human uses on their own machine**, with an AI
+assistant that has the same access the human does. The assistant acts *for* the
+present human, on the human's own logged-in accounts, with the human in the loop
+(see the captcha hand-off and the dead-man switch below). A person using their
+own browser with an assistant is a legitimate, allowed use — it does nothing a
+human browsing their own accounts may not do.
+
+The only thing this layer hides is **that an AI/Electron is driving the browser**,
+so a site sees a normal Chrome used by a normal person — which is exactly what it
+is. If a site could tell it was an "AI browser," it would wrongly flag or ban the
+human's real accounts; that is the harm this prevents.
+
+What this layer is **not**, and must never become:
+
+- **Not** scraping or mass automation. One user, one machine, human present.
+- **Not** hardware-fingerprint spoofing. The real, stable hardware fingerprint is
+  fine and expected — sites may fingerprint normally. The old WebGL / canvas /
+  audio / screen / CPU / font / timing spoofing was **removed** on purpose (see
+  the Stealth section in `TODO.md`). Do not re-add it.
+- **Not** cheating security challenges. Cloudflare challenges are solved
+  natively; captchas are handed off to the human to solve.
+
+So the rule is simple: **hide the AI-integration, present a real human's real
+browser.** Nothing more. When in doubt, that boundary is the answer.
+
 ### The Golden Rule
 
-**Everything Wingman does must stay invisible from the web page’s JavaScript
-context.**
-
-The website should only ever see: “a human in Chrome on a Mac in Belgium.”
-Wingman is looking over Robin’s shoulder, but the website must not know that.
+**The web page must not be able to tell an AI/Electron is involved.** It should
+see a normal Chrome and normal, human-initiated interaction — because the human
+is present and the assistant acts on their behalf. Wingman looks over Robin's
+shoulder; the page simply sees Robin's own browser.
 
 ### Two-Layer Architecture
 
@@ -249,28 +275,37 @@ Wingman is looking over Robin’s shoulder, but the website must not know that.
   `sendInputEvent`
 - `document.hasFocus()`: if the Wingman panel steals focus, mock focus must stay
   consistent
-- `performance.now()` timing: too fast looks like a bot, so use randomized
-  80-300ms delays
+- Input cadence: assistant-driven clicks/typing that are inhumanly fast or
+  regular can get the user's own account flagged for robotic behaviour, so
+  input is paced from the user's real patterns (see Humanization below) — not
+  to defeat detection, but so the assistant's actions look like the user's own,
+  because they are
 - Injected DOM elements: anything not from the site itself must never live in
   the webview
 - WebSocket to localhost: the page must never call our API directly from the
   webview
 - `window.process` / `window.require`: Electron giveaways must be `undefined`
-- `navigator.userAgentData`: must match real Chrome
+- `navigator.userAgentData`: must match real Chrome (hides Electron, not hardware)
 - `localhost:8765` port scans: use strict CORS and no cross-origin responses
 
-### Fundamental Rule: No Unique Fingerprint
+### Fundamental Rule: Hide the AI, Not the Hardware
 
-Tandem must never have a recognizable fingerprint. If platforms such as Meta,
-Google, or LinkedIn can identify Tandem as an “AI browser,” it is game over for
-all users.
+Hide the signals that reveal an AI/Electron is involved — `webdriver`,
+`window.process` / `window.require`, Electron in the UA, a missing
+`window.chrome`. Present a normal Chrome.
 
-Tandem must be indistinguishable from real Chrome on macOS.
+Do **not** hide or fake the machine. The real, stable hardware fingerprint (GPU,
+canvas, audio, screen, CPU, fonts, timing) is left untouched and is exactly what
+a real human's browser exposes. Spoofing it is both an unwinnable arms race and
+self-defeating: it made Tandem's fingerprint *inconsistent* (real on some sites,
+fake on others), which is itself a tell, and it broke Cloudflare challenges. If
+you are ever tempted to add a fingerprint-masking patch, that is the wrong
+direction — the goal is a real human's real browser, not a disguised one.
 
-- Every Electron-specific API must be hidden or patched
-- No custom headers, no custom properties, no detectable patterns
-- Consider migration toward a Chrome Extension model if Electron cannot remain
-  stealth-safe enough
+- Hide Electron-specific / automation APIs; leave everything else real.
+- No custom headers, no custom properties that mark the browser as non-Chrome.
+- Consider a Chrome Extension model if Electron cannot stay free of automation
+  giveaways.
 
 ### Headless Mode = “Minimized With a Dead-Man Switch”
 
