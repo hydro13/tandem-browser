@@ -15,6 +15,7 @@
   let debounceTimer = null;
   let originalValue = '';  // what the user actually typed
   let isOpen = false;
+  let lastInputWasDeletion = false;  // suppress inline completion while deleting
 
   function init(urlBar, onNavigate) {
     dropdown = document.createElement('div');
@@ -38,8 +39,11 @@
       }
     });
 
-    urlBar.addEventListener('input', () => {
+    urlBar.addEventListener('input', (e) => {
       originalValue = urlBar.value;
+      // Backspace/Delete must not re-trigger inline completion, or the
+      // suggestion the user just removed reappears on the next keystroke.
+      lastInputWasDeletion = !!(e.inputType && e.inputType.startsWith('delete'));
       scheduleSearch(urlBar);
     });
 
@@ -125,7 +129,10 @@
       items = results;
       selectedIndex = -1;
       renderDropdown(query);
-      applyInlineCompletion(urlBar, query, results[0]);
+      // Still show the dropdown while deleting, but do not auto-fill the input.
+      if (!lastInputWasDeletion) {
+        applyInlineCompletion(urlBar, query, results[0]);
+      }
       isOpen = true;
     } catch (err) {
       if (err.name !== 'AbortError') {
