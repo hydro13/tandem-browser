@@ -9,109 +9,114 @@ You are a developer agent working on **Tandem Browser**: an Electron browser
 built for human-AI symbiosis. The user (the human) and Wingman (the AI) browse
 the web together. You write the code.
 
-**Read `PROJECT.md` first.** It contains the full overview or what Tandem is,
-how it works, and why it exists.
+**Read `PROJECT.md` first.** It contains the full overview of what Tandem is,
+how it works, and why it exists. **Read `ARCHITECTURE.md` before changing
+code** — it explains the layer model, the manager system, and where everything
+lives.
 
 ## The Project
 
 - **Repo:** `hydro13/tandem-browser` (GitHub: hydro13)
-- **Stack:** Electron 40 + TypeScript + Express.js API (`localhost:8765`) +
-  MCP server (257 tools)
+- **Stack:** Electron + TypeScript + Express.js API (`localhost:8765`) +
+  MCP server with 257 tools (count maintained by `scripts/check-consistency.js`)
 - **Goal:** An agent-first browser where any AI (via MCP, HTTP API, or
   WebSocket) and a human browse together
 - **Philosophy:** Local-first, privacy-first, no cloud dependencies in the
   browser itself
-- **Size:** Large TypeScript codebase with a substantial Electron shell,
-  browser API surface, and security stack
-- **Tests:** Vitest coverage for security and extension behavior
+- **Tests:** Vitest; unit tests live in `src/**/tests/`
 - **Versioning:** See `package.json` and `CHANGELOG.md` for the current release
   and full history
+
+**Counts in docs: trust only the automated ones.** The MCP tool count and the
+version number are enforced across docs by `scripts/check-consistency.js`
+(part of `npm run verify`) — those you can trust. Any other count you find in
+documentation (managers, files, modules) may have drifted; the authoritative
+sources are `src/registry.ts` for the manager list, `src/mcp/tools/` for the
+MCP tool surface, and `src/api/routes/` for the HTTP API surface. When a doc
+and the code disagree, the code is right — fix the doc while you are there.
 
 ## Project Structure
 
 ```text
 tandem-browser/
-├── src/                          # TypeScript application code
-│   ├── api/server.ts             # Express API bootstrap
-│   ├── main.ts                   # Electron main process
-│   ├── security/                 # 8-layer shield + intelligence upgrade
-│   ├── extensions/               # Browser extension system (12 files)
-│   ├── snapshot/                 # Accessibility tree with @refs
-│   ├── network/                  # Inspector + mocking
-│   ├── sessions/                 # Multi-session isolation
-│   ├── mcp/                      # MCP server (257 tools, full API parity)
-│   │   ├── server.ts             # MCP server entry point
-│   │   └── tools/                # Tool definitions (one file per domain)
-│   ├── agents/                   # TaskManager, X-Scout, TabLockManager
-│   ├── devtools/                 # CDP bridge
-│   └── ...                       # 28 other modules
-├── shell/                        # Browser UI
-├── cli/                          # tandem CLI (@hydro13/tandem-cli)
-├── docs/
-│   ├── internal/ROADMAP.md       # Sprint planning + feature backlog (internal)
-│   ├── internal/STATUS.md        # Daily standup/progress tracker (internal)
-│   ├── templates/                # Templates for new features
-│   │   ├── design-template.md    # Template for design docs (plans/)
-│   │   ├── LEES-MIJ-EERST-template.md  # Template for implementation tracks
-│   │   ├── fase-template.md      # Template for phase documents
-│   │   ├── multi-phase-track-template.md  # Self-tracking multi-phase handoff template
-│   │   └── session-prompt-template.md  # Reusable universal prompt template
-│   ├── implementations/          # Completed implementation plans
-│   │   ├── ai-integratie/        # MCP, EventStream, ChatRouter, autonomy
-│   │   ├── agent-browser-gaps/   # Snapshot, mock, sessions, CLI
-│   │   ├── linux-portatie/       # Linux porting roadmap
-│   │   ├── cdp-devtools/         # DevTools Bridge plans
-│   │   ├── context-menu/         # Context menu plans
-│   │   ├── wingman-vision/       # Wingman Vision plans
-│   │   └── liquid-glass/         # Liquid Glass Lite docs
-│   ├── plans/                    # Not-yet-implemented plans (design docs)
-│   ├── research/                 # Opera gap analysis + feature inventories
-│   ├── archive/                  # Historical documents
-│   ├── Browser-extensions/       # Extension system (10 phases)
-│   ├── agent-tools/              # Agent tools (3 phases + phase 4 TBD)
-│   ├── security-fixes/           # Security fixes
-│   ├── security-shield/          # Security Shield (5 layers)
-│   └── security-upgrade/         # Security Intelligence (9 phases)
-├── scripts/                      # Test & launch scripts
-├── skill/                        # Agent skill file (SKILL.md)
-├── release/                      # Local build artifacts (DMG, ZIP)
-├── README.md
-├── PROJECT.md
-├── CHANGELOG.md
-├── AGENTS.md                     # This file
-└── TODO.md
+├── src/                       # TypeScript application code (main process)
+│   ├── main.ts                # Electron main process entry
+│   ├── registry.ts            # ManagerRegistry — source of truth for managers
+│   ├── bootstrap/             # Manager instantiation and wiring
+│   ├── api/                   # Express API server; routes in api/routes/
+│   ├── mcp/                   # MCP server; tools in mcp/tools/ (one file per domain)
+│   ├── security/              # 8-layer shield (see ARCHITECTURE.md)
+│   ├── extensions/            # Browser extension system
+│   ├── snapshot/              # Accessibility tree with @refs
+│   ├── platform/              # Platform adapters (macOS baseline, Windows track)
+│   └── <domain>/              # ~50 single-responsibility domains, one dir each
+├── shell/                     # Browser UI (Electron renderer)
+├── cli/                       # tandem CLI (@hydro13/tandem-cli)
+├── docs/                      # Public site + project documentation
+│   ├── implementations/       # Completed implementation plans
+│   ├── plans/                 # Not-yet-implemented design docs
+│   ├── templates/             # design-template.md, manager-pattern.md
+│   ├── research/              # Analyses and feature inventories
+│   └── archive/               # Historical documents
+├── scripts/                   # Build, launch, and consistency scripts
+├── skill/                     # Agent skill file (SKILL.md)
+├── tests/                     # Smoke tests (unit tests live in src/**/tests/)
+├── ARCHITECTURE.md            # System structure — read before changing code
+├── PROJECT.md                 # Product vision
+├── AGENTS.md                  # This file
+├── TODO.md                    # Current priorities
+└── CHANGELOG.md
 ```
 
 ## Rules — What You Must Do
 
-### 1. Read First, Build Second
+### 1. Orient, Then Change
 
-- Always read `TODO.md` before you start so you know the current priorities
-- Always read the existing code in `src/` so you understand the architecture
-- Read `PROJECT.md` if you need vision context for a design choice
-- Check `docs/implementations/` for context on completed subsystems
+- Read the section of `TODO.md` relevant to your task so you know how it fits
+  the current priorities (you do not need to read the whole file)
+- Read `ARCHITECTURE.md` for the patterns your change must follow
+- For larger features, check `docs/plans/` and `docs/implementations/` for an
+  existing design doc and read it if present
+- Explore the slice you are changing **and its blast radius**: the manager,
+  its tests, its wiring (`src/registry.ts`, `src/bootstrap/`), and its callers
+  (API routes and MCP tools that use it). Verify what else observes the
+  behavior you are about to change before you change it.
 
-### 2. Test Your Own Work
+### 2. Context Discipline
+
+- Load what you need to be correct — no less. Artificially avoiding files that
+  your change touches causes regressions; reading everything causes drowning.
+- Delegate bulk reading (repo-wide sweeps, long documents, large test
+  suites) to subagents where your environment supports them; keep summaries in
+  your main context, not raw file dumps.
+- Do not answer structural questions from memory or from docs alone: verify
+  names, signatures, and wiring against the source.
+
+### 3. Test Your Own Work
 
 - **Always compile:** `npx tsc` must be error-free before you finish
 - **Start the app:** `npm start` and verify startup without crashes
 - **Test API endpoints:** Use `curl` for every new or changed endpoint
 - **Test the UI:** Take a screenshot and verify it looks correct
 - **Run tests:** `npx vitest run`; all existing tests must keep passing
-- **Report:** Provide a summary or what you tested and the outcomes
+- **Full gate:** `npm run verify` (compile + lint + test + consistency check)
+  is what CI runs — run it before opening a PR
+- **Report:** Provide a summary of what you tested and the outcomes
 
-### 3. Update Documentation
+### 4. Update Documentation
 
 - **TODO.md:** Check off completed work and add newly discovered items
-- **CHANGELOG.md:** Add an entry for each completed phase or feature
-- **Code comments:** Use JSDoc for public functions and inline comments for
-  complex logic
-- **Multi-phase work:** If a task spans multiple sessions, create or update a
-  self-tracking `LEES-MIJ-EERST.md` handoff file using
-  `docs/templates/multi-phase-track-template.md` and reuse
-  `docs/templates/session-prompt-template.md`
+- **CHANGELOG.md:** Add an entry for each completed phase or feature (add at
+  the top; you do not need to read the whole file)
+- **Code comments:** Use JSDoc for public functions. Comment only what the
+  code cannot say itself (constraints, invariants, non-obvious why) — not
+  what it does.
+- **Multi-session work:** If a task spans multiple sessions, keep a short
+  `HANDOFF.md` next to the feature's docs (state, decisions made, next steps)
+  so the next session can resume without re-deriving context. Keep it current;
+  delete it when the track completes.
 
-### 4. Git Discipline
+### 5. Git Discipline
 
 - Commit after each completed sub-feature, not as one giant commit
 - Default to a branch + pull request workflow, even for maintainer-owned work
@@ -121,8 +126,7 @@ tandem-browser/
   checks (`verify`, `CodeQL`) and using PRs as the review step; do not assume a
   second human reviewer will exist
 - Any merged `feat:` change must bump the app version before the PR is merged
-  (`minor`, e.g. `0.72.2` → `0.73.0`), and any merged `fix:` change must bump a
-  `patch` version (e.g. `0.72.2` → `0.72.3`)
+  (`minor`), and any merged `fix:` change must bump a `patch` version
 - Keep `CHANGELOG.md`, `package.json`, the in-app version, and the repo/docs
   version references on the same release number; do not leave new product
   surface under an old version header
@@ -136,7 +140,7 @@ tandem-browser/
 - Merge to `main` only after the PR checks are green or Robin explicitly
   chooses to bypass them
 
-### 4A. Release Policy
+### 5A. Release Policy
 
 - Tandem is currently a **source-only developer preview**
 - Do not publish official end-user binaries by default
@@ -145,24 +149,27 @@ tandem-browser/
   packaging, naming, signing, notarization, and update metadata are deliberate
   and repeatable
 
-### 5. Code Quality
+### 6. Code Quality
 
 - **TypeScript strict mode:** no `any` unless truly necessary, and document why
 - **Error handling:** every API endpoint should catch errors and return JSON
 - **No hardcoded paths:** use `path.join()`, `app.getPath()`, and related APIs
-- **Separation or concerns:** each file should have one clear responsibility
+- **Separation of concerns:** each file should have one clear responsibility
 - **Naming:** camelCase for variables/functions, PascalCase for classes,
   kebab-case for files
 
-### 6. References to Code — Always Use Function Names, Never Line Numbers
+### 7. References to Code
 
-- Forbidden: “see `server.ts` line 287” because line numbers change
-- Required: “see `function startAPI()` in `main.ts`”
-- Required: “add it to `class TandemAPI` and the `TandemAPIOptions` interface”
-- Required: “look for `// === SECTION NAME ===` in `shell/index.html`”
-- Use `grep -n "function name" file.ts` if you need to locate something
+- In **persistent artifacts** (docs, commit messages, code comments, handoff
+  files): refer to function, class, or section names — never line numbers,
+  because line numbers rot. Example: "see `function startAPI()` in `main.ts`",
+  not "see `server.ts` line 287".
+- In **ephemeral conversation** (chat replies, PR review threads) `file:line`
+  references are fine — modern tooling renders them clickable and they are
+  read immediately, not archived.
+- Use `grep -n "functionName"` to locate code you have not loaded yet.
 
-### 7. Cross-Platform Discipline
+### 8. Cross-Platform Discipline
 
 - Treat `docs/platform-support.md` as the public platform capability matrix.
   Update it whenever a platform capability changes status.
@@ -173,9 +180,8 @@ tandem-browser/
   independently revertable, and isolated behind platform adapters where code
   changes are needed.
 - Do not add new `process.platform` branches in shared application code.
-  Introduce platform-specific behavior through `src/platform/` adapters as the
-  Windows track lands. Existing branches are grandfathered until their phase
-  migrates them.
+  Introduce platform-specific behavior through `src/platform/` adapters.
+  Existing branches are grandfathered until their phase migrates them.
 - Do not put Unix shell syntax in `package.json` scripts. Cross-platform
   launch and maintenance behavior must go through Node helpers.
 - Do not claim Windows support in README, website, `docs/llms.txt`, or release
@@ -340,8 +346,9 @@ real-time. The gateway token lives in `~/.openclaw/openclaw.json` under
 
 ### Chat Code Location
 
-All chat WebSocket code lives in `shell/index.html` inside the `ocChat` IIFE.
-Look for `// === OpenClaw WebSocket Chat ===` or `ocChat`.
+Chat WebSocket code lives in `shell/chat/openclaw-backend.js` (it moved out of
+`shell/index.html` during the shell refactor). Look for `ocChat` or the
+`// === OpenClaw WebSocket Chat ===` marker.
 
 ## macOS Quarantine — Important
 
@@ -357,30 +364,22 @@ into start scripts.
 
 ## Development Workflow
 
-> For new features: Kees writes the docs, Claude Code implements them.
-> See `docs/internal/ROADMAP.md` for the active sprint backlog.
-
 ```text
-1. Read the phase file for this session (docs/implementations/{feature}/fase-N.md)
-2. Read LEES-MIJ-EERST.md in the same directory
-3. Read only the files listed by the phase file, nothing more
-4. Write the code
-5. Run npx tsc and fix all type errors
-6. Run npx vitest run and keep all tests passing
-7. Run npm start and test manually (not npm run dev)
-8. Use curl to test every new endpoint (see acceptance criteria in the phase file)
-9. Update CHANGELOG.md (see format below)
-10. Create the git commit (see commit format below)
-11. Push
-12. Report: built / tested / problems / next step
+1. Orient: TODO.md section, ARCHITECTURE.md, any design doc in docs/plans/
+2. Explore the affected slice and its blast radius (callers, wiring, tests)
+3. Write the code
+4. Run npx tsc and fix all type errors
+5. Run npx vitest run and keep all tests passing
+6. Run npm start and test manually (not npm run dev)
+7. Use curl to test every new or changed endpoint
+8. Run npm run verify (the CI gate) before opening the PR
+9. Update CHANGELOG.md and TODO.md
+10. Commit (see commit format below), push, open a PR
+11. Report: built / tested / problems / next step
 ```
 
-**Session discipline:**
-
-- Read only what the phase file tells you to read; do not wander through the
-  codebase
-- Refer to **function names**, never line numbers
-- Use `grep` to locate functions if you do not know where they are
+Work in units that end in a verifiable state: each commit should compile, pass
+tests, and leave the app startable. Verify each unit before starting the next.
 
 ---
 
@@ -398,7 +397,7 @@ What was built/changed:
 - Deleted files: (if applicable)
 
 Why this approach:
-- Short explanation or the architecture choices
+- Short explanation of the architecture choices
 
 Tested:
 - npx tsc: zero errors
@@ -483,7 +482,19 @@ Robin is the product owner. He:
 - Decides design choices when there are multiple valid options
 - Must be informed about new dependencies
 - Tests the UI visually while you test the code
-- Speaks Dutch; you may reply to Robin in Dutch, but all repository content must remain in English
-- No exceptions for repository language: code, comments, commit messages, docs, plans, TODOs, changelog entries, and handoff files must all be written in English
+- Speaks Dutch; you may reply to Robin in Dutch, but all repository content
+  must remain in English
+- No exceptions for repository language: code, comments, commit messages, docs,
+  plans, TODOs, changelog entries, and handoff files must all be written in
+  English
 
-If you are unsure, ask. One extra question is better than a wrong assumption.
+### Autonomy Contract
+
+- **Proceed without asking** on reversible, in-scope decisions. Record every
+  such decision in your report so Robin can course-correct afterwards.
+- **Ask first** before anything irreversible or scope-changing: adding
+  dependencies, deleting data, publishing or releasing, weakening the security
+  posture, or genuine product choices where multiple designs are valid and the
+  choice shapes the user experience.
+- When you do need input, batch your questions and keep working on whatever is
+  not blocked. Do not stall an entire session on one open question.
