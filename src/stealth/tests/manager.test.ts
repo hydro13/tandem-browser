@@ -309,50 +309,6 @@ describe('stealth-ua platform adapters', () => {
           "platformVersion": "15.3.0",
           "uaFullVersion": "132.0.6834.160",
         },
-        "fingerprint": {
-          "colorDepth": 30,
-          "deviceMemory": 8,
-          "fonts": [
-            "Arial",
-            "Arial Black",
-            "Comic Sans MS",
-            "Courier New",
-            "Georgia",
-            "Impact",
-            "Tahoma",
-            "Times New Roman",
-            "Trebuchet MS",
-            "Verdana",
-            "Courier",
-            "Helvetica",
-            "Helvetica Neue",
-            "Lucida Console",
-            "Lucida Grande",
-            "Lucida Sans Unicode",
-            "Monaco",
-            "Palatino",
-            "Palatino Linotype",
-            "Times",
-            "Apple Color Emoji",
-            "Apple SD Gothic Neo",
-            "Avenir",
-            "Avenir Next",
-            "Futura",
-            "Geneva",
-            "Gill Sans",
-            "Menlo",
-            "Optima",
-            "San Francisco",
-            "SF Pro",
-            "SF Mono",
-            "System Font",
-            "-apple-system",
-            "BlinkMacSystemFont",
-          ],
-          "hardwareConcurrency": 8,
-          "webglRenderer": "ANGLE (Apple, Apple M1, OpenGL 4.1)",
-          "webglVendor": "Google Inc. (Apple)",
-        },
         "requestHeaders": {
           "platform": ""macOS"",
         },
@@ -404,53 +360,6 @@ describe('stealth-ua platform adapters', () => {
           "platform": "Windows",
           "platformVersion": "15.0.0",
           "uaFullVersion": "132.0.6834.160",
-        },
-        "fingerprint": {
-          "colorDepth": 24,
-          "deviceMemory": 8,
-          "fonts": [
-            "Arial",
-            "Arial Black",
-            "Comic Sans MS",
-            "Courier New",
-            "Georgia",
-            "Impact",
-            "Tahoma",
-            "Times New Roman",
-            "Trebuchet MS",
-            "Verdana",
-            "Bahnschrift",
-            "Calibri",
-            "Cambria",
-            "Cambria Math",
-            "Candara",
-            "Consolas",
-            "Constantia",
-            "Corbel",
-            "Ebrima",
-            "Franklin Gothic Medium",
-            "Gabriola",
-            "Gadugi",
-            "Lucida Console",
-            "Lucida Sans Unicode",
-            "Microsoft Sans Serif",
-            "MS Gothic",
-            "MV Boli",
-            "Palatino Linotype",
-            "Segoe Print",
-            "Segoe Script",
-            "Segoe UI",
-            "Segoe UI Emoji",
-            "Segoe UI Symbol",
-            "Sylfaen",
-            "Symbol",
-            "Webdings",
-            "Wingdings",
-            "Yu Gothic",
-          ],
-          "hardwareConcurrency": 8,
-          "webglRenderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
-          "webglVendor": "Google Inc. (Intel)",
         },
         "requestHeaders": {
           "platform": ""Windows"",
@@ -645,88 +554,52 @@ describe('registerWith() — Sec-CH-UA client-hints injection', () => {
   });
 });
 
-describe('getStealthScript() — timing protection', () => {
-  it('rounds performance.now to 100μs (Firefox parity)', () => {
-    const script = StealthManager.getStealthScript('seed');
-    expect(script).toContain('performance.now = function');
-    expect(script).toContain('Math.round(origPerfNow() * 10) / 10');
-  });
+describe('getStealthScript() — no fingerprinting tricks (real fingerprint only)', () => {
+  // The stealth layer must ONLY hide automation/Electron, never spoof or block
+  // hardware fingerprinting. If any of these come back, the browser starts lying
+  // about hardware again — which both breaks Cloudflare challenges and makes the
+  // fingerprint internally inconsistent (real GPU on some sites, fake on others).
 
-  it('does NOT patch Date.now — real Chrome returns the same ms for back-to-back calls', () => {
-    // Regression guard: an earlier version added +/-1ms noise to every
-    // Date.now call. That made Tandem trivially distinguishable from real
-    // Chrome (two back-to-back calls in real Chrome always return the same
-    // value; jittered calls almost never do). Keep this test red if anyone
-    // re-introduces the jitter without updating the comment / test.
-    const script = StealthManager.getStealthScript('seed');
-    expect(script).not.toMatch(/Date\.now\s*=\s*function/);
-    expect(script).not.toMatch(/origDateNow/);
-  });
-});
-
-describe('getStealthScript() — OS persona fingerprint consistency', () => {
-  // Regression guard: WebGL renderer and screen colour depth must be driven by
-  // the OS persona, not hardcoded. A Windows UA that reports a macOS "Apple M1"
-  // GPU (or 30-bit colour) is a cross-checkable automation tell.
-  it('injects the Windows profile GPU and colour depth for a Windows persona', () => {
-    const win = createWindowsStealthUaAdapter();
-    const script = StealthManager.getStealthScript('seed', undefined, win);
-    expect(script).toContain('Intel(R) UHD Graphics 630');
-    expect(script).toContain('Google Inc. (Intel)');
-    expect(script).toContain('return 24'); // screen.colorDepth
-    // Must NOT leak the macOS GPU into a Windows persona
+  it('does not spoof WebGL renderer/vendor', () => {
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('UNMASKED_RENDERER');
+    expect(script).not.toContain('WebGLRenderingContext.prototype.getParameter');
     expect(script).not.toContain('Apple M1');
-    expect(script).not.toContain('Google Inc. (Apple)');
-  });
-
-  it('injects the macOS profile GPU and colour depth for a macOS persona', () => {
-    const mac = createDarwinStealthUaAdapter();
-    const script = StealthManager.getStealthScript('seed', undefined, mac);
-    expect(script).toContain('Apple M1');
-    expect(script).toContain('Google Inc. (Apple)');
-    expect(script).toContain('return 30'); // screen.colorDepth
     expect(script).not.toContain('Intel(R) UHD Graphics 630');
   });
 
-  it('keeps the WebGL/colour-depth persona aligned with the User-Agent OS', () => {
-    // The one invariant that matters: whatever OS the UA claims, the GPU and
-    // colour depth agree with it.
-    for (const ua of [createWindowsStealthUaAdapter(), createDarwinStealthUaAdapter()]) {
-      const profile = ua.getProfile('132.0.0.0');
-      const script = StealthManager.getStealthScript('seed', undefined, ua);
-      expect(script).toContain(profile.fingerprint.webglRenderer);
-      expect(script).toContain(profile.fingerprint.webglVendor);
-      expect(script).toContain(`return ${profile.fingerprint.colorDepth}`);
-    }
+  it('does not add canvas noise', () => {
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('getImageData');
+    expect(script).not.toContain('addCanvasNoise');
+    expect(script).not.toContain('toDataURL');
   });
 
-  it('exposes the Windows font signature (Segoe UI) and hides macOS-only fonts', () => {
-    const script = StealthManager.getStealthScript('seed', undefined, createWindowsStealthUaAdapter());
-    expect(script).toContain('Segoe UI');
-    expect(script).toContain('Calibri');
-    expect(script).toContain('Consolas');
-    // A Windows machine does not have these macOS-only fonts
-    expect(script).not.toContain('San Francisco');
-    expect(script).not.toContain('Helvetica Neue');
-    expect(script).not.toContain('-apple-system');
+  it('does not add audio noise', () => {
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('getFloatFrequencyData');
+    expect(script).not.toContain('OfflineAudioContext');
   });
 
-  it('exposes the macOS font signature and hides Windows-only fonts', () => {
-    const script = StealthManager.getStealthScript('seed', undefined, createDarwinStealthUaAdapter());
-    expect(script).toContain('San Francisco');
-    expect(script).toContain('Helvetica Neue');
-    expect(script).not.toContain('Segoe UI');
-    expect(script).not.toContain('Calibri');
+  it('does not spoof screen colour depth, CPU cores, or memory', () => {
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('colorDepth');
+    expect(script).not.toContain('hardwareConcurrency');
+    expect(script).not.toContain('deviceMemory');
   });
 
-  it('pins hardwareConcurrency and deviceMemory so the host core count cannot leak', () => {
-    for (const ua of [createWindowsStealthUaAdapter(), createDarwinStealthUaAdapter()]) {
-      const profile = ua.getProfile('132.0.0.0');
-      const script = StealthManager.getStealthScript('seed', undefined, ua);
-      expect(script).toContain('hardwareConcurrency');
-      expect(script).toContain(`return ${profile.fingerprint.hardwareConcurrency}`);
-      expect(script).toContain('deviceMemory');
-    }
+  it('does not block font enumeration', () => {
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('document.fonts');
+    expect(script).not.toContain('standardFonts');
+  });
+
+  it('does not patch timing (performance.now / Date.now)', () => {
+    // Firefox-like performance.now precision reduction is itself a "not real
+    // Chrome" signal, and Date.now jitter is trivially detectable.
+    const script = StealthManager.getStealthScript();
+    expect(script).not.toContain('performance.now =');
+    expect(script).not.toMatch(/Date\.now\s*=\s*function/);
   });
 });
 
@@ -735,21 +608,21 @@ describe('getStealthScript() — userAgentData GREASE brand consistency', () => 
     // Cloudflare cross-checks navigator.userAgentData.brands against the
     // sec-ch-ua HTTP header. The header handler preserves Chromium's natural
     // GREASE token ("Not(A:Brand" for Chrome 120+). The injected JS must match.
-    const script = StealthManager.getStealthScript('seed');
+    const script = StealthManager.getStealthScript();
     expect(script).toContain('Not(A:Brand');
     expect(script).not.toContain('Not_A Brand');
     expect(script).not.toContain('Not.A/Brand');
   });
 
   it('uses GREASE version "8", not the old "24"', () => {
-    const script = StealthManager.getStealthScript('seed');
+    const script = StealthManager.getStealthScript();
     // The __greaseVersion variable must be '8'
     expect(script).toContain("__greaseVersion = '8'");
     expect(script).not.toMatch(/__greaseVersion\s*=\s*'24'/);
   });
 
   it('fullVersionList GREASE version is pinned to Chrome 120+ "8.0.0.0"', () => {
-    const script = StealthManager.getStealthScript('seed');
+    const script = StealthManager.getStealthScript();
     // Should not hardcode the old wrong "24.0.0.0"
     expect(script).not.toContain('"24.0.0.0"');
     expect(script).not.toContain("'24.0.0.0'");
@@ -757,7 +630,7 @@ describe('getStealthScript() — userAgentData GREASE brand consistency', () => 
   });
 
   it('includes "Google Chrome" in all brand lists', () => {
-    const script = StealthManager.getStealthScript('seed');
+    const script = StealthManager.getStealthScript();
     // Must appear in both the low-entropy brands and the getHighEntropyValues response
     const chromeCount = (script.match(/Google Chrome/g) || []).length;
     // brands (1) + getHighEntropyValues brands (1) + fullVersionList (1) = min 3
@@ -766,7 +639,6 @@ describe('getStealthScript() — userAgentData GREASE brand consistency', () => 
 
   it('uses Windows userAgentData values when given the Windows stealth adapter', () => {
     const script = StealthManager.getStealthScript(
-      'seed',
       '132.0.6834.160',
       createWindowsStealthUaAdapter(),
     );

@@ -4,7 +4,7 @@
 > Historical release summaries belong in `CHANGELOG.md`.
 > Architecture and product context belong in `PROJECT.md`.
 
-Last updated: May 5, 2026
+Last updated: August 16, 2026
 
 ## Purpose
 
@@ -85,6 +85,28 @@ Last updated: May 5, 2026
 
 ### Stealth and Browser Fidelity
 
+> Stealth philosophy (clarified): the stealth layer exists ONLY to hide that an
+> AI/Electron drives the browser, so sites see a normal Chrome used by a real
+> human. It must NOT spoof or block hardware fingerprinting — the real, stable
+> hardware fingerprint is fine and expected. Spoofing hardware both breaks
+> Cloudflare challenges and makes the fingerprint internally inconsistent (real
+> on challenge sites, fake elsewhere). The hardware-spoofing patches (WebGL,
+> canvas/audio noise, colour depth, CPU/RAM, font enumeration, timing) were
+> removed for this reason.
+
+- [ ] Solve Cloudflare challenges in-place in `persist:tandem` instead of
+      rerouting to the isolated `persist:cf-human-*` no-touch partition. The
+      no-touch reroute (`promoteTabToCloudflareNoTouchSession` in `src/main.ts`)
+      is kept as a **temporary fallback** until in-place solving is proven,
+      tested, and stable. Removing it also fixes the session-isolation problem
+      (logged-in CF sites fall back to a fresh partition) and the missing
+      cf_clearance sync back to the main session.
+- [ ] Retire the now-unused per-install stealth seed infrastructure
+      (`deriveStealthSeed`, `getPartitionSeed`, `partitionSeed`) — it only fed
+      the removed canvas/audio noise, so it is dead in production now.
+- [ ] Re-evaluate the spoofing items below against the clarified philosophy:
+      several (screen resolution, battery, geolocation, JA3) are hardware/
+      environment spoofing that the goal now argues *against*, not for.
 - [ ] Proxy support (SOCKS5 or HTTP, per-tab or global)
 - [ ] User-facing request interception and header rewrite rules
 - [ ] TLS / JA3 fingerprint matching

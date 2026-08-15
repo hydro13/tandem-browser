@@ -555,8 +555,7 @@ async function createWindow(): Promise<BrowserWindow> {
   }, COOKIE_FLUSH_INTERVAL_MS);
 
   // Inject stealth script into all webviews via session preload
-  const stealthSeed = stealth.getPartitionSeed();
-  const stealthScript = StealthManager.getStealthScript(stealthSeed);
+  const stealthScript = StealthManager.getStealthScript();
   // Minimal early script for CDP OOPIF injection — omits canvas/audio/timing patches
   // that crash Cloudflare Turnstile's OOPIF (ctx.getImageData() triggers GPU IPC in
   // a sandboxed cross-origin frame, causing V8 crash in challenges.cloudflare.com)
