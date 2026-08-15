@@ -50,6 +50,7 @@ import { selectPlatform } from './platform';
 import { CloudflarePolicyManager } from './cloudflare/policy-manager';
 import {
   CLOUDFLARE_CHALLENGE_SELECTORS,
+  chooseCloudflareRerouteTarget,
   getCloudflareNoTouchPartition,
   isCloudflareChallengeUrl,
   isCloudflareNoTouchPartition,
@@ -318,7 +319,10 @@ async function promoteTabToCloudflareNoTouchSession(webContentsId: number, prefe
     return;
   }
 
-  const targetUrl = preferredUrl || sourceTab.url || null;
+  // Never reopen pointing at a Cloudflare challenge sub-resource (e.g. the
+  // challenge-platform main.js the detector tripped on) — that lands the tab on
+  // the raw challenge script. Reopen at the tab's real destination page.
+  const targetUrl = chooseCloudflareRerouteTarget(sourceTab.url ?? null, preferredUrl);
   const targetPartition = targetUrl ? getCloudflareNoTouchPartition(targetUrl) : null;
   if (!targetUrl || !targetPartition) {
     return;

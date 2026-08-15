@@ -84,6 +84,32 @@ export function isCloudflareChallengeUrl(rawValue: string): boolean {
   );
 }
 
+/**
+ * Choose the page URL to reopen a Cloudflare-challenged tab at, in the no-touch
+ * partition.
+ *
+ * The URL that tripped the detector (`preferredUrl`, i.e. the challenge-detected
+ * event's URL) is frequently a challenge *sub-resource* — the challenge-platform
+ * script (`/cdn-cgi/challenge-platform/.../main.js`) or an intermediate redirect
+ * — not the page the user is trying to reach. Reopening the tab at such a URL
+ * lands it on the raw challenge script instead of the destination page.
+ *
+ * Reopen at the tab's committed page URL first, fall back to the preferred URL,
+ * and never return a Cloudflare challenge URL. Returns null when no safe
+ * destination is available (caller should then not reroute).
+ */
+export function chooseCloudflareRerouteTarget(
+  tabUrl: string | null,
+  preferredUrl: string | null,
+): string | null {
+  for (const candidate of [tabUrl, preferredUrl]) {
+    if (candidate && !isCloudflareChallengeUrl(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
 export function responseHeadersContainCfClearance(responseHeaders: Record<string, string[]>): boolean {
   for (const [key, values] of Object.entries(responseHeaders)) {
     if (key.toLowerCase() !== 'set-cookie' || !Array.isArray(values)) {

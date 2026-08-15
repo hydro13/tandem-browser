@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CLOUDFLARE_CHALLENGE_SELECTORS,
   CLOUDFLARE_NO_TOUCH_PARTITION_PREFIX,
+  chooseCloudflareRerouteTarget,
   getCloudflareNoTouchPartition,
   getCloudflareNoTouchPartitionForOrigin,
   getOriginFromUrl,
@@ -60,5 +61,34 @@ describe('cloudflare utils', () => {
 
   it('exposes the selector list used for DOM probes', () => {
     expect(CLOUDFLARE_CHALLENGE_SELECTORS).toContain('iframe[src*="challenges.cloudflare.com"]');
+  });
+
+  describe('chooseCloudflareRerouteTarget', () => {
+    const page = 'https://www.g2.com/products/anthropic-claude/reviews';
+    const challengeScript = 'https://www.g2.com/cdn-cgi/challenge-platform/scripts/jsd/main.js';
+
+    it('prefers the tab page URL over the detector URL', () => {
+      expect(chooseCloudflareRerouteTarget(page, challengeScript)).toBe(page);
+    });
+
+    it('never returns a challenge sub-resource as the reopen target', () => {
+      // The classic bug: the detector tripped on the challenge script, so it
+      // arrived as preferredUrl. The tab page URL must win.
+      expect(chooseCloudflareRerouteTarget(page, challengeScript)).toBe(page);
+      // Even when the page URL is momentarily the challenge URL, fall through.
+      expect(chooseCloudflareRerouteTarget(challengeScript, page)).toBe(page);
+    });
+
+    it('falls back to the preferred URL when the tab URL is missing', () => {
+      expect(chooseCloudflareRerouteTarget(null, page)).toBe(page);
+    });
+
+    it('returns null when both candidates are challenge URLs (do not reroute)', () => {
+      expect(chooseCloudflareRerouteTarget(challengeScript, challengeScript)).toBeNull();
+    });
+
+    it('returns null when nothing usable is provided', () => {
+      expect(chooseCloudflareRerouteTarget(null, null)).toBeNull();
+    });
   });
 });
