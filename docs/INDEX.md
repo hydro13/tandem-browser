@@ -77,7 +77,7 @@ Each module is a self-contained subsystem with its own manager.
 | `shared/` | `ipc-channels.ts` | Shared constants (IPC channel names) |
 | `sidebar/` | `manager.ts` | Left sidebar config, panel routing |
 | `snapshot/` | `manager.ts` | Accessibility tree with @ref IDs |
-| `stealth/` | `manager.ts` | Anti-fingerprint, Chrome UA spoofing |
+| `stealth/` | `manager.ts` | Hide AI/Electron giveaways; real Chrome UA (no hardware-fingerprint spoofing) |
 | `sync/` | `manager.ts` | Local sync and export |
 | `tabs/` | `manager.ts` | Tab lifecycle, focus, groups, keyboard shortcuts |
 | `utils/` | (multiple) | Logger, path helpers, shared utilities |

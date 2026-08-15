@@ -12,21 +12,19 @@ import { isGoogleAuthUrl } from '../utils/security';
 const log = createLogger('StealthManager');
 
 /**
- * Derive the fingerprint-noise seed from an install-specific secret and the
- * session partition. Exported for testability — callers should use
- * `StealthManager` which persists the installSecret.
+ * LEGACY — no longer used. Derived the per-session seed for the canvas/audio
+ * noise that was removed in the stealth simplification (the real fingerprint is
+ * now left intact). Retained pending removal — see the Stealth section in
+ * TODO.md — and kept exported for its existing tests until then.
  */
 export function deriveStealthSeed(installSecret: string, partition: string): string {
   return crypto.createHash('sha256').update(`${installSecret}|${partition}`).digest('hex');
 }
 
 /**
- * Load the per-install stealth secret from `~/.tandem/config.json`, generating
- * one on first use. Stored alongside formEncryptionKey with mode 0o600.
- *
- * Rationale: previously the seed was `sha256('persist:tandem')` — identical
- * across every Tandem install, which made the fingerprint-noise pattern a
- * Tandem tell. Per-install randomness makes noise unique like any real Chrome.
+ * LEGACY — no longer used. Loaded the per-install secret that seeded the removed
+ * fingerprint noise. Retained pending removal (see TODO.md Stealth section) and
+ * kept for its existing tests. Stored in `~/.tandem/config.json`, mode 0o600.
  */
 export function loadOrCreateInstallSecret(): string {
   const configPath = path.join(tandemDir(), 'config.json');
@@ -58,14 +56,17 @@ export function loadOrCreateInstallSecret(): string {
 // ─── Manager ───
 
 /**
- * StealthManager — Makes Tandem Browser look like a regular human browser.
+ * StealthManager — makes Tandem look like a normal Chrome used by a real human,
+ * hiding ONLY that an AI/Electron drives it. It does NOT spoof or block hardware
+ * fingerprinting; the real, stable fingerprint (WebGL, canvas, audio, screen,
+ * CPU, fonts, timing) is left untouched. See AGENTS.md "Anti-Detection
+ * Architecture" for the intent and boundaries.
  *
- * Anti-detection measures:
- * 1. Realistic User-Agent (matches real Chrome)
- * 2. Remove automation indicators
- * 3. Consistent fingerprinting
- * 4. Canvas/WebGL/Audio/Font/Timing fingerprint protection (Phase 5)
- * 5. Realistic request headers
+ * What it hides:
+ * 1. A real Chrome User-Agent + client hints (not Electron's)
+ * 2. Automation indicators (navigator.webdriver)
+ * 3. Electron giveaways on window (process / require / module)
+ * 4. A missing window.chrome (runtime / loadTimes / csi / app stub)
  */
 export class StealthManager {
   // === 1. Private state ===
@@ -110,7 +111,7 @@ export class StealthManager {
     // scripts, so navigator.userAgentData and other APIs are patched early enough.
     await this.writeAndRegisterPreload(options?.cloudflarePolicySyncChannel);
 
-    log.info('🛡️ Stealth patches applied (advanced fingerprint protection active)');
+    log.info('🛡️ Stealth applied (AI/Electron concealment; real hardware fingerprint left intact)');
   }
 
   /**
@@ -121,7 +122,7 @@ export class StealthManager {
    *
    * Three cases:
    *   • file:// or Google auth  → skip entirely (Tandem shell UI / OAuth)
-   *   • challenges.cloudflare.com → inject early script only (no canvas/audio/timing noise)
+   *   • challenges.cloudflare.com → inject early script only (no DOM-touching work)
    *   • everything else           → inject full stealth script
    *
    * Using the preload path (rather than CDP Page.addScriptToEvaluateOnNewDocument)
@@ -155,7 +156,7 @@ export class StealthManager {
         ? `    try { _mode = _electron.ipcRenderer.sendSync(${JSON.stringify(cloudflarePolicySyncChannel)}, _url) || _mode; } catch(e) { /* fall back to default mode */ }`
         : `    /* no cloudflare policy sync channel configured */`,
       `    if (_mode === 'early') {`,
-      `      // Minimal early patches only — no canvas/audio/timing noise that trips Turnstile`,
+      `      // Minimal early patches only — no DOM-touching work that trips Turnstile`,
       `      _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(earlyScript)}, url: 'tandem://stealth-early' }]);`,
       `    } else if (_mode === 'full') {`,
       `      _wf.executeJavaScriptInIsolatedWorld(0, [{ code: ${JSON.stringify(stealthScript)}, url: 'tandem://stealth' }]);`,
@@ -279,7 +280,7 @@ export class StealthManager {
     });
   }
 
-  /** Get the partition seed for fingerprint noise */
+  /** LEGACY — unused; returned the seed for the removed fingerprint noise. */
   getPartitionSeed(): string {
     return this.partitionSeed;
   }
@@ -288,9 +289,10 @@ export class StealthManager {
    * Minimal "early" stealth script — safe to inject into cross-origin OOPIFs
    * (e.g. Cloudflare Turnstile) via CDP Page.addScriptToEvaluateOnNewDocument.
    *
-   * Deliberately omits canvas/audio/timing patches that:
-   *   a) call ctx.getImageData() → GPU readback IPC → V8 crash inside sandboxed OOPIF
-   *   b) implement Firefox-like precision reduction that Cloudflare detects as non-Chrome
+   * Same AI/Electron-hiding layer as the full script (webdriver, userAgentData,
+   * window.chrome stub, remove window.process/require, plugins, languages), kept
+   * minimal and free of any DOM/GPU-touching work so it is safe inside sandboxed
+   * challenge frames.
    *
    * Uses its own idempotency guard (Symbol '__tandem_early_v1') so it doesn't
    * collide with the full stealth script that runs at dom-ready on main frames.
@@ -384,9 +386,10 @@ export class StealthManager {
   }
 
   /**
-   * JavaScript to inject into pages to hide automation indicators.
-   * Phase 5: includes canvas, WebGL, audio, font, and timing fingerprint protection.
-   * @param seed - Deterministic seed for consistent noise per session
+   * JavaScript injected into pages to hide that an AI/Electron drives the
+   * browser: navigator.webdriver, window.process/require, the UA brands, and a
+   * window.chrome stub. It does NOT touch WebGL / canvas / audio / screen / CPU /
+   * fonts / timing — the real hardware fingerprint is left intact.
    */
   static getStealthScript(
     chromeVersion: string = process.versions.chrome,
@@ -523,7 +526,7 @@ export class StealthManager {
         // Already exists, fine
       }
 
-      })(); // end of stealth IIFE — __noise and __rng are NOT exposed on window
+      })(); // end of stealth IIFE — no globals leaked to the page
     `;
   }
 }

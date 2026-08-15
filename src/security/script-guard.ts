@@ -133,7 +133,8 @@ function analyzeScriptContent(source: string, url: string): ScriptAnalysisResult
  *    - Form action hijack detection (form.action setter monitoring)
  *
  * IMPORTANT: Security monitor injections do NOT overlap with Stealth injections:
- *   Stealth: canvas, WebGL, fonts, audio, timing, navigator
+ *   Stealth: navigator/automation signals only (webdriver, userAgentData,
+ *            window.process/require, window.chrome) — no hardware fingerprinting
  *   Security: addEventListener, WebAssembly, clipboard, form.action
  */
 export class ScriptGuard {

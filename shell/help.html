@@ -512,17 +512,23 @@
 
       <section id="stealth" class="section">
         <h2>Stealth & Privacy</h2>
-        <p>Tandem is designed to be completely invisible to websites. It looks exactly like a normal Chrome browser.</p>
-        
-        <h3>Anti-Detection Features</h3>
+        <p>When an AI assistant works in your browser alongside you, Tandem makes
+        sure sites just see a normal Chrome used by a normal person — you — so your
+        own accounts are never wrongly flagged as a bot. It hides only the AI/Electron
+        integration. It does <strong>not</strong> spoof or hide your real hardware:
+        sites may fingerprint your machine normally, exactly as they would in any
+        browser.</p>
+
+        <h3>What Tandem hides (the AI/Electron, nothing more)</h3>
         <ul style="padding-left: 20px; color: var(--text-dim); margin-top: 8px;">
-          <li>Canvas fingerprint randomization</li>
-          <li>WebGL renderer/vendor spoofing</li>
-          <li>Audio context fingerprint spoofing</li>
-          <li>Timing protection</li>
-          <li>Font enumeration masking</li>
-          <li>Humanized delays and behavior simulation</li>
+          <li>A real Chrome User-Agent and client hints (no "Electron")</li>
+          <li>The automation flag (<code>navigator.webdriver</code> stays false)</li>
+          <li>Electron internals removed from the page (<code>window.process</code>/<code>require</code>)</li>
+          <li>A normal <code>window.chrome</code>, like any Chrome tab</li>
+          <li>Assistant clicks/typing paced from your own rhythm, so your actions look like yours — because they are</li>
         </ul>
+        <p style="color: var(--text-dim); margin-top: 8px;">Your real WebGL/GPU,
+        canvas, audio, fonts, screen and CPU are left untouched.</p>
         
         <div class="tip-box">
           <strong>🛡️ Privacy</strong>

@@ -86,7 +86,7 @@ Within the product UI, the right-side assistant surface is called the Wingman pa
 │  │  Electron Main Process                                     │ │
 │  │                                                            │ │
 │  │  SecurityManager     8-layer shield (see below)            │ │
-│  │  StealthManager      Anti-fingerprint patches              │ │
+│  │  StealthManager      Hide AI/Electron (UA, webdriver); real HW    │ │
 │  │  TabManager          Multi-tab, groups, shortcuts          │ │
 │  │  SidebarManager      Sidebar config + panel routing        │ │
 │  │  WorkspaceManager    Named tab groups + persistence        │ │
@@ -158,16 +158,21 @@ None or this touches the webview. Websites don't know it's running.
 
 ## Anti-Detection
 
-The browser presents itself as a normal Chrome instance on macOS. What gets patched:
+The browser presents itself as a normal Chrome instance. Only the signals that
+would reveal an AI/Electron are changed; the real hardware fingerprint (GPU,
+canvas, audio, fonts, screen, CPU, timing) is left completely untouched, because
+a real human's browser exposes exactly that.
 
 - User-Agent: real Chrome UA, no Electron strings
 - `navigator.userAgentData.brands`: Chrome brands only
-- Canvas fingerprint: subtle noise injection
-- WebGL: GPU info masking
-- Font enumeration: consistent list
-- Audio fingerprint: AudioContext noise
-- Timing: randomized delays on automated actions
+- `navigator.webdriver`: false (no automation flag)
+- Electron giveaways removed from `window` (`process` / `require` / `module`)
+- `window.chrome`: present with the runtime/loadTimes/csi/app stub real Chrome has
 - HTTP headers: Sec-CH-UA matches Chrome, "Electron" stripped
+
+What is deliberately **not** touched: WebGL, canvas, audio, fonts, colour depth,
+CPU cores, device memory, and timing all report the machine's real values. See
+AGENTS.md "Anti-Detection Architecture" — spoofing hardware is a non-goal.
 - `app.setName('Google Chrome')`: OS-level name override
 
 **Interaction rule:** All automated interactions go through `webContents.sendInputEvent()`, not `el.click()` or `dispatchEvent()`. `Event.isTrusted` stays true.
@@ -263,7 +268,7 @@ src/api/server.ts              API setup + route registration
 src/api/routes/                16 route modules
 src/security/routes.ts         Security-specific API routes
 src/security/                  8-layer security system
-src/stealth/manager.ts         Anti-fingerprint patches
+src/stealth/manager.ts         Hide AI/Electron giveaways (no HW spoofing)
 src/tabs/manager.ts            Tab management
 src/sidebar/manager.ts         Sidebar config + state
 src/workspaces/manager.ts      Workspace CRUD + tab mapping
