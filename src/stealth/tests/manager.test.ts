@@ -309,6 +309,11 @@ describe('stealth-ua platform adapters', () => {
           "platformVersion": "15.3.0",
           "uaFullVersion": "132.0.6834.160",
         },
+        "fingerprint": {
+          "colorDepth": 30,
+          "webglRenderer": "ANGLE (Apple, Apple M1, OpenGL 4.1)",
+          "webglVendor": "Google Inc. (Apple)",
+        },
         "requestHeaders": {
           "platform": ""macOS"",
         },
@@ -360,6 +365,11 @@ describe('stealth-ua platform adapters', () => {
           "platform": "Windows",
           "platformVersion": "15.0.0",
           "uaFullVersion": "132.0.6834.160",
+        },
+        "fingerprint": {
+          "colorDepth": 24,
+          "webglRenderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
+          "webglVendor": "Google Inc. (Intel)",
         },
         "requestHeaders": {
           "platform": ""Windows"",
@@ -570,6 +580,43 @@ describe('getStealthScript() — timing protection', () => {
     const script = StealthManager.getStealthScript('seed');
     expect(script).not.toMatch(/Date\.now\s*=\s*function/);
     expect(script).not.toMatch(/origDateNow/);
+  });
+});
+
+describe('getStealthScript() — OS persona fingerprint consistency', () => {
+  // Regression guard: WebGL renderer and screen colour depth must be driven by
+  // the OS persona, not hardcoded. A Windows UA that reports a macOS "Apple M1"
+  // GPU (or 30-bit colour) is a cross-checkable automation tell.
+  it('injects the Windows profile GPU and colour depth for a Windows persona', () => {
+    const win = createWindowsStealthUaAdapter();
+    const script = StealthManager.getStealthScript('seed', undefined, win);
+    expect(script).toContain('Intel(R) UHD Graphics 630');
+    expect(script).toContain('Google Inc. (Intel)');
+    expect(script).toContain('return 24'); // screen.colorDepth
+    // Must NOT leak the macOS GPU into a Windows persona
+    expect(script).not.toContain('Apple M1');
+    expect(script).not.toContain('Google Inc. (Apple)');
+  });
+
+  it('injects the macOS profile GPU and colour depth for a macOS persona', () => {
+    const mac = createDarwinStealthUaAdapter();
+    const script = StealthManager.getStealthScript('seed', undefined, mac);
+    expect(script).toContain('Apple M1');
+    expect(script).toContain('Google Inc. (Apple)');
+    expect(script).toContain('return 30'); // screen.colorDepth
+    expect(script).not.toContain('Intel(R) UHD Graphics 630');
+  });
+
+  it('keeps the WebGL/colour-depth persona aligned with the User-Agent OS', () => {
+    // The one invariant that matters: whatever OS the UA claims, the GPU and
+    // colour depth agree with it.
+    for (const ua of [createWindowsStealthUaAdapter(), createDarwinStealthUaAdapter()]) {
+      const profile = ua.getProfile('132.0.0.0');
+      const script = StealthManager.getStealthScript('seed', undefined, ua);
+      expect(script).toContain(profile.fingerprint.webglRenderer);
+      expect(script).toContain(profile.fingerprint.webglVendor);
+      expect(script).toContain(`return ${profile.fingerprint.colorDepth}`);
+    }
   });
 });
 

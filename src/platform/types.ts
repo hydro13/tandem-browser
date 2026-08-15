@@ -127,10 +127,27 @@ export interface StealthUaRequestHeaders {
   platformVersion?: string;
 }
 
+/**
+ * OS-specific fingerprint surfaces that must match the UA persona. These are
+ * spoofed in the page (WebGL debug renderer info, screen colour depth) and, if
+ * they disagree with the User-Agent / client hints, become a cross-checkable
+ * automation tell. Keeping them on the profile makes the persona a single
+ * source of truth so UA, client hints, WebGL, and screen can never diverge.
+ */
+export interface StealthUaFingerprint {
+  /** UNMASKED_VENDOR_WEBGL (0x9245) value. */
+  webglVendor: string;
+  /** UNMASKED_RENDERER_WEBGL (0x9246) value. */
+  webglRenderer: string;
+  /** screen.colorDepth / screen.pixelDepth (Windows Chrome = 24, macOS = 30). */
+  colorDepth: number;
+}
+
 export interface StealthUaProfile {
   userAgent: string;
   chromeVersion: string;
   chromeMajor: string;
   clientHints: StealthUaClientHints;
   requestHeaders: StealthUaRequestHeaders;
+  fingerprint: StealthUaFingerprint;
 }
