@@ -4,7 +4,6 @@ import fs from 'fs';
 import path from 'path';
 import type { RequestDispatcher } from '../network/dispatcher';
 import { selectPlatform } from '../platform';
-import { createDarwinStealthUaAdapter } from '../platform/stealth-ua';
 import type { StealthUaAdapter, StealthUaProfile } from '../platform/types';
 import { createLogger } from '../utils/logger';
 import { tandemDir } from '../utils/paths';
@@ -299,7 +298,7 @@ export class StealthManager {
    */
   static getEarlyScript(
     chromeVersion: string = process.versions.chrome,
-    stealthUa: StealthUaAdapter = createDarwinStealthUaAdapter(),
+    stealthUa: StealthUaAdapter = selectPlatform().stealthUa,
   ): string {
     const profile = stealthUa.getProfile(chromeVersion);
     const brands = JSON.stringify(profile.clientHints.brands);
@@ -393,11 +392,14 @@ export class StealthManager {
   static getStealthScript(
     seed: string = 'tandem-default-seed',
     chromeVersion: string = process.versions.chrome,
-    stealthUa: StealthUaAdapter = createDarwinStealthUaAdapter(),
+    stealthUa: StealthUaAdapter = selectPlatform().stealthUa,
   ): string {
     const profile = stealthUa.getProfile(chromeVersion);
     const brands = JSON.stringify(profile.clientHints.brands);
     const fullVersionList = JSON.stringify(profile.clientHints.fullVersionList);
+    const webglVendor = JSON.stringify(profile.fingerprint.webglVendor);
+    const webglRenderer = JSON.stringify(profile.fingerprint.webglRenderer);
+    const colorDepth = JSON.stringify(profile.fingerprint.colorDepth);
     return `
       // ═══ All stealth patches in one IIFE — no globals leaked to window ═══
       // Idempotency guard: both the session preload and the dom-ready injection
@@ -466,9 +468,11 @@ export class StealthManager {
 
         WebGLRenderingContext.prototype.getParameter = function(param) {
           // UNMASKED_VENDOR_WEBGL (0x9245) and UNMASKED_RENDERER_WEBGL (0x9246)
-          // These come from the WEBGL_debug_renderer_info extension
-          if (param === 0x9245) return 'Google Inc. (Apple)';
-          if (param === 0x9246) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+          // These come from the WEBGL_debug_renderer_info extension. Values come
+          // from the OS persona so they match the User-Agent (a Windows UA with a
+          // macOS GPU string is a cross-checkable automation tell).
+          if (param === 0x9245) return ${webglVendor};
+          if (param === 0x9246) return ${webglRenderer};
           return getParamOrig.call(this, param);
         };
 
@@ -476,8 +480,8 @@ export class StealthManager {
         if (typeof WebGL2RenderingContext !== 'undefined') {
           var getParam2Orig = WebGL2RenderingContext.prototype.getParameter;
           WebGL2RenderingContext.prototype.getParameter = function(param) {
-            if (param === 0x9245) return 'Google Inc. (Apple)';
-            if (param === 0x9246) return 'ANGLE (Apple, Apple M1, OpenGL 4.1)';
+            if (param === 0x9245) return ${webglVendor};
+            if (param === 0x9246) return ${webglRenderer};
             return getParam2Orig.call(this, param);
           };
         }
@@ -501,6 +505,17 @@ export class StealthManager {
         if (typeof WebGL2RenderingContext !== 'undefined') {
           WebGL2RenderingContext.prototype.getSupportedExtensions = function() { return stdExtensions.slice(); };
         }
+      })();
+
+      // ═══ 5.2b Screen colour depth (match OS persona) ═══
+      // Windows Chrome reports 24-bit colour, macOS Retina reports 30-bit. Left
+      // unpatched, the host display's real depth leaks through and can contradict
+      // the User-Agent persona.
+      (function() {
+        try {
+          Object.defineProperty(screen, 'colorDepth', { get: function() { return ${colorDepth}; }, configurable: true });
+          Object.defineProperty(screen, 'pixelDepth', { get: function() { return ${colorDepth}; }, configurable: true });
+        } catch(e) {}
       })();
 
       // ═══ 5.3 Font Enumeration Protection ═══

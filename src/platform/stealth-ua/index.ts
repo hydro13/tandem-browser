@@ -1,5 +1,5 @@
 import { NotImplementedError, type PlatformId } from '../errors';
-import type { StealthUaAdapter, StealthUaBrandVersion, StealthUaProfile } from '../types';
+import type { StealthUaAdapter, StealthUaBrandVersion, StealthUaFingerprint, StealthUaProfile } from '../types';
 
 function getChromeMajor(chromeVersion: string): string {
   return chromeVersion.split('.')[0];
@@ -31,6 +31,7 @@ function createProfile(
     bitness: string;
   },
   requestHeaders: { platform: string; platformVersion?: string },
+  fingerprint: StealthUaFingerprint,
 ): StealthUaProfile {
   const chromeMajor = getChromeMajor(chromeVersion);
   return {
@@ -50,8 +51,27 @@ function createProfile(
       fullVersionList: createFullVersionList(chromeVersion),
     },
     requestHeaders,
+    fingerprint,
   };
 }
+
+// A macOS Chrome on Apple Silicon reports its GPU through ANGLE's Metal
+// backend, and Retina displays report 30-bit colour. These must travel with
+// the macOS UA so the persona stays internally consistent.
+const DARWIN_FINGERPRINT: StealthUaFingerprint = {
+  webglVendor: 'Google Inc. (Apple)',
+  webglRenderer: 'ANGLE (Apple, Apple M1, OpenGL 4.1)',
+  colorDepth: 30,
+};
+
+// A Windows Chrome reports its GPU through ANGLE's Direct3D11 backend and a
+// 24-bit colour depth. Intel UHD 630 is one of the most common Windows GPUs,
+// so it blends in rather than forming a distinctive fingerprint.
+const WINDOWS_FINGERPRINT: StealthUaFingerprint = {
+  webglVendor: 'Google Inc. (Intel)',
+  webglRenderer: 'ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)',
+  colorDepth: 24,
+};
 
 function createDarwinProfile(chromeVersion: string): StealthUaProfile {
   return createProfile(
@@ -64,6 +84,7 @@ function createDarwinProfile(chromeVersion: string): StealthUaProfile {
       bitness: '64',
     },
     { platform: '"macOS"' },
+    DARWIN_FINGERPRINT,
   );
 }
 
@@ -78,6 +99,7 @@ function createWindowsProfile(chromeVersion: string): StealthUaProfile {
       bitness: '64',
     },
     { platform: '"Windows"', platformVersion: '"15.0.0"' },
+    WINDOWS_FINGERPRINT,
   );
 }
 
