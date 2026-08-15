@@ -346,8 +346,9 @@ real-time. The gateway token lives in `~/.openclaw/openclaw.json` under
 
 ### Chat Code Location
 
-Chat WebSocket code lives in the shell. Look for the
-`// === OpenClaw WebSocket Chat ===` marker or `ocChat` under `shell/`.
+Chat WebSocket code lives in `shell/chat/openclaw-backend.js` (it moved out of
+`shell/index.html` during the shell refactor). Look for `ocChat` or the
+`// === OpenClaw WebSocket Chat ===` marker.
 
 ## macOS Quarantine — Important
 
