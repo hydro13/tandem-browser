@@ -354,7 +354,11 @@ README badge.
 ## Key Design Constraints
 
 1. **Local-first** — no data leaves the machine through Tandem
-2. **Stealth** — websites must never detect this is an AI browser
+2. **Stealth** — hide only that an AI/Electron drives the browser, so a site
+   sees a normal Chrome used by the real human who owns it. This does NOT spoof
+   or block hardware fingerprinting (the real fingerprint is fine); it prevents
+   the human's own accounts from being wrongly flagged as a bot. See AGENTS.md
+   "Anti-Detection Architecture" for the intent and boundaries.
 3. **Node security** — `nodeIntegration: false`, `contextIsolation: true`
 4. **API binding** — `127.0.0.1` only, never `0.0.0.0`
 5. **No DOM injection** — all interaction via `sendInputEvent` or main process
