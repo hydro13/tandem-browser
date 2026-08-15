@@ -400,6 +400,9 @@ export class StealthManager {
     const webglVendor = JSON.stringify(profile.fingerprint.webglVendor);
     const webglRenderer = JSON.stringify(profile.fingerprint.webglRenderer);
     const colorDepth = JSON.stringify(profile.fingerprint.colorDepth);
+    const hardwareConcurrency = JSON.stringify(profile.fingerprint.hardwareConcurrency);
+    const deviceMemory = JSON.stringify(profile.fingerprint.deviceMemory);
+    const fonts = JSON.stringify(profile.fingerprint.fonts);
     return `
       // ═══ All stealth patches in one IIFE — no globals leaked to window ═══
       // Idempotency guard: both the session preload and the dom-ready injection
@@ -518,17 +521,27 @@ export class StealthManager {
         } catch(e) {}
       })();
 
+      // ═══ 5.2c CPU / memory (match OS persona) ═══
+      // The host's real core count and RAM leak through untouched and can
+      // contradict the persona (e.g. 32 cores behind a mainstream integrated
+      // GPU). Pin them to values plausible for the persona's hardware tier.
+      (function() {
+        try {
+          Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return ${hardwareConcurrency}; }, configurable: true });
+        } catch(e) {}
+        // Always define deviceMemory: real desktop Chrome exposes it on every
+        // origin, but this Chromium build omits it on some — leaving that gap
+        // is itself a tell, so pin it to the persona value everywhere.
+        try {
+          Object.defineProperty(navigator, 'deviceMemory', { get: function() { return ${deviceMemory}; }, configurable: true });
+        } catch(e) {}
+      })();
+
       // ═══ 5.3 Font Enumeration Protection ═══
       (function() {
-        var standardFonts = [
-          'Arial', 'Arial Black', 'Comic Sans MS', 'Courier', 'Courier New',
-          'Georgia', 'Helvetica', 'Helvetica Neue', 'Impact', 'Lucida Console',
-          'Lucida Grande', 'Lucida Sans Unicode', 'Monaco', 'Palatino', 'Palatino Linotype',
-          'Tahoma', 'Times', 'Times New Roman', 'Trebuchet MS', 'Verdana',
-          'Apple Color Emoji', 'Apple SD Gothic Neo', 'Avenir', 'Avenir Next',
-          'Futura', 'Geneva', 'Gill Sans', 'Menlo', 'Optima', 'San Francisco',
-          'SF Pro', 'SF Mono', 'System Font', '-apple-system', 'BlinkMacSystemFont'
-        ];
+        // Font whitelist comes from the OS persona so each platform only
+        // reports fonts it genuinely ships, never the other OS's set.
+        var standardFonts = ${fonts};
         var standardFontsLower = standardFonts.map(function(f) { return f.toLowerCase(); });
 
         if (document.fonts && document.fonts.check) {
