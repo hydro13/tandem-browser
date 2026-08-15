@@ -132,7 +132,6 @@ export class StealthManager {
    */
   private async writeAndRegisterPreload(cloudflarePolicySyncChannel?: string): Promise<void> {
     const stealthScript = StealthManager.getStealthScript(
-      this.partitionSeed,
       this.uaProfile.chromeVersion,
       this.stealthUa,
     );
@@ -390,239 +389,27 @@ export class StealthManager {
    * @param seed - Deterministic seed for consistent noise per session
    */
   static getStealthScript(
-    seed: string = 'tandem-default-seed',
     chromeVersion: string = process.versions.chrome,
     stealthUa: StealthUaAdapter = selectPlatform().stealthUa,
   ): string {
     const profile = stealthUa.getProfile(chromeVersion);
     const brands = JSON.stringify(profile.clientHints.brands);
     const fullVersionList = JSON.stringify(profile.clientHints.fullVersionList);
-    const webglVendor = JSON.stringify(profile.fingerprint.webglVendor);
-    const webglRenderer = JSON.stringify(profile.fingerprint.webglRenderer);
-    const colorDepth = JSON.stringify(profile.fingerprint.colorDepth);
-    const hardwareConcurrency = JSON.stringify(profile.fingerprint.hardwareConcurrency);
-    const deviceMemory = JSON.stringify(profile.fingerprint.deviceMemory);
-    const fonts = JSON.stringify(profile.fingerprint.fonts);
     return `
-      // ═══ All stealth patches in one IIFE — no globals leaked to window ═══
+      // ═══ Make Tandem look like a normal Chrome — nothing more ═══
+      // The ONLY goal is to hide that an AI/Electron drives the browser, never to
+      // spoof or block hardware fingerprinting. Real WebGL, canvas, audio, fonts,
+      // colour depth, CPU/memory and timing are left completely untouched, so the
+      // page sees a real, stable, human fingerprint. We override only the signals
+      // that would reveal automation (webdriver), Electron (window.process/require,
+      // the UA brands), or a non-Chrome runtime (missing window.chrome).
+      //
       // Idempotency guard: both the session preload and the dom-ready injection
       // run this script. The Symbol key is invisible to page JS (not enumerable).
       (function() {
         var _appliedSym = Symbol.for('__tandem_stealth_v1');
         if (window[_appliedSym]) return;
         Object.defineProperty(window, _appliedSym, { value: 1, configurable: false, writable: false, enumerable: false });
-        // Seeded PRNG (mulberry32) — consistent noise per session
-        var __seed = 0;
-        var seedStr = '${seed}';
-        for (var i = 0; i < seedStr.length; i++) {
-          __seed = ((__seed << 5) - __seed + seedStr.charCodeAt(i)) | 0;
-        }
-        function mulberry32(s) {
-          return function() {
-            s |= 0; s = s + 0x6D2B79F5 | 0;
-            var t = Math.imul(s ^ s >>> 15, 1 | s);
-            t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-            return ((t ^ t >>> 14) >>> 0) / 4294967296;
-          };
-        }
-        var __rng = mulberry32(__seed);
-        // Noise helper: returns integer in [-range, +range] — stays in closure, NOT on window
-        function __noise(range) { return Math.floor(__rng() * (range * 2 + 1)) - range; }
-
-      // ═══ 5.1 Canvas Fingerprint Protection ═══
-      (function() {
-        var origToDataURL = HTMLCanvasElement.prototype.toDataURL;
-        var origToBlob = HTMLCanvasElement.prototype.toBlob;
-
-        function addCanvasNoise(canvas) {
-          try {
-            var ctx = canvas.getContext('2d');
-            if (!ctx) return;
-            var w = canvas.width, h = canvas.height;
-            if (w === 0 || h === 0 || w > 1024 || h > 1024) return; // skip huge canvases
-            var imageData = ctx.getImageData(0, 0, w, h);
-            var data = imageData.data;
-            // Add subtle noise (±2 per channel) using seeded PRNG
-            for (var i = 0; i < data.length; i += 4) {
-              data[i]     = Math.max(0, Math.min(255, data[i]     + __noise(2)));
-              data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + __noise(2)));
-              data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + __noise(2)));
-              // Alpha unchanged
-            }
-            ctx.putImageData(imageData, 0, 0);
-          } catch(e) { /* cross-origin or other issues — silently skip */ }
-        }
-
-        HTMLCanvasElement.prototype.toDataURL = function() {
-          addCanvasNoise(this);
-          return origToDataURL.apply(this, arguments);
-        };
-
-        HTMLCanvasElement.prototype.toBlob = function() {
-          addCanvasNoise(this);
-          return origToBlob.apply(this, arguments);
-        };
-      })();
-
-      // ═══ 5.2 WebGL Fingerprint Masking ═══
-      (function() {
-        var getParamOrig = WebGLRenderingContext.prototype.getParameter;
-        var debugExt = null;
-
-        WebGLRenderingContext.prototype.getParameter = function(param) {
-          // UNMASKED_VENDOR_WEBGL (0x9245) and UNMASKED_RENDERER_WEBGL (0x9246)
-          // These come from the WEBGL_debug_renderer_info extension. Values come
-          // from the OS persona so they match the User-Agent (a Windows UA with a
-          // macOS GPU string is a cross-checkable automation tell).
-          if (param === 0x9245) return ${webglVendor};
-          if (param === 0x9246) return ${webglRenderer};
-          return getParamOrig.call(this, param);
-        };
-
-        // Also patch WebGL2 if available
-        if (typeof WebGL2RenderingContext !== 'undefined') {
-          var getParam2Orig = WebGL2RenderingContext.prototype.getParameter;
-          WebGL2RenderingContext.prototype.getParameter = function(param) {
-            if (param === 0x9245) return ${webglVendor};
-            if (param === 0x9246) return ${webglRenderer};
-            return getParam2Orig.call(this, param);
-          };
-        }
-
-        // Override getSupportedExtensions to return standard Chrome set
-        var stdExtensions = [
-          'ANGLE_instanced_arrays', 'EXT_blend_minmax', 'EXT_color_buffer_half_float',
-          'EXT_disjoint_timer_query', 'EXT_float_blend', 'EXT_frag_depth',
-          'EXT_shader_texture_lod', 'EXT_texture_compression_bptc',
-          'EXT_texture_compression_rgtc', 'EXT_texture_filter_anisotropic',
-          'EXT_sRGB', 'KHR_parallel_shader_compile', 'OES_element_index_uint',
-          'OES_fbo_render_mipmap', 'OES_standard_derivatives', 'OES_texture_float',
-          'OES_texture_float_linear', 'OES_texture_half_float',
-          'OES_texture_half_float_linear', 'OES_vertex_array_object',
-          'WEBGL_color_buffer_float', 'WEBGL_compressed_texture_s3tc',
-          'WEBGL_compressed_texture_s3tc_srgb', 'WEBGL_debug_renderer_info',
-          'WEBGL_debug_shaders', 'WEBGL_depth_texture', 'WEBGL_draw_buffers',
-          'WEBGL_lose_context', 'WEBGL_multi_draw'
-        ];
-        WebGLRenderingContext.prototype.getSupportedExtensions = function() { return stdExtensions.slice(); };
-        if (typeof WebGL2RenderingContext !== 'undefined') {
-          WebGL2RenderingContext.prototype.getSupportedExtensions = function() { return stdExtensions.slice(); };
-        }
-      })();
-
-      // ═══ 5.2b Screen colour depth (match OS persona) ═══
-      // Windows Chrome reports 24-bit colour, macOS Retina reports 30-bit. Left
-      // unpatched, the host display's real depth leaks through and can contradict
-      // the User-Agent persona.
-      (function() {
-        try {
-          Object.defineProperty(screen, 'colorDepth', { get: function() { return ${colorDepth}; }, configurable: true });
-          Object.defineProperty(screen, 'pixelDepth', { get: function() { return ${colorDepth}; }, configurable: true });
-        } catch(e) {}
-      })();
-
-      // ═══ 5.2c CPU / memory (match OS persona) ═══
-      // The host's real core count and RAM leak through untouched and can
-      // contradict the persona (e.g. 32 cores behind a mainstream integrated
-      // GPU). Pin them to values plausible for the persona's hardware tier.
-      (function() {
-        try {
-          Object.defineProperty(navigator, 'hardwareConcurrency', { get: function() { return ${hardwareConcurrency}; }, configurable: true });
-        } catch(e) {}
-        // Always define deviceMemory: real desktop Chrome exposes it on every
-        // origin, but this Chromium build omits it on some — leaving that gap
-        // is itself a tell, so pin it to the persona value everywhere.
-        try {
-          Object.defineProperty(navigator, 'deviceMemory', { get: function() { return ${deviceMemory}; }, configurable: true });
-        } catch(e) {}
-      })();
-
-      // ═══ 5.3 Font Enumeration Protection ═══
-      (function() {
-        // Font whitelist comes from the OS persona so each platform only
-        // reports fonts it genuinely ships, never the other OS's set.
-        var standardFonts = ${fonts};
-        var standardFontsLower = standardFonts.map(function(f) { return f.toLowerCase(); });
-
-        if (document.fonts && document.fonts.check) {
-          var origCheck = document.fonts.check.bind(document.fonts);
-          document.fonts.check = function(font, text) {
-            // Extract font family from CSS font shorthand — last part after size
-            var parts = font.split(/\\s+/);
-            var family = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
-            family = family.replace(/['"]/g, '').trim();
-            // Allow standard fonts, block exotic ones
-            if (standardFontsLower.indexOf(family.toLowerCase()) === -1) {
-              return false;
-            }
-            return origCheck(font, text);
-          };
-        }
-      })();
-
-      // ═══ 5.4 Audio Fingerprint Protection ═══
-      (function() {
-        var OrigAudioContext = window.AudioContext || window.webkitAudioContext;
-        var OrigOfflineAudioContext = window.OfflineAudioContext;
-
-        if (OrigAudioContext) {
-          var origCreateOscillator = OrigAudioContext.prototype.createOscillator;
-          var origCreateDynamicsCompressor = OrigAudioContext.prototype.createDynamicsCompressor;
-
-          // Patch getFloatFrequencyData / getFloatTimeDomainData to add noise
-          var origGetFloatFreq = AnalyserNode.prototype.getFloatFrequencyData;
-          AnalyserNode.prototype.getFloatFrequencyData = function(array) {
-            origGetFloatFreq.call(this, array);
-            for (var i = 0; i < array.length; i++) {
-              array[i] += __noise(1) * 0.001;
-            }
-          };
-
-          var origGetFloatTime = AnalyserNode.prototype.getFloatTimeDomainData;
-          AnalyserNode.prototype.getFloatTimeDomainData = function(array) {
-            origGetFloatTime.call(this, array);
-            for (var i = 0; i < array.length; i++) {
-              array[i] += __noise(1) * 0.0001;
-            }
-          };
-        }
-
-        // Patch OfflineAudioContext.startRendering to add subtle noise to rendered buffer
-        if (OrigOfflineAudioContext) {
-          var origStartRendering = OrigOfflineAudioContext.prototype.startRendering;
-          OrigOfflineAudioContext.prototype.startRendering = function() {
-            return origStartRendering.call(this).then(function(buffer) {
-              try {
-                for (var ch = 0; ch < buffer.numberOfChannels; ch++) {
-                  var data = buffer.getChannelData(ch);
-                  for (var i = 0; i < data.length; i++) {
-                    data[i] += __noise(1) * 0.0001;
-                  }
-                }
-              } catch(e) { /* ignore */ }
-              return buffer;
-            });
-          };
-        }
-      })();
-
-      // ═══ 5.5 Timing Protection ═══
-      (function() {
-        // Reduce performance.now() precision to 100μs (like Firefox).
-        // This is the API where modern timing-based fingerprinting
-        // actually happens, and Firefox ships this exact behaviour, so
-        // it is a known legitimate browser pattern.
-        var origPerfNow = performance.now.bind(performance);
-        performance.now = function() {
-          return Math.round(origPerfNow() * 10) / 10; // 100μs precision
-        };
-
-        // Note: we deliberately do NOT jitter Date.now. Real Chrome
-        // returns the same millisecond for back-to-back calls; adding
-        // +/-1ms noise makes every t1=Date.now(); t2=Date.now() differ
-        // consistently, which is itself a "not real Chrome" fingerprint.
-        // performance.now() above is the right place for timing defense.
-      })();
 
       // Hide webdriver flag
       Object.defineProperty(navigator, 'webdriver', { get: () => false });
