@@ -556,9 +556,9 @@ async function createWindow(): Promise<BrowserWindow> {
 
   // Inject stealth script into all webviews via session preload
   const stealthScript = StealthManager.getStealthScript();
-  // Minimal early script for CDP OOPIF injection — omits canvas/audio/timing patches
-  // that crash Cloudflare Turnstile's OOPIF (ctx.getImageData() triggers GPU IPC in
-  // a sandboxed cross-origin frame, causing V8 crash in challenges.cloudflare.com)
+  // Minimal early script for CDP OOPIF injection — the same AI/Electron-hiding
+  // layer, kept free of any DOM/GPU-touching work so it is safe inside sandboxed
+  // cross-origin challenge frames (e.g. challenges.cloudflare.com)
   const earlyScript = StealthManager.getEarlyScript();
 
   // Apply stealth patches to every webview's webContents on creation
@@ -635,9 +635,9 @@ async function createWindow(): Promise<BrowserWindow> {
         if (!url || url.startsWith('about:') || url.startsWith('data:')) return;
         if (isGoogleAuthUrl(url)) return; // never touch Google auth iframes
         if (noTouchPartition) return;
-        // Skip Cloudflare challenge OOPIF — the full stealth script (canvas noise,
-        // timing reduction) causes Turnstile to score the browser as bot. The minimal
-        // CDP early script already runs there and patches userAgentData/webdriver.
+        // Skip Cloudflare challenge OOPIF — the full stealth script does DOM work
+        // that is unsafe inside a sandboxed challenge frame. The minimal CDP early
+        // script already runs there and patches userAgentData/webdriver.
         if (shouldSkipStealth(url)) return;
         if (cloudflarePolicyManager?.isChallengeSensitiveTab(contents.id)) return;
 

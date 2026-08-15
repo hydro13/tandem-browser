@@ -216,7 +216,7 @@ Since the original gap analysis (Feb 2026, v0.15.1), Tandem has grown from 380+ 
 | **AI Awareness** | `tandem_awareness_digest` (activity summary) + `tandem_awareness_focus` (current state snapshot) | None |
 | **AI Workspaces** | Dedicated agent workspace isolation with full lifecycle management | None |
 | **Security Shield** | 6-layer: NetworkShield, OutboundGuard, ContentAnalyzer, BehaviorMonitor, GatekeeperAI, EvolutionEngine | Basic ad blocker + phishing blacklist |
-| **Stealth/Anti-Detection** | Canvas/WebGL/Audio/Font fingerprint protection, Electron concealment, OS-level click injection, Chrome API mocking | None — Opera is fully detectable |
+| **Stealth/Anti-Detection** | Electron/automation concealment (webdriver, window.process, UA), OS-level (isTrusted) input injection, Chrome API presence — real hardware fingerprint left intact | None — Opera is fully detectable |
 | **Behavioral Learning** | Learn typing rhythm, mouse curves, scroll patterns. Replay as humanized automation | None |
 | **Agent Automation** | 231 MCP tools, JS execution with approval gates, accessibility snapshots, Playwright-style locators, headless browsing, workflow engine | None |
 | **CLI** | Terminal-based browser control | None |

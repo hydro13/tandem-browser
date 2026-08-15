@@ -35,9 +35,12 @@ Tandem is an Electron 40 application with three distinct layers:
 └─────────────────────┘
 ```
 
-**Critical rule:** Layer 3 (webview) must never know Layer 1 or Layer 2 exist.
-All automated interaction goes through `webContents.sendInputEvent()`, never
-DOM injection. See AGENTS.md "Anti-Detection Architecture" for details.
+**Critical rule:** the AI operates from Layers 1–2, never from inside the page.
+Nothing from the privileged layers is injected into Layer 3, and automated
+interaction goes through `webContents.sendInputEvent()` (real, human-like OS
+input the user has authorized) rather than DOM injection — the same isolation a
+normal browser keeps between the browser chrome and the page. See AGENTS.md
+"Anti-Detection Architecture" for the intent and boundaries.
 
 ## Request Flow
 
@@ -193,11 +196,12 @@ defences that protect against the injection itself.
 
 ### Humanized interaction + stealth
 
-Tandem's stealth layer (`src/stealth/manager.ts`) injects per-session
-fingerprint-noise patches (canvas / WebGL / audio / font / timing) and
-scrubs Electron giveaways from `window`. Each install uses a random
-per-install base secret persisted in `~/.tandem/config.json`, so noise
-patterns are unique per install — there is no shared "Tandem" fingerprint.
+Tandem's stealth layer (`src/stealth/manager.ts`) scrubs the signals that reveal
+an AI/Electron from `window` (`navigator.webdriver`, `window.process`/`require`,
+Electron in the UA, a missing `window.chrome`) and presents a real Chrome UA and
+client hints. It does **not** add canvas/WebGL/audio/font/timing noise or spoof
+the screen/CPU/memory — the machine's real, stable hardware fingerprint is left
+untouched, which is exactly what a real human's browser exposes.
 
 Agent-driven input (`/click`, `/type`) flows through `src/input/humanized.ts`
 which uses OS-level `sendInputEvent` (so `Event.isTrusted` is `true`), adds
