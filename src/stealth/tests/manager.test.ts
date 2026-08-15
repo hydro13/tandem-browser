@@ -311,6 +311,45 @@ describe('stealth-ua platform adapters', () => {
         },
         "fingerprint": {
           "colorDepth": 30,
+          "deviceMemory": 8,
+          "fonts": [
+            "Arial",
+            "Arial Black",
+            "Comic Sans MS",
+            "Courier New",
+            "Georgia",
+            "Impact",
+            "Tahoma",
+            "Times New Roman",
+            "Trebuchet MS",
+            "Verdana",
+            "Courier",
+            "Helvetica",
+            "Helvetica Neue",
+            "Lucida Console",
+            "Lucida Grande",
+            "Lucida Sans Unicode",
+            "Monaco",
+            "Palatino",
+            "Palatino Linotype",
+            "Times",
+            "Apple Color Emoji",
+            "Apple SD Gothic Neo",
+            "Avenir",
+            "Avenir Next",
+            "Futura",
+            "Geneva",
+            "Gill Sans",
+            "Menlo",
+            "Optima",
+            "San Francisco",
+            "SF Pro",
+            "SF Mono",
+            "System Font",
+            "-apple-system",
+            "BlinkMacSystemFont",
+          ],
+          "hardwareConcurrency": 8,
           "webglRenderer": "ANGLE (Apple, Apple M1, OpenGL 4.1)",
           "webglVendor": "Google Inc. (Apple)",
         },
@@ -368,6 +407,48 @@ describe('stealth-ua platform adapters', () => {
         },
         "fingerprint": {
           "colorDepth": 24,
+          "deviceMemory": 8,
+          "fonts": [
+            "Arial",
+            "Arial Black",
+            "Comic Sans MS",
+            "Courier New",
+            "Georgia",
+            "Impact",
+            "Tahoma",
+            "Times New Roman",
+            "Trebuchet MS",
+            "Verdana",
+            "Bahnschrift",
+            "Calibri",
+            "Cambria",
+            "Cambria Math",
+            "Candara",
+            "Consolas",
+            "Constantia",
+            "Corbel",
+            "Ebrima",
+            "Franklin Gothic Medium",
+            "Gabriola",
+            "Gadugi",
+            "Lucida Console",
+            "Lucida Sans Unicode",
+            "Microsoft Sans Serif",
+            "MS Gothic",
+            "MV Boli",
+            "Palatino Linotype",
+            "Segoe Print",
+            "Segoe Script",
+            "Segoe UI",
+            "Segoe UI Emoji",
+            "Segoe UI Symbol",
+            "Sylfaen",
+            "Symbol",
+            "Webdings",
+            "Wingdings",
+            "Yu Gothic",
+          ],
+          "hardwareConcurrency": 8,
           "webglRenderer": "ANGLE (Intel, Intel(R) UHD Graphics 630 Direct3D11 vs_5_0 ps_5_0, D3D11)",
           "webglVendor": "Google Inc. (Intel)",
         },
@@ -616,6 +697,35 @@ describe('getStealthScript() — OS persona fingerprint consistency', () => {
       expect(script).toContain(profile.fingerprint.webglRenderer);
       expect(script).toContain(profile.fingerprint.webglVendor);
       expect(script).toContain(`return ${profile.fingerprint.colorDepth}`);
+    }
+  });
+
+  it('exposes the Windows font signature (Segoe UI) and hides macOS-only fonts', () => {
+    const script = StealthManager.getStealthScript('seed', undefined, createWindowsStealthUaAdapter());
+    expect(script).toContain('Segoe UI');
+    expect(script).toContain('Calibri');
+    expect(script).toContain('Consolas');
+    // A Windows machine does not have these macOS-only fonts
+    expect(script).not.toContain('San Francisco');
+    expect(script).not.toContain('Helvetica Neue');
+    expect(script).not.toContain('-apple-system');
+  });
+
+  it('exposes the macOS font signature and hides Windows-only fonts', () => {
+    const script = StealthManager.getStealthScript('seed', undefined, createDarwinStealthUaAdapter());
+    expect(script).toContain('San Francisco');
+    expect(script).toContain('Helvetica Neue');
+    expect(script).not.toContain('Segoe UI');
+    expect(script).not.toContain('Calibri');
+  });
+
+  it('pins hardwareConcurrency and deviceMemory so the host core count cannot leak', () => {
+    for (const ua of [createWindowsStealthUaAdapter(), createDarwinStealthUaAdapter()]) {
+      const profile = ua.getProfile('132.0.0.0');
+      const script = StealthManager.getStealthScript('seed', undefined, ua);
+      expect(script).toContain('hardwareConcurrency');
+      expect(script).toContain(`return ${profile.fingerprint.hardwareConcurrency}`);
+      expect(script).toContain('deviceMemory');
     }
   });
 });

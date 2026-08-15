@@ -141,6 +141,20 @@ export interface StealthUaFingerprint {
   webglRenderer: string;
   /** screen.colorDepth / screen.pixelDepth (Windows Chrome = 24, macOS = 30). */
   colorDepth: number;
+  /**
+   * navigator.hardwareConcurrency. Must stay plausible for the GPU tier: a
+   * mainstream integrated-GPU machine reports ~4-8 cores, not the host's real
+   * count (which, in a VM, can betray the host and contradict the persona).
+   */
+  hardwareConcurrency: number;
+  /** navigator.deviceMemory (GB, quantised: 0.25/0.5/1/2/4/8). */
+  deviceMemory: number;
+  /**
+   * Fonts the OS is allowed to expose via document.fonts.check. Must be the
+   * host OS's real font set — a Windows persona that reports macOS-only fonts
+   * (or lacks Segoe UI) is a cross-checkable tell.
+   */
+  fonts: string[];
 }
 
 export interface StealthUaProfile {
