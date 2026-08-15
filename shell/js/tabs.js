@@ -247,7 +247,9 @@
         }
       }
 
-      if (data.url && tabId === activeTabId) {
+      // Reflect the active tab's live URL — but never while the user is typing
+      // in the address bar, or an in-flight navigation would clobber their input.
+      if (data.url && tabId === activeTabId && document.activeElement !== urlBar) {
         urlBar.value = data.url;
       }
 

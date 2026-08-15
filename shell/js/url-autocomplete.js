@@ -15,6 +15,7 @@
   let debounceTimer = null;
   let originalValue = '';  // what the user actually typed
   let isOpen = false;
+  let lastInputWasDeletion = false;  // suppress inline completion while deleting
 
   function init(urlBar, onNavigate) {
     dropdown = document.createElement('div');
@@ -38,8 +39,11 @@
       }
     });
 
-    urlBar.addEventListener('input', () => {
+    urlBar.addEventListener('input', (e) => {
       originalValue = urlBar.value;
+      // Backspace/Delete must not re-trigger inline completion, or the
+      // suggestion the user just removed reappears on the next keystroke.
+      lastInputWasDeletion = !!(e.inputType && e.inputType.startsWith('delete'));
       scheduleSearch(urlBar);
     });
 
@@ -115,7 +119,19 @@
       );
       if (!res.ok) return;
       const data = await res.json();
-      const results = (data.results || []).slice(0, MAX_RESULTS);
+
+      // Canonicalise and de-duplicate: many history rows collapse to the same
+      // clean URL once tracking query strings are stripped. Keep the first
+      // (highest-ranked) of each.
+      const seen = new Set();
+      const results = [];
+      for (const r of (data.results || [])) {
+        const curl = cleanUrl(r.url);
+        if (!curl || seen.has(curl)) continue;
+        seen.add(curl);
+        results.push({ ...r, url: curl });
+        if (results.length >= MAX_RESULTS) break;
+      }
 
       if (results.length === 0) {
         close();
@@ -125,7 +141,10 @@
       items = results;
       selectedIndex = -1;
       renderDropdown(query);
-      applyInlineCompletion(urlBar, query, results[0]);
+      // Still show the dropdown while deleting, but do not auto-fill the input.
+      if (!lastInputWasDeletion) {
+        applyInlineCompletion(urlBar, query, results[0]);
+      }
       isOpen = true;
     } catch (err) {
       if (err.name !== 'AbortError') {
@@ -146,11 +165,11 @@
 
       const titleEl = document.createElement('div');
       titleEl.className = 'url-autocomplete-title';
-      titleEl.innerHTML = highlightMatch(item.title || item.url, lowerQuery);
+      titleEl.innerHTML = highlightMatch(item.title || displayUrl(item.url), lowerQuery);
 
       const urlEl = document.createElement('div');
       urlEl.className = 'url-autocomplete-url';
-      urlEl.innerHTML = highlightMatch(item.url, lowerQuery);
+      urlEl.innerHTML = highlightMatch(displayUrl(item.url), lowerQuery);
 
       el.appendChild(titleEl);
       el.appendChild(urlEl);
@@ -192,9 +211,28 @@
 
     // When navigating with arrows, show the selected URL in the input
     if (urlBar && items[index]) {
-      urlBar.value = items[index].url;
+      urlBar.value = displayUrl(items[index].url);
       urlBar.setSelectionRange(urlBar.value.length, urlBar.value.length);
     }
+  }
+
+  // Canonical form for a suggestion: drop the query string and fragment
+  // (usually tracking noise like ?referrer=...) but keep the meaningful path,
+  // so completions look like Chrome's clean suggestions instead of raw history
+  // URLs. Keeps the protocol so the value stays navigable.
+  function cleanUrl(rawUrl) {
+    try {
+      const u = new URL(rawUrl);
+      const path = u.pathname === '/' ? '' : u.pathname;
+      return u.origin + path;
+    } catch {
+      return String(rawUrl || '').split(/[?#]/)[0];
+    }
+  }
+
+  // Human-readable form for the dropdown / inline box: strip protocol and www.
+  function displayUrl(rawUrl) {
+    return String(rawUrl || '').replace(/^https?:\/\//, '').replace(/^www\./, '');
   }
 
   function applyInlineCompletion(urlBar, typed, topResult) {
