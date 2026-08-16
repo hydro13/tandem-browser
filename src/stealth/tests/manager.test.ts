@@ -52,11 +52,9 @@ vi.mock('../../utils/logger', () => ({
 }));
 
 import fs from 'fs';
-import { StealthManager, deriveStealthSeed, loadOrCreateInstallSecret } from '../manager';
+import { StealthManager } from '../manager';
 import { createDarwinStealthUaAdapter, createWindowsStealthUaAdapter } from '../../platform/stealth-ua';
 import type { StealthUaAdapter } from '../../platform/types';
-
-const normalizePath = (value: unknown) => String(value).replace(/\\/g, '/');
 
 function makeMockSession() {
   return {
@@ -65,171 +63,6 @@ function makeMockSession() {
     registerPreloadScript: vi.fn(),
   } as unknown as Electron.Session;
 }
-
-describe('deriveStealthSeed()', () => {
-  it('is deterministic for the same inputs', () => {
-    const a = deriveStealthSeed('install-secret-abc', 'persist:tandem');
-    const b = deriveStealthSeed('install-secret-abc', 'persist:tandem');
-    expect(a).toBe(b);
-  });
-
-  it('differs when installSecret differs (even with same partition)', () => {
-    const a = deriveStealthSeed('install-a', 'persist:tandem');
-    const b = deriveStealthSeed('install-b', 'persist:tandem');
-    expect(a).not.toBe(b);
-  });
-
-  it('differs when partition differs (within same install)', () => {
-    const a = deriveStealthSeed('install-a', 'persist:tandem');
-    const b = deriveStealthSeed('install-a', 'persist:workspace-1');
-    expect(a).not.toBe(b);
-  });
-
-  it('produces a 64-char hex string (sha256)', () => {
-    const seed = deriveStealthSeed('install-a', 'persist:tandem');
-    expect(seed).toMatch(/^[0-9a-f]{64}$/);
-  });
-});
-
-describe('loadOrCreateInstallSecret()', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('chmods existing config.json to 0o600 when writing a new secret into it (handles loose existing mode)', () => {
-    // Pre-existing config with loose permissions and no secret yet
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ formEncryptionKey: 'something' })
-    );
-
-    loadOrCreateInstallSecret();
-
-    const chmodCall = vi.mocked(fs.chmodSync).mock.calls.find(
-      (c) => normalizePath(c[0]).endsWith('/config.json')
-    );
-    expect(chmodCall).toBeDefined();
-    expect(chmodCall![1]).toBe(0o600);
-  });
-
-  it('generates a new secret and writes config.json with mode 0o600 when config missing', () => {
-    vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
-      const s = normalizePath(p);
-      if (s.endsWith('/config.json')) return false;
-      return true; // dir exists
-    });
-
-    const secret = loadOrCreateInstallSecret();
-
-    expect(secret).toMatch(/^[0-9a-f]{64}$/);
-
-    const configWrite = vi.mocked(fs.writeFileSync).mock.calls.find(
-      (c) => normalizePath(c[0]).endsWith('/config.json')
-    );
-    expect(configWrite).toBeDefined();
-    expect(configWrite![2]).toMatchObject({ mode: 0o600 });
-
-    const written = JSON.parse(String(configWrite![1]));
-    expect(written.stealthInstallSecret).toBe(secret);
-  });
-
-  it('loads existing secret from config.json without rewriting', () => {
-    const existing = 'f'.repeat(64);
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ stealthInstallSecret: existing })
-    );
-
-    const secret = loadOrCreateInstallSecret();
-
-    expect(secret).toBe(existing);
-    expect(fs.writeFileSync).not.toHaveBeenCalled();
-  });
-
-  it('chmods existing config.json to 0o600 on load (migrates pre-fix installs with loose mode)', () => {
-    const existing = 'e'.repeat(64);
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ stealthInstallSecret: existing })
-    );
-
-    loadOrCreateInstallSecret();
-
-    const chmodCall = vi.mocked(fs.chmodSync).mock.calls.find(
-      (c) => normalizePath(c[0]).endsWith('/config.json')
-    );
-    expect(chmodCall).toBeDefined();
-    expect(chmodCall![1]).toBe(0o600);
-  });
-
-  it('preserves other config fields when adding a new secret', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ formEncryptionKey: 'preexisting' })
-    );
-
-    loadOrCreateInstallSecret();
-
-    const configWrite = vi.mocked(fs.writeFileSync).mock.calls.find(
-      (c) => normalizePath(c[0]).endsWith('/config.json')
-    );
-    expect(configWrite).toBeDefined();
-    const written = JSON.parse(String(configWrite![1]));
-    expect(written.formEncryptionKey).toBe('preexisting');
-    expect(written.stealthInstallSecret).toMatch(/^[0-9a-f]{64}$/);
-  });
-});
-
-describe('StealthManager — per-install seed', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('produces the same seed across instances when install secret persists', () => {
-    const existing = 'a'.repeat(64);
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ stealthInstallSecret: existing })
-    );
-
-    const m1 = new StealthManager(makeMockSession(), 'persist:tandem', createDarwinStealthUaAdapter());
-    const m2 = new StealthManager(makeMockSession(), 'persist:tandem', createDarwinStealthUaAdapter());
-
-    expect(m1.getPartitionSeed()).toBe(m2.getPartitionSeed());
-  });
-
-  it('produces a different seed when the install secret differs (simulates a different install)', () => {
-    // First install: no secret on disk → generates one
-    vi.mocked(fs.existsSync).mockImplementation((p: fs.PathLike) => {
-      return !normalizePath(p).endsWith('/config.json');
-    });
-    const m1 = new StealthManager(makeMockSession(), 'persist:tandem', createDarwinStealthUaAdapter());
-    const seed1 = m1.getPartitionSeed();
-
-    // Reset mocks — simulate a second, separate install with a different secret
-    vi.clearAllMocks();
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ stealthInstallSecret: 'b'.repeat(64) })
-    );
-    const m2 = new StealthManager(makeMockSession(), 'persist:tandem', createDarwinStealthUaAdapter());
-    const seed2 = m2.getPartitionSeed();
-
-    expect(seed1).not.toBe(seed2);
-  });
-
-  it('varies seed by partition within the same install', () => {
-    vi.mocked(fs.existsSync).mockReturnValue(true);
-    vi.mocked(fs.readFileSync).mockReturnValue(
-      JSON.stringify({ stealthInstallSecret: 'c'.repeat(64) })
-    );
-
-    const m1 = new StealthManager(makeMockSession(), 'persist:tandem', createDarwinStealthUaAdapter());
-    const m2 = new StealthManager(makeMockSession(), 'persist:workspace-a', createDarwinStealthUaAdapter());
-
-    expect(m1.getPartitionSeed()).not.toBe(m2.getPartitionSeed());
-  });
-});
 
 // ─── Helpers for registerWith() tests ────────────────────────────────────────
 
@@ -259,7 +92,7 @@ function makeManagerWithFixedSecret(stealthUa: StealthUaAdapter = createDarwinSt
   vi.mocked(fs.readFileSync).mockReturnValue(
     JSON.stringify({ stealthInstallSecret: 'a'.repeat(64) })
   );
-  return new StealthManager(makeMockSession(), 'persist:tandem', stealthUa);
+  return new StealthManager(makeMockSession(), stealthUa);
 }
 
 describe('stealth-ua platform adapters', () => {
@@ -752,7 +585,7 @@ describe('apply() — preload policy sync', () => {
       registerPreloadScript: ReturnType<typeof vi.fn>;
     };
 
-    const manager = new StealthManager(session as never, 'persist:tandem', createDarwinStealthUaAdapter());
+    const manager = new StealthManager(session as never, createDarwinStealthUaAdapter());
     await manager.apply({ cloudflarePolicySyncChannel: 'tandem:cloudflare-policy-sync' });
 
     expect(session.setUserAgent).toHaveBeenCalled();

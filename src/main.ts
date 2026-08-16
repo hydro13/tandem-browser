@@ -410,7 +410,7 @@ async function createWindow(): Promise<BrowserWindow> {
     });
   }
 
-  const stealth = new StealthManager(ses, partition);
+  const stealth = new StealthManager(ses);
   await stealth.apply({ cloudflarePolicySyncChannel: CLOUDFLARE_POLICY_SYNC_CHANNEL });
 
   // Create RequestDispatcher — central hub for all webRequest hooks
