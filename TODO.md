@@ -14,12 +14,12 @@ Last updated: August 16, 2026
 
 ## Current Snapshot
 
-- Current app version: `1.11.0`
+- Current app version: `1.11.4`
 - MCP server: 257 tools (full API parity + awareness)
 - The codebase scope is larger than this backlog summary and includes major subsystems such as `sidebar`, `workspaces`, `pinboards`, `sync`, `headless`, and `sessions`.
 - Scheduled browsing already exists in baseline form via `WatchManager` and the `/watch/*` API routes.
 - Session isolation already exists in baseline form via `SessionManager` and the `/sessions/*` API routes.
-- `TODO.md` is the active engineering backlog; `docs/internal/ROADMAP.md` and `docs/internal/STATUS.md` are historical snapshots, not the day-to-day source of truth.
+- `TODO.md` is the active engineering backlog; release history lives in `CHANGELOG.md`.
 
 ## Current Priorities
 
@@ -51,7 +51,7 @@ Last updated: August 16, 2026
 
 ### Codebase Hygiene
 
-- [ ] Finish Cloudflare human mode phases 4-5 so challenge-sensitive tabs pause cleanly for the human and resume conservatively after `cf_clearance`; phase 3 now gates ScriptGuard and resource monitoring on Cloudflare tabs
+- [ ] Cloudflare human-in-the-loop: challenge-sensitive tabs should pause cleanly for the human and resume conservatively after `cf_clearance` (phase 3 already gates ScriptGuard and resource monitoring on Cloudflare tabs). NOTE: this was built on the no-touch reroute, which the **Stealth** section now treats as a temporary fallback pending in-place challenge solving — settle that architecture question first, since it changes where the pause/resume happens (the UX itself carries over either way).
 - [x] Make Wingman `openclaw` mode gateway-first for sends, sign a real OpenClaw device identity for the WebSocket handshake, and persist gateway replies into Tandem chat history so stock Tandem no longer depends on a local OpenClaw tandem-chat skill
 - [x] Add a built-in Tandem local Wingman chat backend so MCP/API agents can read and reply in the panel without requiring OpenClaw on the host, while keeping the OpenClaw gateway backend available when installed
 - [x] Split `src/main.ts` bootstrap and teardown wiring into dedicated `src/bootstrap/` modules so manager composition stops growing in one file

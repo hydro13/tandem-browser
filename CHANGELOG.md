@@ -2,6 +2,33 @@
 
 All notable changes to Tandem Browser will be documented in this file.
 
+## [v1.11.4] - 2026-08-16
+
+### Changed
+
+- **Stealth simplified to "hide the AI, not the hardware"** — removed all
+  hardware-fingerprint spoofing from the injected stealth scripts (WebGL,
+  canvas/audio noise, screen colour depth, CPU cores, device memory, font
+  enumeration, timing) and the dead per-install seed infrastructure behind it.
+  The layer now only hides that an AI/Electron drives the browser (webdriver,
+  `window.process`/`require`, UA, `window.chrome`); the real, stable hardware
+  fingerprint is left intact. Docs and the in-app Help page were reframed to
+  match, and the fingerprint-spoofing backlog was dropped from `TODO.md`.
+
+### Fixed
+
+- **Address bar** no longer overwrites what the user is typing during
+  navigation, and inline autocomplete no longer re-fills while deleting;
+  history suggestions are cleaned and de-duplicated (Chrome-style).
+- **Cloudflare challenge handling** — a challenged tab is no longer reopened at
+  the challenge-platform script itself, so it lands on the real destination
+  page instead of rendering the raw `main.js`.
+
+### Dependencies
+
+- Resolved the open Dependabot backlog (24 → 0 npm-audit findings), including
+  Electron 40 → 41.10.3 with better-sqlite3 12 → 13.
+
 ## Unreleased
 
 ### Security
