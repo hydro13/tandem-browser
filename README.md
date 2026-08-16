@@ -378,7 +378,7 @@ contributors, not yet a polished mass-user release.
 - Supported platform: Windows 11 x64
 - Secondary platform: Linux
 - Binaries: signed and notarized macOS Apple Silicon builds plus unsigned Windows x64 installer/portable builds on [GitHub Releases](https://github.com/hydro13/tandem-browser/releases), starting with Windows in v1.10.0
-- Current version: `1.11.0`
+- Current version: `1.11.4`
 - Package metadata: [package.json](package.json)
 
 ## Community
