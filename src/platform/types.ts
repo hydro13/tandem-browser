@@ -81,10 +81,6 @@ export interface StealthUaAdapter {
   getProfile(chromeVersion?: string): StealthUaProfile;
 }
 
-export interface SecretsAdapter {
-  loadOrCreateInstallSecret(): string;
-}
-
 export interface UpdaterAdapter {
   isSupported(): boolean;
   checkForUpdates(options?: { mainWindow?: BrowserWindow | null }): Promise<void>;
@@ -101,7 +97,6 @@ export interface PlatformAdapter {
   videoAudio: VideoAudioAdapter;
   windowChrome: WindowChromeAdapter;
   stealthUa: StealthUaAdapter;
-  secrets: SecretsAdapter;
   updater: UpdaterAdapter;
 }
 

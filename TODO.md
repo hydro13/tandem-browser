@@ -102,9 +102,6 @@ Last updated: August 16, 2026
       tested, and stable. Removing it also fixes the session-isolation problem
       (logged-in CF sites fall back to a fresh partition) and the missing
       cf_clearance sync back to the main session.
-- [ ] Retire the now-unused per-install stealth seed infrastructure
-      (`deriveStealthSeed`, `getPartitionSeed`, `partitionSeed`) — it only fed
-      the removed canvas/audio noise, so it is dead in production now.
 
 ## Open Questions
 

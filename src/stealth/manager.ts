@@ -1,5 +1,4 @@
 import type { Session } from 'electron';
-import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
 import type { RequestDispatcher } from '../network/dispatcher';
@@ -10,48 +9,6 @@ import { tandemDir } from '../utils/paths';
 import { isGoogleAuthUrl } from '../utils/security';
 
 const log = createLogger('StealthManager');
-
-/**
- * LEGACY — no longer used. Derived the per-session seed for the canvas/audio
- * noise that was removed in the stealth simplification (the real fingerprint is
- * now left intact). Retained pending removal — see the Stealth section in
- * TODO.md — and kept exported for its existing tests until then.
- */
-export function deriveStealthSeed(installSecret: string, partition: string): string {
-  return crypto.createHash('sha256').update(`${installSecret}|${partition}`).digest('hex');
-}
-
-/**
- * LEGACY — no longer used. Loaded the per-install secret that seeded the removed
- * fingerprint noise. Retained pending removal (see TODO.md Stealth section) and
- * kept for its existing tests. Stored in `~/.tandem/config.json`, mode 0o600.
- */
-export function loadOrCreateInstallSecret(): string {
-  const configPath = path.join(tandemDir(), 'config.json');
-  try {
-    let config: Record<string, unknown> = {};
-    if (fs.existsSync(configPath)) {
-      config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-      // Migrate pre-fix installs: tighten any existing config.json to 0o600.
-      try { fs.chmodSync(configPath, 0o600); } catch { /* best effort */ }
-    }
-    if (typeof config.stealthInstallSecret === 'string' && config.stealthInstallSecret.length >= 32) {
-      return config.stealthInstallSecret;
-    }
-    const secret = crypto.randomBytes(32).toString('hex');
-    config.stealthInstallSecret = secret;
-    const dir = path.dirname(configPath);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    fs.writeFileSync(configPath, JSON.stringify(config, null, 2), { mode: 0o600 });
-    try { fs.chmodSync(configPath, 0o600); } catch { /* best effort */ }
-    return secret;
-  } catch (err) {
-    log.warn('Failed to persist install secret; falling back to ephemeral seed', err);
-    return crypto.randomBytes(32).toString('hex');
-  }
-}
 
 // ─── Manager ───
 
@@ -71,7 +28,6 @@ export function loadOrCreateInstallSecret(): string {
 export class StealthManager {
   // === 1. Private state ===
   private session: Session;
-  private partitionSeed: string;
   private readonly originalUserAgent: string;
   private readonly stealthUa: StealthUaAdapter;
   private readonly uaProfile: StealthUaProfile;
@@ -79,17 +35,12 @@ export class StealthManager {
   // === 2. Constructor ===
   constructor(
     session: Session,
-    partition: string = 'persist:tandem',
     stealthUa: StealthUaAdapter = selectPlatform().stealthUa,
   ) {
     this.session = session;
     this.stealthUa = stealthUa;
     // Store the real Electron UA before overwriting — needed for Google auth
     this.originalUserAgent = session.getUserAgent();
-    // Derive seed from per-install secret + partition — unique per install,
-    // still consistent per (install, partition) pair across restarts.
-    const installSecret = loadOrCreateInstallSecret();
-    this.partitionSeed = deriveStealthSeed(installSecret, partition);
 
     // Build UA from Electron's actual Chromium version to avoid detection mismatches
     this.uaProfile = this.stealthUa.getProfile(process.versions.chrome);
@@ -278,11 +229,6 @@ export class StealthManager {
         return headers;
       }
     });
-  }
-
-  /** LEGACY — unused; returned the seed for the removed fingerprint noise. */
-  getPartitionSeed(): string {
-    return this.partitionSeed;
   }
 
   /**
