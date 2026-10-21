@@ -44,7 +44,7 @@
     "check-consistency": "node scripts/check-consistency.js"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
+    "@modelcontextprotocol/sdk": "^1.32.0",
     "@types/adm-zip": "^0.5.7",
     "acorn": "^8.16.0",
     "adm-zip": "^0.6.0",
